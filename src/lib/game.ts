@@ -76,6 +76,28 @@ function clamp(value: number) {
   return Math.max(0, Math.min(100, value));
 }
 
+// Shared by solo and multiplayer: decay + the chosen action's effects,
+// clamped to 0-100.
+export function nextMeters(meters: Meters, action: ActionOption): Meters {
+  const result: Meters = { ...meters };
+  for (const key of METER_KEYS) {
+    result[key] = clamp(
+      result[key] - TURN_DECAY[key] + (action.effects[key] ?? 0),
+    );
+  }
+  return result;
+}
+
+export function statusAfterTurn(
+  meters: Meters,
+  turnJustPlayed: number,
+): "playing" | "won" | "lost" {
+  if (hasLost(meters)) return "lost";
+  if (hasWon(meters)) return "won";
+  if (turnJustPlayed >= MAX_TURNS) return "lost";
+  return "playing";
+}
+
 export function createInitialState(): GameState {
   return {
     turn: 1,
@@ -100,25 +122,12 @@ export function hasLost(meters: Meters) {
 export function applyAction(state: GameState, action: ActionOption): GameState {
   if (state.status !== "playing") return state;
 
-  const nextMeters: Meters = { ...state.meters };
-  for (const key of METER_KEYS) {
-    nextMeters[key] = clamp(
-      nextMeters[key] - TURN_DECAY[key] + (action.effects[key] ?? 0),
-    );
-  }
-
-  let status: GameState["status"] = "playing";
-  if (hasLost(nextMeters)) {
-    status = "lost";
-  } else if (hasWon(nextMeters)) {
-    status = "won";
-  } else if (state.turn >= MAX_TURNS) {
-    status = "lost";
-  }
+  const meters = nextMeters(state.meters, action);
+  const status = statusAfterTurn(meters, state.turn);
 
   return {
     turn: state.turn + 1,
-    meters: nextMeters,
+    meters,
     log: [...state.log, `Turn ${state.turn}: ${action.label}`],
     status,
   };

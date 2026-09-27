@@ -3,7 +3,8 @@
 Hackathon project for SHISTECH. Theme is UN SDGs, we're going with Sustainable
 Cities and Communities (SDG-11). It's a turn-based city sim: pick a policy each
 turn and try to get education, energy and sustainability all above 75 before
-you run out of turns or any of them hit 0.
+you run out of turns or any of them hit 0. Play solo, or create a room and
+take turns with your team.
 
 ## Prerequisites
 
@@ -15,10 +16,15 @@ you run out of turns or any of them hit 0.
 git clone https://github.com/DaBabaBOI/shistech-hackathon.git
 cd shistech-hackathon
 npm install
+cp .env.example .env.local
 npm run dev
 ```
 
 The app runs at [http://localhost:3000](http://localhost:3000).
+
+Multiplayer needs a Supabase URL + anon key in `.env.local` (see
+`.env.example`) — ask Prithu for the values, they're not committed to the
+repo. Solo mode works without any of that.
 
 ## Scripts
 
@@ -40,11 +46,14 @@ src/
   components/
     layout/     Structural pieces shared across pages (Header, Footer, Container)
     ui/         Reusable, generic UI primitives (Button, Card)
-    game/       The city-sim UI (meter bars, action list, game log)
+    game/       Solo game UI (meter bars, action list, game log)
+    multiplayer/ Room lobby, join form, multiplayer board
   lib/
-    utils.ts    The `cn` class-merge helper
-    game.ts     Game rules — actions, meter math, win/lose conditions
-  types/        Shared TypeScript types (game state, meters, actions)
+    utils.ts       The `cn` class-merge helper
+    game.ts        Game rules — actions, meter math, win/lose conditions
+    supabase.ts    Supabase client for multiplayer
+    multiplayer.ts Room/player DB calls (create, join, start, submit turn)
+  types/        Shared TypeScript types (game state, meters, rooms, players)
 ```
 
 ## Branch and commit conventions
@@ -66,5 +75,6 @@ src/
 ## Deploying
 
 Import this repo on [Vercel](https://vercel.com/new). The framework
-auto-detects as Next.js — no configuration or environment variables are
-needed yet.
+auto-detects as Next.js. For multiplayer to work in the deployed app, add
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in the Vercel
+project's environment variables (same values as your local `.env.local`).

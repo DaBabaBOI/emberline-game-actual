@@ -2,9 +2,9 @@ import Link from "next/link";
 import { Container } from "@/components/layout/container";
 
 const navLinks = [
-  { href: "#", label: "Home" },
-  { href: "#", label: "About" },
-  { href: "#", label: "Contact" },
+  { href: "/", label: "Home" },
+  { href: "/solo", label: "Solo" },
+  { href: "/multiplayer", label: "Multiplayer" },
 ];
 
 export function Header() {
