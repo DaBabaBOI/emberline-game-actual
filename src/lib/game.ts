@@ -1,11 +1,31 @@
 import type { ActionOption, GameState, MeterKey, Meters } from "@/types";
 
-export const METER_KEYS: MeterKey[] = ["education", "energy", "sustainability"];
+export const METER_KEYS: MeterKey[] = [
+  "education",
+  "energy",
+  "sustainability",
+  "currency",
+];
 
 export const METER_LABELS: Record<MeterKey, string> = {
   education: "Education",
   energy: "Energy",
   sustainability: "Sustainability",
+  currency: "Currency",
+};
+
+export const METER_COLORS: Record<MeterKey, { bar: string; text: string }> = {
+  education: { bar: "bg-sky-500", text: "text-sky-600" },
+  energy: { bar: "bg-amber-500", text: "text-amber-600" },
+  sustainability: { bar: "bg-emerald-500", text: "text-emerald-600" },
+  currency: { bar: "bg-fuchsia-500", text: "text-fuchsia-600" },
+};
+
+export const METER_ICONS: Record<MeterKey, string> = {
+  education: "🎓",
+  energy: "⚡",
+  sustainability: "🌿",
+  currency: "💰",
 };
 
 export const STARTING_METER_VALUE = 50;
@@ -19,58 +39,83 @@ const TURN_DECAY: Meters = {
   education: 2,
   energy: 4,
   sustainability: 3,
+  currency: 3,
 };
 
 export const ACTIONS: ActionOption[] = [
   {
     id: "build-school",
     label: "Build a public school",
-    description: "Boosts education, costs a bit of energy to run.",
-    effects: { education: 12, energy: -4 },
+    description: "Boosts education, costs a bit of energy and money.",
+    icon: "🏫",
+    color: "bg-sky-500",
+    effects: { education: 12, energy: -4, currency: -8 },
   },
   {
     id: "solar-panels",
     label: "Install solar panels",
     description: "Clean energy generation, good for sustainability too.",
-    effects: { energy: 14, sustainability: 5 },
+    icon: "☀️",
+    color: "bg-amber-400",
+    effects: { energy: 14, sustainability: 5, currency: -10 },
   },
   {
     id: "recycling-program",
     label: "Launch a recycling program",
-    description: "Great for sustainability, pulls staff off school duty.",
-    effects: { sustainability: 12, education: -2 },
+    description: "Great for sustainability and turns a small profit.",
+    icon: "♻️",
+    color: "bg-emerald-500",
+    effects: { sustainability: 12, education: -2, currency: 6 },
   },
   {
     id: "bike-lanes",
     label: "Build bike lanes",
     description: "Cuts commuter energy use, nudges sustainability up.",
-    effects: { sustainability: 8, energy: 2 },
+    icon: "🚲",
+    color: "bg-teal-500",
+    effects: { sustainability: 8, energy: 2, currency: -5 },
   },
   {
     id: "literacy-classes",
     label: "Fund adult literacy classes",
     description: "Strong education gain, small sustainability trade-off.",
-    effects: { education: 10, sustainability: -2 },
+    icon: "📚",
+    color: "bg-indigo-500",
+    effects: { education: 10, sustainability: -2, currency: -6 },
   },
   {
     id: "grid-upgrade",
     label: "Upgrade the power grid",
-    description: "Big efficiency win, but takes funding from schools.",
-    effects: { energy: 10, sustainability: 4, education: -3 },
+    description: "Big efficiency win, but expensive and takes funding from schools.",
+    icon: "🔌",
+    color: "bg-yellow-500",
+    effects: { energy: 10, sustainability: 4, education: -3, currency: -12 },
   },
   {
     id: "community-garden",
     label: "Start a community garden",
-    description: "A little bit of everything, no big trade-offs.",
-    effects: { sustainability: 6, education: 4, energy: -2 },
+    description: "A little bit of everything, sells produce for extra cash.",
+    icon: "🌱",
+    color: "bg-lime-500",
+    effects: { sustainability: 6, education: 4, energy: -2, currency: 2 },
   },
   {
     id: "coal-plant",
     label: "Build a coal plant",
-    description: "Cheap power fast, but it wrecks sustainability.",
-    effects: { energy: 18, sustainability: -14, education: -1 },
+    description: "Cheap and profitable, but it wrecks sustainability.",
+    icon: "🏭",
+    color: "bg-stone-500",
+    effects: { energy: 18, sustainability: -14, education: -1, currency: 15 },
   },
 ];
+
+const ACTIONS_BY_ID: Record<string, ActionOption> = Object.fromEntries(
+  ACTIONS.map((action) => [action.id, action]),
+);
+
+export function actionById(id: string): ActionOption | undefined {
+  return ACTIONS_BY_ID[id];
+}
 
 function clamp(value: number) {
   return Math.max(0, Math.min(100, value));
@@ -105,8 +150,10 @@ export function createInitialState(): GameState {
       education: STARTING_METER_VALUE,
       energy: STARTING_METER_VALUE,
       sustainability: STARTING_METER_VALUE,
+      currency: STARTING_METER_VALUE,
     },
     log: [],
+    builds: [],
     status: "playing",
   };
 }
@@ -129,6 +176,7 @@ export function applyAction(state: GameState, action: ActionOption): GameState {
     turn: state.turn + 1,
     meters,
     log: [...state.log, `Turn ${state.turn}: ${action.label}`],
+    builds: [...state.builds, action.id],
     status,
   };
 }

@@ -1,4 +1,4 @@
-export type MeterKey = "education" | "energy" | "sustainability";
+export type MeterKey = "education" | "energy" | "sustainability" | "currency";
 
 export type Meters = Record<MeterKey, number>;
 
@@ -6,6 +6,8 @@ export interface ActionOption {
   id: string;
   label: string;
   description: string;
+  icon: string;
+  color: string;
   effects: Partial<Meters>;
 }
 
@@ -15,6 +17,7 @@ export interface GameState {
   turn: number;
   meters: Meters;
   log: string[];
+  builds: string[];
   status: GameStatus;
 }
 
@@ -35,6 +38,7 @@ export interface PlayerRow {
   seat_order: number;
   meters: Meters;
   turn: number;
+  builds: string[];
   status: GameStatus;
   joined_at: string;
 }

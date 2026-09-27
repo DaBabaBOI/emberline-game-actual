@@ -4,16 +4,21 @@ export interface MeterBarProps {
   label: string;
   value: number;
   goal: number;
+  color: string;
+  icon?: string;
 }
 
-export function MeterBar({ label, value, goal }: MeterBarProps) {
+export function MeterBar({ label, value, goal, color, icon }: MeterBarProps) {
   const isCritical = value <= 20;
   const isAtGoal = value >= goal;
 
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between text-sm">
-        <span className="font-medium">{label}</span>
+        <span className="flex items-center gap-1.5 font-medium">
+          {icon ? <span>{icon}</span> : null}
+          {label}
+        </span>
         <span
           className={cn(
             "text-muted-foreground",
@@ -24,11 +29,11 @@ export function MeterBar({ label, value, goal }: MeterBarProps) {
           {value}/100
         </span>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+      <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
         <div
           className={cn(
             "h-full rounded-full transition-all",
-            isCritical ? "bg-red-500" : isAtGoal ? "bg-emerald-500" : "bg-primary",
+            isCritical ? "bg-red-500" : color,
           )}
           style={{ width: `${value}%` }}
         />

@@ -7,17 +7,19 @@ export default function Home() {
   return (
     <Container className="flex flex-col gap-6 py-10">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Hacktrack</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">
+          🏝️ Hacktrack
+        </h1>
         <p className="text-muted-foreground">
-          Keep education, energy and sustainability alive while building a
-          city that actually lasts. SDG-11.
+          Keep education, energy, sustainability and your budget alive while
+          building a city that actually lasts. SDG-11.
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Card>
+        <Card className="overflow-hidden border-t-4 border-t-sky-400">
           <CardHeader>
-            <p className="font-medium">Solo</p>
+            <p className="font-medium">🧑‍💻 Solo</p>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             <p className="text-sm text-muted-foreground">
@@ -29,9 +31,9 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden border-t-4 border-t-amber-400">
           <CardHeader>
-            <p className="font-medium">Multiplayer</p>
+            <p className="font-medium">🧑‍🤝‍🧑 Multiplayer</p>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             <p className="text-sm text-muted-foreground">

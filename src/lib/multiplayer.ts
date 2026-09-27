@@ -16,6 +16,7 @@ const STARTING_METERS = {
   education: STARTING_METER_VALUE,
   energy: STARTING_METER_VALUE,
   sustainability: STARTING_METER_VALUE,
+  currency: STARTING_METER_VALUE,
 };
 
 export async function createRoom(playerName: string) {
@@ -107,9 +108,11 @@ export async function submitAction(
   const meters = nextMeters(actingPlayer.meters, action);
   const status = statusAfterTurn(meters, actingPlayer.turn);
 
+  const builds = [...actingPlayer.builds, action.id];
+
   const { error: playerError } = await supabase
     .from("players")
-    .update({ meters, turn: actingPlayer.turn + 1, status })
+    .update({ meters, turn: actingPlayer.turn + 1, builds, status })
     .eq("id", actingPlayer.id);
   if (playerError) throw playerError;
 
@@ -120,7 +123,9 @@ export async function submitAction(
   });
 
   const updatedPlayers = players.map((p) =>
-    p.id === actingPlayer.id ? { ...p, meters, status, turn: p.turn + 1 } : p,
+    p.id === actingPlayer.id
+      ? { ...p, meters, status, turn: p.turn + 1, builds }
+      : p,
   );
 
   if (status === "won") {
