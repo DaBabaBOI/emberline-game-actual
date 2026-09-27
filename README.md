@@ -1,8 +1,9 @@
 # Hacktrack
 
 Hackathon project for SHISTECH. Theme is UN SDGs, we're going with Sustainable
-Cities and Communities (SDG-11) — building something around a sustainable city.
-Still figuring out the exact feature set, this repo is just the base to build on.
+Cities and Communities (SDG-11). It's a turn-based city sim: pick a policy each
+turn and try to get education, energy and sustainability all above 75 before
+you run out of turns or any of them hit 0.
 
 ## Prerequisites
 
@@ -39,12 +40,12 @@ src/
   components/
     layout/     Structural pieces shared across pages (Header, Footer, Container)
     ui/         Reusable, generic UI primitives (Button, Card)
-  lib/          Small shared utilities (e.g. the `cn` class-merge helper)
-  types/        Shared TypeScript types, once we have any
+    game/       The city-sim UI (meter bars, action list, game log)
+  lib/
+    utils.ts    The `cn` class-merge helper
+    game.ts     Game rules — actions, meter math, win/lose conditions
+  types/        Shared TypeScript types (game state, meters, actions)
 ```
-
-Keep names generic for now — until we've actually agreed on what we're
-building, don't name files/folders after a guessed feature.
 
 ## Branch and commit conventions
 
