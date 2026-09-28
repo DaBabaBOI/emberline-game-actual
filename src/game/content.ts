@@ -204,6 +204,21 @@ export const BUILDINGS: BuildingDef[] = [
     requires: "herbalism",
     reveal: 2,
   },
+  {
+    id: "pen",
+    name: "Livestock Pen",
+    icon: "sheep",
+    description: "Goats and sheep behind a fence. A little milk and meat, and later their hides and wool make warm clothes.",
+    gain: "A little food; with Hide Clothing, warm clothes for 6 people so fewer fires are needed",
+    landCost: "Grazing animals wear down the grass around them",
+    landImpact: 1,
+    era: 0,
+    cost: { wood: 12, food: 10 },
+    terrain: ["grass", "steppe"],
+    requires: "herding",
+    produces: { food: 0.5 },
+    reveal: 1,
+  },
 ];
 
 export const BUILDINGS_BY_ID = Object.fromEntries(BUILDINGS.map((b) => [b.id, b]));
@@ -329,6 +344,25 @@ export const TREE: TreeNode[] = [
     cost: 10,
     requires: ["fire"],
     unlocks: ["healer"],
+  },
+  {
+    id: "herding",
+    name: "Herding",
+    description: "Tame wild goats and sheep. Unlocks the Livestock Pen.",
+    branch: "knowledge",
+    era: 0,
+    cost: 10,
+    requires: ["early-farming"],
+    unlocks: ["pen"],
+  },
+  {
+    id: "hide-clothing",
+    name: "Hide Clothing",
+    description: "Sew hides and wool into warm clothes. Each Livestock Pen keeps 6 people warm without a fire.",
+    branch: "energy",
+    era: 0,
+    cost: 12,
+    requires: ["herding"],
   },
   {
     id: "cave-paintings",
@@ -590,6 +624,8 @@ export const GROWTH_PRESSURE = {
   foodRots: 0.015,
   // Each lit campfire warms this many people; the rest are cold.
   peoplePerFire: 10,
+  // With Hide Clothing, each Livestock Pen clothes this many people warmly.
+  peoplePerPen: 6,
   // Raiders come in bigger groups the bigger (richer) the tribe: +1 per this many people.
   raidersPerPeople: 10,
 };
@@ -643,6 +679,18 @@ export const LESSONS: { id: string; title: string; text: string; sdg: string }[]
     id: "exhausted",
     title: "The land is tired",
     text: "We have pushed the land too hard for too long. The forest has stopped coming back and the harvests are shrinking. Land needs rest to recover.",
+    sdg: "SDG 15.3: restore damaged land and soil",
+  },
+  {
+    id: "clothes",
+    title: "Warm without burning",
+    text: "Warm clothes keep people warm without burning a single log. Needing less fire means cutting fewer trees and breathing less smoke.",
+    sdg: "SDG 7.3: use energy more efficiently",
+  },
+  {
+    id: "grazing",
+    title: "Too many mouths on the grass",
+    text: "Our herds are growing, and the grass around the pens is being eaten down to the dirt. Too many animals on too little land can wear it out.",
     sdg: "SDG 15.3: restore damaged land and soil",
   },
   {

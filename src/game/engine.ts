@@ -602,7 +602,7 @@ export function warnings(state: GameState): Warning[] {
     });
   }
 
-  if (!hasLitFire(state)) {
+  if (!hasLitFire(state) && coldShare(state) > 0.05) {
     const noCampfire = (countBuildings(state).campfire ?? 0) === 0;
     out.push({
       id: "fire",
@@ -655,6 +655,11 @@ export function sustainabilityBreakdown(state: GameState): SustainPart[] {
       hint: "Farmland replaces wild land.",
     },
     {
+      label: `${counts.pen ?? 0} livestock pen${counts.pen === 1 ? "" : "s"} grazing`,
+      value: -(counts.pen ?? 0) * 2,
+      hint: "Grazing animals wear down the grass around them.",
+    },
+    {
       label: "Recent events",
       value: state.modifiers.sustainability,
       hint: "Fires and choices you made in events. This fades over time.",
@@ -672,7 +677,8 @@ export function sustainabilityTrend(state: GameState) {
 
 // Share of the tribe with no fire to warm them (each fire warms peoplePerFire).
 export function coldShare(state: GameState) {
-  const warmed = litFires(state).length * GROWTH_PRESSURE.peoplePerFire;
+  const pens = state.researched.includes("hide-clothing") ? countBuildings(state).pen ?? 0 : 0;
+  const warmed = litFires(state).length * GROWTH_PRESSURE.peoplePerFire + pens * GROWTH_PRESSURE.peoplePerPen;
   return state.population > 0 ? Math.max(0, 1 - warmed / state.population) : 0;
 }
 
@@ -785,6 +791,10 @@ function lessonReady(id: string, state: GameState) {
       return state.strainTicks > 0;
     case "restore":
       return (state.planted ?? 0) > 0;
+    case "clothes":
+      return state.researched.includes("hide-clothing");
+    case "grazing":
+      return (countBuildings(state).pen ?? 0) >= 3;
     default:
       return false;
   }

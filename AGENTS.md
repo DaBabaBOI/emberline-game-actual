@@ -157,6 +157,10 @@ These were decided with the project owner. Do not change them without being aske
   working when adding eras. It must never show without `?dev`. **Every new
   feature gets a dev-panel button (or dev option) to trigger or test it**, e.g.
   Wildfire, +10 people.
+- **Livestock and clothing:** Herding unlocks the Livestock Pen (a little food,
+  grazing wears the land: −2 Sustainability each). Hide Clothing makes each pen
+  keep `peoplePerPen` (6) people warm without a fire, so fewer fires are needed
+  (less wood cut, less smoke). A trade-off, not a free upgrade.
 - **Growing is as hard as surviving** (`GROWTH_PRESSURE`): stored food above 60
   rots (no preservation yet), each lit campfire warms only 10 people (the
   rest are cold, scaled happiness penalty), and raids grow with the tribe's

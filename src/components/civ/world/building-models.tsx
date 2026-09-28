@@ -393,7 +393,72 @@ export function WarCampModel({ opacity }: ModelProps) {
   );
 }
 
+// A fenced pen with a few sheep and goats that graze and look around.
+function Sheep({ opacity, position, dark, phase }: ModelProps & { position: [number, number, number]; dark?: boolean; phase: number }) {
+  const head = useRef<Mesh>(null);
+  useFrame(({ clock }) => {
+    if (head.current) head.current.position.y = 0.1 + Math.max(0, Math.sin(clock.elapsedTime * 0.8 + phase)) * -0.05;
+  });
+  return (
+    <group position={position} rotation={[0, phase, 0]}>
+      <Part color={dark ? "#6b5a48" : "#f1ede4"} opacity={opacity} position={[0, 0.1, 0]}>
+        <boxGeometry args={[0.16, 0.1, 0.1]} />
+      </Part>
+      <mesh ref={head} position={[0.1, 0.1, 0]}>
+        <boxGeometry args={[0.06, 0.06, 0.06]} />
+        <meshStandardMaterial color="#2b2119" transparent opacity={opacity} />
+      </mesh>
+      {[
+        [0.05, 0.035],
+        [-0.05, 0.035],
+        [0.05, -0.035],
+        [-0.05, -0.035],
+      ].map(([x, z]) => (
+        <Part key={`${x}${z}`} color="#2b2119" opacity={opacity} position={[x, 0.03, z]}>
+          <boxGeometry args={[0.02, 0.06, 0.02]} />
+        </Part>
+      ))}
+    </group>
+  );
+}
+
+export function PenModel({ opacity }: ModelProps) {
+  const posts = 10;
+  return (
+    <group>
+      {Array.from({ length: posts }, (_, i) => {
+        const a = (i / posts) * Math.PI * 2;
+        const next = ((i + 1) / posts) * Math.PI * 2;
+        const r = 0.5;
+        const mid = (a + next) / 2;
+        return (
+          <group key={i}>
+            <Part color="#6b4a2b" opacity={opacity} position={[Math.cos(a) * r, 0.08, Math.sin(a) * r]}>
+              <cylinderGeometry args={[0.018, 0.018, 0.16, 5]} />
+            </Part>
+            <Part
+              color="#8b5a2b"
+              opacity={opacity}
+              position={[Math.cos(mid) * r * 0.98, 0.11, Math.sin(mid) * r * 0.98]}
+              rotation={[0, -mid, 0]}
+            >
+              <boxGeometry args={[0.02, 0.02, 0.31]} />
+            </Part>
+          </group>
+        );
+      })}
+      <Sheep opacity={opacity} position={[0.12, 0, 0.1]} phase={0.4} />
+      <Sheep opacity={opacity} position={[-0.18, 0, -0.05]} phase={2.1} />
+      <Sheep opacity={opacity} position={[0.05, 0, -0.22]} phase={4.2} dark />
+      <Part color="#7a9a4a" opacity={opacity} position={[0, 0.005, 0]}>
+        <cylinderGeometry args={[0.46, 0.46, 0.01, 12]} />
+      </Part>
+    </group>
+  );
+}
+
 export const MODELS: Record<string, (props: ModelProps) => JSX.Element> = {
+  pen: PenModel,
   campfire: CampfireModel,
   hut: HutModel,
   gatherer: GathererModel,
