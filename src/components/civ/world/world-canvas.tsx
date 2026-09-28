@@ -13,7 +13,7 @@ import { useGuide } from "@/components/civ/hud/guide-overlay";
 import type { Tile } from "@/game/types";
 import { BiomeDetails, Deposits, Forests, HexTerrain, Mountains, tileTop } from "./hex-terrain";
 import { MODELS } from "./building-models";
-import { Raiders, Villagers, Warriors } from "./villagers";
+import { FireVictims, Raiders, Villagers, Warriors } from "./villagers";
 import { Wildlife } from "./wildlife";
 import { CampfireSmoke, Haze, Wildfire } from "./atmosphere";
 
@@ -152,6 +152,7 @@ export function WorldCanvas() {
       />
       <CampfireSmoke tiles={state.tiles} />
       <Wildfire tiles={state.tiles} />
+      <FireVictims tiles={state.tiles} victims={state.fireVictims ?? []} />
 
       {hoverTile && (
         <HexOutline

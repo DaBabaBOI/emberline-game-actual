@@ -177,6 +177,9 @@ export function DevPanel() {
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devEvent", id: "wildfire" })}>
           Wildfire
         </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devPeople" })}>
+          +10 people
+        </button>
       </div>
       <div className="flex flex-wrap gap-1">
         {ERAS.map((era, i) => (

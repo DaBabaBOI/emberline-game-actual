@@ -7,6 +7,7 @@ import { isLand } from "@/game/map";
 import type { Raid, Tile } from "@/game/types";
 import { Figures, HAIRS, SKINS, type Agent } from "./figures";
 import { makeGround, type Ground } from "./ground";
+import { tileTop } from "./hex-terrain";
 
 const TUNICS = ["#b5651d", "#8e5a3a", "#a0522d", "#6b8e23", "#c2956b", "#9c6b3f"];
 
@@ -257,4 +258,53 @@ export function Raiders({ tiles, raid, tick }: { tiles: Tile[]; raid: Raid | nul
   });
 
   return <Figures agents={agents} max={30} weapon="club" />;
+}
+
+// People caught by a wildfire: they stagger, fall over in the flames, and lie
+// there until that patch stops burning.
+export function FireVictims({ tiles, victims }: { tiles: Tile[]; victims: { tile: number; tick: number }[] }) {
+  const agents = useRef<Agent[]>([]);
+  const started = useRef<{ key: string; at: number }>({ key: "", at: 0 });
+  const burning = victims.filter((v) => (tiles[v.tile]?.scorch ?? 0) > 0.8);
+  const key = burning.map((v, i) => `${v.tile}@${v.tick}#${i}`).join(",");
+
+  useFrame(({ clock }, delta) => {
+    const now = clock.elapsedTime;
+    if (started.current.key !== key) {
+      started.current = { key, at: now };
+      agents.current = burning.map((v, i) => {
+        const t = tiles[v.tile];
+        const a = hash(v.tile * 7 + i) * Math.PI * 2;
+        return {
+          x: t.x + Math.cos(a) * 0.35,
+          y: tileTop(t),
+          z: t.z + Math.sin(a) * 0.35,
+          heading: hash(v.tile + i * 3) * Math.PI * 2,
+          moving: true,
+          scale: 1.35,
+          tunic: TUNICS[i % TUNICS.length],
+          skin: SKINS[Math.floor(hash(i + 3) * SKINS.length)],
+          hair: HAIRS[Math.floor(hash(i + 7) * HAIRS.length)],
+          phase: i,
+          fallen: 0,
+        };
+      });
+    }
+    const age = now - started.current.at;
+    agents.current.forEach((a, i) => {
+      const t = age - i * 0.3;
+      if (t < 1.1) {
+        // Stagger a few steps.
+        a.moving = true;
+        a.x += Math.sin(a.heading) * 0.25 * Math.min(delta, 0.1);
+        a.z += Math.cos(a.heading) * 0.25 * Math.min(delta, 0.1);
+      } else {
+        a.moving = false;
+        a.fallen = Math.min(1, (t - 1.1) / 0.45);
+      }
+    });
+  });
+
+  if (!burning.length) return null;
+  return <Figures agents={agents} max={6} />;
 }

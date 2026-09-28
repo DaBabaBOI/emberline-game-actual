@@ -146,6 +146,8 @@ export interface GameState {
   unrestTicks: number;
   // How worn out the land is: counts up while Sustainability is below LAND.strainLevel.
   strainTicks: number;
+  // People caught in the last wildfire: where they fell and when (for the 3D scene).
+  fireVictims?: { tile: number; tick: number }[];
   // Total forest growth near the village when the game began (100% Sustainability).
   forestBaseline: number;
   soldiers: number;

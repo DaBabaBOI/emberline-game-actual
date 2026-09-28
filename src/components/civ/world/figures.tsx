@@ -16,6 +16,8 @@ export interface Agent {
   hair: string;
   phase: number;
   sitting?: boolean;
+  // 0–1: how far the figure has toppled over (fire victims).
+  fallen?: number;
 }
 
 export const SKINS = ["#f1c7a0", "#e0ac69", "#c68642", "#8d5524", "#f5d0b0"];
@@ -80,7 +82,8 @@ export function Figures({
       const bob = a.moving ? Math.abs(Math.sin(t * 9 + a.phase)) * 0.015 : 0;
       // Sitting: hips drop to the ground, legs point forward, hands reach out.
       fig.position.set(a.x, a.y + bob - (a.sitting ? 0.15 * a.scale : 0), a.z);
-      fig.rotation.set(0, a.heading, 0);
+      // Toppling pivots at the feet, forward along the way they face.
+      fig.rotation.set(((a.fallen ?? 0) * Math.PI) / 2, a.heading, 0, "YXZ");
       fig.scale.setScalar(a.scale);
       fig.updateMatrix();
 
