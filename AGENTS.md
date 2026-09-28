@@ -65,8 +65,17 @@ These were decided with the project owner. Do not change them without being aske
 - Politics = event cards with choices + simple diplomacy with AI nations.
 - "AI" in the future era means **in-game tech** (automation, data centers), not an
   AI chatbot.
-- Every game starts with one free woodcutter, and the last woodcutter can't be
-  demolished, so the player can never soft-lock with no wood.
+- In the tutorial the player builds their own woodcutter (step 2). Games that
+  skip the tutorial (or dev starts) get one free. The last woodcutter can't be
+  sold, so the player can never soft-lock with no wood.
+- **Tutorial budget:** a new game starts with exactly what the tutorial buys
+  (`tutorialBudget()`, from `TUTORIAL[].buys`) plus `AFTER_TUTORIAL_RESERVE`,
+  and the clock is held while the hand is guiding, so nobody waits. If you add
+  or change a tutorial step, fill in its `buys`.
+- **People on the map are representative:** at most 20 figures at once
+  (`MAX_FIGURES` / `figureCounts()` in `world/villagers.tsx`), roughly one per
+  three people and one per two warriors. Food use still scales with the real
+  population.
 - Buildings can be **sold** (the "Sell" tool) for a 50% refund.
 - During the tutorial the player can only build **one of each** building.
 - **Wood is scarce** in the Stone Age by design; scouting is expensive and gets

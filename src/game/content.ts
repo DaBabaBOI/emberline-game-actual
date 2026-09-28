@@ -6,6 +6,7 @@ import type {
   DifficultyId,
   EventCard,
   MeterKey,
+  Resources,
   TreeNode,
 } from "./types";
 
@@ -403,11 +404,25 @@ export const EVENTS: EventCard[] = [
 
 // Each step unlocks the buildings/tools it introduces. Until the tutorial ends
 // (or is skipped), anything not yet introduced stays locked.
-export const TUTORIAL: { text: string; done: string; unlocks: string[] }[] = [
-  { text: "Our people are cold, and without a fire they grow unhappy. Pick the Campfire from the bar below and place it on a green tile.", done: "campfire", unlocks: ["campfire"] },
-  { text: "Good! Now build a Hut so more people have shelter.", done: "hut", unlocks: ["hut"] },
-  { text: "We need food. Place a Gatherer's Camp. Berry bushes give a bonus.", done: "gatherer", unlocks: ["gatherer"] },
-  { text: "The world is hidden. Press Scout to explore new land.", done: "scout", unlocks: ["scout"] },
-  { text: "Raiders roam these lands. Build a War Camp, then train a warrior to defend us.", done: "train", unlocks: ["warcamp", "train"] },
-  { text: "Open Advancements and research Early Farming, then place Farmland.", done: "early-farming", unlocks: ["advancements", "farm"] },
+// What's left over once the tutorial is done. On top of this, a new game starts
+// with exactly what the tutorial buys (see tutorialBudget), so nobody waits.
+// Buying something that leaves less wood than this shows a "save up" warning.
+export const LOW_WOOD_AFTER_BUY = 10;
+
+// After the tutorial, how long before the first event and the first raid.
+export const GRACE_AFTER_TUTORIAL = { event: 90, raid: 150 };
+
+export const AFTER_TUTORIAL_RESERVE: Partial<Resources> = { food: 40, wood: 10 };
+
+// `buys` lists what the step pays for: building ids, "scout", "train" or an
+// advancement id. The starting resources are worked out from it.
+export const TUTORIAL: { text: string; done: string; unlocks: string[]; buys: string[] }[] = [
+  { text: "Our people are cold, and without a fire they grow unhappy. Pick the Campfire from the bar below and place it on a green tile.", done: "campfire", unlocks: ["campfire"], buys: ["campfire"] },
+  { text: "Fires burn wood, and wood is scarce. Build a Woodcutter in the forest to keep them going.", done: "woodcutter", unlocks: ["woodcutter"], buys: ["woodcutter"] },
+  { text: "Good! Now build a Hut so more people have shelter.", done: "hut", unlocks: ["hut"], buys: ["hut"] },
+  { text: "We need food. Place a Gatherer's Camp. Berry bushes give a bonus.", done: "gatherer", unlocks: ["gatherer"], buys: ["gatherer"] },
+  { text: "The world is hidden. Press Scout to explore new land.", done: "scout", unlocks: ["scout"], buys: ["scout"] },
+  { text: "Raiders roam these lands. Build a War Camp, then train a warrior to defend us.", done: "train", unlocks: ["warcamp", "train"], buys: ["warcamp", "train"] },
+  { text: "Our elders have learned a lot. Open Advancements and research Early Farming.", done: "early-farming", unlocks: ["advancements"], buys: ["early-farming"] },
+  { text: "Now we can plant grain. Place Farmland on a green tile for a steady supply of food.", done: "farm", unlocks: ["farm"], buys: ["farm"] },
 ];

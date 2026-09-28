@@ -4,9 +4,10 @@ import { useMemo, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Vector3 } from "three";
 import { Html, MapControls } from "@react-three/drei";
-import { BUILDINGS_BY_ID } from "@/game/content";
-import { DEMOLISH_TOOL, demolishError, demolishRefund, placementError } from "@/game/engine";
+import { BUILDINGS_BY_ID, LOW_WOOD_AFTER_BUY, TUTORIAL } from "@/game/content";
+import { buildingCost, DEMOLISH_TOOL, demolishError, demolishRefund, placementError } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
+import { PixelIcon } from "@/components/civ/pixel-icon";
 import { tileAnchor } from "@/components/civ/guide";
 import { useGuide } from "@/components/civ/hud/guide-overlay";
 import type { Tile } from "@/game/types";
@@ -77,6 +78,12 @@ export function WorldCanvas() {
     return { ok: true, text: `Sell ${target.name}${refund ? ` (${refund})` : ""}` };
   })();
   const Ghost = def ? MODELS[def.id] : null;
+  // Warn before a purchase that would leave the fires short of wood.
+  const woodLeft = def ? Math.floor(state.resources.wood - (buildingCost(state, def).wood ?? 0)) : null;
+  const lowWood =
+    def && !error && woodLeft !== null && woodLeft < LOW_WOOD_AFTER_BUY && state.tutorialStep >= TUTORIAL.length
+      ? `Leaves only ${woodLeft} wood. Fires need wood, so you might save up first.`
+      : null;
 
   function pick(id: number) {
     if (guideTile !== null && id !== guideTile) return;
@@ -134,8 +141,8 @@ export function WorldCanvas() {
         );
       })}
 
-      <Villagers tiles={state.tiles} population={state.population} homeTile={home} />
-      <Warriors tiles={state.tiles} soldiers={state.soldiers} homeTile={home} />
+      <Villagers tiles={state.tiles} population={state.population} soldiers={state.soldiers} homeTile={home} />
+      <Warriors tiles={state.tiles} population={state.population} soldiers={state.soldiers} homeTile={home} />
       <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} />
       <Wildlife
         tiles={state.tiles}
@@ -171,10 +178,21 @@ export function WorldCanvas() {
       {hoverTile && Ghost && (
         <group position={[hoverTile.x, tileTop(hoverTile), hoverTile.z]} scale={1.55}>
           <Ghost opacity={0.45} />
-          {error && (
+          {(error || lowWood) && (
             <Html center position={[0, 0.8, 0]} style={{ pointerEvents: "none" }}>
-              <div className="pixel-panel-dark font-pixel whitespace-nowrap px-2 py-1 text-xs">
-                {error}
+              <div
+                className={
+                  error
+                    ? "pixel-panel-dark font-pixel whitespace-nowrap px-2 py-1 text-xs"
+                    : "pixel-panel-dark font-pixel flex w-56 items-center gap-1.5 border-amber-400 px-2 py-1 text-xs text-amber-200"
+                }
+              >
+                {error ?? (
+                  <>
+                    <PixelIcon name="warning" size={14} />
+                    {lowWood}
+                  </>
+                )}
               </div>
             </Html>
           )}
