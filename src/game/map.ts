@@ -87,6 +87,7 @@ export function generateMap(seed: number): { tiles: Tile[]; startTile: number } 
         revealed: false,
         building: null,
         growth: terrain === "forest" ? 1 : 0,
+        scorch: 0,
       });
     }
   }

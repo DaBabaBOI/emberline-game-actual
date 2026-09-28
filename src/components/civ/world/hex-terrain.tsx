@@ -17,6 +17,7 @@ const TERRAIN_COLORS: Record<Terrain, string> = {
 };
 
 const FOG_HEIGHT = 0.62;
+const CHARRED = new Color("#2e2620");
 
 function jitter(id: number, salt: number) {
   const x = Math.sin(id * 127.1 + salt * 311.7) * 43758.5453;
@@ -56,6 +57,7 @@ export function HexTerrain({
       if (tile.revealed) {
         color.set(TERRAIN_COLORS[tile.terrain]);
         color.offsetHSL(0, 0, (jitter(tile.id, 1) - 0.5) * 0.06);
+        if (tile.scorch > 0) color.lerp(CHARRED, Math.min(1, tile.scorch * 1.2));
       } else {
         if (isLand(tile.terrain)) {
           color.set("#eef2f6");
