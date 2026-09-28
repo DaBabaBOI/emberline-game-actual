@@ -16,6 +16,8 @@ export interface Agent {
   hair: string;
   phase: number;
   sitting?: boolean;
+  // 0–1: how far the figure has toppled over (fire victims).
+  fallen?: number;
 }
 
 export const SKINS = ["#f1c7a0", "#e0ac69", "#c68642", "#8d5524", "#f5d0b0"];
@@ -31,10 +33,16 @@ export function Figures({
   agents,
   max,
   weapon,
+  gear,
+  colorKey = "",
 }: {
   agents: React.RefObject<Agent[]>;
   max: number;
-  weapon?: "spear" | "club";
+  weapon?: "spear" | "club" | "sword";
+  // "roman": crested bronze helmet and a big curved red shield.
+  gear?: "roman";
+  // Change this when agents' colours change so they get repainted.
+  colorKey?: string | number;
 }) {
   const torso = useRef<InstancedMesh>(null);
   const head = useRef<InstancedMesh>(null);
@@ -42,10 +50,13 @@ export function Figures({
   const legs = useRef<InstancedMesh>(null);
   const arms = useRef<InstancedMesh>(null);
   const tool = useRef<InstancedMesh>(null);
-  const colored = useRef(0);
+  const helmet = useRef<InstancedMesh>(null);
+  const crest = useRef<InstancedMesh>(null);
+  const shield = useRef<InstancedMesh>(null);
+  const colored = useRef("");
 
   useLayoutEffect(() => {
-    colored.current = -1;
+    colored.current = "";
   });
 
   useFrame(({ clock }) => {
@@ -53,7 +64,8 @@ export function Figures({
     const n = Math.min(list.length, max);
     const t = clock.elapsedTime;
 
-    if (colored.current !== n) {
+    const paintKey = `${n}|${colorKey}`;
+    if (colored.current !== paintKey) {
       const c = new Color();
       list.slice(0, n).forEach((a, i) => {
         torso.current?.setColorAt(i, c.set(a.tunic));
@@ -65,7 +77,7 @@ export function Figures({
       for (const m of [torso, head, hair, arms]) {
         if (m.current?.instanceColor) m.current.instanceColor.needsUpdate = true;
       }
-      colored.current = n;
+      colored.current = paintKey;
     }
 
     const put = (mesh: InstancedMesh | null, i: number) => {
@@ -80,7 +92,8 @@ export function Figures({
       const bob = a.moving ? Math.abs(Math.sin(t * 9 + a.phase)) * 0.015 : 0;
       // Sitting: hips drop to the ground, legs point forward, hands reach out.
       fig.position.set(a.x, a.y + bob - (a.sitting ? 0.15 * a.scale : 0), a.z);
-      fig.rotation.set(0, a.heading, 0);
+      // Toppling pivots at the feet, forward along the way they face.
+      fig.rotation.set(((a.fallen ?? 0) * Math.PI) / 2, a.heading, 0, "YXZ");
       fig.scale.setScalar(a.scale);
       fig.updateMatrix();
 
@@ -109,15 +122,26 @@ export function Figures({
       }
 
       if (weapon && tool.current) {
-        local.rotation.set(weapon === "spear" ? 0.15 : -0.6, 0, 0);
-        local.position.set(0.1, weapon === "spear" ? 0.4 : 0.34, 0.04);
+        local.rotation.set(weapon === "spear" ? 0.15 : weapon === "sword" ? -1.1 : -0.6, 0, 0);
+        local.position.set(0.1, weapon === "spear" ? 0.4 : weapon === "sword" ? 0.3 : 0.34, weapon === "sword" ? 0.08 : 0.04);
         put(tool.current, i);
+      }
+      if (gear === "roman") {
+        local.rotation.set(0, 0, 0);
+        local.scale.set(1, 1, 1);
+        local.position.set(0, 0.47, 0);
+        put(helmet.current, i);
+        local.position.set(0, 0.54, 0);
+        put(crest.current, i);
+        local.position.set(-0.1, 0.3, 0.05);
+        local.rotation.set(0, 0.25, 0);
+        put(shield.current, i);
       }
     }
 
-    for (const m of [torso, head, hair, tool]) if (m.current) m.current.count = n;
+    for (const m of [torso, head, hair, tool, helmet, crest, shield]) if (m.current) m.current.count = n;
     for (const m of [legs, arms]) if (m.current) m.current.count = n * 2;
-    for (const m of [torso, head, hair, legs, arms, tool]) {
+    for (const m of [torso, head, hair, legs, arms, tool, helmet, crest, shield]) {
       if (m.current) m.current.instanceMatrix.needsUpdate = true;
     }
   });
@@ -149,11 +173,32 @@ export function Figures({
         <instancedMesh ref={tool} args={[undefined, undefined, max]} {...common}>
           {weapon === "spear" ? (
             <cylinderGeometry args={[0.008, 0.008, 0.6, 5]} />
+          ) : weapon === "sword" ? (
+            <boxGeometry args={[0.015, 0.2, 0.03]} />
           ) : (
             <cylinderGeometry args={[0.03, 0.014, 0.22, 6]} />
           )}
-          <meshStandardMaterial color={weapon === "spear" ? "#8a6a45" : "#5b3b22"} />
+          <meshStandardMaterial
+            color={weapon === "spear" ? "#8a6a45" : weapon === "sword" ? "#c9ccd1" : "#5b3b22"}
+            metalness={weapon === "sword" ? 0.7 : 0.1}
+          />
         </instancedMesh>
+      )}
+      {gear === "roman" && (
+        <>
+          <instancedMesh ref={helmet} args={[undefined, undefined, max]} {...common}>
+            <sphereGeometry args={[0.066, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2]} />
+            <meshStandardMaterial color="#c89b3c" metalness={0.6} roughness={0.35} />
+          </instancedMesh>
+          <instancedMesh ref={crest} args={[undefined, undefined, max]} {...common}>
+            <boxGeometry args={[0.02, 0.05, 0.1]} />
+            <meshStandardMaterial color="#d62d2d" />
+          </instancedMesh>
+          <instancedMesh ref={shield} args={[undefined, undefined, max]} {...common}>
+            <boxGeometry args={[0.025, 0.24, 0.15]} />
+            <meshStandardMaterial color="#a8201a" />
+          </instancedMesh>
+        </>
       )}
     </group>
   );

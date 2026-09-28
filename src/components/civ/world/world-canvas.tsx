@@ -4,8 +4,20 @@ import { useMemo, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Vector3 } from "three";
 import { Html, MapControls } from "@react-three/drei";
-import { BUILDINGS_BY_ID, LOW_WOOD_AFTER_BUY, TUTORIAL } from "@/game/content";
-import { buildingCost, DEMOLISH_TOOL, landStrain, demolishError, demolishRefund, placementError } from "@/game/engine";
+import { BUILDINGS_BY_ID, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL } from "@/game/content";
+import {
+  buildingCost,
+  DEMOLISH_TOOL,
+  isLit,
+  landStrain,
+  litFires,
+  demolishError,
+  demolishRefund,
+  PLANT_TOOL,
+  plantError,
+  placementError,
+} from "@/game/engine";
+import { BuildingInfo } from "./building-info";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { tileAnchor } from "@/components/civ/guide";
@@ -13,7 +25,7 @@ import { useGuide } from "@/components/civ/hud/guide-overlay";
 import type { Tile } from "@/game/types";
 import { BiomeDetails, Deposits, Forests, HexTerrain, Mountains, tileTop } from "./hex-terrain";
 import { MODELS } from "./building-models";
-import { Raiders, Villagers, Warriors } from "./villagers";
+import { BattleScene, FireVictims, Raiders, Villagers, Warriors } from "./villagers";
 import { Wildlife } from "./wildlife";
 import { CampfireSmoke, Haze, Wildfire } from "./atmosphere";
 
@@ -52,19 +64,26 @@ function GuideAnchor({ tile }: { tile: Tile | null }) {
 }
 
 export function WorldCanvas() {
-  const { state, dispatch, selected, setSelected } = useGame();
+  const { state, dispatch, selected, setSelected, panel } = useGame();
   const [rawHovered, setHovered] = useState<number | null>(null);
+  // Tall phone screens start further out so more of the island fits.
+  const [portrait] = useState(() => typeof window !== "undefined" && window.innerHeight > window.innerWidth);
+  // The building whose info panel is open (click a building with no tool picked).
+  const [inspected, setInspected] = useState<number | null>(null);
   const guide = useGuide();
   const guideTile = guide.target?.kind === "tile" ? guide.target.tileId : null;
   // While the tutorial points at a tile, that is the only one you can build on.
-  const hovered = guideTile === null || rawHovered === guideTile ? rawHovered : null;
+  // No map preview while a menu like Advancements covers the map.
+  const hovered = panel ? null : guideTile === null || rawHovered === guideTile ? rawHovered : null;
   const home = state.tiles[state.startTile];
   const target = useMemo<[number, number, number]>(() => [home.x, 0, home.z], [home.x, home.z]);
 
   const buildings = useMemo(() => state.tiles.filter((t) => t.building), [state.tiles]);
   const hoverTile = hovered !== null ? state.tiles[hovered] : null;
   const demolishing = selected === DEMOLISH_TOOL;
-  const def = selected && !demolishing ? BUILDINGS_BY_ID[selected] : null;
+  const planting = selected === PLANT_TOOL;
+  const def = selected && !demolishing && !planting ? BUILDINGS_BY_ID[selected] : null;
+  const plantNote = planting && hoverTile ? plantError(state, hoverTile) ?? null : null;
   const error = hoverTile && def ? placementError(state, hoverTile, def) : null;
   const demolishNote = (() => {
     if (!demolishing || !hoverTile) return null;
@@ -85,27 +104,58 @@ export function WorldCanvas() {
       ? `Leaves only ${woodLeft} wood. Fires need wood, so you might save up first.`
       : null;
 
-  function pick(id: number) {
+  const burning = useMemo(() => litFires(state), [state]);
+  // A battle is played out for a few ticks after it happens.
+  const battleShowing = !!state.battle && state.tick - state.battle.tick < 7;
+  const burningIds = burning.map((t) => t.id);
+  const outFires = buildings.filter((t) => t.building === "campfire" && !isLit(state, t));
+
+  // On a phone there is no hover: the first tap previews, the second tap builds.
+  function pick(id: number, touch = false) {
     if (guideTile !== null && id !== guideTile) return;
+    const tile = state.tiles[id];
+    if (touch && selected && rawHovered !== id) {
+      setHovered(id);
+      return;
+    }
+    if (!selected && tile.building === "campfire" && !isLit(state, tile)) {
+      dispatch({ type: "relight", tileId: id });
+      return;
+    }
+    if (!selected) {
+      setInspected(tile.building ? id : null);
+      return;
+    }
+    if (planting) {
+      dispatch({ type: "plant", tileId: id });
+      return;
+    }
     if (demolishing) {
       dispatch({ type: "demolish", tileId: id });
       return;
     }
     if (!selected) return;
     dispatch({ type: "place", tileId: id, buildingId: selected });
+    // After a two-tap build on a phone, drop the preview so no stale label lingers.
+    if (touch) setHovered(null);
   }
 
   return (
     <Canvas
       shadows
-      camera={{ position: [home.x, 18, home.z + 16], fov: 38, near: 0.5, far: 400 }}
+      camera={{
+        position: portrait ? [home.x, 30, home.z + 27] : [home.x, 18, home.z + 16],
+        fov: 38,
+        near: 0.5,
+        far: 400,
+      }}
       onContextMenu={(e) => {
         e.preventDefault();
         setSelected(null);
       }}
     >
       <color attach="background" args={["#a8dcf5"]} />
-      <Haze fires={buildings.filter((t) => t.building === "campfire").length} />
+      <Haze fires={burning.length + 2 * buildings.filter((t) => t.building === "smithy").length} />
       <hemisphereLight args={["#d6f1ff", "#6f8f4e", 0.75]} />
       <directionalLight
         position={[home.x + 25, 40, home.z + 15]}
@@ -129,7 +179,7 @@ export function WorldCanvas() {
 
       <HexTerrain tiles={state.tiles} home={home} wear={landStrain(state)} onHover={setHovered} onPick={pick} />
       <Forests tiles={state.tiles} />
-      <Mountains tiles={state.tiles} />
+      <Mountains tiles={state.tiles} onHover={setHovered} onPick={pick} />
       <Deposits tiles={state.tiles} />
       <BiomeDetails tiles={state.tiles} />
 
@@ -137,21 +187,56 @@ export function WorldCanvas() {
         const Model = MODELS[t.building!];
         return (
           <group key={t.id} position={[t.x, t.height, t.z]} rotation={[0, (t.id % 6) * (Math.PI / 3), 0]} scale={1.55}>
-            <Model opacity={1} />
+            <Model opacity={1} lit={t.building !== "campfire" || burningIds.includes(t.id)} />
           </group>
         );
       })}
 
-      <Villagers tiles={state.tiles} population={state.population} soldiers={state.soldiers} homeTile={home} />
-      <Warriors tiles={state.tiles} population={state.population} soldiers={state.soldiers} homeTile={home} />
+      <Villagers
+        tiles={state.tiles}
+        population={state.population}
+        soldiers={state.soldiers}
+        homeTile={home}
+        litFires={burningIds}
+        sick={state.population > 0 ? (state.sick ?? 0) / state.population : 0}
+      />
+      <Warriors
+        tiles={state.tiles}
+        population={state.population}
+        soldiers={state.soldiers}
+        homeTile={home}
+        rally={state.raid ? state.tiles[state.raid.meetTile ?? state.raid.targetTile] : null}
+        hidden={battleShowing}
+      />
+      <BattleScene tiles={state.tiles} battle={battleShowing ? state.battle ?? null : null} homeTile={home} />
       <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} />
       <Wildlife
         tiles={state.tiles}
         homeTile={home}
         onHunt={(animal) => dispatch({ type: "hunt", animal })}
       />
-      <CampfireSmoke tiles={state.tiles} />
+      <CampfireSmoke fires={[...burning, ...buildings.filter((t) => t.building === "smithy")]} />
+      {!guide.target &&
+        outFires.map((t) => (
+          <Html zIndexRange={[15, 0]} key={t.id} center position={[t.x, tileTop(t) + 1.3, t.z]}>
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                dispatch({ type: "relight", tileId: t.id });
+              }}
+              disabled={state.resources.wood < RELIGHT_WOOD}
+              className="pixel-btn font-pixel flex items-center gap-1 whitespace-nowrap bg-amber-400 px-2 py-0.5 text-xs text-[#2b2119] disabled:opacity-50"
+            >
+              <PixelIcon name="flame" size={12} />
+              Relight · <span className="font-num">{RELIGHT_WOOD}</span> wood
+            </button>
+          </Html>
+        ))}
       <Wildfire tiles={state.tiles} />
+      <FireVictims tiles={state.tiles} victims={state.fireVictims ?? []} />
 
       {hoverTile && (
         <HexOutline
@@ -159,7 +244,11 @@ export function WorldCanvas() {
           y={tileTop(hoverTile)}
           z={hoverTile.z}
           color={
-            demolishNote
+            planting
+              ? plantNote
+                ? "#ef4444"
+                : "#22c55e"
+              : demolishNote
               ? demolishNote.ok
                 ? "#f59e0b"
                 : "#ef4444"
@@ -172,32 +261,57 @@ export function WorldCanvas() {
         />
       )}
       {hoverTile && demolishNote && hoverTile.building && (
-        <Html center position={[hoverTile.x, tileTop(hoverTile) + 1.2, hoverTile.z]} style={{ pointerEvents: "none" }}>
+        <Html zIndexRange={[15, 0]} center position={[hoverTile.x, tileTop(hoverTile) + 1.2, hoverTile.z]} style={{ pointerEvents: "none" }}>
           <div className="pixel-panel-dark font-pixel whitespace-nowrap px-2 py-1 text-xs">{demolishNote.text}</div>
         </Html>
       )}
       {hoverTile && Ghost && (
         <group position={[hoverTile.x, tileTop(hoverTile), hoverTile.z]} scale={1.55}>
           <Ghost opacity={0.45} />
-          {(error || lowWood) && (
-            <Html center position={[0, 0.8, 0]} style={{ pointerEvents: "none" }}>
-              <div
-                className={
-                  error
-                    ? "pixel-panel-dark font-pixel whitespace-nowrap px-2 py-1 text-xs"
-                    : "pixel-panel-dark font-pixel flex w-56 items-center gap-1.5 border-amber-400 px-2 py-1 text-xs text-amber-200"
-                }
-              >
-                {error ?? (
-                  <>
-                    <PixelIcon name="warning" size={14} />
+          <Html zIndexRange={[15, 0]} center position={[0, 1.1, 0]} style={{ pointerEvents: "none" }}>
+            {error ? (
+              <div className="pixel-panel-dark font-pixel whitespace-nowrap px-2 py-1 text-xs">{error}</div>
+            ) : (
+              // The trade-off of this building, right where you're about to place it.
+              <div className="pixel-panel-dark font-pixel flex w-60 flex-col gap-1 px-2 py-1.5 text-xs">
+                <span className="flex items-start gap-1.5 text-emerald-300">
+                  <span className="font-num">+</span>
+                  {def!.gain}
+                </span>
+                <span className="flex items-start gap-1.5 text-red-300">
+                  <PixelIcon name={def!.landImpact ? "stump" : "leaf"} size={12} />
+                  {def!.landCost}
+                </span>
+                {lowWood && (
+                  <span className="flex items-start gap-1.5 text-amber-200">
+                    <PixelIcon name="warning" size={12} />
                     {lowWood}
-                  </>
+                  </span>
                 )}
               </div>
-            </Html>
-          )}
+            )}
+          </Html>
         </group>
+      )}
+
+      {hoverTile && planting && (
+        <Html zIndexRange={[15, 0]} center position={[hoverTile.x, tileTop(hoverTile) + 1.1, hoverTile.z]} style={{ pointerEvents: "none" }}>
+          <div className="pixel-panel-dark font-pixel w-56 px-2 py-1 text-xs">
+            {plantNote ?? (
+              <span className="flex items-start gap-1.5 text-emerald-300">
+                <PixelIcon name="sapling" size={12} />
+                {hoverTile.terrain === "forest"
+                  ? "Plant saplings (−4 food): this thinned forest grows back faster."
+                  : "Plant saplings (−4 food): a new forest grows here and Sustainability rises."}
+              </span>
+            )}
+          </div>
+        </Html>
+      )}
+      {inspected !== null && state.tiles[inspected]?.building && !selected && (
+        <Html zIndexRange={[15, 0]} center position={[state.tiles[inspected].x, tileTop(state.tiles[inspected]) + 2.2, state.tiles[inspected].z]}>
+          <BuildingInfo state={state} tileId={inspected} dispatch={dispatch} onClose={() => setInspected(null)} />
+        </Html>
       )}
 
       <GuideAnchor tile={guideTile === null ? null : state.tiles[guideTile]} />

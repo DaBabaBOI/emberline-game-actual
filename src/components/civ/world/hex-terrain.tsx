@@ -50,9 +50,11 @@ export function HexTerrain({
   // 0–1: how worn out the land around home is (dries the grass).
   wear?: number;
   onHover: (id: number | null) => void;
-  onPick: (id: number) => void;
+  // `touch` is true when the tap came from a finger (no hover on phones).
+  onPick: (id: number, touch: boolean) => void;
 }) {
   const ref = useRef<InstancedMesh>(null);
+  const lastPointer = useRef("mouse");
   const geometry = useMemo(() => new CylinderGeometry(0.985, 0.985, 1, 6, 1), []);
 
   useLayoutEffect(() => {
@@ -96,14 +98,21 @@ export function HexTerrain({
       args={[geometry, undefined, tiles.length]}
       receiveShadow
       castShadow
+      onPointerDown={(e: ThreeEvent<PointerEvent>) => {
+        lastPointer.current = e.pointerType;
+      }}
       onPointerMove={(e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
+        // Fingers dragging the map shouldn't move the preview around.
+        if (e.pointerType === "touch") return;
         onHover(e.instanceId ?? null);
       }}
-      onPointerOut={() => onHover(null)}
+      onPointerOut={(e: ThreeEvent<PointerEvent>) => {
+        if (e.pointerType !== "touch") onHover(null);
+      }}
       onClick={(e: ThreeEvent<MouseEvent>) => {
         if (e.delta > 6 || e.instanceId === undefined) return;
-        onPick(e.instanceId);
+        onPick(e.instanceId, lastPointer.current === "touch");
       }}
     >
       <meshStandardMaterial roughness={0.85} flatShading />
@@ -169,25 +178,61 @@ export function Forests({ tiles }: { tiles: Tile[] }) {
   );
 }
 
-export function Mountains({ tiles }: { tiles: Tile[] }) {
+// The mountain is the peak itself: a steep six-sided cone that fills the whole
+// hex, with a snow cap and sometimes a smaller shoulder peak beside it.
+export function Mountains({
+  tiles,
+  onHover,
+  onPick,
+}: {
+  tiles: Tile[];
+  onHover?: (id: number | null) => void;
+  onPick?: (id: number, touch: boolean) => void;
+}) {
   const peaks = useMemo(
     () => tiles.filter((t) => t.revealed && t.terrain === "mountain" && !t.building),
     [tiles],
   );
   return (
     <group>
-      {peaks.map((t) => (
-        <group key={t.id} position={[t.x, t.height, t.z]} rotation={[0, jitter(t.id, 4) * 3, 0]}>
-          <mesh castShadow position={[0, 0.35, 0]} raycast={() => null}>
-            <coneGeometry args={[0.6, 0.75, 5]} />
-            <meshStandardMaterial color="#8f8a84" flatShading />
-          </mesh>
-          <mesh position={[0, 0.63, 0]} raycast={() => null}>
-            <coneGeometry args={[0.27, 0.25, 5]} />
-            <meshStandardMaterial color="#f4f6f8" flatShading />
-          </mesh>
-        </group>
-      ))}
+      {peaks.map((t) => {
+        const h = 1.7 + jitter(t.id, 4) * 0.9;
+        const cap = h * 0.28;
+        const shoulder = jitter(t.id, 5) > 0.45;
+        return (
+          <group
+            key={t.id}
+            position={[t.x, t.height, t.z]}
+            onPointerMove={(e) => {
+              e.stopPropagation();
+              onHover?.(t.id);
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onPick?.(t.id, e.nativeEvent instanceof PointerEvent && e.nativeEvent.pointerType === "touch");
+            }}
+          >
+            <mesh castShadow receiveShadow position={[0, h / 2, 0]}>
+              <coneGeometry args={[0.97, h, 6]} />
+              <meshStandardMaterial color="#8f8a84" flatShading />
+            </mesh>
+            <mesh position={[0, h - cap / 2 + 0.01, 0]} raycast={() => null}>
+              <coneGeometry args={[(0.97 * cap) / h + 0.02, cap, 6]} />
+              <meshStandardMaterial color="#f4f6f8" flatShading />
+            </mesh>
+            {shoulder && (
+              <mesh
+                castShadow
+                position={[0.35 * Math.cos(jitter(t.id, 6) * 6), h * 0.3, 0.35 * Math.sin(jitter(t.id, 6) * 6)]}
+                raycast={() => null}
+              >
+                <coneGeometry args={[0.5, h * 0.6, 5]} />
+                <meshStandardMaterial color="#7f7a74" flatShading />
+              </mesh>
+            )}
+          </group>
+        );
+      })}
     </group>
   );
 }

@@ -4,9 +4,10 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { hexDistance } from "@/game/hex";
 import { isLand } from "@/game/map";
-import type { Raid, Tile } from "@/game/types";
+import type { Battle, Raid, Tile } from "@/game/types";
 import { Figures, HAIRS, SKINS, type Agent } from "./figures";
 import { makeGround, type Ground } from "./ground";
+import { tileTop } from "./hex-terrain";
 
 const TUNICS = ["#b5651d", "#8e5a3a", "#a0522d", "#6b8e23", "#c2956b", "#9c6b3f"];
 
@@ -18,7 +19,12 @@ interface Walker extends Agent {
   wait: number;
   child: boolean;
   sitAt: Tile | null;
+  // What they look like and how fast they walk when healthy.
+  baseTunic?: string;
+  baseSpeed?: number;
 }
+
+const SICK_TUNIC = "#9db38a";
 
 function hash(n: number) {
   const x = Math.sin(n * 91.7) * 43758.5453;
@@ -129,13 +135,20 @@ export function Villagers({
   population,
   soldiers,
   homeTile,
+  litFires,
+  sick = 0,
 }: {
   tiles: Tile[];
   population: number;
   soldiers: number;
   homeTile: Tile;
+  // Share of the tribe that is sick (0–1): that many figures look ill and shuffle.
+  sick?: number;
+  // Tile ids of campfires that are burning; people only gather at those.
+  litFires: number[];
 }) {
   const walkers = useRef<Walker[]>([]);
+  const litKey = litFires.join(",");
   const spots = useMemo(() => {
     const built = tiles.filter((t) => t.building && t.building !== "warcamp");
     const wander = tiles.filter(
@@ -146,12 +159,13 @@ export function Villagers({
       wander: wander.length ? wander : [homeTile],
       school: built.filter((t) => t.building === "elder"),
       fields: built.filter((t) => t.building === "farm"),
-      fires: built.filter((t) => t.building === "campfire"),
+      fires: built.filter((t) => t.building === "campfire" && litKey.split(",").includes(String(t.id))),
     };
-  }, [tiles, homeTile]);
+  }, [tiles, homeTile, litKey]);
 
   const ground = useMemo(() => makeGround(tiles), [tiles]);
   const count = figureCounts(population, soldiers).villagers;
+  const sickFigures = Math.min(count, Math.round(count * sick + (sick > 0 ? 0.49 : 0)));
 
   useFrame((_, delta) => {
     const list = walkers.current;
@@ -167,6 +181,13 @@ export function Villagers({
       );
     }
     list.length = count;
+    list.forEach((w, i) => {
+      w.baseTunic ??= w.tunic;
+      w.baseSpeed ??= w.speed;
+      const ill = i < sickFigures;
+      w.tunic = ill ? SICK_TUNIC : w.baseTunic;
+      w.speed = ill ? w.baseSpeed * 0.35 : w.baseSpeed;
+    });
     const dt = Math.min(delta, 0.1);
     for (const w of list) {
       stepWalker(w, dt, ground, () => {
@@ -178,7 +199,7 @@ export function Villagers({
     }
   });
 
-  return <Figures agents={walkers} max={MAX_FIGURES} />;
+  return <Figures agents={walkers} max={MAX_FIGURES} colorKey={sickFigures} />;
 }
 
 export function Warriors({
@@ -186,11 +207,17 @@ export function Warriors({
   population,
   soldiers,
   homeTile,
+  rally,
+  hidden,
 }: {
   tiles: Tile[];
   population: number;
   soldiers: number;
   homeTile: Tile;
+  // While raiders approach, warriors march to this tile to meet them.
+  rally?: Tile | null;
+  // Hidden while a battle is being played out (BattleScene draws them).
+  hidden?: boolean;
 }) {
   const walkers = useRef<Walker[]>([]);
   const ground = useMemo(() => makeGround(tiles), [tiles]);
@@ -210,9 +237,16 @@ export function Warriors({
     }
     list.length = count;
     const dt = Math.min(delta, 0.1);
-    for (const w of list) stepWalker(w, dt, ground, () => pick(camps));
+    for (const w of list) {
+      if (rally) {
+        w.speed = 0.9;
+        w.wait = 0;
+      }
+      stepWalker(w, dt, ground, () => rally ?? pick(camps));
+    }
   });
 
+  if (hidden) return null;
   return <Figures agents={walkers} max={MAX_FIGURES} weapon="spear" />;
 }
 
@@ -227,15 +261,16 @@ export function Raiders({ tiles, raid, tick }: { tiles: Tile[]; raid: Raid | nul
       return;
     }
     const from = tiles[raid.fromTile];
-    const to = tiles[raid.targetTile];
+    const to = tiles[raid.meetTile ?? raid.targetTile];
     const goal = Math.min(1, (tick - raid.startTick) / (raid.arriveTick - raid.startTick));
     progress.current += (goal - progress.current) * Math.min(1, delta * 1.5);
     if (goal === 0) progress.current = 0;
     const p = progress.current;
     const heading = Math.atan2(to.x - from.x, to.z - from.z);
     const list = agents.current;
-    list.length = raid.strength;
-    for (let i = 0; i < raid.strength; i++) {
+    const count = Math.min(30, raid.legion ?? raid.strength);
+    list.length = count;
+    for (let i = 0; i < count; i++) {
       const offX = (hash(i + 1) - 0.5) * 1.2;
       const offZ = (hash(i + 2) - 0.5) * 1.2;
       const x = from.x + (to.x - from.x) * p + offX;
@@ -248,7 +283,7 @@ export function Raiders({ tiles, raid, tick }: { tiles: Tile[]; raid: Raid | nul
         heading,
         moving: p < 0.98,
         scale: 1.4,
-        tunic: "#9b1c1c",
+        tunic: raid.roman ? "#b3261e" : "#9b1c1c",
         skin: SKINS[i % SKINS.length],
         hair: "#1a1a1a",
         phase: i * 1.7,
@@ -256,5 +291,168 @@ export function Raiders({ tiles, raid, tick }: { tiles: Tile[]; raid: Raid | nul
     }
   });
 
-  return <Figures agents={agents} max={30} weapon="club" />;
+  return raid?.roman ? (
+    <Figures agents={agents} max={30} weapon="sword" gear="roman" />
+  ) : (
+    <Figures agents={agents} max={30} weapon="club" />
+  );
+}
+
+// People caught by a wildfire: they stagger, fall over in the flames, and lie
+// there until that patch stops burning.
+export function FireVictims({ tiles, victims }: { tiles: Tile[]; victims: { tile: number; tick: number }[] }) {
+  const agents = useRef<Agent[]>([]);
+  const started = useRef<{ key: string; at: number }>({ key: "", at: 0 });
+  const burning = victims.filter((v) => (tiles[v.tile]?.scorch ?? 0) > 0.8);
+  const key = burning.map((v, i) => `${v.tile}@${v.tick}#${i}`).join(",");
+
+  useFrame(({ clock }, delta) => {
+    const now = clock.elapsedTime;
+    if (started.current.key !== key) {
+      started.current = { key, at: now };
+      agents.current = burning.map((v, i) => {
+        const t = tiles[v.tile];
+        const a = hash(v.tile * 7 + i) * Math.PI * 2;
+        return {
+          x: t.x + Math.cos(a) * 0.35,
+          y: tileTop(t),
+          z: t.z + Math.sin(a) * 0.35,
+          heading: hash(v.tile + i * 3) * Math.PI * 2,
+          moving: true,
+          scale: 1.35,
+          tunic: TUNICS[i % TUNICS.length],
+          skin: SKINS[Math.floor(hash(i + 3) * SKINS.length)],
+          hair: HAIRS[Math.floor(hash(i + 7) * HAIRS.length)],
+          phase: i,
+          fallen: 0,
+        };
+      });
+    }
+    const age = now - started.current.at;
+    agents.current.forEach((a, i) => {
+      const t = age - i * 0.3;
+      if (t < 1.1) {
+        // Stagger a few steps.
+        a.moving = true;
+        a.x += Math.sin(a.heading) * 0.25 * Math.min(delta, 0.1);
+        a.z += Math.cos(a.heading) * 0.25 * Math.min(delta, 0.1);
+      } else {
+        a.moving = false;
+        a.fallen = Math.min(1, (t - 1.1) / 0.45);
+      }
+    });
+  });
+
+  if (!burning.length) return null;
+  return <Figures agents={agents} max={6} />;
+}
+
+// A fight with raiders, played out where the warriors met them: two lines
+// clash, the fallen topple over one by one, then the winners move on (raiders
+// flee to their boats, or march on the village if they won).
+export function BattleScene({ tiles, battle, homeTile }: { tiles: Tile[]; battle: Battle | null; homeTile: Tile }) {
+  const warriors = useRef<Agent[]>([]);
+  const raiders = useRef<Agent[]>([]);
+  const started = useRef<{ key: string; at: number }>({ key: "", at: 0 });
+  const key = battle ? `${battle.tick}@${battle.tile}` : "";
+
+  useFrame(({ clock }, delta) => {
+    const now = clock.elapsedTime;
+    if (!battle) {
+      warriors.current = [];
+      raiders.current = [];
+      return;
+    }
+    const at = tiles[battle.tile];
+    const from = tiles[battle.fromTile];
+    // Unit vector from the shore towards the village, and one across it.
+    const len = Math.hypot(homeTile.x - from.x, homeTile.z - from.z) || 1;
+    const dx = (homeTile.x - from.x) / len;
+    const dz = (homeTile.z - from.z) / len;
+    const px = -dz;
+    const pz = dx;
+    const y = tileTop(at);
+
+    if (started.current.key !== key) {
+      started.current = { key, at: now };
+      const nW = Math.min(battle.warriors, 8);
+      const nR = Math.min(battle.raiders, 10);
+      const lostW = battle.warriors ? Math.round((nW * battle.warriorsLost) / battle.warriors) : 0;
+      const lostR = Math.round((nR * battle.raidersLost) / Math.max(1, battle.raiders));
+      const line = (n: number, lost: number, side: number, look: Partial<Agent>) =>
+        Array.from({ length: n }, (_, i) => {
+          const across = (i - (n - 1) / 2) * 0.28;
+          return {
+            x: at.x + dx * 0.3 * side + px * across,
+            y,
+            z: at.z + dz * 0.3 * side + pz * across,
+            heading: Math.atan2(-dx * side, -dz * side),
+            moving: true,
+            scale: 1.4,
+            skin: SKINS[(i + (side > 0 ? 0 : 2)) % SKINS.length],
+            hair: "#1a1a1a",
+            phase: i * 1.3,
+            fallen: 0,
+            // Every other fighter along the line falls, until the losses are covered.
+            dies: i % 2 === 0 ? i / 2 < lost : Math.floor(i / 2) < lost - Math.ceil(n / 2),
+            order: i,
+            ...look,
+          } as Agent & { dies: boolean; order: number };
+        });
+      warriors.current = line(nW, lostW, 1, { tunic: "#5b6f8a" });
+      raiders.current = line(nR, lostR, -1, { tunic: battle.roman ? "#b3261e" : "#9b1c1c" });
+    }
+
+    const age = now - started.current.at;
+    if (age > 11) {
+      warriors.current = [];
+      raiders.current = [];
+      return;
+    }
+    const dt = Math.min(delta, 0.1);
+    const step = (list: Agent[], side: number) => {
+      let falling = 0;
+      for (const raw of list) {
+        const a = raw as Agent & { dies: boolean; order: number };
+        if (a.dies) {
+          const fallAt = 0.9 + falling * 0.35;
+          falling++;
+          if (age > fallAt) {
+            a.moving = false;
+            a.fallen = Math.min(1, (age - fallAt) / 0.4);
+            continue;
+          }
+        }
+        if (age < 3) {
+          // Lunge back and forth at the enemy line.
+          const lunge = Math.sin(age * 9 + a.phase) * 0.012;
+          a.x += dx * lunge * -side;
+          a.z += dz * lunge * -side;
+          a.moving = true;
+        } else {
+          // Warriors head home; raiders flee to the boats, or push on if they won.
+          const dir = side > 0 ? 1 : battle.won ? -1 : 1;
+          const speed = side < 0 && battle.won ? 0.7 : 0.4;
+          a.x += dx * dir * speed * dt;
+          a.z += dz * dir * speed * dt;
+          a.heading = Math.atan2(dx * dir, dz * dir);
+          a.moving = true;
+        }
+      }
+    };
+    step(warriors.current, 1);
+    step(raiders.current, -1);
+  });
+
+  if (!battle) return null;
+  return (
+    <>
+      <Figures agents={warriors} max={8} weapon="spear" />
+      {battle.roman ? (
+        <Figures agents={raiders} max={10} weapon="sword" gear="roman" />
+      ) : (
+        <Figures agents={raiders} max={10} weapon="club" />
+      )}
+    </>
+  );
 }

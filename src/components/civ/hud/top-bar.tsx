@@ -32,25 +32,28 @@ export function TopBar() {
   const low = new Set(warnings(state).map((w) => w.id));
 
   return (
-    <div className="pointer-events-auto absolute inset-x-0 top-3 flex justify-center px-3">
-      <div className="pixel-panel-dark font-pixel flex max-w-full items-center gap-4 overflow-x-auto px-4 py-1.5 text-sm">
+    <div className="pointer-events-auto absolute inset-x-0 top-2 flex justify-center px-2 md:top-3 md:px-3">
+      <div className="pixel-panel-dark font-pixel flex max-w-full flex-wrap items-center justify-center gap-x-3 gap-y-1 px-2 py-1 text-xs md:flex-nowrap md:gap-4 md:px-4 md:py-1.5 md:text-sm">
         <Link href="/" className="font-semibold text-amber-300" title="Back to the home page">
           ◀
         </Link>
         <div className="flex flex-col leading-tight">
+          <span className="max-w-40 truncate text-xs font-semibold text-white" title="Your people">
+            {state.nation ?? "The Emberfolk"}
+          </span>
           <span className="text-[11px] uppercase tracking-wide text-amber-300">{era.name}</span>
           <span className="font-num text-base">{formatYear(state.year)}</span>
         </div>
-        <span className="h-6 w-px bg-white/20" />
+        <span className="hidden h-6 w-px bg-white/20 md:block" />
         <Chip icon="person" value={Math.floor(state.population).toLocaleString()} title="Population" />
         <Chip icon="coin" value={Math.floor(r.currency).toLocaleString()} title={era.currency} />
         <Chip icon="sword" value={state.soldiers.toString()} title="Warriors" />
-        <span className="h-6 w-px bg-white/20" />
+        <span className="hidden h-6 w-px bg-white/20 md:block" />
         <Chip icon="meat" value={Math.floor(r.food).toString()} title="Food stored" low={low.has("food") || low.has("famine")} />
         <Chip icon="log" value={Math.floor(r.wood).toString()} title="Wood" low={low.has("wood")} />
         <Chip icon="rock" value={Math.floor(r.stone).toString()} title="Stone" />
         <Chip icon="bulb" value={Math.floor(r.knowledge).toString()} title="Knowledge" />
-        <span className="h-6 w-px bg-white/20" />
+        <span className="hidden h-6 w-px bg-white/20 md:block" />
         <div className="flex gap-1">
           {SPEEDS.map((s) => (
             <button

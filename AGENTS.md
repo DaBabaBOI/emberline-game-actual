@@ -63,10 +63,18 @@ These were decided with the project owner. Do not change them without being aske
   Culture & Trade). Knowledge comes from literacy, goals, exploration and trade.
 - Secret goals show as locked `???` slots and give big bonuses.
 - Politics = event cards with choices + simple diplomacy with AI nations.
+- **Event cards are trade-offs** (`EVENTS`): every choice gains something and
+  costs something, and each card has a `realWorld` line linking it to today.
+  Keep those lines modest and general, with no statistics. Effects available:
+  resources, population, happiness, sustainability, burn, raidSooner,
+  clearForest, protectForest (woodcutters never cut protected tiles),
+  sickness (a chance) and gamble (rolled when chosen).
 - "AI" in the future era means **in-game tech** (automation, data centers), not an
   AI chatbot.
-- In the tutorial the player builds their own woodcutter (step 2). Games that
-  skip the tutorial (or dev starts) get one free. The last woodcutter can't be
+- In the tutorial the player builds their own woodcutter (step 2). Skipping
+  the tutorial gives the basics it would have built (woodcutter, lit campfire,
+  gatherer); dev starts get a woodcutter and a campfire. Unrest can't start
+  during the calm period after the tutorial. The last woodcutter can't be
   sold, so the player can never soft-lock with no wood.
 - **Tutorial budget:** a new game starts with exactly what the tutorial buys
   (`tutorialBudget()`, from `TUTORIAL[].buys`) plus `AFTER_TUTORIAL_RESERVE`,
@@ -78,6 +86,26 @@ These were decided with the project owner. Do not change them without being aske
   population.
 - Buildings can be **sold** (the "Sell" tool) for a 50% refund.
 - During the tutorial the player can only build **one of each** building.
+- **Trade-offs are the point of the game. Always show them.** Every building
+  has `gain`, `landCost` and `landImpact` (0–3 stumps on its card); the
+  placement preview shows the trade-off. Clicking the Sustainability meter
+  shows `sustainabilityBreakdown()` (every part pushing it down or up) and the
+  trend over the last minute. A new building or mechanic that affects the land
+  must add its own line to the breakdown and its own gain/cost text.
+- **Sustainable alternatives exist for the big choices.** Clicking a building
+  opens its info panel (`world/building-info.tsx`). Woodcutters can
+  **clear-cut** (full wood, strips the forest) or log **selectively** (half the
+  wood, only trees above `SELECTIVE_FLOOR`, the forest lasts). The **Plant**
+  tool (`PLANT_TOOL`, `PLANT_COST`) turns grass/steppe into young forest or
+  helps thinned forest regrow. Keep offering a slower-but-lasting option next
+  to every fast-but-damaging one.
+- **Elder lessons** (`LESSONS` in content.ts, `lessonDue` in engine.ts): when
+  something happens in play (the forest shrinks, food rots, smoke builds up,
+  sickness in crowded huts, the land is exhausted, the player plants trees…),
+  Elder Ama explains the lesson and links it to a real UN SDG target. One at a
+  time, `LESSON_GAP` apart, each only once, never during the tutorial. Keep
+  the facts modest and general, with no statistics. New mechanics that teach
+  something should get a lesson.
 - **Sustainability = land health** (`computeMeters`): mostly the share of
   forest still standing within `LAND.radius` of the start (`forestCover`), minus
   a little for campfire smoke, quarries and fields. Woodcutters really fell the
@@ -93,12 +121,27 @@ These were decided with the project owner. Do not change them without being aske
   **marsh** (gatherers only), beach, hills, mountains. The Silk Steppe island is
   mostly steppe.
 - Food use scales with people (`FOOD_PER_PERSON`, `FOOD_PER_WARRIOR`); the food
-  meter mostly measures "do we make enough for everyone", so it drops as the
-  tribe grows.
+  meter mostly measures "do we make enough for everyone" (45 = just enough,
+  about 2× what you eat = 100), so it drops as the tribe grows. **Food should
+  be a scramble**: one gatherer (0.6/s, +0.5 on berries) does not feed a tribe;
+  farms give 1.1/s, fishing 0.9/s (+0.6 by fish), hunts `HUNT_FOOD`.
 - **Wood is scarce** in the Stone Age by design; scouting is expensive and gets
   pricier each trip (Transport advancements make it 20% cheaper each).
 - Events are rare but **hit hard** (a wildfire really burns the forest and nearby
   buildings, leaving charred ground that heals). Keep events meaningful.
+- **Pace:** one game tick = `TICK_SECONDS` (1.5 s) at 1× speed. The engine
+  counts in ticks; anything shown to the player in seconds goes through
+  `secs()` / `perSecond()`. The early game is deliberately calm and easy
+  (`GRACE_AFTER_TUTORIAL`: first event after 150 ticks, first raid after 300,
+  no disease out of nowhere for 300); pressure builds as the tribe grows.
+- **Phones are supported.** Layouts use `md:` breakpoints (bars stack and
+  scroll on small screens). There is no hover on touch: the first tap on a tile
+  previews (ghost + trade-off card), the second tap builds. Never rely on Esc or
+  right-click alone (there is an on-screen Cancel). Map labels (drei `<Html>`)
+  use `zIndexRange={[15, 0]}` so HUD panels stay on top. Test new UI at a
+  phone size (e.g. Playwright "Pixel 7").
+- **Never flood the screen:** at most 2 toasts at once, each gone after ~5 s,
+  and only the most urgent warning is shown (the rest behind "+N more").
 - **Low-resource warnings** (food, wood, famine, unrest, no fire) show bottom-left and the
   top-bar number flashes red. Add new ones in `warnings()` in `engine.ts`.
 - Numbers in the UI use the `font-num` class (VT323): Pixelify's digits 2/5/8
@@ -109,12 +152,57 @@ These were decided with the project owner. Do not change them without being aske
   can be used (`TUTORIAL[].unlocks`, `tutorialLocked()`); the rest shows a lock
   until the tutorial is finished or skipped. When adding a building or tool,
   decide which tutorial step (if any) introduces it.
-- A lit campfire (and wood to burn) is needed; without one happiness drops and a
-  warning is shown. Villagers sit around campfires.
+- **Campfires burn out** after `CAMPFIRE_BURN_TICKS` (×1.5 with Firekeeping)
+  and must be relit by clicking them (`RELIGHT_WOOD` = 1 wood). Only lit fires
+  give warmth, energy, smoke, wildfire risk, and a place for villagers to sit.
+  With no lit fire, happiness drops and a warning says how to relight. The clock
+  is held during the tutorial, so the first fire can't go out mid-tutorial.
 - Scouting costs food and wood and gets more expensive with each trip.
 - **Dev mode** (`/play/?dev`): start in any era with plenty of resources; an
   in-game dev panel can grant resources, reveal the map and jump eras. Keep it
-  working when adding eras. It must never show without `?dev`.
+  working when adding eras. It must never show without `?dev`. **Every new
+  feature gets a dev-panel button (or dev option) to trigger or test it**, e.g.
+  Wildfire, +10 people.
+- **Livestock and clothing:** Herding unlocks the Livestock Pen (a little food,
+  grazing wears the land: −2 Sustainability each). Hide Clothing makes each pen
+  keep `peoplePerPen` (6) people warm without a fire, so fewer fires are needed
+  (less wood cut, less smoke). A trade-off, not a free upgrade.
+- **Growing is as hard as surviving** (`GROWTH_PRESSURE`): stored food above 60
+  rots (no preservation yet), each lit campfire warms only 10 people (the
+  rest are cold, scaled happiness penalty), and raids grow with the tribe's
+  size as well as time. Disease also gets likelier as the tribe grows.
+- **Disease** (`src/game/disease.ts`, `DISEASE`): outbreaks start from crowding
+  (more people, more crowded = likelier), hunts, fishing spots and especially
+  welcomed wanderers. It spreads, people recover and are immune for a while
+  (so outbreaks burn out), and some die. The sick can't work but still eat, and
+  show as pale, slow figures. **Before Herbalism it is "a curse from the gods"**
+  (messages still describe symptoms: fever, coughing, weakness); after it,
+  it's called sickness and Healer's Huts cut spread and deaths.
+- Letting a wildfire burn near the village kills people (at most a quarter of
+  the tribe); a few visibly stagger and fall in the flames (`FireVictims`).
+- **Leaving the Stone Age:** research Agriculture and grow to
+  `NEXT_ERA_POPULATION` (15). A button appears; it opens the **debrief**
+  (`hud/debrief.tsx`): achievements vs. what they cost (forest lost, time with
+  low Sustainability, lives lost by cause), all six meters with their SDG
+  target (`METER_SDG`), and the lessons learned. The ending tier needs
+  Sustainability ≥ `MIN_SUSTAINABILITY_FOR_BEST_ENDING` (60) for the best
+  ending. Losing shows the same debrief. The Stone Age year stops just before
+  the next era's start until the player moves on.
+- **Ancient era** (era 1), all trade-offs: Mud-brick House (Hut upgrade via
+  its info panel, `upgradeFor`), Scribe School (literacy), Bronze Smithy (+20%
+  food and wood per smithy up to 3, burns `SMITHY_CHARCOAL` wood/tick, −4
+  Sustainability), Irrigation Canal (next to water; adjacent farms +50%, salts
+  the soil −3), Granary (+`GRANARY_KEEPS` food keeps), Forester's Lodge
+  (regrows thinned forest nearby), Stone Walls (+`WALL_DEFENSE`). Bronze
+  Weapons doubles each warrior. Era-gated event cards use `era`.
+- **The Ancient era ends with a Roman legion** (`ROMAN_LEGION`, `updateLegion`):
+  scouts see it at 1600 BCE, it lands ~90 ticks later. Size grows with
+  population and difficulty; each legionary fights like 2 warriors. Win → the
+  **final debrief** (ending tier as above, then "Keep playing"); lose → the
+  loss debrief ("Conquered"). No ordinary raids while it's coming. Romans wear
+  crested bronze helmets and big red shields (`Figures gear="roman"`).
+  (Historically Rome only becomes a power right at the end of this period; the
+  legion is the Ancient era's climax on purpose.)
 - Seven cultures (Balanced + six with bonuses), three difficulties. There are two
   ways to lose: **famine** (no food for too long) and **unrest** (happiness below
   15 for too long, after the tutorial). Both show a countdown warning first.

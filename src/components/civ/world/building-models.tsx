@@ -7,6 +7,8 @@ import { Part } from "./part";
 
 interface ModelProps {
   opacity: number;
+  // Campfires only: false when it has burned out.
+  lit?: boolean;
 }
 
 export function Flame({ opacity, position = [0, 0, 0], scale = 1 }: ModelProps & {
@@ -89,14 +91,28 @@ function ThatchHut({ opacity, radius = 0.32, height = 0.3, roofColor = "#c9a24d"
   );
 }
 
-export function CampfireModel({ opacity }: ModelProps) {
+export function CampfireModel({ opacity, lit = true }: ModelProps) {
   return (
     <group>
       <StoneRing opacity={opacity} radius={0.2} count={9} />
       <Log opacity={opacity} position={[0, 0.06, 0]} rotation={[0, 0.4, Math.PI / 2.4]} length={0.34} />
       <Log opacity={opacity} position={[0, 0.06, 0]} rotation={[0, -0.9, Math.PI / 2.4]} length={0.34} />
       <Log opacity={opacity} position={[0, 0.06, 0]} rotation={[0, 1.8, Math.PI / 2.4]} length={0.34} />
-      <Flame opacity={opacity} position={[0, 0.06, 0]} scale={1.2} />
+      {lit ? (
+        <Flame opacity={opacity} position={[0, 0.06, 0]} scale={1.2} />
+      ) : (
+        // Burnt out: grey ash and a few dull embers.
+        <group>
+          <Part color="#6e6862" opacity={opacity} position={[0, 0.03, 0]}>
+            <cylinderGeometry args={[0.16, 0.18, 0.04, 8]} />
+          </Part>
+          {[0.5, 2.4, 4.1].map((a) => (
+            <Part key={a} color="#7a2e14" opacity={opacity} position={[Math.cos(a) * 0.07, 0.06, Math.sin(a) * 0.07]}>
+              <boxGeometry args={[0.04, 0.03, 0.04]} />
+            </Part>
+          ))}
+        </group>
+      )}
       {[0, 1.3, 2.6, 3.9, 5.2].map((a) => (
         <Log key={a} opacity={opacity} position={[Math.cos(a) * 0.5, 0.05, Math.sin(a) * 0.5]} rotation={[0, -a, Math.PI / 2]} length={0.3} radius={0.05} />
       ))}
@@ -377,7 +393,263 @@ export function WarCampModel({ opacity }: ModelProps) {
   );
 }
 
+// A fenced pen with a few sheep and goats that graze and look around.
+function Sheep({ opacity, position, dark, phase }: ModelProps & { position: [number, number, number]; dark?: boolean; phase: number }) {
+  const head = useRef<Mesh>(null);
+  useFrame(({ clock }) => {
+    if (head.current) head.current.position.y = 0.1 + Math.max(0, Math.sin(clock.elapsedTime * 0.8 + phase)) * -0.05;
+  });
+  return (
+    <group position={position} rotation={[0, phase, 0]}>
+      <Part color={dark ? "#6b5a48" : "#f1ede4"} opacity={opacity} position={[0, 0.1, 0]}>
+        <boxGeometry args={[0.16, 0.1, 0.1]} />
+      </Part>
+      <mesh ref={head} position={[0.1, 0.1, 0]}>
+        <boxGeometry args={[0.06, 0.06, 0.06]} />
+        <meshStandardMaterial color="#2b2119" transparent opacity={opacity} />
+      </mesh>
+      {[
+        [0.05, 0.035],
+        [-0.05, 0.035],
+        [0.05, -0.035],
+        [-0.05, -0.035],
+      ].map(([x, z]) => (
+        <Part key={`${x}${z}`} color="#2b2119" opacity={opacity} position={[x, 0.03, z]}>
+          <boxGeometry args={[0.02, 0.06, 0.02]} />
+        </Part>
+      ))}
+    </group>
+  );
+}
+
+export function PenModel({ opacity }: ModelProps) {
+  const posts = 10;
+  return (
+    <group>
+      {Array.from({ length: posts }, (_, i) => {
+        const a = (i / posts) * Math.PI * 2;
+        const next = ((i + 1) / posts) * Math.PI * 2;
+        const r = 0.5;
+        const mid = (a + next) / 2;
+        return (
+          <group key={i}>
+            <Part color="#6b4a2b" opacity={opacity} position={[Math.cos(a) * r, 0.08, Math.sin(a) * r]}>
+              <cylinderGeometry args={[0.018, 0.018, 0.16, 5]} />
+            </Part>
+            <Part
+              color="#8b5a2b"
+              opacity={opacity}
+              position={[Math.cos(mid) * r * 0.98, 0.11, Math.sin(mid) * r * 0.98]}
+              rotation={[0, -mid, 0]}
+            >
+              <boxGeometry args={[0.02, 0.02, 0.31]} />
+            </Part>
+          </group>
+        );
+      })}
+      <Sheep opacity={opacity} position={[0.12, 0, 0.1]} phase={0.4} />
+      <Sheep opacity={opacity} position={[-0.18, 0, -0.05]} phase={2.1} />
+      <Sheep opacity={opacity} position={[0.05, 0, -0.22]} phase={4.2} dark />
+      <Part color="#7a9a4a" opacity={opacity} position={[0, 0.005, 0]}>
+        <cylinderGeometry args={[0.46, 0.46, 0.01, 12]} />
+      </Part>
+    </group>
+  );
+}
+
+// ---- Ancient era ------------------------------------------------------------
+
+const BRICK = "#c98f5a";
+const BRICK_DARK = "#9c6a3f";
+const CLAY = "#d9b07a";
+
+// Two stacked mud-brick blocks with a flat roof, a door and a ladder.
+export function HouseModel({ opacity }: ModelProps) {
+  return (
+    <group>
+      <Part color={BRICK} opacity={opacity} position={[0, 0.16, 0]}>
+        <boxGeometry args={[0.62, 0.32, 0.5]} />
+      </Part>
+      <Part color={BRICK_DARK} opacity={opacity} position={[0, 0.33, 0]}>
+        <boxGeometry args={[0.66, 0.03, 0.54]} />
+      </Part>
+      <Part color={BRICK} opacity={opacity} position={[-0.12, 0.45, -0.05]}>
+        <boxGeometry args={[0.32, 0.22, 0.34]} />
+      </Part>
+      <Part color={BRICK_DARK} opacity={opacity} position={[-0.12, 0.57, -0.05]}>
+        <boxGeometry args={[0.35, 0.02, 0.37]} />
+      </Part>
+      <Part color="#4a3526" opacity={opacity} position={[0.14, 0.1, 0.251]}>
+        <boxGeometry args={[0.12, 0.2, 0.01]} />
+      </Part>
+      <Part color="#2b2119" opacity={opacity} position={[-0.18, 0.2, 0.251]}>
+        <boxGeometry args={[0.08, 0.07, 0.01]} />
+      </Part>
+      <Log opacity={opacity} position={[0.25, 0.28, 0.1]} rotation={[0.3, 0, 0]} length={0.36} radius={0.012} />
+    </group>
+  );
+}
+
+// A long clay hall with a thatched roof and a clay tablet on a post.
+export function SchoolModel({ opacity }: ModelProps) {
+  return (
+    <group>
+      <Part color={CLAY} opacity={opacity} position={[0, 0.15, 0]}>
+        <boxGeometry args={[0.8, 0.3, 0.46]} />
+      </Part>
+      <Part color="#c9a24a" opacity={opacity} position={[0, 0.38, 0]} rotation={[0, 0, Math.PI / 4]} scale={[1, 1, 1]}>
+        <boxGeometry args={[0.36, 0.36, 0.52]} />
+      </Part>
+      <Part color="#4a3526" opacity={opacity} position={[0, 0.1, 0.231]}>
+        <boxGeometry args={[0.14, 0.2, 0.01]} />
+      </Part>
+      <group position={[0.48, 0, 0.26]}>
+        <Log opacity={opacity} position={[0, 0.16, 0]} rotation={[0, 0, 0]} length={0.32} radius={0.012} />
+        <Part color="#b5835a" opacity={opacity} position={[0, 0.3, 0.015]}>
+          <boxGeometry args={[0.14, 0.1, 0.02]} />
+        </Part>
+      </group>
+    </group>
+  );
+}
+
+// A stone forge with a tall chimney, a glowing furnace and an anvil.
+export function SmithyModel({ opacity }: ModelProps) {
+  return (
+    <group>
+      <Part color="#8d8a86" opacity={opacity} position={[0, 0.14, 0]}>
+        <boxGeometry args={[0.6, 0.28, 0.46]} />
+      </Part>
+      <Part color="#6b4a2b" opacity={opacity} position={[0, 0.3, 0]}>
+        <boxGeometry args={[0.66, 0.04, 0.52]} />
+      </Part>
+      <Part color="#7d7a76" opacity={opacity} position={[0.2, 0.45, -0.12]}>
+        <boxGeometry args={[0.12, 0.34, 0.12]} />
+      </Part>
+      <Part color="#2b2119" opacity={opacity} position={[0, 0.1, 0.231]}>
+        <boxGeometry args={[0.2, 0.16, 0.01]} />
+      </Part>
+      <Flame opacity={opacity} position={[0, 0.03, 0.26]} scale={0.6} />
+      <Part color="#3a3a3a" opacity={opacity} position={[-0.3, 0.07, 0.32]} metalness={0.6} roughness={0.4}>
+        <boxGeometry args={[0.12, 0.06, 0.06]} />
+      </Part>
+      <Part color="#b87333" opacity={opacity} position={[0.36, 0.04, 0.3]} metalness={0.7} roughness={0.3}>
+        <cylinderGeometry args={[0.05, 0.05, 0.08, 8]} />
+      </Part>
+    </group>
+  );
+}
+
+// A water channel with earth banks running across the tile.
+export function CanalModel({ opacity }: ModelProps) {
+  return (
+    <group>
+      <Part color="#8a6a3d" opacity={opacity} position={[0, 0.03, -0.14]}>
+        <boxGeometry args={[1.2, 0.06, 0.1]} />
+      </Part>
+      <Part color="#8a6a3d" opacity={opacity} position={[0, 0.03, 0.14]}>
+        <boxGeometry args={[1.2, 0.06, 0.1]} />
+      </Part>
+      <Part color="#4a90c2" opacity={opacity} position={[0, 0.02, 0]} roughness={0.2}>
+        <boxGeometry args={[1.2, 0.03, 0.18]} />
+      </Part>
+      <Part color="#6b4a2b" opacity={opacity} position={[0.35, 0.09, 0]}>
+        <boxGeometry args={[0.04, 0.12, 0.34]} />
+      </Part>
+    </group>
+  );
+}
+
+// Two round clay silos with pointed roofs.
+export function GranaryModel({ opacity }: ModelProps) {
+  return (
+    <group>
+      {[
+        [-0.18, 0, 0.9],
+        [0.2, 0.05, 0.75],
+      ].map(([x, z, s]) => (
+        <group key={x} position={[x, 0, z]} scale={s}>
+          <Part color={CLAY} opacity={opacity} position={[0, 0.2, 0]}>
+            <cylinderGeometry args={[0.18, 0.2, 0.4, 10]} />
+          </Part>
+          <Part color="#c9a24a" opacity={opacity} position={[0, 0.5, 0]}>
+            <coneGeometry args={[0.24, 0.22, 10]} />
+          </Part>
+          <Part color="#4a3526" opacity={opacity} position={[0, 0.12, 0.19]}>
+            <boxGeometry args={[0.08, 0.12, 0.02]} />
+          </Part>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+// A small lodge beside rows of young trees in a nursery bed.
+export function ForesterModel({ opacity }: ModelProps) {
+  return (
+    <group>
+      <group position={[-0.22, 0, -0.1]} scale={0.7}>
+        <Part color="#8b5a2b" opacity={opacity} position={[0, 0.15, 0]}>
+          <boxGeometry args={[0.4, 0.3, 0.34]} />
+        </Part>
+        <Part color="#3e6b35" opacity={opacity} position={[0, 0.38, 0]} rotation={[0, 0, Math.PI / 4]}>
+          <boxGeometry args={[0.3, 0.3, 0.4]} />
+        </Part>
+      </group>
+      <Part color="#6b4f33" opacity={opacity} position={[0.2, 0.015, 0.1]}>
+        <boxGeometry args={[0.44, 0.03, 0.44]} />
+      </Part>
+      {[-0.1, 0.05, 0.2].flatMap((x) =>
+        [-0.05, 0.1, 0.25].map((z) => (
+          <Part key={`${x}${z}`} color="#4f9a43" opacity={opacity} position={[x + 0.1, 0.08, z]}>
+            <coneGeometry args={[0.04, 0.12, 5]} />
+          </Part>
+        )),
+      )}
+    </group>
+  );
+}
+
+// A ring of stone walls with a gate, around a small watch post.
+export function WallsModel({ opacity }: ModelProps) {
+  const sides = 6;
+  return (
+    <group>
+      {Array.from({ length: sides }, (_, i) => {
+        if (i === 1) return null; // the gate
+        const a = (i / sides) * Math.PI * 2 + Math.PI / 6;
+        const r = 0.5;
+        return (
+          <Part
+            key={i}
+            color={i % 2 ? "#9a958e" : "#a8a39b"}
+            opacity={opacity}
+            position={[Math.cos(a) * r, 0.14, Math.sin(a) * r]}
+            rotation={[0, -a + Math.PI / 2, 0]}
+          >
+            <boxGeometry args={[0.52, 0.28, 0.1]} />
+          </Part>
+        );
+      })}
+      <Part color="#8d8a86" opacity={opacity} position={[0, 0.22, 0]}>
+        <boxGeometry args={[0.18, 0.44, 0.18]} />
+      </Part>
+      <Part color="#9b1c1c" opacity={opacity} position={[0, 0.52, 0]}>
+        <boxGeometry args={[0.12, 0.08, 0.01]} />
+      </Part>
+    </group>
+  );
+}
+
 export const MODELS: Record<string, (props: ModelProps) => JSX.Element> = {
+  house: HouseModel,
+  school: SchoolModel,
+  smithy: SmithyModel,
+  canal: CanalModel,
+  granary: GranaryModel,
+  forester: ForesterModel,
+  walls: WallsModel,
+  pen: PenModel,
   campfire: CampfireModel,
   hut: HutModel,
   gatherer: GathererModel,

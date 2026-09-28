@@ -12,7 +12,7 @@ import type {
 
 export const ERAS = [
   { name: "Stone Age", startYear: -50000, yearsPerTick: 100, currency: "Shells" },
-  { name: "Ancient", startYear: -3000, yearsPerTick: 20, currency: "Bronze coins" },
+  { name: "Ancient", startYear: -3000, yearsPerTick: 10, currency: "Bronze coins" },
   { name: "Classical", startYear: -500, yearsPerTick: 10, currency: "Silver coins" },
   { name: "Medieval & Renaissance", startYear: 1000, yearsPerTick: 4, currency: "Florins" },
   { name: "Industrial & Modern", startYear: 1750, yearsPerTick: 1, currency: "Banknotes" },
@@ -64,6 +64,9 @@ export const BUILDINGS: BuildingDef[] = [
     name: "Campfire",
     icon: "campfire",
     description: "Warmth, light and cooked food. People gather to sit around it. Without a lit fire, happiness drops. Burns a little wood.",
+    gain: "Warmth for 10 people, light, cooked food",
+    landCost: "Burns wood, adds smoke, and can start a wildfire in nearby trees",
+    landImpact: 2,
     era: 0,
     cost: { wood: 5 },
     terrain: ["grass", "steppe", "forest", "beach", "hills"],
@@ -74,6 +77,9 @@ export const BUILDINGS: BuildingDef[] = [
     name: "Hut",
     icon: "hut",
     description: "Shelter for 6 people.",
+    gain: "Room for 6 more people",
+    landCost: "More people eat more food and need more fires",
+    landImpact: 1,
     era: 0,
     cost: { wood: 10 },
     terrain: ["grass", "steppe", "beach", "hills"],
@@ -85,11 +91,14 @@ export const BUILDINGS: BuildingDef[] = [
     name: "Gatherer's Camp",
     icon: "basket",
     description: "Collects food. Bonus on berry bushes.",
+    gain: "Food from wild plants, more on berry bushes",
+    landCost: "Almost nothing: the land stays healthy, but it gives less food",
+    landImpact: 0,
     era: 0,
     cost: { wood: 8 },
     terrain: ["grass", "steppe", "forest", "marsh"],
-    produces: { food: 1.2 },
-    depositBonus: { deposit: "berries", amount: { food: 1.2 } },
+    produces: { food: 0.9 },
+    depositBonus: { deposit: "berries", amount: { food: 0.6 } },
     reveal: 2,
   },
   {
@@ -97,11 +106,14 @@ export const BUILDINGS: BuildingDef[] = [
     name: "Farmland",
     icon: "wheat",
     description: "Tilled fields of wild grain. Lots of food, but clears the land.",
+    gain: "Lots of steady food",
+    landCost: "Clears wild land for good",
+    landImpact: 1,
     era: 0,
     cost: { wood: 12 },
     terrain: ["grass"],
     requires: "early-farming",
-    produces: { food: 2.2 },
+    produces: { food: 1.5 },
     reveal: 1,
   },
   {
@@ -109,6 +121,9 @@ export const BUILDINGS: BuildingDef[] = [
     name: "War Camp",
     icon: "shield",
     description: "Trains warriors to fight off raiders. Each camp holds 4 warriors.",
+    gain: "Warriors to hold off raiders",
+    landCost: "Warriors eat food and don't gather any",
+    landImpact: 0,
     era: 0,
     cost: { wood: 15, food: 10 },
     terrain: ["grass", "steppe", "hills", "beach"],
@@ -118,7 +133,10 @@ export const BUILDINGS: BuildingDef[] = [
     id: "woodcutter",
     name: "Woodcutter",
     icon: "axe",
-    description: "Chops wood from forests. Hurts sustainability a little.",
+    description: "Chops wood from the forest around it. Wood only comes from trees that are still standing.",
+    gain: "Wood for fires and building",
+    landCost: "Fells the trees around it; the forest takes a long time to grow back",
+    landImpact: 3,
     era: 0,
     cost: { wood: 4 },
     terrain: ["forest"],
@@ -130,12 +148,15 @@ export const BUILDINGS: BuildingDef[] = [
     name: "Fishing Spot",
     icon: "fish",
     description: "Food from the sea. Must touch water; bonus near fish.",
+    gain: "Food from the sea",
+    landCost: "A small chance of sickness from the catch",
+    landImpact: 0,
     era: 0,
     cost: { wood: 10 },
     terrain: ["beach"],
     needsWaterNeighbor: true,
     requires: "fishing",
-    produces: { food: 1.8 },
+    produces: { food: 1.2 },
     reveal: 3,
   },
   {
@@ -143,6 +164,9 @@ export const BUILDINGS: BuildingDef[] = [
     name: "Stone Quarry",
     icon: "pickaxe",
     description: "Cuts stone from hills. Bonus on stone deposits.",
+    gain: "Stone for better buildings",
+    landCost: "Digs pits into the land",
+    landImpact: 2,
     era: 0,
     cost: { wood: 15 },
     terrain: ["hills", "mountain"],
@@ -156,6 +180,9 @@ export const BUILDINGS: BuildingDef[] = [
     name: "Elder's Hut",
     icon: "feather",
     description: "Stories and cave paintings pass knowledge on to children.",
+    gain: "Knowledge and literacy for the children",
+    landCost: "Nothing from the land",
+    landImpact: 0,
     era: 0,
     cost: { wood: 10, stone: 10 },
     terrain: ["grass", "steppe"],
@@ -168,11 +195,131 @@ export const BUILDINGS: BuildingDef[] = [
     name: "Healer's Hut",
     icon: "herb",
     description: "Herbs and care keep people healthy.",
+    gain: "Fights sickness and keeps people healthy",
+    landCost: "Nothing from the land",
+    landImpact: 0,
     era: 0,
     cost: { wood: 10, stone: 5 },
     terrain: ["grass", "steppe", "forest"],
     requires: "herbalism",
     reveal: 2,
+  },
+  {
+    id: "pen",
+    name: "Livestock Pen",
+    icon: "sheep",
+    description: "Goats and sheep behind a fence. A little milk and meat, and later their hides and wool make warm clothes.",
+    gain: "A little food; with Hide Clothing, warm clothes for 6 people so fewer fires are needed",
+    landCost: "Grazing animals wear down the grass around them",
+    landImpact: 1,
+    era: 0,
+    cost: { wood: 12, food: 10 },
+    terrain: ["grass", "steppe"],
+    requires: "herding",
+    produces: { food: 0.5 },
+    reveal: 1,
+  },
+  // ---- Ancient era ---------------------------------------------------------
+  {
+    id: "house",
+    name: "Mud-brick House",
+    icon: "bricks",
+    description: "Sturdy homes of sun-dried and fired brick. Built by upgrading a Hut (click it), or new.",
+    gain: "Room for 12 people",
+    landCost: "Bricks are fired in kilns that burn wood",
+    landImpact: 1,
+    era: 1,
+    cost: { wood: 14, stone: 8 },
+    terrain: ["grass", "steppe"],
+    requires: "agriculture",
+    housing: 12,
+    reveal: 1,
+  },
+  {
+    id: "school",
+    name: "Scribe School",
+    icon: "book",
+    description: "Children learn to write on clay tablets. Knowledge no longer dies with the elders.",
+    gain: "Knowledge and literacy for the whole village",
+    landCost: "Nothing from the land",
+    landImpact: 0,
+    era: 1,
+    cost: { wood: 20, stone: 15 },
+    terrain: ["grass", "steppe"],
+    requires: "writing",
+    produces: { knowledge: 0.4 },
+    reveal: 1,
+  },
+  {
+    id: "smithy",
+    name: "Bronze Smithy",
+    icon: "hammer",
+    description: "Smelts copper and tin into bronze tools. Better tools mean more food and wood from every worker.",
+    gain: "+20% food and wood from bronze tools (up to 3 smithies)",
+    landCost: "Burns wood for charcoal all the time, and its smoke is heavy",
+    landImpact: 3,
+    era: 1,
+    cost: { wood: 20, stone: 20 },
+    terrain: ["grass", "steppe", "hills"],
+    requires: "bronze",
+    reveal: 1,
+  },
+  {
+    id: "canal",
+    name: "Irrigation Canal",
+    icon: "boat",
+    description: "Channels river water to the fields next to it.",
+    gain: "Every farm next to it grows 50% more food",
+    landCost: "Watered soil slowly turns salty, and the land wears out",
+    landImpact: 2,
+    era: 1,
+    cost: { wood: 10, stone: 10 },
+    terrain: ["grass", "steppe"],
+    needsWaterNeighbor: true,
+    requires: "irrigation",
+    reveal: 1,
+  },
+  {
+    id: "granary",
+    name: "Granary",
+    icon: "amphora",
+    description: "Sealed clay jars and dry storage. Food keeps for much longer.",
+    gain: "150 more food keeps without rotting",
+    landCost: "Nothing from the land",
+    landImpact: 0,
+    era: 1,
+    cost: { wood: 15, stone: 10 },
+    terrain: ["grass", "steppe"],
+    requires: "pottery",
+    reveal: 1,
+  },
+  {
+    id: "forester",
+    name: "Forester's Lodge",
+    icon: "sapling",
+    description: "Foresters tend young trees and replant what the woodcutters take.",
+    gain: "Replants cut forest around it, a little at a time",
+    landCost: "Its land can't be farmed or built on",
+    landImpact: 0,
+    era: 1,
+    cost: { wood: 15, food: 10 },
+    terrain: ["grass", "steppe", "forest"],
+    requires: "forestry",
+    reveal: 2,
+  },
+  {
+    id: "walls",
+    name: "Stone Walls",
+    icon: "castle",
+    description: "A ring of stone walls. Each adds 4 to your defense.",
+    gain: "+4 defense against raiders",
+    landCost: "Stone quarried out of the hills",
+    landImpact: 1,
+    era: 1,
+    cost: { wood: 10, stone: 30 },
+    terrain: ["grass", "steppe", "hills"],
+    requires: "bronze-arms",
+    reveal: 1,
   },
 ];
 
@@ -190,11 +337,7 @@ export const BRANCHES: { id: Branch; name: string; color: string }[] = [
 type NodeSeed = [id: string, name: string, branch: Branch, era: number, cost: number, requires: string[], description: string];
 
 const LATER_NODES: NodeSeed[] = [
-  ["writing", "Writing", "knowledge", 1, 0, ["agriculture"], "Clay tablets and the first scribes."],
-  ["bronze", "Bronze Working", "construction", 1, 0, ["agriculture"], "Copper + tin = tools, weapons and trade goods."],
-  ["irrigation", "Irrigation", "energy", 1, 0, ["agriculture"], "Canals feed bigger fields."],
   ["wheel", "The Wheel", "transport", 1, 0, ["agriculture"], "Carts and the first trade caravans."],
-  ["bronze-arms", "Bronze Weapons", "military", 1, 0, ["bronze"], "Spearmen with bronze tips and shields."],
   ["barter-roads", "Silk Road Contact", "culture", 1, 0, ["wheel"], "Traders from the east arrive."],
   ["philosophy", "Philosophy", "knowledge", 2, 0, ["writing"], "Academies and great thinkers."],
   ["concrete", "Roman Concrete", "construction", 2, 0, ["bronze"], "Limestone + ash → aqueducts and domes."],
@@ -301,6 +444,25 @@ export const TREE: TreeNode[] = [
     unlocks: ["healer"],
   },
   {
+    id: "herding",
+    name: "Herding",
+    description: "Tame wild goats and sheep. Unlocks the Livestock Pen.",
+    branch: "knowledge",
+    era: 0,
+    cost: 10,
+    requires: ["early-farming"],
+    unlocks: ["pen"],
+  },
+  {
+    id: "hide-clothing",
+    name: "Hide Clothing",
+    description: "Sew hides and wool into warm clothes. Each Livestock Pen keeps 6 people warm without a fire.",
+    branch: "energy",
+    era: 0,
+    cost: 12,
+    requires: ["herding"],
+  },
+  {
     id: "cave-paintings",
     name: "Cave Paintings",
     description: "Secret: build 2 Elder's Huts. +25 knowledge and +10 happiness.",
@@ -313,12 +475,72 @@ export const TREE: TreeNode[] = [
   {
     id: "agriculture",
     name: "Agriculture",
-    description: "Enter the Ancient era: farms, villages, bronze.",
+    description: "Settle down to farm for good. With 15 people, your tribe can enter the Ancient era.",
     branch: "knowledge",
     era: 0,
     cost: 40,
     requires: ["early-farming", "toolmaking"],
-    comingSoon: true,
+  },
+  // ---- Ancient era ---------------------------------------------------------
+  {
+    id: "writing",
+    name: "Writing",
+    description: "Clay tablets and the first scribes. Unlocks the Scribe School.",
+    branch: "knowledge",
+    era: 1,
+    cost: 30,
+    requires: ["agriculture"],
+    unlocks: ["school"],
+  },
+  {
+    id: "pottery",
+    name: "Pottery & Storage",
+    description: "Fired jars keep grain dry and safe. Unlocks the Granary.",
+    branch: "construction",
+    era: 1,
+    cost: 20,
+    requires: ["agriculture"],
+    unlocks: ["granary"],
+  },
+  {
+    id: "bronze",
+    name: "Bronze Working",
+    description: "Copper and tin make bronze tools. Unlocks the Bronze Smithy.",
+    branch: "construction",
+    era: 1,
+    cost: 35,
+    requires: ["pottery"],
+    unlocks: ["smithy"],
+  },
+  {
+    id: "irrigation",
+    name: "Irrigation",
+    description: "Canals carry water to the fields. Unlocks the Irrigation Canal.",
+    branch: "energy",
+    era: 1,
+    cost: 30,
+    requires: ["agriculture"],
+    unlocks: ["canal"],
+  },
+  {
+    id: "forestry",
+    name: "Forest Stewardship",
+    description: "Tend the forest instead of just cutting it. Unlocks the Forester's Lodge.",
+    branch: "culture",
+    era: 1,
+    cost: 25,
+    requires: ["agriculture"],
+    unlocks: ["forester"],
+  },
+  {
+    id: "bronze-arms",
+    name: "Bronze Weapons",
+    description: "Bronze spears and shields: each warrior fights twice as hard. Unlocks Stone Walls.",
+    branch: "military",
+    era: 1,
+    cost: 35,
+    requires: ["bronze"],
+    unlocks: ["walls"],
   },
   {
     id: "silk-secret",
@@ -347,19 +569,22 @@ export const TREE: TreeNode[] = [
 
 export const TREE_BY_ID = Object.fromEntries(TREE.map((n) => [n.id, n]));
 
+// Event cards are trade-offs: every choice gains something and costs something.
+// `realWorld` links the card to today. Keep those lines modest, with no statistics.
 export const EVENTS: EventCard[] = [
   {
     id: "wanderers",
     title: "Wanderers at the fire",
     icon: "person",
-    body: "A band of eight hungry wanderers asks to join your tribe. They're strong workers, but they'll eat a lot. Turned away, they may not forget it.",
+    body: "A band of eight hungry wanderers asks to join your tribe. They're strong workers, but they'll eat a lot, and strangers can carry sickness. Turned away, they may not forget it.",
     choices: [
-      { label: "Welcome them (+8 people, −25 food)", effect: { population: 8, resources: { food: -25 } } },
+      { label: "Welcome them (+8 people, −25 food, they may bring sickness)", effect: { population: 8, resources: { food: -25 } } },
       {
         label: "Send them away (−12 happiness, raiders come sooner)",
         effect: { happiness: -12, raidSooner: 40 },
       },
     ],
+    realWorld: "People have always moved to find food and safety. Newcomers bring new skills and ideas, but large movements of people can also spread disease.",
   },
   {
     id: "wildfire",
@@ -372,10 +597,11 @@ export const EVENTS: EventCard[] = [
         effect: { resources: { wood: -25 }, happiness: -5, burn: 0 },
       },
       {
-        label: "Let it burn (the forest and buildings nearby are lost)",
+        label: "Let it burn (the forest, buildings and people nearby are lost)",
         effect: { burn: 2, sustainability: -25, happiness: -12 },
       },
     ],
+    realWorld: "Wildfires happen naturally, but many are started by people, often by accident. Fires close to homes are the most dangerous.",
   },
   {
     id: "eastern-trader",
@@ -389,6 +615,7 @@ export const EVENTS: EventCard[] = [
       },
       { label: "Turn her away", effect: {} },
     ],
+    realWorld: "Long before the Silk Road, traders carried goods, ideas and inventions across Eurasia.",
   },
   {
     id: "good-hunt",
@@ -397,8 +624,126 @@ export const EVENTS: EventCard[] = [
     body: "Your hunters brought down a mammoth! There's enough meat for weeks, or for one unforgettable night.",
     choices: [
       { label: "Feast! (+25 happiness)", effect: { happiness: 25 } },
-      { label: "Preserve it (+60 food)", effect: { resources: { food: 60 } } },
+      { label: "Dry and smoke the meat (+60 food)", effect: { resources: { food: 60 } } },
     ],
+    realWorld: "Drying and smoking let people store meat for lean times, thousands of years before fridges.",
+  },
+  {
+    id: "sacred-grove",
+    title: "The old grove",
+    icon: "leaf",
+    body: "The elders ask you to protect the ancient grove near the village. Its trees are the oldest and tallest we have, and the woodcutters have their eyes on them.",
+    choices: [
+      {
+        label: "Protect the grove forever (+8 happiness, woodcutters must leave it)",
+        effect: { protectForest: 4, happiness: 8 },
+      },
+      { label: "Cut it down (+40 wood, the grove is gone)", effect: { clearForest: 4, resources: { wood: 40 }, happiness: -4 } },
+    ],
+    realWorld: "Many cultures have protected sacred groves, and some of them still stand today as islands of old forest.",
+  },
+  {
+    id: "thinning-herds",
+    title: "The herds are thinning",
+    icon: "meat",
+    body: "The hunters are bringing back fewer deer each season. Some want one last big hunt before winter; others say to let the herds recover.",
+    choices: [
+      { label: "One big hunt (+50 food now, the land suffers)", effect: { resources: { food: 50 }, sustainability: -15 } },
+      { label: "Hunt only the old animals (+12 food, the herds recover)", effect: { resources: { food: 12 }, sustainability: 5 } },
+    ],
+    realWorld: "Overhunting has wiped out animals before. Many scientists think people helped drive mammoths and other big Ice Age animals to extinction.",
+  },
+  {
+    id: "floodplain",
+    title: "Rich soil by the river",
+    icon: "wheat",
+    body: "The flat land by the river is dark and rich, perfect for gathering and planting. But the old ones say the river rises in spring.",
+    choices: [
+      {
+        label: "Settle the riverbank (+45 food now, a flood may come)",
+        effect: {
+          resources: { food: 45 },
+          gamble: {
+            chance: 0.5,
+            resources: { food: -70, wood: -20 },
+            happiness: -10,
+            message: "The spring flood came. Stores were washed away.",
+            safeMessage: "The river stayed in its banks this year.",
+          },
+        },
+      },
+      { label: "Stay on higher ground (+10 food, safe)", effect: { resources: { food: 10 } } },
+    ],
+    realWorld: "Building on flood plains puts homes and fields in harm's way. Today, planners map flood zones before towns grow (SDG 11.5).",
+  },
+  {
+    id: "indoor-fire",
+    title: "Fire inside the hut",
+    icon: "hut",
+    body: "The nights are bitter. Families want to keep fires burning inside their huts, but the smoke has nowhere to go.",
+    choices: [
+      { label: "Fires indoors (+12 happiness, smoke may make people sick)", effect: { happiness: 12, sickness: 0.6 } },
+      { label: "Keep fires outside (−4 happiness, clean air)", effect: { happiness: -4 } },
+    ],
+    realWorld: "Smoke from cooking and heating fires indoors is still a serious health risk in many homes today, which is why SDG 7 includes clean cooking.",
+  },
+  {
+    id: "burn-scrub",
+    title: "Burn the scrub?",
+    icon: "flame",
+    body: "Thick brush chokes the land near the forest. Setting fire to it would clear it fast and bring fresh growth, if the fire behaves.",
+    choices: [
+      {
+        label: "Burn it (+30 food from new growth, the fire may spread)",
+        effect: {
+          resources: { food: 30 },
+          gamble: {
+            chance: 0.4,
+            burn: 1,
+            happiness: -6,
+            message: "The wind turned and the fire spread into the forest.",
+            safeMessage: "The burn went well and fresh shoots are coming up.",
+          },
+        },
+      },
+      { label: "Clear it by hand (−15 food of work, slow but safe)", effect: { resources: { food: -15 } } },
+    ],
+    realWorld: "People have used fire to shape the land for thousands of years. Careful burns can help, but fires that get away destroy forests and homes.",
+  },
+  {
+    id: "midden",
+    title: "The rubbish heap",
+    icon: "skull",
+    body: "Bones, scraps and ashes pile up at the edge of the village. It smells, and flies swarm over it.",
+    choices: [
+      { label: "Bury it far away (−10 food of work, no flies)", effect: { resources: { food: -10 } } },
+      { label: "Leave it (sickness may spread)", effect: { sickness: 0.5 } },
+    ],
+    realWorld: "Archaeologists learn a lot from ancient rubbish heaps called middens. Today, handling waste safely is part of SDG 11.6.",
+  },
+  {
+    id: "charcoal-burners",
+    title: "The charcoal burners",
+    icon: "hammer",
+    body: "The smiths need more charcoal. They want to cut the whole forest on the far hill and burn it slowly in covered pits.",
+    era: 1,
+    choices: [
+      { label: "Let them (+60 wood of charcoal, the hill forest is gone)", effect: { clearForest: 5, resources: { wood: 60 } } },
+      { label: "Only dead wood and fallen branches (+15 wood)", effect: { resources: { wood: 15 }, sustainability: 3 } },
+    ],
+    realWorld: "Making bronze and iron took huge amounts of charcoal, and in some places early metalworking helped clear the forests around it.",
+  },
+  {
+    id: "salty-fields",
+    title: "White crust on the fields",
+    icon: "wheat",
+    body: "A white crust is forming on the oldest watered fields and the grain is coming up thin. The farmers say the canals are to blame.",
+    era: 1,
+    choices: [
+      { label: "Rest the fields for a season (−40 food, the soil recovers)", effect: { resources: { food: -40 }, sustainability: 8 } },
+      { label: "Keep watering (+20 food now, the land wears out)", effect: { resources: { food: 20 }, sustainability: -15 } },
+    ],
+    realWorld: "In ancient Mesopotamia, centuries of irrigation left salt in the soil, and historians think it helped push farmers to hardier crops like barley.",
   },
 ];
 
@@ -422,13 +767,188 @@ export const LAND = {
 // Wildfire odds: a little from lightning, more for every campfire near trees.
 export const FIRE_RISK = { base: 0.1, perForestTile: 0.06, max: 1.5 };
 
+// Real seconds per game tick at 1× speed. Everything in the engine counts in
+// ticks; the UI converts to seconds with this. Raising it slows the whole game.
+export const TICK_SECONDS = 1.5;
+
+// A campfire burns this many ticks on one load of wood, then goes out until
+// the player clicks it to relight it (costs RELIGHT_WOOD). Firekeeping: ×1.5.
+export const CAMPFIRE_BURN_TICKS = 60;
+export const RELIGHT_WOOD = 1;
+
+// Disease. Before Herbalism the tribe calls it a curse from the gods; after it,
+// Healer's Huts slow it down. All chances are per second unless noted.
+export const DISEASE = {
+  // An outbreak starting on its own: per person, more when people are crowded.
+  perPerson: 0.00012,
+  crowding: 2,
+  // Each hunt (per animal brought back) and each fishing spot.
+  hunt: 0.02,
+  fishing: 0.0006,
+  // Welcomed wanderers bring it with them this often (per event).
+  wanderers: 0.4,
+  // Each sick person infects this many healthy people per second (× healthy share).
+  spread: 0.09,
+  // Share of the sick who get better, or die, each second.
+  recover: 0.045,
+  death: 0.015,
+  // People who got better can't catch it again for a while (share lost per second).
+  immunityFades: 0.004,
+  // Each Healer's Hut: extra recovery, and cuts to spread and deaths (up to 75%).
+  healerRecover: 0.03,
+  healerCut: 0.25,
+};
+
+// Pressure that grows with the tribe, so developing is as hard as surviving.
+export const GROWTH_PRESSURE = {
+  // No way to preserve food yet: stored food above this rots away (share per second).
+  foodKeeps: 100,
+  foodRots: 0.015,
+  // Each lit campfire warms this many people; the rest are cold.
+  peoplePerFire: 10,
+  // With Hide Clothing, each Livestock Pen clothes this many people warmly.
+  peoplePerPen: 6,
+  // Raiders come in bigger groups the bigger (richer) the tribe: +1 per this many people.
+  raidersPerPeople: 10,
+};
+
+// Selective logging only takes trees above this growth and never cuts below it,
+// for half the wood. Planting costs food (people's work).
+export const SELECTIVE_FLOOR = 0.5;
+export const PLANT_COST = { food: 4 };
+
+// Elder Ama's lessons: each appears once, when its moment comes in play (see
+// lessonDue in engine.ts), and links what just happened to a real UN target.
+// Keep claims modest and general; no statistics.
+export const LESSONS: { id: string; title: string; text: string; sdg: string }[] = [
+  {
+    id: "forest",
+    title: "The forest is shrinking",
+    text: "Our woodcutters take trees faster than the forest can grow back. A tree takes years to grow and a moment to cut. Selective logging and planting saplings let us have wood without losing the forest.",
+    sdg: "SDG 15.2: stop deforestation and restore forests",
+  },
+  {
+    id: "wildlife",
+    title: "Where did the deer go?",
+    text: "Deer and boar live in the old forest. As the trees disappear, so do the animals we hunt. Protecting their home protects our food too.",
+    sdg: "SDG 15.5: protect habitats and the living things in them",
+  },
+  {
+    id: "smoke",
+    title: "Smoke over the village",
+    text: "More fires keep more people warm, but they burn more wood and fill the air with smoke. Breathing smoke from open fires harms people's lungs, and it still does today for families who cook over open fires.",
+    sdg: "SDG 7.1: clean, modern energy for everyone",
+  },
+  {
+    id: "rot",
+    title: "Food going to waste",
+    text: "We have gathered more than we can keep, and it is rotting. Taking only what we need leaves more for later, and none of our work is wasted.",
+    sdg: "SDG 12.3: cut food waste in half",
+  },
+  {
+    id: "crowding",
+    title: "Sickness in crowded huts",
+    text: "When many people live packed together, sickness spreads fast. Enough shelter for everyone, and people who know how to care for the sick, keep a village healthy.",
+    sdg: "SDG 11.1: safe, decent housing for all",
+  },
+  {
+    id: "growth",
+    title: "A growing village",
+    text: "Every new hut means more mouths to feed, more fires to keep and more trees to cut. A village that grows faster than its food and forests cannot last. Plan the growth.",
+    sdg: "SDG 11.3: plan towns and cities that can last",
+  },
+  {
+    id: "exhausted",
+    title: "The land is tired",
+    text: "We have pushed the land too hard for too long. The forest has stopped coming back and the harvests are shrinking. Land needs rest to recover.",
+    sdg: "SDG 15.3: restore damaged land and soil",
+  },
+  {
+    id: "clothes",
+    title: "Warm without burning",
+    text: "Warm clothes keep people warm without burning a single log. Needing less fire means cutting fewer trees and breathing less smoke.",
+    sdg: "SDG 7.3: use energy more efficiently",
+  },
+  {
+    id: "grazing",
+    title: "Too many mouths on the grass",
+    text: "Our herds are growing, and the grass around the pens is being eaten down to the dirt. Too many animals on too little land can wear it out.",
+    sdg: "SDG 15.3: restore damaged land and soil",
+  },
+  {
+    id: "charcoal",
+    title: "Bronze needs fire, fire needs trees",
+    text: "Every bronze tool was paid for in charcoal, and charcoal is made from whole trees. Better tools make every worker richer, but the smithy eats the forest.",
+    sdg: "SDG 12.2: use natural resources wisely",
+  },
+  {
+    id: "salt",
+    title: "Salt in the fields",
+    text: "Water from the canals makes the fields rich, but as it dries it leaves a little salt behind. Year after year, the soil can turn too salty to grow anything.",
+    sdg: "SDG 15.3: restore damaged land and soil",
+  },
+  {
+    id: "stewardship",
+    title: "Tending the forest",
+    text: "Our foresters plant as the woodcutters cut. A forest looked after like a field can give wood for ever.",
+    sdg: "SDG 15.2: manage forests so they last",
+  },
+  {
+    id: "writing",
+    title: "Words that outlive us",
+    text: "Now that our children can write, what the elders know is no longer lost when they die. Every generation starts where the last one stopped.",
+    sdg: "SDG 4.6: everyone learns to read and write",
+  },
+  {
+    id: "restore",
+    title: "Planting for the future",
+    text: "These saplings won't give us wood for a long time, but our grandchildren will walk in a forest because of them.",
+    sdg: "SDG 15.2: restore forests",
+  },
+];
+
+// Ticks between two lessons, so they never pile up.
+export const LESSON_GAP = 40;
+
+// Leaving the Stone Age: research Agriculture and grow to this many people.
+export const NEXT_ERA_POPULATION = 15;
+
+// The best ending needs the land to still be healthy: growth can't just ignore
+// the damage it does. Used for every debrief's ending tier.
+export const MIN_SUSTAINABILITY_FOR_BEST_ENDING = 60;
+
+// Each meter's real-world target, shown on the debrief.
+export const METER_SDG: Record<MeterKey, string> = {
+  food: "SDG 2.1: enough safe, nutritious food for everyone",
+  shelter: "SDG 11.1: safe, decent housing for all",
+  happiness: "SDG 3.4: mental health and well-being",
+  literacy: "SDG 4.6: everyone learns to read and count",
+  energy: "SDG 7.1: modern energy for everyone",
+  sustainability: "SDG 15.2: halt deforestation and restore forests",
+};
+
+// Ancient-era numbers. Smithies burn this much wood per tick for charcoal;
+// granaries keep this much more food from rotting; foresters add this much
+// growth to one thinned forest tile within reach every 3 ticks; walls add defense.
+export const SMITHY_CHARCOAL = 0.35;
+export const GRANARY_KEEPS = 150;
+export const FORESTER_GROWTH = 0.12;
+export const FORESTER_REACH = 3;
+export const WALL_DEFENSE = 4;
+
+// The Ancient era ends with a Roman legion. Scouts see it coming when the year
+// reaches warningYear; it lands warningTicks later. Each legionary fights like
+// two of your warriors. Size: (base + population / perPeople) × difficulty.
+export const ROMAN_LEGION = { warningYear: -1600, warningTicks: 90, strengthEach: 2, base: 6, perPeople: 5 };
+
 // Buying something that leaves less wood than this shows a "save up" warning.
 export const LOW_WOOD_AFTER_BUY = 10;
 
-// After the tutorial, how long before the first event and the first raid.
-export const GRACE_AFTER_TUTORIAL = { event: 90, raid: 150 };
+// After the tutorial, how long (ticks) before the first event, the first raid,
+// and the first disease that isn't the player's own choice. The early game is calm.
+export const GRACE_AFTER_TUTORIAL = { event: 150, raid: 300, disease: 300 };
 
-export const AFTER_TUTORIAL_RESERVE: Partial<Resources> = { food: 40, wood: 10 };
+export const AFTER_TUTORIAL_RESERVE: Partial<Resources> = { food: 60, wood: 15 };
 
 // `buys` lists what the step pays for: building ids, "scout", "train" or an
 // advancement id. The starting resources are worked out from it.

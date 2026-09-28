@@ -37,8 +37,52 @@ export interface Raid {
   strength: number;
   fromTile: number;
   targetTile: number;
+  // Where the warriors march out to meet them.
+  meetTile?: number;
+  // The Roman legion: `legion` legionaries, each worth two warriors.
+  roman?: boolean;
+  legion?: number;
   startTick: number;
   arriveTick: number;
+}
+
+export interface Battle {
+  tick: number;
+  tile: number;
+  fromTile: number;
+  warriors: number;
+  raiders: number;
+  warriorsLost: number;
+  raidersLost: number;
+  // True when the village held.
+  won: boolean;
+  roman?: boolean;
+}
+
+// Running totals for the end-of-era debrief.
+export interface Stats {
+  peakPopulation: number;
+  built: number;
+  raidsWon: number;
+  raidsLost: number;
+  // Seconds (ticks) the land spent below the best-ending Sustainability.
+  lowLandTicks: number;
+  deaths: { famine: number; disease: number; fire: number; battle: number };
+}
+
+// What the debrief shows: frozen when the era ends (or the game does).
+export interface Debrief {
+  kind: "era" | "loss" | "final";
+  era: number;
+  tick: number;
+  year: number;
+  meters: Meters;
+  forestLeft: number;
+  stats: Stats;
+  researched: number;
+  planted: number;
+  lessons: string[];
+  tier: "thriving" | "costly" | "stripped";
 }
 
 export type MeterKey =
@@ -79,6 +123,11 @@ export interface BuildingDef {
   name: string;
   icon: IconId;
   description: string;
+  // The trade-off, shown on the card and when placing: what you get, what the land pays.
+  gain: string;
+  landCost: string;
+  // 0–3: how hard it is on the land (shown as red leaves).
+  landImpact: 0 | 1 | 2 | 3;
   era: number;
   cost: Partial<Resources>;
   terrain: Terrain[];
@@ -114,6 +163,21 @@ export interface EventChoice {
     burn?: number;
     // Ticks to bring the next raid forward by.
     raidSooner?: number;
+    // Cut down this many of the biggest forest tiles near the village.
+    clearForest?: number;
+    // Protect this many of the oldest forest tiles near the village for good.
+    protectForest?: number;
+    // Chance (0–1) that sickness breaks out because of this choice.
+    sickness?: number;
+    // Something that may or may not happen: rolled when the choice is made.
+    gamble?: {
+      chance: number;
+      resources?: Partial<Resources>;
+      happiness?: number;
+      burn?: number;
+      message: string;
+      safeMessage: string;
+    };
   };
 }
 
@@ -123,16 +187,28 @@ export interface EventCard {
   body: string;
   icon: IconId;
   choices: EventChoice[];
+  // A short, modest real-world connection shown under the card.
+  realWorld: string;
+  // The earliest era this card can appear in (default: the Stone Age).
+  era?: number;
 }
 
 export interface GameState {
   version: number;
   phase: "playing" | "gameover";
   // Why the game ended: everyone starved, or everyone got so sad they left.
-  lostTo: "famine" | "unrest" | null;
+  lostTo: "famine" | "unrest" | "conquest" | null;
   seed: number;
   culture: CultureId;
   difficulty: DifficultyId;
+  // The Roman legion on its way (seen by scouts), and whether it has been fought.
+  legion?: { size: number; arriveTick: number } | null;
+  legionDone?: boolean;
+  // Running totals for the debrief, and the debrief on screen (if any).
+  stats?: Stats;
+  debrief?: Debrief | null;
+  // The name the player gave their people.
+  nation?: string;
   tiles: Tile[];
   startTile: number;
   era: number;
@@ -146,6 +222,33 @@ export interface GameState {
   unrestTicks: number;
   // How worn out the land is: counts up while Sustainability is below LAND.strainLevel.
   strainTicks: number;
+  // How many people are sick right now, and how many the current outbreak has killed.
+  sick?: number;
+  // Until this tick, no disease strikes unless the player invites it (early calm).
+  calmUntil?: number;
+  // Recently recovered people who can't catch it again for a while.
+  immune?: number;
+  outbreakDeaths?: number;
+  // Seconds of fuel left in each campfire, by tile id. 0 or missing = out.
+  fires?: Record<number, number>;
+  // Elder lessons already shown, the one on screen, and when it appeared.
+  lessonsSeen?: string[];
+  lesson?: string | null;
+  lessonTick?: number;
+  // Saplings planted so far.
+  planted?: number;
+  // The last event card shown, so it isn't repeated right away.
+  lastEvent?: string;
+  // Forest tiles the tribe has chosen to protect: woodcutters never cut them.
+  protectedTiles?: number[];
+  // How each woodcutter works, by tile id: clear-cut (default) or selective.
+  logging?: Record<number, "clear" | "selective">;
+  // Sustainability sampled every 5 ticks, oldest first (for the trend arrow).
+  sustainTrail?: number[];
+  // The last fight with raiders, so the 3D scene can play it out.
+  battle?: Battle | null;
+  // People caught in the last wildfire: where they fell and when (for the 3D scene).
+  fireVictims?: { tile: number; tick: number }[];
   // Total forest growth near the village when the game began (100% Sustainability).
   forestBaseline: number;
   soldiers: number;

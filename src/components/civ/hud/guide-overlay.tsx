@@ -14,6 +14,18 @@ export function useGuide() {
   return useMemo(() => guideFor(state, selected, panel), [state, selected, panel]);
 }
 
+// Scroll only the bar that holds the element (never the page) so it's visible.
+function revealInBar(el: Element) {
+  let bar = el.parentElement;
+  while (bar && !(bar.scrollWidth > bar.clientWidth + 2 && getComputedStyle(bar).overflowX !== "visible")) {
+    bar = bar.parentElement;
+  }
+  if (!bar || bar === document.body) return;
+  const box = el.getBoundingClientRect();
+  const frame = bar.getBoundingClientRect();
+  bar.scrollBy({ left: box.left + box.width / 2 - (frame.left + frame.width / 2), behavior: "smooth" });
+}
+
 function findHole(target: GuideTarget): Hole | null {
   if (target.kind === "tile") {
     if (!tileAnchor.visible) return null;
@@ -43,6 +55,16 @@ export function GuideOverlay() {
   useEffect(() => {
     if (!key) return;
     const t = JSON.parse(key) as GuideTarget;
+    // On narrow screens the button may be scrolled out of sight in its bar.
+    if (t.kind === "ui") {
+      for (const id of t.ids) {
+        const el = document.querySelector(`[data-guide="${id}"]`);
+        if (el) {
+          revealInBar(el);
+          break;
+        }
+      }
+    }
     let raf = 0;
     const loop = () => {
       const next = findHole(t);

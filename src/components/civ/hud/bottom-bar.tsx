@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { BUILDINGS, LOW_WOOD_AFTER_BUY, TRAIN_COST, TREE_BY_ID, TUTORIAL } from "@/game/content";
+import { BUILDINGS, LOW_WOOD_AFTER_BUY, PLANT_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL } from "@/game/content";
 import {
   buildingCost,
   canAfford,
@@ -9,8 +9,12 @@ import {
   countBuildings,
   defenseStrength,
   DEMOLISH_TOOL,
+  PLANT_TOOL,
+  foodKeeps,
+  foodSpoiling,
   housingCapacity,
   isUnlocked,
+  perSecond,
   production,
   scoutCost,
   tutorialLocked,
@@ -30,9 +34,13 @@ const COST_ICONS: Record<keyof Resources, IconId> = {
   knowledge: "bulb",
 };
 
+// Per-tick amount shown per real second.
 function rate(n: number) {
-  return `${n >= 0 ? "+" : ""}${n.toFixed(1)}`;
+  const s = perSecond(n);
+  return `${s >= 0 ? "+" : ""}${s.toFixed(1)}`;
 }
+
+const perSec = (n: number) => perSecond(n).toFixed(1);
 
 function Cost({ cost, bad, tight }: { cost: Partial<Resources>; bad?: boolean; tight?: boolean }) {
   return (
@@ -46,6 +54,22 @@ function Cost({ cost, bad, tight }: { cost: Partial<Resources>; bad?: boolean; t
           <span className="font-num">{v}</span>
         </span>
       ))}
+    </span>
+  );
+}
+
+// How hard a building is on the land: tree stumps, or a leaf if it's gentle.
+function LandImpact({ level }: { level: number }) {
+  return (
+    <span
+      className="absolute right-0.5 top-0.5 flex"
+      title={level ? `Hard on the land (${level}/3)` : "Gentle on the land"}
+    >
+      {level === 0 ? (
+        <PixelIcon name="leaf" size={10} />
+      ) : (
+        Array.from({ length: level }, (_, i) => <PixelIcon key={i} name="stump" size={10} />)
+      )}
     </span>
   );
 }
@@ -102,7 +126,7 @@ function ToolButton({
 export function BottomBar() {
   const { state, dispatch, selected, setSelected, setPanel } = useGame();
   const prod = production(state);
-  const net = prod.food - consumption(state);
+  const net = prod.food - consumption(state) - foodSpoiling(state);
   const eraBuildings = BUILDINGS.filter((b) => b.era <= state.era);
   const inTutorial = state.tutorialStep < TUTORIAL.length;
   const counts = countBuildings(state);
@@ -111,22 +135,38 @@ export function BottomBar() {
     !inTutorial && (cost.wood ?? 0) > 0 && state.resources.wood - (cost.wood ?? 0) < LOW_WOOD_AFTER_BUY;
 
   return (
-    <div className="pointer-events-auto absolute inset-x-0 bottom-3 flex justify-center px-3">
-      <div className="pixel-panel-dark font-pixel flex min-w-0 max-w-full items-stretch gap-3 p-2">
+    <div className="pointer-events-auto absolute inset-x-0 bottom-2 flex flex-col items-center gap-1.5 px-2 md:bottom-3 md:px-3">
+      {selected && (
+        // Phones have no Esc key or right click: a clear way out of build mode.
+        <button
+          type="button"
+          onClick={() => setSelected(null)}
+          className="pixel-btn font-pixel bg-[#fdf6e3] px-3 py-1 text-xs text-[#2b2119]"
+          data-testid="cancel-tool"
+        >
+          Cancel
+        </button>
+      )}
+      <div className="pixel-panel-dark font-pixel flex w-full min-w-0 max-w-full flex-col items-stretch gap-2 p-1.5 md:w-auto md:flex-row md:gap-3 md:p-2">
         <div className="hidden flex-col justify-center gap-0.5 border-r-2 border-white/10 pr-3 text-[11px] text-white/85 md:flex">
           <Stat icon="hut" title="Housing">
             {Math.floor(state.population)}/{housingCapacity(state)}
           </Stat>
           <Stat
             icon="meat"
-            title={`Food: +${prod.food.toFixed(1)}/s made, −${consumption(state).toFixed(1)}/s eaten by ${Math.floor(state.population)} people`}
+            title={`Food: +${perSec(prod.food)}/s made, −${perSec(consumption(state))}/s eaten by ${Math.floor(state.population)} people`}
             bad={net < 0}
           >
             {rate(net)}/s
           </Stat>
           <span className="font-num whitespace-nowrap text-[11px] text-white/60" title="More people eat more food">
-            eat −{consumption(state).toFixed(1)}/s
+            eat −{perSec(consumption(state))}/s
           </span>
+          {foodSpoiling(state) > 0.05 && (
+            <span className="font-num whitespace-nowrap text-[11px] text-amber-300" title={`Stored food above ${foodKeeps(state)} rots away. Granaries keep more.`}>
+              rot −{perSec(foodSpoiling(state))}/s
+            </span>
+          )}
           <Stat icon="log" title="Wood per second" bad={prod.wood < 0}>
             {rate(prod.wood)}/s
           </Stat>
@@ -153,17 +193,18 @@ export function BottomBar() {
                   usedUp
                     ? "Only one of each during the tutorial"
                     : unlocked
-                    ? b.description
+                    ? `${b.description}\n\nYou get: ${b.gain}\nThe land pays: ${b.landCost}`
                     : tutorialLocked(state, b.id)
                       ? "Unlocks later in the tutorial"
                       : `Research ${TREE_BY_ID[b.requires ?? ""]?.name ?? "more"} to unlock`
                 }
                 className={cn(
-                  "pixel-btn flex w-20 shrink-0 flex-col items-center gap-0.5 px-1 py-1.5 text-center",
+                  "pixel-btn relative flex w-20 shrink-0 flex-col items-center gap-0.5 px-1 py-1.5 text-center",
                   active ? "bg-amber-400 text-[#2b2119]" : "bg-[#4a3b2e] hover:bg-[#5c4a3a]",
                   (!unlocked || usedUp) && "cursor-not-allowed opacity-40",
                 )}
               >
+                {unlocked && <LandImpact level={b.landImpact} />}
                 <PixelIcon name={unlocked ? b.icon : "lock"} size={24} />
                 <span className="text-[11px] leading-tight">{b.name}</span>
                 {usedUp ? (
@@ -176,7 +217,7 @@ export function BottomBar() {
           })}
         </div>
 
-        <div className="flex shrink-0 gap-1.5 border-l-2 border-white/10 pl-3">
+        <div className="flex shrink-0 gap-1.5 overflow-x-auto border-t-2 border-white/10 pt-1.5 md:overflow-visible md:border-l-2 md:border-t-0 md:pl-3 md:pt-0">
           <ToolButton
             icon="coin"
             label="Sell"
@@ -184,6 +225,18 @@ export function BottomBar() {
             title="Sell a building to make room. You get half its cost back."
             tone={selected === DEMOLISH_TOOL ? "bg-amber-400 text-[#2b2119]" : "bg-[#4a3b2e] hover:bg-[#5c4a3a]"}
           />
+          <ToolButton
+            guide="tool-plant"
+            locked={tutorialLocked(state, "plant")}
+            icon="sapling"
+            label="Plant"
+            onClick={() => setSelected(selected === PLANT_TOOL ? null : PLANT_TOOL)}
+            disabled={!canAfford(state, PLANT_COST)}
+            title="Plant saplings on open land or thinned forest. A new forest raises Sustainability and gives more wood later."
+            tone={selected === PLANT_TOOL ? "bg-emerald-400 text-[#2b2119]" : "bg-emerald-900 hover:bg-emerald-800"}
+          >
+            <Cost cost={PLANT_COST} />
+          </ToolButton>
           <ArmyButton />
           <ToolButton
             guide="tool-scout"

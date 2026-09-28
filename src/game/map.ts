@@ -27,7 +27,8 @@ const HEIGHTS: Record<Terrain, number> = {
   marsh: 0.4,
   forest: 0.55,
   hills: 0.85,
-  mountain: 1.35,
+  // The base only; the peak on top is drawn as its own cone (see Mountains).
+  mountain: 0.7,
 };
 
 export function terrainHeight(terrain: Terrain) {
