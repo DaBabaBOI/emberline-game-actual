@@ -4,6 +4,8 @@ import {
   DISEASE,
   CAMPFIRE_BURN_TICKS,
   RELIGHT_WOOD,
+  PLANT_COST,
+  SELECTIVE_FLOOR,
   TICK_SECONDS,
   FIRE_RISK,
   LAND,
@@ -58,6 +60,8 @@ export type Action =
   | { type: "devFiresOut" }
   | { type: "devOutbreak" }
   | { type: "devRaid" }
+  | { type: "setLogging"; tileId: number; mode: "clear" | "selective" }
+  | { type: "plant"; tileId: number }
   | { type: "relight"; tileId: number }
   | { type: "devEra"; era: number }
   | { type: "devReveal" }
@@ -238,9 +242,32 @@ const treesNear = (state: GameState, tile: Tile) =>
   );
 
 // 0–1: a woodcutter with no trees left nearby makes no wood.
+export function loggingMode(state: GameState, tile: Tile) {
+  return state.logging?.[tile.id] ?? "clear";
+}
+
+// 0–1: how much of its full output a woodcutter makes. Clear-cutting takes every
+// tree; selective logging only thins mature trees, for half the wood.
 export function woodcutterYield(state: GameState, tile: Tile) {
+  if (loggingMode(state, tile) === "selective") {
+    const mature = treesNear(state, tile).reduce((sum, t) => sum + Math.max(0, t.growth - SELECTIVE_FLOOR), 0);
+    return Math.min(1, mature) * 0.5;
+  }
   const standing = treesNear(state, tile).reduce((sum, t) => sum + t.growth, 0);
   return Math.min(1, standing / 2);
+}
+
+export const PLANT_TOOL = "__plant";
+
+// Where saplings can go: open grass or steppe, or forest that has been thinned.
+export function plantError(state: GameState, tile: Tile): string | null {
+  if (tutorialLocked(state, "plant")) return "Unlocks after the tutorial";
+  if (!tile.revealed) return "Unexplored land";
+  if (tile.building) return "Something is built here";
+  if (tile.terrain === "forest" && tile.growth >= 0.6) return "The forest here is already healthy";
+  if (tile.terrain !== "grass" && tile.terrain !== "steppe" && tile.terrain !== "forest") return "Trees won't grow here";
+  if (!canAfford(state, PLANT_COST)) return "Not enough food";
+  return null;
 }
 
 // How likely a wildfire is: every campfire close to trees adds risk.
@@ -850,7 +877,7 @@ function growForests(state: GameState): GameState {
       .sort((a, b) => b.growth - a.growth);
     for (const { t, growth } of trees) {
       if (need <= 0) break;
-      const take = Math.min(need, growth - 0.02);
+      const take = Math.min(need, growth - (loggingMode(state, w) === "selective" ? SELECTIVE_FLOOR : 0.02));
       if (take <= 0) continue;
       need -= take;
       changes.set(t.id, { ...changes.get(t.id), growth: growth - take });
@@ -1129,6 +1156,39 @@ function step(state: GameState, action: Action): GameState {
         fires: { ...state.fires, [tile.id]: burnTicks(state) },
         resources: { ...state.resources, wood: state.resources.wood - RELIGHT_WOOD },
         log: ["Relit the campfire.", ...state.log].slice(0, 30),
+      });
+    }
+
+    case "setLogging": {
+      const tile = state.tiles[action.tileId];
+      if (!tile || tile.building !== "woodcutter") return state;
+      return withMeters({
+        ...state,
+        logging: { ...state.logging, [tile.id]: action.mode },
+        log: [
+          action.mode === "selective"
+            ? "Selective logging: half the wood, but the forest will last."
+            : "Clear-cutting: full wood, but the forest will be stripped.",
+          ...state.log,
+        ].slice(0, 30),
+      });
+    }
+
+    case "plant": {
+      const tile = state.tiles[action.tileId];
+      if (!tile || plantError(state, tile)) return state;
+      const young = tile.terrain !== "forest";
+      return withMeters({
+        ...state,
+        tiles: state.tiles.map((t) =>
+          t.id !== tile.id
+            ? t
+            : young
+              ? { ...t, terrain: "forest", height: terrainHeight("forest"), growth: 0.1 }
+              : { ...t, growth: Math.min(1, t.growth + 0.3) },
+        ),
+        resources: spend(state.resources, PLANT_COST),
+        log: [young ? "Planted saplings: a new forest will grow here." : "Planted saplings in the thinned forest.", ...state.log].slice(0, 30),
       });
     }
 

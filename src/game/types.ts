@@ -174,6 +174,8 @@ export interface GameState {
   outbreakDeaths?: number;
   // Seconds of fuel left in each campfire, by tile id. 0 or missing = out.
   fires?: Record<number, number>;
+  // How each woodcutter works, by tile id: clear-cut (default) or selective.
+  logging?: Record<number, "clear" | "selective">;
   // Sustainability sampled every 5 ticks, oldest first (for the trend arrow).
   sustainTrail?: number[];
   // The last fight with raiders, so the 3D scene can play it out.
