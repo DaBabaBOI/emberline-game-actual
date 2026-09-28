@@ -134,6 +134,12 @@ These were decided with the project owner. Do not change them without being aske
   `secs()` / `perSecond()`. The early game is deliberately calm and easy
   (`GRACE_AFTER_TUTORIAL`: first event after 150 ticks, first raid after 300,
   no disease out of nowhere for 300); pressure builds as the tribe grows.
+- **Phones are supported.** Layouts use `md:` breakpoints (bars stack and
+  scroll on small screens). There is no hover on touch: the first tap on a tile
+  previews (ghost + trade-off card), the second tap builds. Never rely on Esc or
+  right-click alone (there is an on-screen Cancel). Map labels (drei `<Html>`)
+  use `zIndexRange={[15, 0]}` so HUD panels stay on top. Test new UI at a
+  phone size (e.g. Playwright "Pixel 7").
 - **Never flood the screen:** at most 2 toasts at once, each gone after ~5 s,
   and only the most urgent warning is shown (the rest behind "+N more").
 - **Low-resource warnings** (food, wood, famine, unrest, no fire) show bottom-left and the

@@ -64,14 +64,17 @@ function GuideAnchor({ tile }: { tile: Tile | null }) {
 }
 
 export function WorldCanvas() {
-  const { state, dispatch, selected, setSelected } = useGame();
+  const { state, dispatch, selected, setSelected, panel } = useGame();
   const [rawHovered, setHovered] = useState<number | null>(null);
+  // Tall phone screens start further out so more of the island fits.
+  const [portrait] = useState(() => typeof window !== "undefined" && window.innerHeight > window.innerWidth);
   // The building whose info panel is open (click a building with no tool picked).
   const [inspected, setInspected] = useState<number | null>(null);
   const guide = useGuide();
   const guideTile = guide.target?.kind === "tile" ? guide.target.tileId : null;
   // While the tutorial points at a tile, that is the only one you can build on.
-  const hovered = guideTile === null || rawHovered === guideTile ? rawHovered : null;
+  // No map preview while a menu like Advancements covers the map.
+  const hovered = panel ? null : guideTile === null || rawHovered === guideTile ? rawHovered : null;
   const home = state.tiles[state.startTile];
   const target = useMemo<[number, number, number]>(() => [home.x, 0, home.z], [home.x, home.z]);
 
@@ -107,9 +110,14 @@ export function WorldCanvas() {
   const burningIds = burning.map((t) => t.id);
   const outFires = buildings.filter((t) => t.building === "campfire" && !isLit(state, t));
 
-  function pick(id: number) {
+  // On a phone there is no hover: the first tap previews, the second tap builds.
+  function pick(id: number, touch = false) {
     if (guideTile !== null && id !== guideTile) return;
     const tile = state.tiles[id];
+    if (touch && selected && rawHovered !== id) {
+      setHovered(id);
+      return;
+    }
     if (!selected && tile.building === "campfire" && !isLit(state, tile)) {
       dispatch({ type: "relight", tileId: id });
       return;
@@ -128,12 +136,19 @@ export function WorldCanvas() {
     }
     if (!selected) return;
     dispatch({ type: "place", tileId: id, buildingId: selected });
+    // After a two-tap build on a phone, drop the preview so no stale label lingers.
+    if (touch) setHovered(null);
   }
 
   return (
     <Canvas
       shadows
-      camera={{ position: [home.x, 18, home.z + 16], fov: 38, near: 0.5, far: 400 }}
+      camera={{
+        position: portrait ? [home.x, 30, home.z + 27] : [home.x, 18, home.z + 16],
+        fov: 38,
+        near: 0.5,
+        far: 400,
+      }}
       onContextMenu={(e) => {
         e.preventDefault();
         setSelected(null);
@@ -203,7 +218,7 @@ export function WorldCanvas() {
       <CampfireSmoke fires={burning} />
       {!guide.target &&
         outFires.map((t) => (
-          <Html key={t.id} center position={[t.x, tileTop(t) + 1.3, t.z]}>
+          <Html zIndexRange={[15, 0]} key={t.id} center position={[t.x, tileTop(t) + 1.3, t.z]}>
             <button
               type="button"
               onPointerDown={(e) => e.stopPropagation()}
@@ -246,14 +261,14 @@ export function WorldCanvas() {
         />
       )}
       {hoverTile && demolishNote && hoverTile.building && (
-        <Html center position={[hoverTile.x, tileTop(hoverTile) + 1.2, hoverTile.z]} style={{ pointerEvents: "none" }}>
+        <Html zIndexRange={[15, 0]} center position={[hoverTile.x, tileTop(hoverTile) + 1.2, hoverTile.z]} style={{ pointerEvents: "none" }}>
           <div className="pixel-panel-dark font-pixel whitespace-nowrap px-2 py-1 text-xs">{demolishNote.text}</div>
         </Html>
       )}
       {hoverTile && Ghost && (
         <group position={[hoverTile.x, tileTop(hoverTile), hoverTile.z]} scale={1.55}>
           <Ghost opacity={0.45} />
-          <Html center position={[0, 1.1, 0]} style={{ pointerEvents: "none" }}>
+          <Html zIndexRange={[15, 0]} center position={[0, 1.1, 0]} style={{ pointerEvents: "none" }}>
             {error ? (
               <div className="pixel-panel-dark font-pixel whitespace-nowrap px-2 py-1 text-xs">{error}</div>
             ) : (
@@ -280,7 +295,7 @@ export function WorldCanvas() {
       )}
 
       {hoverTile && planting && (
-        <Html center position={[hoverTile.x, tileTop(hoverTile) + 1.1, hoverTile.z]} style={{ pointerEvents: "none" }}>
+        <Html zIndexRange={[15, 0]} center position={[hoverTile.x, tileTop(hoverTile) + 1.1, hoverTile.z]} style={{ pointerEvents: "none" }}>
           <div className="pixel-panel-dark font-pixel w-56 px-2 py-1 text-xs">
             {plantNote ?? (
               <span className="flex items-start gap-1.5 text-emerald-300">
@@ -294,7 +309,7 @@ export function WorldCanvas() {
         </Html>
       )}
       {inspected !== null && state.tiles[inspected]?.building && !selected && (
-        <Html center position={[state.tiles[inspected].x, tileTop(state.tiles[inspected]) + 2.2, state.tiles[inspected].z]}>
+        <Html zIndexRange={[15, 0]} center position={[state.tiles[inspected].x, tileTop(state.tiles[inspected]) + 2.2, state.tiles[inspected].z]}>
           <BuildingInfo state={state} tileId={inspected} dispatch={dispatch} onClose={() => setInspected(null)} />
         </Html>
       )}
