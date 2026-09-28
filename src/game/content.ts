@@ -500,6 +500,63 @@ export const GROWTH_PRESSURE = {
 export const SELECTIVE_FLOOR = 0.5;
 export const PLANT_COST = { food: 4 };
 
+// Elder Ama's lessons: each appears once, when its moment comes in play (see
+// lessonDue in engine.ts), and links what just happened to a real UN target.
+// Keep claims modest and general; no statistics.
+export const LESSONS: { id: string; title: string; text: string; sdg: string }[] = [
+  {
+    id: "forest",
+    title: "The forest is shrinking",
+    text: "Our woodcutters take trees faster than the forest can grow back. A tree takes years to grow and a moment to cut. Selective logging and planting saplings let us have wood without losing the forest.",
+    sdg: "SDG 15.2: stop deforestation and restore forests",
+  },
+  {
+    id: "wildlife",
+    title: "Where did the deer go?",
+    text: "Deer and boar live in the old forest. As the trees disappear, so do the animals we hunt. Protecting their home protects our food too.",
+    sdg: "SDG 15.5: protect habitats and the living things in them",
+  },
+  {
+    id: "smoke",
+    title: "Smoke over the village",
+    text: "More fires keep more people warm, but they burn more wood and fill the air with smoke. Breathing smoke from open fires harms people's lungs, and it still does today for families who cook over open fires.",
+    sdg: "SDG 7.1: clean, modern energy for everyone",
+  },
+  {
+    id: "rot",
+    title: "Food going to waste",
+    text: "We have gathered more than we can keep, and it is rotting. Taking only what we need leaves more for later, and none of our work is wasted.",
+    sdg: "SDG 12.3: cut food waste in half",
+  },
+  {
+    id: "crowding",
+    title: "Sickness in crowded huts",
+    text: "When many people live packed together, sickness spreads fast. Enough shelter for everyone, and people who know how to care for the sick, keep a village healthy.",
+    sdg: "SDG 11.1: safe, decent housing for all",
+  },
+  {
+    id: "growth",
+    title: "A growing village",
+    text: "Every new hut means more mouths to feed, more fires to keep and more trees to cut. A village that grows faster than its food and forests cannot last. Plan the growth.",
+    sdg: "SDG 11.3: plan towns and cities that can last",
+  },
+  {
+    id: "exhausted",
+    title: "The land is tired",
+    text: "We have pushed the land too hard for too long. The forest has stopped coming back and the harvests are shrinking. Land needs rest to recover.",
+    sdg: "SDG 15.3: restore damaged land and soil",
+  },
+  {
+    id: "restore",
+    title: "Planting for the future",
+    text: "These saplings won't give us wood for a long time, but our grandchildren will walk in a forest because of them.",
+    sdg: "SDG 15.2: restore forests",
+  },
+];
+
+// Ticks between two lessons, so they never pile up.
+export const LESSON_GAP = 40;
+
 // Buying something that leaves less wood than this shows a "save up" warning.
 export const LOW_WOOD_AFTER_BUY = 10;
 
