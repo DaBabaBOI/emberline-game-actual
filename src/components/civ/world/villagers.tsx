@@ -6,6 +6,7 @@ import { hexDistance } from "@/game/hex";
 import { isLand } from "@/game/map";
 import type { Raid, Tile } from "@/game/types";
 import { Figures, HAIRS, SKINS, type Agent } from "./figures";
+import { makeGround, type Ground } from "./ground";
 
 const TUNICS = ["#b5651d", "#8e5a3a", "#a0522d", "#6b8e23", "#c2956b", "#9c6b3f"];
 
@@ -23,13 +24,14 @@ function hash(n: number) {
   return x - Math.floor(x);
 }
 
-function makeWalker(i: number, at: Tile, look: Partial<Walker> = {}): Walker {
+function makeWalker(i: number, at: Tile, ground: Ground, look: Partial<Walker> = {}): Walker {
+  const spot = ground.spotOn(at);
   return {
-    x: at.x,
+    x: spot.x,
     y: at.height,
-    z: at.z,
-    tx: at.x,
-    tz: at.z,
+    z: spot.z,
+    tx: spot.x,
+    tz: spot.z,
     ty: at.height,
     heading: 0,
     moving: false,
@@ -45,7 +47,16 @@ function makeWalker(i: number, at: Tile, look: Partial<Walker> = {}): Walker {
   };
 }
 
-function stepWalker(w: Walker, dt: number, pickTarget: () => Tile) {
+function retarget(w: Walker, ground: Ground, pickTarget: () => Tile) {
+  const target = pickTarget();
+  const spot = ground.spotOn(target);
+  w.tx = spot.x;
+  w.tz = spot.z;
+}
+
+// Walks toward the target, standing on whatever tile is underfoot. If the next
+// step would go into a mountain, the sea or a building, pick somewhere else.
+function stepWalker(w: Walker, dt: number, ground: Ground, pickTarget: () => Tile) {
   const dx = w.tx - w.x;
   const dz = w.tz - w.z;
   const dist = Math.hypot(dx, dz);
@@ -53,20 +64,26 @@ function stepWalker(w: Walker, dt: number, pickTarget: () => Tile) {
     w.moving = false;
     w.wait -= dt;
     if (w.wait <= 0) {
-      const target = pickTarget();
-      w.tx = target.x + (Math.random() - 0.5) * 0.7;
-      w.tz = target.z + (Math.random() - 0.5) * 0.7;
-      w.ty = target.height;
+      retarget(w, ground, pickTarget);
       w.wait = 1 + Math.random() * 3;
     }
-    return;
+  } else {
+    const step = Math.min(dist, w.speed * dt);
+    const nx = w.x + (dx / dist) * step;
+    const nz = w.z + (dz / dist) * step;
+    const stuck = !ground.walkable(w.x, w.z);
+    if (stuck || ground.walkable(nx, nz)) {
+      w.moving = true;
+      w.heading = Math.atan2(dx, dz);
+      w.x = nx;
+      w.z = nz;
+    } else {
+      w.moving = false;
+      retarget(w, ground, pickTarget);
+    }
   }
-  const step = Math.min(dist, w.speed * dt);
-  w.moving = true;
-  w.heading = Math.atan2(dx, dz);
-  w.x += (dx / dist) * step;
-  w.z += (dz / dist) * step;
-  w.y += (w.ty - w.y) * Math.min(1, dt * 3);
+  const floor = ground.heightAt(w.x, w.z);
+  w.y += (floor - w.y) * Math.min(1, dt * 12);
 }
 
 const pick = (list: Tile[]) => list[Math.floor(Math.random() * list.length)];
@@ -94,6 +111,7 @@ export function Villagers({
     };
   }, [tiles, homeTile]);
 
+  const ground = useMemo(() => makeGround(tiles), [tiles]);
   const count = Math.min(60, Math.max(3, Math.ceil(population / 2)));
 
   useFrame((_, delta) => {
@@ -102,7 +120,7 @@ export function Villagers({
       const i = list.length;
       const child = i % 4 === 3;
       list.push(
-        makeWalker(i, pick(spots.all), {
+        makeWalker(i, pick(spots.all), ground, {
           child,
           scale: child ? 0.95 : 1.35,
           tunic: child ? "#4a90d9" : TUNICS[i % TUNICS.length],
@@ -112,7 +130,7 @@ export function Villagers({
     list.length = count;
     const dt = Math.min(delta, 0.1);
     for (const w of list) {
-      stepWalker(w, dt, () => {
+      stepWalker(w, dt, ground, () => {
         if (w.child && spots.school.length && Math.random() < 0.6) return pick(spots.school);
         if (spots.fields.length && Math.random() < 0.3) return pick(spots.fields);
         return Math.random() < 0.4 ? pick(spots.wander) : pick(spots.all);
@@ -125,6 +143,7 @@ export function Villagers({
 
 export function Warriors({ tiles, soldiers, homeTile }: { tiles: Tile[]; soldiers: number; homeTile: Tile }) {
   const walkers = useRef<Walker[]>([]);
+  const ground = useMemo(() => makeGround(tiles), [tiles]);
   const camps = useMemo(() => {
     const list = tiles.filter((t) => t.building === "warcamp");
     return list.length ? list : [homeTile];
@@ -136,12 +155,12 @@ export function Warriors({ tiles, soldiers, homeTile }: { tiles: Tile[]; soldier
     while (list.length < count) {
       const i = list.length;
       list.push(
-        makeWalker(i + 100, pick(camps), { tunic: "#5b6f8a", hair: "#1a1a1a", scale: 1.4, speed: 0.5 }),
+        makeWalker(i + 100, pick(camps), ground, { tunic: "#5b6f8a", hair: "#1a1a1a", scale: 1.4, speed: 0.5 }),
       );
     }
     list.length = count;
     const dt = Math.min(delta, 0.1);
-    for (const w of list) stepWalker(w, dt, () => pick(camps));
+    for (const w of list) stepWalker(w, dt, ground, () => pick(camps));
   });
 
   return <Figures agents={walkers} max={40} weapon="spear" />;
@@ -149,6 +168,7 @@ export function Warriors({ tiles, soldiers, homeTile }: { tiles: Tile[]; soldier
 
 export function Raiders({ tiles, raid, tick }: { tiles: Tile[]; raid: Raid | null; tick: number }) {
   const agents = useRef<Agent[]>([]);
+  const ground = useMemo(() => makeGround(tiles), [tiles]);
   const progress = useRef(0);
 
   useFrame((_, delta) => {
@@ -168,10 +188,13 @@ export function Raiders({ tiles, raid, tick }: { tiles: Tile[]; raid: Raid | nul
     for (let i = 0; i < raid.strength; i++) {
       const offX = (hash(i + 1) - 0.5) * 1.2;
       const offZ = (hash(i + 2) - 0.5) * 1.2;
+      const x = from.x + (to.x - from.x) * p + offX;
+      const z = from.z + (to.z - from.z) * p + offZ;
+      const under = ground.tileAt(x, z);
       list[i] = {
-        x: from.x + (to.x - from.x) * p + offX,
-        z: from.z + (to.z - from.z) * p + offZ,
-        y: Math.max(0.3, from.height + (to.height - from.height) * p),
+        x,
+        z,
+        y: ground.heightAt(x, z) + (under?.terrain === "mountain" ? 0.55 : 0),
         heading,
         moving: p < 0.98,
         scale: 1.4,
