@@ -96,8 +96,22 @@ These were decided with the project owner. Do not change them without being aske
 
 ## Roadmap (in order)
 
-1. Ancient era: farms → villages, bronze (copper + tin), writing, the wheel, first
-   trade caravans, first AI nation neighbors.
+1. Ancient era (decided with the owner):
+   - **Entering it:** research Agriculture *and* hit a milestone (e.g. 30 people and
+     3 farms), then a short "A new era dawns" moment.
+   - **Old buildings upgrade manually:** click any building to open an info panel
+     with an "Upgrade to …" button; the model changes when upgraded.
+   - **All four systems:** the bronze supply chain (copper + tin → furnace →
+     bronze); villages and roads (houses cluster, dirt roads people walk on);
+     writing and a scribes' school (kids attend, literacy rises); trade caravans.
+   - **First neighbor:** steppe traders on the Silk Steppe island. Mostly want to
+     trade; turn aggressive if you're weak or keep refusing.
+   - **Sea travel:** research Reed Boats → build a dock → scouts and caravans can
+     sail to other islands.
+   - **Overseas outposts:** yes, but late in the era after a sailing advancement
+     (historically accurate: Minoan/Phoenician/Greek colonies).
+   - **Raiders:** bigger raids; unlock bronze spearmen, archers, and palisade/stone
+     walls that protect nearby tiles.
 2. Classical: coinage, roads, iron legions, philosophy, the first landmark project.
 3. Medieval & Renaissance, then Industrial & Modern (pollution gets serious),
    then Future & Space (the space view, fusion, AI tech, interstellar).
