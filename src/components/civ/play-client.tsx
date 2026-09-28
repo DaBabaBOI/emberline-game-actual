@@ -6,5 +6,5 @@ import dynamic from "next/dynamic";
 // ever renders in the browser.
 export const PlayClient = dynamic(
   () => import("./game-screen").then((m) => m.GameScreen),
-  { ssr: false, loading: () => <div className="min-h-screen bg-[#0b1220]" /> },
+  { ssr: false, loading: () => <div className="min-h-screen bg-sky-100" /> },
 );

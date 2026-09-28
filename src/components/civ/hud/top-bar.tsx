@@ -40,6 +40,7 @@ export function TopBar() {
         <span className="h-6 w-px bg-white/20" />
         <Chip icon="👥" value={Math.floor(state.population).toLocaleString()} title="Population" />
         <Chip icon="🐚" value={Math.floor(r.currency).toLocaleString()} title={era.currency} />
+        <Chip icon="⚔️" value={state.soldiers.toString()} title="Warriors" />
         <span className="h-6 w-px bg-white/20" />
         <Chip icon="🍖" value={Math.floor(r.food).toString()} title="Food stored" />
         <Chip icon="🪵" value={Math.floor(r.wood).toString()} title="Wood" />

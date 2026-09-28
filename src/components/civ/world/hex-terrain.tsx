@@ -23,8 +23,11 @@ function jitter(id: number, salt: number) {
   return x - Math.floor(x);
 }
 
+// Unexplored sea stays blue (just a little darker); unexplored land is hidden
+// under a layer of cloud.
 export function tileTop(tile: Tile) {
-  return tile.revealed ? tile.height : FOG_HEIGHT;
+  if (tile.revealed || !isLand(tile.terrain)) return tile.height;
+  return FOG_HEIGHT;
 }
 
 export function HexTerrain({
@@ -54,8 +57,13 @@ export function HexTerrain({
         color.set(TERRAIN_COLORS[tile.terrain]);
         color.offsetHSL(0, 0, (jitter(tile.id, 1) - 0.5) * 0.06);
       } else {
-        color.set(isLand(tile.terrain) ? "#e9eef3" : "#dfe8f0");
-        color.offsetHSL(0, 0, (jitter(tile.id, 2) - 0.5) * 0.05);
+        if (isLand(tile.terrain)) {
+          color.set("#eef2f6");
+          color.offsetHSL(0, 0, (jitter(tile.id, 2) - 0.5) * 0.05);
+        } else {
+          color.set(TERRAIN_COLORS.deep);
+          color.offsetHSL(0, 0, -0.04 + (jitter(tile.id, 2) - 0.5) * 0.03);
+        }
       }
       mesh.setColorAt(tile.id, color);
     }
@@ -98,7 +106,7 @@ export function Forests({ tiles }: { tiles: Tile[] }) {
           x: t.x + (jitter(t.id, i * 3 + 1) - 0.5) * 1.1,
           z: t.z + (jitter(t.id, i * 3 + 2) - 0.5) * 1.1,
           y: t.height,
-          s: 0.75 + jitter(t.id, i * 3 + 3) * 0.5,
+          s: (0.75 + jitter(t.id, i * 3 + 3) * 0.5) * Math.max(0.2, t.terrain === "forest" ? t.growth : 1),
           tone: jitter(t.id, i + 20),
         });
       }

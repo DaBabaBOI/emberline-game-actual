@@ -46,12 +46,15 @@ export const CULTURES: Record<
 
 export const DIFFICULTIES: Record<
   DifficultyId,
-  { name: string; blurb: string; consumption: number; famineLimit: number }
+  { name: string; blurb: string; consumption: number; famineLimit: number; raiders: number }
 > = {
-  easy: { name: "Easy", blurb: "Forgiving. Famine takes a long time to hit.", consumption: 0.8, famineLimit: 45 },
-  normal: { name: "Normal", blurb: "The intended experience.", consumption: 1, famineLimit: 30 },
-  hard: { name: "Hard", blurb: "Hungry people, short patience.", consumption: 1.25, famineLimit: 18 },
+  easy: { name: "Easy", blurb: "Forgiving. Famine takes a long time to hit.", consumption: 0.8, famineLimit: 45, raiders: 0.7 },
+  normal: { name: "Normal", blurb: "The intended experience.", consumption: 1, famineLimit: 30, raiders: 1 },
+  hard: { name: "Hard", blurb: "Hungry people, short patience, bold raiders.", consumption: 1.25, famineLimit: 18, raiders: 1.4 },
 };
+
+export const WARRIORS_PER_CAMP = 4;
+export const TRAIN_COST = { food: 8, wood: 4 };
 
 export const BUILDINGS: BuildingDef[] = [
   {
@@ -86,6 +89,28 @@ export const BUILDINGS: BuildingDef[] = [
     produces: { food: 1.2 },
     depositBonus: { deposit: "berries", amount: { food: 1.2 } },
     reveal: 2,
+  },
+  {
+    id: "farm",
+    name: "Farmland",
+    icon: "🌾",
+    description: "Tilled fields of wild grain. Lots of food, but clears the land.",
+    era: 0,
+    cost: { wood: 12 },
+    terrain: ["grass"],
+    requires: "early-farming",
+    produces: { food: 2.2 },
+    reveal: 1,
+  },
+  {
+    id: "warcamp",
+    name: "War Camp",
+    icon: "⚔️",
+    description: "Trains warriors to fight off raiders. Each camp holds 4 warriors.",
+    era: 0,
+    cost: { wood: 15, food: 10 },
+    terrain: ["grass", "hills", "beach"],
+    reveal: 3,
   },
   {
     id: "woodcutter",
@@ -245,9 +270,19 @@ export const TREE: TreeNode[] = [
     unlocks: ["fishing"],
   },
   {
+    id: "early-farming",
+    name: "Early Farming",
+    description: "Plant the seeds of wild grain. Unlocks Farmland.",
+    branch: "knowledge",
+    era: 0,
+    cost: 8,
+    requires: ["fire"],
+    unlocks: ["farm"],
+  },
+  {
     id: "spears",
     name: "Hunting Spears",
-    description: "Better hunting and defense. +15% food.",
+    description: "+15% food, and warriors fight 50% harder.",
     branch: "military",
     era: 0,
     cost: 6,
@@ -280,7 +315,7 @@ export const TREE: TreeNode[] = [
     branch: "knowledge",
     era: 0,
     cost: 40,
-    requires: ["storytelling", "toolmaking"],
+    requires: ["early-farming", "toolmaking"],
     comingSoon: true,
   },
   {
@@ -359,5 +394,6 @@ export const TUTORIAL = [
   { text: "We need food. Place a Gatherer's Camp. Berry bushes give a bonus.", done: "gatherer" },
   { text: "Fires need wood. Put a Woodcutter on a forest tile.", done: "woodcutter" },
   { text: "The world is hidden. Press Scout to explore new land.", done: "scout" },
-  { text: "Open Advancements (🌳) and research Toolmaking.", done: "toolmaking" },
+  { text: "Raiders roam these lands. Build a War Camp, then train warriors to defend us.", done: "warcamp" },
+  { text: "Open Advancements (✨) and research Early Farming, then place Farmland.", done: "early-farming" },
 ];

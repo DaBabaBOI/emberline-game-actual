@@ -1,13 +1,15 @@
 "use client";
 
-import { BUILDINGS, TREE_BY_ID } from "@/game/content";
+import { BUILDINGS, TRAIN_COST, TREE_BY_ID } from "@/game/content";
 import {
   buildingCost,
   canAfford,
   consumption,
+  defenseStrength,
   housingCapacity,
   isUnlocked,
   production,
+  warriorCap,
 } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
 import { cn } from "@/lib/utils";
@@ -73,6 +75,7 @@ export function BottomBar() {
         </div>
 
         <div className="flex gap-1.5 border-l border-white/10 pl-3">
+          <ArmyButton />
           <button
             type="button"
             onClick={() => dispatch({ type: "scout" })}
@@ -86,11 +89,11 @@ export function BottomBar() {
           <button
             type="button"
             onClick={() => setPanel("tree")}
-            title="Advancements"
-            className="flex w-16 flex-col items-center justify-center gap-0.5 rounded-xl bg-emerald-500/25 text-[11px] hover:bg-emerald-500/40"
+            title="Research new technology and see your goals"
+            className="flex w-24 flex-col items-center justify-center gap-0.5 rounded-xl bg-emerald-500/25 text-[11px] hover:bg-emerald-500/40"
           >
-            <span className="text-xl leading-none">🌳</span>
-            Tree
+            <span className="text-xl leading-none">✨</span>
+            Advancements
           </button>
           {state.flags.rocket && (
             <button
@@ -105,5 +108,33 @@ export function BottomBar() {
         </div>
       </div>
     </div>
+  );
+}
+
+function ArmyButton() {
+  const { state, dispatch } = useGame();
+  const cap = warriorCap(state);
+  const full = state.soldiers >= cap;
+  const affordable = canAfford(state, TRAIN_COST);
+  const title =
+    cap === 0
+      ? "Build a War Camp to train warriors"
+      : full
+        ? "All War Camps are full. Build another to train more."
+        : `Train a warrior (🍖${TRAIN_COST.food} 🪵${TRAIN_COST.wood}). Defense: ${defenseStrength(state)}`;
+  return (
+    <button
+      type="button"
+      onClick={() => dispatch({ type: "train" })}
+      disabled={cap === 0 || full || !affordable}
+      title={title}
+      className="flex w-20 flex-col items-center justify-center gap-0.5 rounded-xl bg-red-500/20 text-[11px] hover:bg-red-500/35 disabled:opacity-45"
+    >
+      <span className="text-xl leading-none">🗡️</span>
+      Train {state.soldiers}/{cap}
+      <span className="text-[10px] text-white/70">
+        🍖{TRAIN_COST.food} 🪵{TRAIN_COST.wood}
+      </span>
+    </button>
   );
 }

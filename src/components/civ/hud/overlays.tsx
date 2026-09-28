@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { formatYear, TUTORIAL } from "@/game/content";
-import { clearSave } from "@/game/engine";
+import { clearSave, defenseStrength } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
 
 export function TutorialPanel() {
@@ -102,6 +102,27 @@ export function Toasts() {
           {line}
         </div>
       ))}
+    </div>
+  );
+}
+
+export function RaidBanner() {
+  const { state } = useGame();
+  if (!state.raid) return null;
+  const defense = defenseStrength(state);
+  const safe = defense >= state.raid.strength;
+  const eta = Math.max(0, state.raid.arriveTick - state.tick);
+  return (
+    <div className="pointer-events-none absolute inset-x-0 top-20 flex justify-center">
+      <div
+        className={
+          "rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-lg " +
+          (safe ? "bg-emerald-700/85" : "animate-pulse bg-red-700/90")
+        }
+      >
+        ⚔️ {state.raid.strength} raiders arriving in {eta}s · Your defense: {defense}
+        {safe ? " (you can hold them)" : " (train more warriors!)"}
+      </div>
     </div>
   );
 }

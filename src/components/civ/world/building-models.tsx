@@ -3,7 +3,7 @@
 import { useRef, type JSX } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Mesh } from "three";
-import { Part } from "@/components/game/scene/part";
+import { Part } from "./part";
 
 interface ModelProps {
   opacity: number;
@@ -297,6 +297,86 @@ export function HealerModel({ opacity }: ModelProps) {
   );
 }
 
+export function FarmModel({ opacity }: ModelProps) {
+  const rows = [-0.36, -0.18, 0, 0.18, 0.36];
+  return (
+    <group>
+      <Part color="#7a5230" opacity={opacity} position={[0, 0.012, 0]}>
+        <cylinderGeometry args={[0.62, 0.62, 0.025, 6]} />
+      </Part>
+      {rows.map((z) => (
+        <group key={z}>
+          <Part color="#5e3d22" opacity={opacity} position={[0, 0.03, z]}>
+            <boxGeometry args={[0.9 - Math.abs(z) * 0.9, 0.03, 0.06]} />
+          </Part>
+          {Array.from({ length: Math.round(7 - Math.abs(z) * 6) }, (_, i) => {
+            const n = Math.round(7 - Math.abs(z) * 6);
+            const span = 0.8 - Math.abs(z) * 0.9;
+            const x = -span / 2 + (span / Math.max(1, n - 1)) * i;
+            return (
+              <group key={i} position={[x, 0.04, z]}>
+                <Part color="#d9b44a" opacity={opacity} position={[0, 0.07, 0]}>
+                  <cylinderGeometry args={[0.008, 0.008, 0.14, 4]} />
+                </Part>
+                <Part color="#e8c65a" opacity={opacity} position={[0, 0.15, 0]} scale={[1, 2.2, 1]}>
+                  <sphereGeometry args={[0.022, 6, 4]} />
+                </Part>
+              </group>
+            );
+          })}
+        </group>
+      ))}
+      <group position={[0.42, 0, 0.3]}>
+        <Log opacity={opacity} position={[0, 0.2, 0]} rotation={[0, 0, 0]} length={0.4} radius={0.015} />
+        <Log opacity={opacity} position={[0, 0.3, 0]} rotation={[0, 0, Math.PI / 2]} length={0.26} radius={0.012} />
+        <Part color="#a3552b" opacity={opacity} position={[0, 0.3, 0]}>
+          <boxGeometry args={[0.1, 0.12, 0.06]} />
+        </Part>
+        <Part color="#e8c9a0" opacity={opacity} position={[0, 0.41, 0]}>
+          <sphereGeometry args={[0.045, 8, 6]} />
+        </Part>
+        <Part color="#c9a24d" opacity={opacity} position={[0, 0.45, 0]}>
+          <coneGeometry args={[0.08, 0.06, 8]} />
+        </Part>
+      </group>
+    </group>
+  );
+}
+
+export function WarCampModel({ opacity }: ModelProps) {
+  const stakes = Array.from({ length: 14 }, (_, i) => (i / 14) * Math.PI * 2);
+  return (
+    <group>
+      {stakes.map((a) => (
+        <Part key={a} color="#6b4a2b" opacity={opacity} position={[Math.cos(a) * 0.52, 0.13, Math.sin(a) * 0.52]}>
+          <coneGeometry args={[0.035, 0.28, 5]} />
+        </Part>
+      ))}
+      <group position={[-0.12, 0, -0.08]}>
+        <Part color="#8c6a4a" opacity={opacity} position={[0, 0.2, 0]}>
+          <coneGeometry args={[0.26, 0.42, 6]} />
+        </Part>
+        <Part color="#2b1d12" opacity={opacity} position={[0, 0.1, 0.19]} rotation={[-0.45, 0, 0]}>
+          <boxGeometry args={[0.1, 0.16, 0.02]} />
+        </Part>
+      </group>
+      <group position={[0.22, 0, 0.12]}>
+        {[-0.05, 0, 0.05].map((x, i) => (
+          <Log key={x} opacity={opacity} position={[x, 0.2, 0]} rotation={[0, 0, (i - 1) * 0.15]} length={0.42} radius={0.008} />
+        ))}
+        <Log opacity={opacity} position={[0, 0.12, 0]} rotation={[0, 0, Math.PI / 2]} length={0.2} radius={0.012} />
+      </group>
+      <group position={[0.05, 0, 0.3]}>
+        <Log opacity={opacity} position={[0, 0.25, 0]} rotation={[0, 0, 0]} length={0.5} radius={0.012} />
+        <Part color="#9b1c1c" opacity={opacity} position={[0.08, 0.42, 0]}>
+          <boxGeometry args={[0.15, 0.1, 0.01]} />
+        </Part>
+      </group>
+      <Flame opacity={opacity} position={[0.2, 0.02, -0.25]} scale={0.7} />
+    </group>
+  );
+}
+
 export const MODELS: Record<string, (props: ModelProps) => JSX.Element> = {
   campfire: CampfireModel,
   hut: HutModel,
@@ -306,4 +386,6 @@ export const MODELS: Record<string, (props: ModelProps) => JSX.Element> = {
   quarry: QuarryModel,
   elder: ElderModel,
   healer: HealerModel,
+  farm: FarmModel,
+  warcamp: WarCampModel,
 };

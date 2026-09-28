@@ -21,6 +21,16 @@ export interface Tile {
   deposit: Deposit | null;
   revealed: boolean;
   building: string | null;
+  // 0–1: how grown the trees on a forest tile are. New forest starts small.
+  growth: number;
+}
+
+export interface Raid {
+  strength: number;
+  fromTile: number;
+  targetTile: number;
+  startTick: number;
+  arriveTick: number;
 }
 
 export type MeterKey =
@@ -118,6 +128,9 @@ export interface GameState {
   resources: Resources;
   population: number;
   famineTicks: number;
+  soldiers: number;
+  raid: Raid | null;
+  nextRaidTick: number;
   meters: Meters;
   modifiers: { sustainability: number; happiness: number };
   researched: string[];

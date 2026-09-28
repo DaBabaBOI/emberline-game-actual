@@ -8,7 +8,8 @@ import { placementError } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
 import { Deposits, Forests, HexTerrain, Mountains, tileTop } from "./hex-terrain";
 import { MODELS } from "./building-models";
-import { Villagers } from "./villagers";
+import { Raiders, Villagers, Warriors } from "./villagers";
+import { Wildlife } from "./wildlife";
 import { Haze, SmogPlumes } from "./atmosphere";
 
 function HexOutline({ x, y, z, color }: { x: number; y: number; z: number; color: string }) {
@@ -84,6 +85,13 @@ export function WorldCanvas() {
       })}
 
       <Villagers tiles={state.tiles} population={state.population} homeTile={home} />
+      <Warriors tiles={state.tiles} soldiers={state.soldiers} homeTile={home} />
+      <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} />
+      <Wildlife
+        tiles={state.tiles}
+        homeTile={home}
+        onHunt={(animal) => dispatch({ type: "hunt", animal })}
+      />
       <SmogPlumes tiles={state.tiles} sustainability={state.meters.sustainability} />
 
       {hoverTile && (

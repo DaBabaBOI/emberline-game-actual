@@ -4,11 +4,13 @@ import {
   DIFFICULTIES,
   ERAS,
   EVENTS,
+  TRAIN_COST,
   TREE_BY_ID,
   TUTORIAL,
+  WARRIORS_PER_CAMP,
 } from "./content";
-import { hexDistance } from "./hex";
-import { generateMap, isLand, revealAround } from "./map";
+import { hexDistance, hexKey, NEIGHBOR_OFFSETS } from "./hex";
+import { generateMap, isLand, revealAround, terrainHeight } from "./map";
 import { mulberry32 } from "./noise";
 import type {
   BuildingDef,
@@ -20,7 +22,7 @@ import type {
   Tile,
 } from "./types";
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 const BASE_HOUSING = 8;
 
 export type Action =
@@ -30,7 +32,9 @@ export type Action =
   | { type: "scout" }
   | { type: "research"; nodeId: string }
   | { type: "resolveEvent"; choice: number }
-  | { type: "skipTutorial" };
+  | { type: "skipTutorial" }
+  | { type: "train" }
+  | { type: "hunt"; animal: string };
 
 export function newGame(culture: CultureId, difficulty: DifficultyId): GameState {
   const seed = Math.floor(Math.random() * 1e9);
@@ -50,6 +54,9 @@ export function newGame(culture: CultureId, difficulty: DifficultyId): GameState
     resources: { food: 60, wood: 40, stone: 0, knowledge: 0, currency: 0 },
     population: 8,
     famineTicks: 0,
+    soldiers: 0,
+    raid: null,
+    nextRaidTick: 110,
     meters: { food: 60, shelter: 70, happiness: 60, literacy: 0, energy: 0, sustainability: 100 },
     modifiers: { sustainability: 0, happiness: 0 },
     researched: ["fire"],
@@ -136,7 +143,19 @@ export function production(state: GameState): Resources {
 }
 
 export function consumption(state: GameState) {
-  return state.population * 0.06 * DIFFICULTIES[state.difficulty].consumption;
+  return (
+    (state.population * 0.06 + state.soldiers * 0.05) *
+    DIFFICULTIES[state.difficulty].consumption
+  );
+}
+
+export function warriorCap(state: GameState) {
+  return (countBuildings(state).warcamp ?? 0) * WARRIORS_PER_CAMP;
+}
+
+export function defenseStrength(state: GameState) {
+  const perWarrior = state.researched.includes("spears") ? 1.5 : 1;
+  return state.soldiers * perWarrior + ((countBuildings(state).warcamp ?? 0) > 0 ? 1 : 0);
 }
 
 const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
@@ -162,7 +181,8 @@ export function computeMeters(state: GameState): Meters {
     100 -
     (counts.woodcutter ?? 0) * 6 -
     (counts.quarry ?? 0) * 4 -
-    (counts.campfire ?? 0) * 1.5 +
+    (counts.campfire ?? 0) * 1.5 -
+    (counts.farm ?? 0) * 2 +
     state.modifiers.sustainability;
 
   const literacy = (counts.elder ?? 0) * 12 + (state.researched.length - 1) * 2;
@@ -255,6 +275,9 @@ function tick(state: GameState): GameState {
     modifiers,
   };
 
+  if (next.tick % 3 === 0) next = growForests(next);
+  next = updateRaids(next);
+
   if (famineTicks >= DIFFICULTIES[state.difficulty].famineLimit) {
     return { ...next, phase: "gameover", log: ["Famine has wiped out the tribe.", ...next.log] };
   }
@@ -268,6 +291,105 @@ function tick(state: GameState): GameState {
   next = checkSecrets(next);
   next = advanceTutorial(next);
   return { ...next, meters: computeMeters(next) };
+}
+
+// Forests spread onto grass next to them, young trees grow up over time, and
+// woodcutters thin out the forest around them (it grows back).
+function growForests(state: GameState): GameState {
+  const rand = mulberry32(state.seed + state.tick * 13);
+  const byKey = new Map(state.tiles.map((t) => [hexKey(t.q, t.r), t]));
+  const woodcutters = state.tiles.filter((t) => t.building === "woodcutter");
+  const changes = new Map<number, Partial<Tile>>();
+
+  for (const t of state.tiles) {
+    if (t.terrain === "forest" && t.growth < 1) {
+      changes.set(t.id, { growth: Math.min(1, t.growth + 0.06) });
+    }
+    if (t.terrain !== "grass" || t.building) continue;
+    let forestNeighbors = 0;
+    for (const [dq, dr] of NEIGHBOR_OFFSETS) {
+      if (byKey.get(hexKey(t.q + dq, t.r + dr))?.terrain === "forest") forestNeighbors++;
+    }
+    if (forestNeighbors >= 2 && rand() < 0.008 * forestNeighbors) {
+      changes.set(t.id, { terrain: "forest", height: terrainHeight("forest"), growth: 0.1 });
+    }
+  }
+
+  if (state.tick % 12 === 0) {
+    for (const w of woodcutters) {
+      const grove = state.tiles.find(
+        (t) => t.terrain === "forest" && !t.building && t.growth >= 1 && hexDistance(t, w) === 1,
+      );
+      if (grove) changes.set(grove.id, { growth: 0.25 });
+    }
+  }
+
+  if (changes.size === 0) return state;
+  return {
+    ...state,
+    tiles: state.tiles.map((t) => (changes.has(t.id) ? { ...t, ...changes.get(t.id) } : t)),
+  };
+}
+
+function updateRaids(state: GameState): GameState {
+  const { raid } = state;
+  if (raid && state.tick >= raid.arriveTick) {
+    const defense = defenseStrength(state);
+    if (defense >= raid.strength) {
+      const losses = Math.min(state.soldiers, Math.floor(raid.strength / 3));
+      return {
+        ...state,
+        raid: null,
+        soldiers: state.soldiers - losses,
+        modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + 6 },
+        log: [
+          `🛡️ Raiders driven off!${losses ? ` ${losses} warrior${losses > 1 ? "s" : ""} fell.` : ""}`,
+          ...state.log,
+        ].slice(0, 30),
+      };
+    }
+    return {
+      ...state,
+      raid: null,
+      soldiers: Math.max(0, state.soldiers - raid.strength),
+      resources: {
+        ...state.resources,
+        food: state.resources.food * 0.65,
+        wood: state.resources.wood * 0.65,
+      },
+      modifiers: { ...state.modifiers, happiness: state.modifiers.happiness - 12 },
+      log: ["🔥 Raiders plundered the village! Food and wood stolen.", ...state.log].slice(0, 30),
+    };
+  }
+
+  if (!raid && state.tick >= state.nextRaidTick) {
+    const rand = mulberry32(state.seed + state.tick * 31);
+    const home = state.tiles[state.startTile];
+    const shores = state.tiles.filter((t) => {
+      if (t.terrain !== "shallow") return false;
+      const d = hexDistance(t, home);
+      return d >= 7 && d <= 11;
+    });
+    if (shores.length === 0) return { ...state, nextRaidTick: state.tick + 60 };
+    const from = shores[Math.floor(rand() * shores.length)];
+    const strength = Math.max(
+      2,
+      Math.round((2 + state.tick / 110) * DIFFICULTIES[state.difficulty].raiders),
+    );
+    return {
+      ...state,
+      raid: {
+        strength,
+        fromTile: from.id,
+        targetTile: home.id,
+        startTick: state.tick,
+        arriveTick: state.tick + 12,
+      },
+      nextRaidTick: state.tick + 100 + Math.floor(rand() * 60),
+      log: [`⚠️ ${strength} raiders spotted landing on the shore!`, ...state.log].slice(0, 30),
+    };
+  }
+  return state;
 }
 
 function spend(resources: Resources, cost: Partial<Resources>): Resources {
@@ -371,10 +493,26 @@ export function reducer(state: GameState, action: Action): GameState {
 
     case "skipTutorial":
       return { ...state, tutorialStep: TUTORIAL.length };
+
+    case "train": {
+      if (state.soldiers >= warriorCap(state) || !canAfford(state, TRAIN_COST)) return state;
+      return withMeters({
+        ...state,
+        soldiers: state.soldiers + 1,
+        resources: spend(state.resources, TRAIN_COST),
+      });
+    }
+
+    case "hunt":
+      return {
+        ...state,
+        resources: { ...state.resources, food: state.resources.food + 6 },
+        log: [`🏹 Hunters brought down a ${action.animal} (+6 food).`, ...state.log].slice(0, 30),
+      };
   }
 }
 
-const SAVE_KEY = "hacktrack-save";
+const SAVE_KEY = "emberline-save";
 
 export function saveGame(state: GameState) {
   try {
