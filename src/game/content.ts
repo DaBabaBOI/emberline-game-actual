@@ -450,6 +450,17 @@ export const DISEASE = {
   healerCut: 0.25,
 };
 
+// Pressure that grows with the tribe, so developing is as hard as surviving.
+export const GROWTH_PRESSURE = {
+  // No way to preserve food yet: stored food above this rots away (share per second).
+  foodKeeps: 60,
+  foodRots: 0.015,
+  // Each lit campfire warms this many people; the rest are cold.
+  peoplePerFire: 10,
+  // Raiders come in bigger groups the bigger (richer) the tribe: +1 per this many people.
+  raidersPerPeople: 10,
+};
+
 // Buying something that leaves less wood than this shows a "save up" warning.
 export const LOW_WOOD_AFTER_BUY = 10;
 

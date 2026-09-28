@@ -1,5 +1,6 @@
 import {
   AFTER_TUTORIAL_RESERVE,
+  GROWTH_PRESSURE,
   DISEASE,
   CAMPFIRE_BURN_TICKS,
   RELIGHT_WOOD,
@@ -500,6 +501,16 @@ export function warnings(state: GameState): Warning[] {
     });
   }
 
+  if (hasLitFire(state) && coldShare(state) > 0.05) {
+    const cold = Math.round(coldShare(state) * state.population);
+    out.push({
+      id: "fire",
+      icon: "flame",
+      text: `Not enough campfires: ${cold} people have no fire to warm them. Each fire warms ${GROWTH_PRESSURE.peoplePerFire}.`,
+      severe: false,
+    });
+  }
+
   if (!hasLitFire(state)) {
     const noCampfire = (countBuildings(state).campfire ?? 0) === 0;
     out.push({
@@ -517,6 +528,17 @@ export function warnings(state: GameState): Warning[] {
 // A fire only counts if there's wood to keep it burning.
 export function hasLitFire(state: GameState) {
   return litFires(state).length > 0;
+}
+
+// Share of the tribe with no fire to warm them (each fire warms peoplePerFire).
+export function coldShare(state: GameState) {
+  const warmed = litFires(state).length * GROWTH_PRESSURE.peoplePerFire;
+  return state.population > 0 ? Math.max(0, 1 - warmed / state.population) : 0;
+}
+
+// Food lost to rot each second: stores above foodKeeps slowly go bad.
+export function foodSpoiling(state: GameState) {
+  return Math.max(0, state.resources.food - GROWTH_PRESSURE.foodKeeps) * GROWTH_PRESSURE.foodRots;
 }
 
 export function isLit(state: GameState, tile: Tile) {
@@ -580,7 +602,7 @@ export function computeMeters(state: GameState): Meters {
     Math.min(3, lit) * 6 +
     (counts.elder ? 5 : 0) -
     // No cold penalty while the tutorial is still teaching you to light a fire.
-    (hasLitFire(state) || state.tutorialStep < TUTORIAL.length ? 0 : NO_FIRE_PENALTY) -
+    (state.tutorialStep < TUTORIAL.length ? 0 : NO_FIRE_PENALTY * coldShare(state)) -
     (100 - clamp(sustainability)) * 0.15 -
     sickShare(state) * 30 +
     state.modifiers.happiness;
@@ -641,7 +663,7 @@ function tick(state: GameState): GameState {
   const era = ERAS[state.era];
 
   const resources: Resources = {
-    food: Math.max(0, state.resources.food + prod.food - cons),
+    food: Math.max(0, state.resources.food + prod.food - cons - foodSpoiling(state)),
     wood: Math.max(0, state.resources.wood + prod.wood),
     stone: state.resources.stone + prod.stone,
     knowledge: state.resources.knowledge + prod.knowledge,
@@ -815,7 +837,10 @@ function updateRaids(state: GameState): GameState {
     const from = shores[Math.floor(rand() * shores.length)];
     const strength = Math.max(
       2,
-      Math.round((2 + state.tick / 110) * DIFFICULTIES[state.difficulty].raiders),
+      Math.round(
+        (2 + state.tick / 150 + state.population / GROWTH_PRESSURE.raidersPerPeople) *
+          DIFFICULTIES[state.difficulty].raiders,
+      ),
     );
     return {
       ...state,

@@ -122,6 +122,10 @@ These were decided with the project owner. Do not change them without being aske
   working when adding eras. It must never show without `?dev`. **Every new
   feature gets a dev-panel button (or dev option) to trigger or test it**, e.g.
   Wildfire, +10 people.
+- **Growing is as hard as surviving** (`GROWTH_PRESSURE`): stored food above 60
+  rots (no preservation yet), each lit campfire warms only 10 people (the
+  rest are cold, scaled happiness penalty), and raids grow with the tribe's
+  size as well as time. Disease also gets likelier as the tribe grows.
 - **Disease** (`src/game/disease.ts`, `DISEASE`): outbreaks start from crowding
   (more people, more crowded = likelier), hunts, fishing spots and especially
   welcomed wanderers. It spreads, people recover and are immune for a while
