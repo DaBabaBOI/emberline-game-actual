@@ -33,8 +33,8 @@ import type {
 export const SAVE_VERSION = 6;
 const BASE_HOUSING = 8;
 // Food eaten per second by each person and each warrior.
-export const FOOD_PER_PERSON = 0.15;
-export const FOOD_PER_WARRIOR = 0.1;
+export const FOOD_PER_PERSON = 0.2; // 1 food every 5 seconds
+export const FOOD_PER_WARRIOR = 0.15;
 // Food from each animal the hunters bring back.
 export const HUNT_FOOD = 4;
 
