@@ -6,6 +6,7 @@ import type { Group } from "three";
 import { hexDistance } from "@/game/hex";
 import type { Tile } from "@/game/types";
 import { Figures, type Agent } from "./figures";
+import { makeGround } from "./ground";
 
 type Kind = "deer" | "boar";
 
@@ -127,6 +128,7 @@ export function Wildlife({
     [tiles],
   );
   const wanted = Math.min(14, Math.floor(forests.length / 4));
+  const ground = useMemo(() => makeGround(tiles), [tiles]);
   const [animals, setAnimals] = useState<Animal[]>([]);
   const nextId = useRef(0);
   const motion = useRef(new Map<number, Motion>());
@@ -235,7 +237,8 @@ export function Wildlife({
     man.x += (dx / d) * s;
     man.z += (dz / d) * s;
     man.heading = Math.atan2(dx, dz);
-    man.y = homeTile.height;
+    const under = ground.tileAt(man.x, man.z);
+    man.y += (ground.heightAt(man.x, man.z) + (under?.terrain === "mountain" ? 0.55 : 0) - man.y) * Math.min(1, dt * 12);
   });
 
   return (

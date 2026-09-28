@@ -26,3 +26,19 @@ export const NEIGHBOR_OFFSETS: [number, number][] = [
 ];
 
 export const hexKey = (q: number, r: number) => `${q},${r}`;
+
+// Which hex a world-space point falls in (inverse of axialToWorld).
+export function worldToAxial(x: number, z: number): { q: number; r: number } {
+  const fq = ((SQRT3 / 3) * x - z / 3) / HEX_RADIUS;
+  const fr = ((2 / 3) * z) / HEX_RADIUS;
+  const fs = -fq - fr;
+  let q = Math.round(fq);
+  let r = Math.round(fr);
+  const s = Math.round(fs);
+  const dq = Math.abs(q - fq);
+  const dr = Math.abs(r - fr);
+  const ds = Math.abs(s - fs);
+  if (dq > dr && dq > ds) q = -r - s;
+  else if (dr > ds) r = -q - s;
+  return { q, r };
+}
