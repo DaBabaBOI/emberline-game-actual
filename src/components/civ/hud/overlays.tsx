@@ -160,9 +160,40 @@ export function Toasts() {
   );
 }
 
+// The Roman legion: seen by scouts, then landing. Shows their attack against
+// your defense so the player knows what to prepare.
+function LegionWarning() {
+  const { state } = useGame();
+  const size = state.raid?.legion ?? state.legion?.size ?? 0;
+  const attack = state.raid?.strength ?? size * 2;
+  const defense = defenseStrength(state);
+  const eta = state.raid ? state.raid.arriveTick - state.tick : (state.legion?.arriveTick ?? state.tick) - state.tick;
+  const safe = defense >= attack;
+  return (
+    <div className="pointer-events-none absolute inset-x-0 top-28 flex justify-center px-2 md:top-20" data-testid="legion-banner">
+      <div
+        className={
+          "font-pixel flex max-w-xl items-start gap-2 border-[3px] border-[#140e0a] px-4 py-2 text-xs font-semibold text-white md:text-sm " +
+          (safe ? "bg-emerald-800/90" : "bg-red-800/95")
+        }
+      >
+        <PixelIcon name="shield" size={20} />
+        <span>
+          {state.raid ? "The Roman legion has landed" : "A Roman legion is marching on us"}: {size} legionaries, each
+          as strong as two of our warriors (attack {attack}). {state.raid ? "They reach us" : "They land"} in{" "}
+          {secs(Math.max(0, eta))}s. Our defense: {defense}
+          {safe ? ". We can hold them." : ". Train warriors, forge bronze weapons, build walls!"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function RaidBanner() {
   const { state } = useGame();
+  if (state.legion && !state.raid) return <LegionWarning />;
   if (!state.raid) return null;
+  if (state.raid.roman) return <LegionWarning />;
   const defense = defenseStrength(state);
   const safe = defense >= state.raid.strength;
   const eta = Math.max(0, state.raid.arriveTick - state.tick);
@@ -244,6 +275,9 @@ export function DevPanel() {
         </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devRaid" })}>
           Raid now
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devRomans" })}>
+          Romans
         </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devLesson" })}>
           Lesson

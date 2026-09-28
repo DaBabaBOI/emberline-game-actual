@@ -195,6 +195,14 @@ These were decided with the project owner. Do not change them without being aske
   the soil −3), Granary (+`GRANARY_KEEPS` food keeps), Forester's Lodge
   (regrows thinned forest nearby), Stone Walls (+`WALL_DEFENSE`). Bronze
   Weapons doubles each warrior. Era-gated event cards use `era`.
+- **The Ancient era ends with a Roman legion** (`ROMAN_LEGION`, `updateLegion`):
+  scouts see it at 1600 BCE, it lands ~90 ticks later. Size grows with
+  population and difficulty; each legionary fights like 2 warriors. Win → the
+  **final debrief** (ending tier as above, then "Keep playing"); lose → the
+  loss debrief ("Conquered"). No ordinary raids while it's coming. Romans wear
+  crested bronze helmets and big red shields (`Figures gear="roman"`).
+  (Historically Rome only becomes a power right at the end of this period; the
+  legion is the Ancient era's climax on purpose.)
 - Seven cultures (Balanced + six with bonuses), three difficulties. There are two
   ways to lose: **famine** (no food for too long) and **unrest** (happiness below
   15 for too long, after the tutorial). Both show a countdown warning first.

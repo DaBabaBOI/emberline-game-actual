@@ -268,8 +268,9 @@ export function Raiders({ tiles, raid, tick }: { tiles: Tile[]; raid: Raid | nul
     const p = progress.current;
     const heading = Math.atan2(to.x - from.x, to.z - from.z);
     const list = agents.current;
-    list.length = raid.strength;
-    for (let i = 0; i < raid.strength; i++) {
+    const count = Math.min(30, raid.legion ?? raid.strength);
+    list.length = count;
+    for (let i = 0; i < count; i++) {
       const offX = (hash(i + 1) - 0.5) * 1.2;
       const offZ = (hash(i + 2) - 0.5) * 1.2;
       const x = from.x + (to.x - from.x) * p + offX;
@@ -282,7 +283,7 @@ export function Raiders({ tiles, raid, tick }: { tiles: Tile[]; raid: Raid | nul
         heading,
         moving: p < 0.98,
         scale: 1.4,
-        tunic: "#9b1c1c",
+        tunic: raid.roman ? "#b3261e" : "#9b1c1c",
         skin: SKINS[i % SKINS.length],
         hair: "#1a1a1a",
         phase: i * 1.7,
@@ -290,7 +291,11 @@ export function Raiders({ tiles, raid, tick }: { tiles: Tile[]; raid: Raid | nul
     }
   });
 
-  return <Figures agents={agents} max={30} weapon="club" />;
+  return raid?.roman ? (
+    <Figures agents={agents} max={30} weapon="sword" gear="roman" />
+  ) : (
+    <Figures agents={agents} max={30} weapon="club" />
+  );
 }
 
 // People caught by a wildfire: they stagger, fall over in the flames, and lie
@@ -395,7 +400,7 @@ export function BattleScene({ tiles, battle, homeTile }: { tiles: Tile[]; battle
           } as Agent & { dies: boolean; order: number };
         });
       warriors.current = line(nW, lostW, 1, { tunic: "#5b6f8a" });
-      raiders.current = line(nR, lostR, -1, { tunic: "#9b1c1c" });
+      raiders.current = line(nR, lostR, -1, { tunic: battle.roman ? "#b3261e" : "#9b1c1c" });
     }
 
     const age = now - started.current.at;
@@ -443,7 +448,11 @@ export function BattleScene({ tiles, battle, homeTile }: { tiles: Tile[]; battle
   return (
     <>
       <Figures agents={warriors} max={8} weapon="spear" />
-      <Figures agents={raiders} max={10} weapon="club" />
+      {battle.roman ? (
+        <Figures agents={raiders} max={10} weapon="sword" gear="roman" />
+      ) : (
+        <Figures agents={raiders} max={10} weapon="club" />
+      )}
     </>
   );
 }
