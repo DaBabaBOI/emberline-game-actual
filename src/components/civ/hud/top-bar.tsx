@@ -38,6 +38,9 @@ export function TopBar() {
           ◀
         </Link>
         <div className="flex flex-col leading-tight">
+          <span className="max-w-40 truncate text-xs font-semibold text-white" title="Your people">
+            {state.nation ?? "The Emberfolk"}
+          </span>
           <span className="text-[11px] uppercase tracking-wide text-amber-300">{era.name}</span>
           <span className="font-num text-base">{formatYear(state.year)}</span>
         </div>

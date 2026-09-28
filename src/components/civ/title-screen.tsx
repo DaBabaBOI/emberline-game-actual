@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { CULTURES, DIFFICULTIES, ERAS } from "@/game/content";
-import type { NewGameOptions } from "@/game/engine";
+import { DEFAULT_NATION, type NewGameOptions } from "@/game/engine";
 import type { CultureId, DifficultyId } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { PixelIcon } from "@/components/civ/pixel-icon";
@@ -25,19 +25,22 @@ export function TitleScreen({
     }
   });
   const [culture, setCulture] = useState<CultureId>("balanced");
+  const [nation, setNation] = useState("");
   const [difficulty, setDifficulty] = useState<DifficultyId>("normal");
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-sky-200 via-sky-50 to-[#fbf7ef] p-4 text-stone-900">
       <div className="w-full max-w-3xl">
         <div className="mb-8 text-center">
-          <p className="font-pixel text-sm font-semibold uppercase tracking-[0.3em] text-amber-700">From fire to the stars</p>
+          <p className="font-pixel text-sm font-semibold uppercase tracking-[0.3em] text-amber-700">
+            A sustainability trade-off game
+          </p>
           <h1 className="font-pixel mt-2 flex items-center justify-center gap-3 text-6xl font-bold">
             <PixelIcon name="flame" size={56} />
             Emberline
           </h1>
           <p className="mt-3 text-stone-600">
-            Lead a people at the crossroads of the world, from the first campfire to interstellar travel.
+            Grow a Stone Age tribe without destroying the land that feeds it.
           </p>
         </div>
 
@@ -52,6 +55,17 @@ export function TitleScreen({
         )}
 
         <div className="pixel-panel p-5">
+          <label className="font-pixel mb-4 block">
+            <span className="mb-1 block text-lg font-semibold">Name your people</span>
+            <input
+              value={nation}
+              onChange={(e) => setNation(e.target.value.slice(0, 24))}
+              placeholder={DEFAULT_NATION}
+              maxLength={24}
+              className="w-full border-[3px] border-[#2b2119] bg-white px-3 py-2 text-base outline-none focus:bg-amber-50"
+              data-testid="nation-input"
+            />
+          </label>
           <h2 className="font-pixel mb-3 text-lg font-semibold">Choose your culture</h2>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {(Object.keys(CULTURES) as CultureId[]).map((id) => {
@@ -97,7 +111,7 @@ export function TitleScreen({
 
           <button
             type="button"
-            onClick={() => onStart(culture, difficulty)}
+            onClick={() => onStart(culture, difficulty, { nation })}
             className="pixel-btn font-pixel mt-6 w-full bg-emerald-600 py-3 text-xl font-semibold text-white hover:bg-emerald-500"
           >
             {canContinue ? "Start a new game" : "Start"}
@@ -115,7 +129,7 @@ export function TitleScreen({
                 <button
                   key={era.name}
                   type="button"
-                  onClick={() => onStart(culture, difficulty, { dev: true, startEra: i })}
+                  onClick={() => onStart(culture, difficulty, { dev: true, startEra: i, nation })}
                   className="pixel-btn font-pixel bg-sky-100 px-2 py-2 text-sm hover:bg-sky-200"
                 >
                   {era.name}

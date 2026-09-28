@@ -118,8 +118,8 @@ export function GameOver({ onRestart }: { onRestart: () => void }) {
         <h2 className="font-pixel text-3xl font-bold">{unrest ? "The tribe has left" : "Famine"}</h2>
         <p className="mt-2 text-sm text-stone-600">
           {unrest
-            ? `Your people were too unhappy for too long and wandered away in ${formatYear(state.year)}.`
-            : `Your people ran out of food in ${formatYear(state.year)}.`}{" "}
+            ? `${state.nation ?? "Your people"} were too unhappy for too long and wandered away in ${formatYear(state.year)}.`
+            : `${state.nation ?? "Your people"} ran out of food in ${formatYear(state.year)}.`}{" "}
           They built{" "}
           {state.tiles.filter((t) => t.building).length} structures and made{" "}
           {state.researched.length - 1} discoveries.
