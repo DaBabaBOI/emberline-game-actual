@@ -12,7 +12,7 @@ import type {
 
 export const ERAS = [
   { name: "Stone Age", startYear: -50000, yearsPerTick: 100, currency: "Shells" },
-  { name: "Ancient", startYear: -3000, yearsPerTick: 20, currency: "Bronze coins" },
+  { name: "Ancient", startYear: -3000, yearsPerTick: 10, currency: "Bronze coins" },
   { name: "Classical", startYear: -500, yearsPerTick: 10, currency: "Silver coins" },
   { name: "Medieval & Renaissance", startYear: 1000, yearsPerTick: 4, currency: "Florins" },
   { name: "Industrial & Modern", startYear: 1750, yearsPerTick: 1, currency: "Banknotes" },
@@ -935,6 +935,11 @@ export const GRANARY_KEEPS = 150;
 export const FORESTER_GROWTH = 0.12;
 export const FORESTER_REACH = 3;
 export const WALL_DEFENSE = 4;
+
+// The Ancient era ends with a Roman legion. Scouts see it coming when the year
+// reaches warningYear; it lands warningTicks later. Each legionary fights like
+// two of your warriors. Size: (base + population / perPeople) × difficulty.
+export const ROMAN_LEGION = { warningYear: -1600, warningTicks: 90, strengthEach: 2, base: 6, perPeople: 5 };
 
 // Buying something that leaves less wood than this shows a "save up" warning.
 export const LOW_WOOD_AFTER_BUY = 10;

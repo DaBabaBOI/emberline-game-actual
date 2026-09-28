@@ -1,5 +1,6 @@
 import {
   AFTER_TUTORIAL_RESERVE,
+  ROMAN_LEGION,
   FORESTER_GROWTH,
   FORESTER_REACH,
   GRANARY_KEEPS,
@@ -71,6 +72,8 @@ export type Action =
   | { type: "devFiresOut" }
   | { type: "devOutbreak" }
   | { type: "devRaid" }
+  | { type: "devRomans" }
+  | { type: "dismissDebrief" }
   | { type: "advanceEra" }
   | { type: "enterEra" }
   | { type: "devFinishEra" }
@@ -1041,7 +1044,9 @@ function tick(state: GameState): GameState {
 
   if (next.tick % 3 === 0) next = growForests(next);
   // No raids or events while a new player is still learning.
-  if (!inTutorial) next = updateRaids(next);
+  if (!inTutorial) next = updateLegion(updateRaids(next));
+  // The final battle ends the story (won or lost): nothing else happens today.
+  if (next.phase !== "playing" || next.debrief) return { ...next, meters: computeMeters(next) };
 
   if (famineTicks >= DIFFICULTIES[state.difficulty].famineLimit) {
     const lost: GameState = { ...next, phase: "gameover", lostTo: "famine", log: ["Famine has wiped out the tribe.", ...next.log] };
@@ -1134,8 +1139,116 @@ function growForests(state: GameState): GameState {
   };
 }
 
+// Where raiders come ashore, and where the warriors meet them.
+function pickLanding(state: GameState, rand: () => number) {
+  const home = state.tiles[state.startTile];
+  const shores = state.tiles.filter((t) => {
+    if (t.terrain !== "shallow") return false;
+    const d = hexDistance(t, home);
+    return d >= 7 && d <= 11;
+  });
+  if (shores.length === 0) return null;
+  const from = shores[Math.floor(rand() * shores.length)];
+  const mx = from.x + (home.x - from.x) * 0.7;
+  const mz = from.z + (home.z - from.z) * 0.7;
+  const meet = state.tiles
+    .filter((t) => isLand(t.terrain) && t.terrain !== "mountain" && t.revealed)
+    .reduce((best, t) => (Math.hypot(t.x - mx, t.z - mz) < Math.hypot(best.x - mx, best.z - mz) ? t : best));
+  return { from, meet, home };
+}
+
+export function legionSize(state: GameState) {
+  return Math.max(
+    4,
+    Math.round((ROMAN_LEGION.base + state.population / ROMAN_LEGION.perPeople) * DIFFICULTIES[state.difficulty].raiders),
+  );
+}
+
+// The legion: scouts see it coming, then it lands like a raid, only much bigger.
+function updateLegion(state: GameState): GameState {
+  if (state.era !== 1 || state.legionDone || state.phase !== "playing") return state;
+  if (!state.legion && state.year >= ROMAN_LEGION.warningYear) {
+    const size = legionSize(state);
+    return {
+      ...state,
+      legion: { size, arriveTick: state.tick + ROMAN_LEGION.warningTicks },
+      // No ordinary raids while the legion is coming.
+      nextRaidTick: Number.MAX_SAFE_INTEGER,
+      log: [`Scouts report a Roman legion of ${size} marching toward us!`, ...state.log].slice(0, 30),
+    };
+  }
+  if (state.legion && !state.raid && state.tick >= state.legion.arriveTick) {
+    const landing = pickLanding(state, mulberry32(state.seed + state.tick * 53));
+    if (!landing) return state;
+    const { size } = state.legion;
+    return {
+      ...state,
+      raid: {
+        strength: size * ROMAN_LEGION.strengthEach,
+        legion: size,
+        roman: true,
+        fromTile: landing.from.id,
+        targetTile: landing.home.id,
+        meetTile: landing.meet.id,
+        startTick: state.tick,
+        arriveTick: state.tick + 12,
+      },
+      log: ["The Roman legion has landed!", ...state.log].slice(0, 30),
+    };
+  }
+  return state;
+}
+
+// The final battle: hold and the story ends well; fall and the village is taken.
+function resolveLegion(state: GameState) {
+  const raid = state.raid!;
+  const defense = defenseStrength(state);
+  const size = raid.legion ?? Math.round(raid.strength / 2);
+  const won = defense >= raid.strength;
+  const lostWarriors = won ? Math.min(state.soldiers, Math.ceil(state.soldiers / 3)) : state.soldiers;
+  const battle = {
+    tick: state.tick,
+    tile: raid.meetTile ?? raid.targetTile,
+    fromTile: raid.fromTile,
+    warriors: state.soldiers,
+    raiders: size,
+    warriorsLost: lostWarriors,
+    raidersLost: won ? Math.max(1, Math.ceil(size * 0.6)) : Math.floor(defense / 4),
+    won,
+    roman: true,
+  };
+  const counted = bumpStats(state, (st) => {
+    if (won) st.raidsWon += 1;
+    else st.raidsLost += 1;
+    st.deaths.battle += lostWarriors;
+  });
+  const after: GameState = {
+    ...counted,
+    raid: null,
+    legion: null,
+    legionDone: true,
+    battle,
+    soldiers: state.soldiers - lostWarriors,
+  };
+  if (won) {
+    const done: GameState = {
+      ...after,
+      log: [`The Roman legion is beaten! ${state.nation ?? "Your people"} stand free.`, ...state.log].slice(0, 30),
+    };
+    return { ...done, debrief: makeDebrief(done, "final") };
+  }
+  const lost: GameState = {
+    ...after,
+    phase: "gameover",
+    lostTo: "conquest",
+    log: ["The legion broke through. The village has fallen.", ...state.log].slice(0, 30),
+  };
+  return { ...lost, debrief: makeDebrief(lost, "loss") };
+}
+
 function updateRaids(state: GameState): GameState {
   const { raid } = state;
+  if (raid?.roman) return state.tick >= raid.arriveTick ? resolveLegion(state) : state;
   if (raid && state.tick >= raid.arriveTick) {
     const defense = defenseStrength(state);
     const battleAt = raid.meetTile ?? raid.targetTile;
@@ -1524,6 +1637,18 @@ function step(state: GameState, action: Action): GameState {
       };
       return { ...ready, debrief: makeDebrief(ready, "era") };
     }
+
+    case "devRomans":
+      if (!state.dev || state.era !== 1 || state.legionDone) return state;
+      return {
+        ...state,
+        legion: { size: legionSize(state), arriveTick: state.tick + 3 },
+        nextRaidTick: Number.MAX_SAFE_INTEGER,
+        log: ["Dev: the Roman legion is almost here.", ...state.log].slice(0, 30),
+      };
+
+    case "dismissDebrief":
+      return state.debrief?.kind === "final" ? { ...state, debrief: null } : state;
 
     case "devRaid":
       if (!state.dev || state.raid) return state;

@@ -39,6 +39,9 @@ export interface Raid {
   targetTile: number;
   // Where the warriors march out to meet them.
   meetTile?: number;
+  // The Roman legion: `legion` legionaries, each worth two warriors.
+  roman?: boolean;
+  legion?: number;
   startTick: number;
   arriveTick: number;
 }
@@ -53,6 +56,7 @@ export interface Battle {
   raidersLost: number;
   // True when the village held.
   won: boolean;
+  roman?: boolean;
 }
 
 // Running totals for the end-of-era debrief.
@@ -193,10 +197,13 @@ export interface GameState {
   version: number;
   phase: "playing" | "gameover";
   // Why the game ended: everyone starved, or everyone got so sad they left.
-  lostTo: "famine" | "unrest" | null;
+  lostTo: "famine" | "unrest" | "conquest" | null;
   seed: number;
   culture: CultureId;
   difficulty: DifficultyId;
+  // The Roman legion on its way (seen by scouts), and whether it has been fought.
+  legion?: { size: number; arriveTick: number } | null;
+  legionDone?: boolean;
   // Running totals for the debrief, and the debrief on screen (if any).
   stats?: Stats;
   debrief?: Debrief | null;

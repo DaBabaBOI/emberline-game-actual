@@ -54,13 +54,17 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
         ? "Your story is complete"
         : state.lostTo === "unrest"
           ? "The tribe has left"
-          : "Famine";
+          : state.lostTo === "conquest"
+            ? "Conquered"
+            : "Famine";
   const sub =
     d.kind === "era"
       ? `${who} are ready to settle down and farm for good. Here is how you got here.`
       : d.kind === "final"
-        ? `${who} stood their ground. Here is the whole story.`
-        : state.lostTo === "unrest"
+        ? `${who} held back the Roman legion. Here is the whole story, from the first fire.`
+        : state.lostTo === "conquest"
+          ? `The Roman legion broke through in ${formatYear(d.year)} and ${who} lost their village.`
+          : state.lostTo === "unrest"
           ? `${who} were too unhappy for too long and wandered away in ${formatYear(d.year)}.`
           : `${who} ran out of food in ${formatYear(d.year)}.`;
 
@@ -68,7 +72,10 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
     <div className="pointer-events-auto absolute inset-0 z-40 flex items-center justify-center overflow-y-auto bg-black/60 p-2 md:p-6">
       <div className="pixel-panel my-auto w-[min(96vw,760px)] p-4 md:p-6" data-testid="debrief">
         <div className="flex items-center gap-3">
-          <PixelIcon name={d.kind === "loss" ? (state.lostTo === "unrest" ? "sad" : "skull") : "star"} size={48} />
+          <PixelIcon
+            name={d.kind === "loss" ? (state.lostTo === "unrest" ? "sad" : state.lostTo === "conquest" ? "shield" : "skull") : "star"}
+            size={48}
+          />
           <div>
             <h2 className="font-pixel text-2xl font-bold md:text-3xl">{heading}</h2>
             <p className="text-sm text-stone-600">{sub}</p>
@@ -153,6 +160,15 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
         )}
 
         <div className="mt-5 flex flex-wrap justify-end gap-2">
+          {d.kind === "final" && (
+            <button
+              type="button"
+              onClick={() => dispatch({ type: "dismissDebrief" })}
+              className="pixel-btn font-pixel bg-emerald-600 px-4 py-2 font-semibold text-white hover:bg-emerald-500"
+            >
+              Keep playing
+            </button>
+          )}
           {d.kind === "era" ? (
             <button
               type="button"
