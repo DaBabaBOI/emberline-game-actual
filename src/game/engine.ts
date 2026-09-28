@@ -1,5 +1,10 @@
 import {
   AFTER_TUTORIAL_RESERVE,
+  FORESTER_GROWTH,
+  FORESTER_REACH,
+  GRANARY_KEEPS,
+  SMITHY_CHARCOAL,
+  WALL_DEFENSE,
   MIN_SUSTAINABILITY_FOR_BEST_ENDING,
   NEXT_ERA_POPULATION,
   GROWTH_PRESSURE,
@@ -73,6 +78,7 @@ export type Action =
   | { type: "devLesson" }
   | { type: "setLogging"; tileId: number; mode: "clear" | "selective" }
   | { type: "plant"; tileId: number }
+  | { type: "upgrade"; tileId: number }
   | { type: "relight"; tileId: number }
   | { type: "devEra"; era: number }
   | { type: "devReveal" }
@@ -297,6 +303,12 @@ export function woodcutterYield(state: GameState, tile: Tile) {
 
 export const PLANT_TOOL = "__plant";
 
+// What a building can be upgraded into in the current era (e.g. Hut → House).
+export function upgradeFor(state: GameState, buildingId: string): BuildingDef | null {
+  const next = buildingId === "hut" ? BUILDINGS_BY_ID.house : null;
+  return next && isUnlocked(state, next) ? next : null;
+}
+
 // Where saplings can go: open grass or steppe, or forest that has been thinned.
 export function plantError(state: GameState, tile: Tile): string | null {
   if (tutorialLocked(state, "plant")) return "Unlocks after the tutorial";
@@ -325,7 +337,9 @@ export function fireRisk(state: GameState) {
 function pickEvent(roll: number, state: GameState) {
   const wildfire = Math.min(FIRE_RISK.max, FIRE_RISK.base + FIRE_RISK.perForestTile * fireRisk(state));
   // Never the same card twice in a row.
-  const weights = EVENTS.map((e) => (e.id === state.lastEvent ? 0 : e.id === "wildfire" ? wildfire : 1));
+  const weights = EVENTS.map((e) =>
+    e.id === state.lastEvent || (e.era ?? 0) > state.era ? 0 : e.id === "wildfire" ? wildfire : 1,
+  );
   let r = roll * weights.reduce((a, b) => a + b, 0);
   for (let i = 0; i < EVENTS.length; i++) {
     r -= weights[i];
@@ -397,7 +411,12 @@ export function production(state: GameState): Resources {
   for (const tile of state.tiles) {
     if (!tile.building) continue;
     const def = BUILDINGS_BY_ID[tile.building];
-    const factor = tile.building === "woodcutter" ? woodcutterYield(state, tile) : 1;
+    const factor =
+      tile.building === "woodcutter"
+        ? woodcutterYield(state, tile)
+        : tile.building === "farm" && state.tiles.some((t) => t.building === "canal" && hexDistance(t, tile) === 1)
+          ? 1.5
+          : 1;
     for (const [k, v] of Object.entries(def.produces ?? {})) out[k as keyof Resources] += (v ?? 0) * factor;
     if (def.depositBonus && tile.deposit === def.depositBonus.deposit) {
       for (const [k, v] of Object.entries(def.depositBonus.amount))
@@ -410,6 +429,13 @@ export function production(state: GameState): Resources {
       if (fishNearby) out.food += 0.8;
     }
   }
+  // Bronze tools: each smithy (up to three) makes every worker 20% better.
+  const smithies = countBuildings(state).smithy ?? 0;
+  const tools = 1 + 0.2 * Math.min(3, smithies);
+  out.food *= tools;
+  out.wood *= tools;
+  // ...but every smithy burns wood for charcoal, all the time.
+  out.wood -= smithies * SMITHY_CHARCOAL;
   // Worn-out land gives smaller harvests.
   out.food *= 1 - 0.4 * landStrain(state);
   // The sick can't work (but they still eat).
@@ -667,6 +693,21 @@ export function sustainabilityBreakdown(state: GameState): SustainPart[] {
       hint: "Grazing animals wear down the grass around them.",
     },
     {
+      label: `${counts.smithy ?? 0} smith${counts.smithy === 1 ? "y" : "ies"} burning charcoal`,
+      value: -(counts.smithy ?? 0) * 4,
+      hint: "Smelting bronze burns wood all the time and fills the air with smoke.",
+    },
+    {
+      label: `${counts.canal ?? 0} canal${counts.canal === 1 ? "" : "s"} salting the soil`,
+      value: -(counts.canal ?? 0) * 3,
+      hint: "Irrigation water leaves salt behind as it dries.",
+    },
+    {
+      label: `${counts.house ?? 0} brick house${counts.house === 1 ? "" : "s"}`,
+      value: -(counts.house ?? 0) * 1,
+      hint: "Bricks are fired in kilns that burn wood.",
+    },
+    {
       label: "Recent events",
       value: state.modifiers.sustainability,
       hint: "Fires and choices you made in events. This fades over time.",
@@ -690,8 +731,12 @@ export function coldShare(state: GameState) {
 }
 
 // Food lost to rot each second: stores above foodKeeps slowly go bad.
+export function foodKeeps(state: GameState) {
+  return GROWTH_PRESSURE.foodKeeps + (countBuildings(state).granary ?? 0) * GRANARY_KEEPS;
+}
+
 export function foodSpoiling(state: GameState) {
-  return Math.max(0, state.resources.food - GROWTH_PRESSURE.foodKeeps) * GROWTH_PRESSURE.foodRots;
+  return Math.max(0, state.resources.food - foodKeeps(state)) * GROWTH_PRESSURE.foodRots;
 }
 
 export function isLit(state: GameState, tile: Tile) {
@@ -711,8 +756,10 @@ export function warriorCap(state: GameState) {
 }
 
 export function defenseStrength(state: GameState) {
-  const perWarrior = state.researched.includes("spears") ? 1.5 : 1;
-  return state.soldiers * perWarrior + ((countBuildings(state).warcamp ?? 0) > 0 ? 1 : 0);
+  const perWarrior =
+    (state.researched.includes("spears") ? 1.5 : 1) * (state.researched.includes("bronze-arms") ? 2 : 1);
+  const counts = countBuildings(state);
+  return state.soldiers * perWarrior + ((counts.warcamp ?? 0) > 0 ? 1 : 0) + (counts.walls ?? 0) * WALL_DEFENSE;
 }
 
 const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
@@ -740,7 +787,7 @@ export function computeMeters(state: GameState): Meters {
   // How healthy the land is (see sustainabilityBreakdown for the parts).
   const sustainability = 100 + sustainabilityBreakdown(state).reduce((sum, p) => sum + p.value, 0);
 
-  const literacy = (counts.elder ?? 0) * 12 + (state.researched.length - 1) * 2;
+  const literacy = (counts.elder ?? 0) * 12 + (counts.school ?? 0) * 15 + (state.researched.length - 1) * 2;
 
   const happiness =
     clamp(food) * 0.35 +
@@ -798,6 +845,14 @@ function lessonReady(id: string, state: GameState) {
       return state.strainTicks > 0;
     case "restore":
       return (state.planted ?? 0) > 0;
+    case "charcoal":
+      return (countBuildings(state).smithy ?? 0) > 0;
+    case "salt":
+      return (countBuildings(state).canal ?? 0) > 0;
+    case "stewardship":
+      return (countBuildings(state).forester ?? 0) > 0;
+    case "writing":
+      return (countBuildings(state).school ?? 0) > 0;
     case "clothes":
       return state.researched.includes("hide-clothing");
     case "grazing":
@@ -1037,6 +1092,23 @@ function growForests(state: GameState): GameState {
       if (strain < 1) changes.set(t.id, { ...changes.get(t.id), growth: Math.min(1, t.growth + 0.06 * (1 - strain)) });
     }
     // Forests only grow back where they already stood; they don't take over new land.
+  }
+
+  // Foresters tend the thinnest forest near them (this runs every 3 ticks).
+  for (const f of state.tiles.filter((t) => t.building === "forester")) {
+    const tended = state.tiles
+      .filter(
+        (t) =>
+          t.terrain === "forest" &&
+          !t.building &&
+          hexDistance(t, f) <= FORESTER_REACH &&
+          (changes.get(t.id)?.growth ?? t.growth) < 0.9,
+      )
+      .sort((a, b) => (changes.get(a.id)?.growth ?? a.growth) - (changes.get(b.id)?.growth ?? b.growth))[0];
+    if (tended) {
+      const g = changes.get(tended.id)?.growth ?? tended.growth;
+      changes.set(tended.id, { ...changes.get(tended.id), growth: Math.min(1, g + FORESTER_GROWTH) });
+    }
   }
 
   // Woodcutters fell the trees they turn into wood (this runs every 3 ticks),
@@ -1382,6 +1454,19 @@ function step(state: GameState, action: Action): GameState {
             : "Clear-cutting: full wood, but the forest will be stripped.",
           ...state.log,
         ].slice(0, 30),
+      });
+    }
+
+    case "upgrade": {
+      const tile = state.tiles[action.tileId];
+      const target = tile?.building ? upgradeFor(state, tile.building) : null;
+      if (!tile || !target || !canAfford(state, buildingCost(state, target))) return state;
+      return withMeters({
+        ...state,
+        tiles: state.tiles.map((t) => (t.id === tile.id ? { ...t, building: target.id } : t)),
+        resources: spend(state.resources, buildingCost(state, target)),
+        log: [`Upgraded to a ${target.name}.`, ...state.log].slice(0, 30),
+        stats: { ...(state.stats ?? emptyStats()), built: (state.stats?.built ?? 0) + 1 },
       });
     }
 

@@ -188,6 +188,13 @@ These were decided with the project owner. Do not change them without being aske
   Sustainability ≥ `MIN_SUSTAINABILITY_FOR_BEST_ENDING` (60) for the best
   ending. Losing shows the same debrief. The Stone Age year stops just before
   the next era's start until the player moves on.
+- **Ancient era** (era 1), all trade-offs: Mud-brick House (Hut upgrade via
+  its info panel, `upgradeFor`), Scribe School (literacy), Bronze Smithy (+20%
+  food and wood per smithy up to 3, burns `SMITHY_CHARCOAL` wood/tick, −4
+  Sustainability), Irrigation Canal (next to water; adjacent farms +50%, salts
+  the soil −3), Granary (+`GRANARY_KEEPS` food keeps), Forester's Lodge
+  (regrows thinned forest nearby), Stone Walls (+`WALL_DEFENSE`). Bronze
+  Weapons doubles each warrior. Era-gated event cards use `era`.
 - Seven cultures (Balanced + six with bonuses), three difficulties. There are two
   ways to lose: **famine** (no food for too long) and **unrest** (happiness below
   15 for too long, after the tutorial). Both show a countdown warning first.

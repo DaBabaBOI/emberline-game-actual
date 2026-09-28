@@ -1,7 +1,17 @@
 "use client";
 
 import { BUILDINGS_BY_ID } from "@/game/content";
-import { type Action, isLit, loggingMode, perSecond, secs, woodcutterYield } from "@/game/engine";
+import {
+  type Action,
+  buildingCost,
+  canAfford,
+  isLit,
+  loggingMode,
+  perSecond,
+  secs,
+  upgradeFor,
+  woodcutterYield,
+} from "@/game/engine";
 import type { GameState } from "@/game/types";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { cn } from "@/lib/utils";
@@ -81,6 +91,31 @@ export function BuildingInfo({
           </div>
         </div>
       )}
+
+      {(() => {
+        const next = upgradeFor(state, def.id);
+        if (!next) return null;
+        const cost = buildingCost(state, next);
+        return (
+          <div className="mt-2 border-t-2 border-stone-300 pt-1.5">
+            <button
+              type="button"
+              disabled={!canAfford(state, cost)}
+              onClick={() => dispatch({ type: "upgrade", tileId })}
+              className="pixel-btn w-full bg-amber-400 px-2 py-1 text-left disabled:opacity-50"
+            >
+              <span className="font-semibold">Upgrade to {next.name}</span>
+              <span className="block text-[11px] text-stone-800">
+                {next.gain}. Costs{" "}
+                {Object.entries(cost)
+                  .map(([k, v]) => `${v} ${k}`)
+                  .join(", ")}
+                . {next.landCost}.
+              </span>
+            </button>
+          </div>
+        );
+      })()}
 
       {def.id === "campfire" && (
         <p className="mt-2 border-t-2 border-stone-300 pt-1.5">

@@ -45,7 +45,7 @@ export function ElderLesson() {
   return (
     <div
       className={
-        "pixel-panel pointer-events-auto absolute left-11 right-11 z-[26] p-2.5 text-xs md:left-16 md:right-auto md:max-w-xs md:p-3 md:text-sm " +
+        "pixel-panel pointer-events-auto absolute left-11 right-11 z-[15] p-2.5 text-xs md:left-16 md:right-auto md:max-w-xs md:p-3 md:text-sm " +
         (state.dev ? "top-64" : "top-24 md:top-20")
       }
       data-testid="elder-lesson"

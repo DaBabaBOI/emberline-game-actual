@@ -10,6 +10,7 @@ import {
   defenseStrength,
   DEMOLISH_TOOL,
   PLANT_TOOL,
+  foodKeeps,
   foodSpoiling,
   housingCapacity,
   isUnlocked,
@@ -162,7 +163,7 @@ export function BottomBar() {
             eat −{perSec(consumption(state))}/s
           </span>
           {foodSpoiling(state) > 0.05 && (
-            <span className="font-num whitespace-nowrap text-[11px] text-amber-300" title="Stored food above 100 rots away">
+            <span className="font-num whitespace-nowrap text-[11px] text-amber-300" title={`Stored food above ${foodKeeps(state)} rots away. Granaries keep more.`}>
               rot −{perSec(foodSpoiling(state))}/s
             </span>
           )}
