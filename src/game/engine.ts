@@ -133,14 +133,10 @@ function applyDevStart(state: GameState, era: number): GameState {
   );
   giveStartingWoodcutter(state.tiles, state.tiles[state.startTile]);
   // A lit campfire too, so testers aren't racing unrest from the first second.
-  const home = state.tiles[state.startTile];
-  const firePit = state.tiles
-    .filter((t) => t.revealed && t.terrain === "grass" && !t.building)
-    .sort((a, b) => hexDistance(a, home) - hexDistance(b, home))[0];
-  if (firePit) firePit.building = "campfire";
+  const firePit = giveStartingCampfire(state.tiles, state.tiles[state.startTile]);
   return {
     ...devJumpToEra(state, era),
-    fires: firePit ? { [firePit.id]: 9999 } : {},
+    fires: firePit !== null ? { [firePit]: 9999 } : {},
     tutorialStep: TUTORIAL.length,
     researched: Array.from(new Set([...state.researched, ...researched])),
     resources: { food: 999, wood: 999, stone: 999, knowledge: 999, currency: 999 },
@@ -418,6 +414,16 @@ export function tutorialBudget(state: GameState): Resources {
     else if (TREE_BY_ID[id]) add({ knowledge: TREE_BY_ID[id].cost });
   }
   return total;
+}
+
+// A campfire on the nearest open grass; returns its tile id (or null).
+function giveStartingCampfire(tiles: Tile[], home: Tile) {
+  const pit = tiles
+    .filter((t) => t.revealed && t.terrain === "grass" && !t.building)
+    .sort((a, b) => hexDistance(a, home) - hexDistance(b, home))[0];
+  if (!pit) return null;
+  pit.building = "campfire";
+  return pit.id;
 }
 
 // Games that skip the tutorial get their woodcutter for free, so wood can never run dry for good.
@@ -821,7 +827,7 @@ function tick(state: GameState): GameState {
   // Unrest only builds up once the tutorial is over, so new players get a fair start.
   const inTutorial = state.tutorialStep < TUTORIAL.length;
   const unrestTicks =
-    state.meters.happiness < UNREST_LEVEL && !inTutorial
+    state.meters.happiness < UNREST_LEVEL && !inTutorial && !isCalm(state)
       ? state.unrestTicks + 1
       : Math.max(0, state.unrestTicks - 2);
 
@@ -1155,11 +1161,22 @@ function step(state: GameState, action: Action): GameState {
     }
 
     case "skipTutorial": {
+      // Skipping players still get the basics the tutorial would have built:
+      // a woodcutter, a lit campfire and a gatherer, so they don't freeze or starve.
       const skipped = startGrace({ ...state, tutorialStep: TUTORIAL.length });
-      if (countBuildings(state).woodcutter) return skipped;
+      const counts = countBuildings(state);
       const tiles = state.tiles.map((t) => ({ ...t }));
-      giveStartingWoodcutter(tiles, tiles[state.startTile]);
-      return withMeters({ ...skipped, tiles });
+      if (!counts.woodcutter) giveStartingWoodcutter(tiles, tiles[state.startTile]);
+      const pit = counts.campfire ? null : giveStartingCampfire(tiles, tiles[state.startTile]);
+      if (!counts.gatherer) {
+        const home = tiles[state.startTile];
+        const spot = tiles
+          .filter((t) => t.revealed && (t.terrain === "grass" || t.terrain === "forest") && !t.building)
+          .sort((a, b) => hexDistance(a, home) - (a.deposit === "berries" ? 2 : 0) - (hexDistance(b, home) - (b.deposit === "berries" ? 2 : 0)))[0];
+        if (spot) spot.building = "gatherer";
+      }
+      const fires = pit !== null ? { ...state.fires, [pit]: burnTicks(state) } : state.fires;
+      return withMeters({ ...skipped, tiles, fires });
     }
 
     case "train": {
