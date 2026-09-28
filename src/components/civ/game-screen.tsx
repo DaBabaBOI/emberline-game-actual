@@ -11,7 +11,16 @@ import { SideMeters } from "./hud/side-meters";
 import { BottomBar } from "./hud/bottom-bar";
 import { TreeOverlay } from "./hud/tree-overlay";
 import { GuideOverlay } from "./hud/guide-overlay";
-import { DevPanel, EventModal, GameOver, RaidBanner, Toasts, TutorialPanel, Warnings } from "./hud/overlays";
+import {
+  DevPanel,
+  ElderLesson,
+  EventModal,
+  GameOver,
+  RaidBanner,
+  Toasts,
+  TutorialPanel,
+  Warnings,
+} from "./hud/overlays";
 
 const WorldCanvas = dynamic(
   () => import("./world/world-canvas").then((m) => m.WorldCanvas),
@@ -35,6 +44,7 @@ function Hud({ onRestart }: { onRestart: () => void }) {
       <SideMeters side="left" />
       <SideMeters side="right" />
       <TutorialPanel />
+      <ElderLesson />
       <Toasts />
       <RaidBanner />
       <Warnings />

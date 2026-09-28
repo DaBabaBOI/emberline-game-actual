@@ -4,6 +4,8 @@ import {
   DISEASE,
   CAMPFIRE_BURN_TICKS,
   RELIGHT_WOOD,
+  LESSONS,
+  LESSON_GAP,
   PLANT_COST,
   SELECTIVE_FLOOR,
   TICK_SECONDS,
@@ -60,6 +62,8 @@ export type Action =
   | { type: "devFiresOut" }
   | { type: "devOutbreak" }
   | { type: "devRaid" }
+  | { type: "dismissLesson" }
+  | { type: "devLesson" }
   | { type: "setLogging"; tileId: number; mode: "clear" | "selective" }
   | { type: "plant"; tileId: number }
   | { type: "relight"; tileId: number }
@@ -723,6 +727,42 @@ function checkSecrets(state: GameState): GameState {
   return state;
 }
 
+// When has the moment for each elder lesson come?
+function lessonReady(id: string, state: GameState) {
+  const huts = countBuildings(state).hut ?? 0;
+  switch (id) {
+    case "forest":
+      return forestCover(state) < 0.9;
+    case "wildlife":
+      return forestCover(state) < 0.7;
+    case "smoke":
+      return litFires(state).length >= 3;
+    case "rot":
+      return foodSpoiling(state) > 0.2;
+    case "crowding":
+      return (state.sick ?? 0) >= 1;
+    case "growth":
+      return huts >= 3;
+    case "exhausted":
+      return state.strainTicks > 0;
+    case "restore":
+      return (state.planted ?? 0) > 0;
+    default:
+      return false;
+  }
+}
+
+// Show the next elder lesson whose moment has come: one at a time, spaced out,
+// never during the tutorial or an event.
+export function lessonDue(state: GameState): GameState {
+  if (state.tutorialStep < TUTORIAL.length || state.lesson || state.event || state.phase !== "playing") return state;
+  if (state.tick - (state.lessonTick ?? -LESSON_GAP) < LESSON_GAP) return state;
+  const seen = state.lessonsSeen ?? [];
+  const next = LESSONS.find((l) => !seen.includes(l.id) && lessonReady(l.id, state));
+  if (!next) return state;
+  return { ...state, lesson: next.id, lessonsSeen: [...seen, next.id], lessonTick: state.tick };
+}
+
 function advanceTutorial(state: GameState): GameState {
   const step = TUTORIAL[state.tutorialStep];
   if (!step) return state;
@@ -846,6 +886,7 @@ function tick(state: GameState): GameState {
     next = { ...next, sustainTrail: [...(next.sustainTrail ?? []), next.meters.sustainability].slice(-8) };
   }
   next = checkSecrets(next);
+  next = lessonDue(next);
   next = advanceTutorial(next);
   return { ...next, meters: computeMeters(next) };
 }
@@ -1188,8 +1229,19 @@ function step(state: GameState, action: Action): GameState {
               : { ...t, growth: Math.min(1, t.growth + 0.3) },
         ),
         resources: spend(state.resources, PLANT_COST),
+        planted: (state.planted ?? 0) + 1,
         log: [young ? "Planted saplings: a new forest will grow here." : "Planted saplings in the thinned forest.", ...state.log].slice(0, 30),
       });
+    }
+
+    case "dismissLesson":
+      return { ...state, lesson: null };
+
+    case "devLesson": {
+      if (!state.dev) return state;
+      const seen = state.lessonsSeen ?? [];
+      const nextLesson = LESSONS.find((l) => !seen.includes(l.id)) ?? LESSONS[0];
+      return { ...state, lesson: nextLesson.id, lessonsSeen: [...seen, nextLesson.id], lessonTick: state.tick };
     }
 
     case "devRaid":

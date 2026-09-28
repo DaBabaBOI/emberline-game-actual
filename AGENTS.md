@@ -91,6 +91,13 @@ These were decided with the project owner. Do not change them without being aske
   tool (`PLANT_TOOL`, `PLANT_COST`) turns grass/steppe into young forest or
   helps thinned forest regrow. Keep offering a slower-but-lasting option next
   to every fast-but-damaging one.
+- **Elder lessons** (`LESSONS` in content.ts, `lessonDue` in engine.ts): when
+  something happens in play (the forest shrinks, food rots, smoke builds up,
+  sickness in crowded huts, the land is exhausted, the player plants trees…),
+  Elder Ama explains the lesson and links it to a real UN SDG target. One at a
+  time, `LESSON_GAP` apart, each only once, never during the tutorial. Keep
+  the facts modest and general, with no statistics. New mechanics that teach
+  something should get a lesson.
 - **Sustainability = land health** (`computeMeters`): mostly the share of
   forest still standing within `LAND.radius` of the start (`forestCover`), minus
   a little for campfire smoke, quarries and fields. Woodcutters really fell the

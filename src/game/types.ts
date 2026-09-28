@@ -174,6 +174,12 @@ export interface GameState {
   outbreakDeaths?: number;
   // Seconds of fuel left in each campfire, by tile id. 0 or missing = out.
   fires?: Record<number, number>;
+  // Elder lessons already shown, the one on screen, and when it appeared.
+  lessonsSeen?: string[];
+  lesson?: string | null;
+  lessonTick?: number;
+  // Saplings planted so far.
+  planted?: number;
   // How each woodcutter works, by tile id: clear-cut (default) or selective.
   logging?: Record<number, "clear" | "selective">;
   // Sustainability sampled every 5 ticks, oldest first (for the trend arrow).

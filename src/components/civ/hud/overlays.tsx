@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ERAS, formatYear, TUTORIAL } from "@/game/content";
+import { ERAS, formatYear, LESSONS, TUTORIAL } from "@/game/content";
 import { clearSave, defenseStrength, secs, warnings } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
@@ -32,6 +32,43 @@ export function TutorialPanel() {
         className="mt-2 text-xs text-stone-500 underline"
       >
         Skip tutorial
+      </button>
+    </div>
+  );
+}
+
+// Elder Ama explains the lesson behind what just happened, with its real-world
+// UN target. One at a time; the game keeps running.
+export function ElderLesson() {
+  const { state, dispatch } = useGame();
+  const lesson = LESSONS.find((l) => l.id === state.lesson);
+  if (!lesson) return null;
+  return (
+    <div
+      className={
+        "pixel-panel pointer-events-auto absolute left-16 z-[26] max-w-xs p-3 text-sm " +
+        (state.dev ? "top-64" : "top-20")
+      }
+      data-testid="elder-lesson"
+    >
+      <div className="mb-1 flex items-center gap-2">
+        <PixelIcon name="elder" size={28} />
+        <span className="font-pixel flex flex-col leading-tight">
+          <span className="text-[11px] text-amber-800/80">Elder Ama&apos;s lesson</span>
+          <span className="text-base font-semibold">{lesson.title}</span>
+        </span>
+      </div>
+      <p>{lesson.text}</p>
+      <p className="font-pixel mt-2 flex items-start gap-1.5 border-t-2 border-stone-300 pt-1.5 text-xs text-[#1e4f9c]">
+        <PixelIcon name="leaf" size={14} />
+        <span>In the real world: {lesson.sdg}</span>
+      </p>
+      <button
+        type="button"
+        onClick={() => dispatch({ type: "dismissLesson" })}
+        className="pixel-btn font-pixel mt-2 bg-amber-400 px-3 py-1 text-xs font-semibold text-[#2b2119]"
+      >
+        Got it
       </button>
     </div>
   );
@@ -237,6 +274,9 @@ export function DevPanel() {
         </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devRaid" })}>
           Raid now
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devLesson" })}>
+          Lesson
         </button>
       </div>
       <div className="flex flex-wrap gap-1">
