@@ -37,8 +37,22 @@ export interface Raid {
   strength: number;
   fromTile: number;
   targetTile: number;
+  // Where the warriors march out to meet them.
+  meetTile?: number;
   startTick: number;
   arriveTick: number;
+}
+
+export interface Battle {
+  tick: number;
+  tile: number;
+  fromTile: number;
+  warriors: number;
+  raiders: number;
+  warriorsLost: number;
+  raidersLost: number;
+  // True when the village held.
+  won: boolean;
 }
 
 export type MeterKey =
@@ -155,6 +169,8 @@ export interface GameState {
   outbreakDeaths?: number;
   // Seconds of fuel left in each campfire, by tile id. 0 or missing = out.
   fires?: Record<number, number>;
+  // The last fight with raiders, so the 3D scene can play it out.
+  battle?: Battle | null;
   // People caught in the last wildfire: where they fell and when (for the 3D scene).
   fireVictims?: { tile: number; tick: number }[];
   // Total forest growth near the village when the game began (100% Sustainability).

@@ -13,7 +13,7 @@ import { useGuide } from "@/components/civ/hud/guide-overlay";
 import type { Tile } from "@/game/types";
 import { BiomeDetails, Deposits, Forests, HexTerrain, Mountains, tileTop } from "./hex-terrain";
 import { MODELS } from "./building-models";
-import { FireVictims, Raiders, Villagers, Warriors } from "./villagers";
+import { BattleScene, FireVictims, Raiders, Villagers, Warriors } from "./villagers";
 import { Wildlife } from "./wildlife";
 import { CampfireSmoke, Haze, Wildfire } from "./atmosphere";
 
@@ -86,6 +86,8 @@ export function WorldCanvas() {
       : null;
 
   const burning = useMemo(() => litFires(state), [state]);
+  // A battle is played out for a few ticks after it happens.
+  const battleShowing = !!state.battle && state.tick - state.battle.tick < 7;
   const burningIds = burning.map((t) => t.id);
   const outFires = buildings.filter((t) => t.building === "campfire" && !isLit(state, t));
 
@@ -159,7 +161,15 @@ export function WorldCanvas() {
         litFires={burningIds}
         sick={state.population > 0 ? (state.sick ?? 0) / state.population : 0}
       />
-      <Warriors tiles={state.tiles} population={state.population} soldiers={state.soldiers} homeTile={home} />
+      <Warriors
+        tiles={state.tiles}
+        population={state.population}
+        soldiers={state.soldiers}
+        homeTile={home}
+        rally={state.raid ? state.tiles[state.raid.meetTile ?? state.raid.targetTile] : null}
+        hidden={battleShowing}
+      />
+      <BattleScene tiles={state.tiles} battle={battleShowing ? state.battle ?? null : null} homeTile={home} />
       <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} />
       <Wildlife
         tiles={state.tiles}

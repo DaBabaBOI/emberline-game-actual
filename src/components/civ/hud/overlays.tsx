@@ -235,6 +235,9 @@ export function DevPanel() {
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devOutbreak" })}>
           Outbreak
         </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devRaid" })}>
+          Raid now
+        </button>
       </div>
       <div className="flex flex-wrap gap-1">
         {ERAS.map((era, i) => (

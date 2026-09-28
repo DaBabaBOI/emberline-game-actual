@@ -4,7 +4,7 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { hexDistance } from "@/game/hex";
 import { isLand } from "@/game/map";
-import type { Raid, Tile } from "@/game/types";
+import type { Battle, Raid, Tile } from "@/game/types";
 import { Figures, HAIRS, SKINS, type Agent } from "./figures";
 import { makeGround, type Ground } from "./ground";
 import { tileTop } from "./hex-terrain";
@@ -207,11 +207,17 @@ export function Warriors({
   population,
   soldiers,
   homeTile,
+  rally,
+  hidden,
 }: {
   tiles: Tile[];
   population: number;
   soldiers: number;
   homeTile: Tile;
+  // While raiders approach, warriors march to this tile to meet them.
+  rally?: Tile | null;
+  // Hidden while a battle is being played out (BattleScene draws them).
+  hidden?: boolean;
 }) {
   const walkers = useRef<Walker[]>([]);
   const ground = useMemo(() => makeGround(tiles), [tiles]);
@@ -231,9 +237,16 @@ export function Warriors({
     }
     list.length = count;
     const dt = Math.min(delta, 0.1);
-    for (const w of list) stepWalker(w, dt, ground, () => pick(camps));
+    for (const w of list) {
+      if (rally) {
+        w.speed = 0.9;
+        w.wait = 0;
+      }
+      stepWalker(w, dt, ground, () => rally ?? pick(camps));
+    }
   });
 
+  if (hidden) return null;
   return <Figures agents={walkers} max={MAX_FIGURES} weapon="spear" />;
 }
 
@@ -248,7 +261,7 @@ export function Raiders({ tiles, raid, tick }: { tiles: Tile[]; raid: Raid | nul
       return;
     }
     const from = tiles[raid.fromTile];
-    const to = tiles[raid.targetTile];
+    const to = tiles[raid.meetTile ?? raid.targetTile];
     const goal = Math.min(1, (tick - raid.startTick) / (raid.arriveTick - raid.startTick));
     progress.current += (goal - progress.current) * Math.min(1, delta * 1.5);
     if (goal === 0) progress.current = 0;
@@ -327,4 +340,110 @@ export function FireVictims({ tiles, victims }: { tiles: Tile[]; victims: { tile
 
   if (!burning.length) return null;
   return <Figures agents={agents} max={6} />;
+}
+
+// A fight with raiders, played out where the warriors met them: two lines
+// clash, the fallen topple over one by one, then the winners move on (raiders
+// flee to their boats, or march on the village if they won).
+export function BattleScene({ tiles, battle, homeTile }: { tiles: Tile[]; battle: Battle | null; homeTile: Tile }) {
+  const warriors = useRef<Agent[]>([]);
+  const raiders = useRef<Agent[]>([]);
+  const started = useRef<{ key: string; at: number }>({ key: "", at: 0 });
+  const key = battle ? `${battle.tick}@${battle.tile}` : "";
+
+  useFrame(({ clock }, delta) => {
+    const now = clock.elapsedTime;
+    if (!battle) {
+      warriors.current = [];
+      raiders.current = [];
+      return;
+    }
+    const at = tiles[battle.tile];
+    const from = tiles[battle.fromTile];
+    // Unit vector from the shore towards the village, and one across it.
+    const len = Math.hypot(homeTile.x - from.x, homeTile.z - from.z) || 1;
+    const dx = (homeTile.x - from.x) / len;
+    const dz = (homeTile.z - from.z) / len;
+    const px = -dz;
+    const pz = dx;
+    const y = tileTop(at);
+
+    if (started.current.key !== key) {
+      started.current = { key, at: now };
+      const nW = Math.min(battle.warriors, 8);
+      const nR = Math.min(battle.raiders, 10);
+      const lostW = battle.warriors ? Math.round((nW * battle.warriorsLost) / battle.warriors) : 0;
+      const lostR = Math.round((nR * battle.raidersLost) / Math.max(1, battle.raiders));
+      const line = (n: number, lost: number, side: number, look: Partial<Agent>) =>
+        Array.from({ length: n }, (_, i) => {
+          const across = (i - (n - 1) / 2) * 0.28;
+          return {
+            x: at.x + dx * 0.3 * side + px * across,
+            y,
+            z: at.z + dz * 0.3 * side + pz * across,
+            heading: Math.atan2(-dx * side, -dz * side),
+            moving: true,
+            scale: 1.4,
+            skin: SKINS[(i + (side > 0 ? 0 : 2)) % SKINS.length],
+            hair: "#1a1a1a",
+            phase: i * 1.3,
+            fallen: 0,
+            // Every other fighter along the line falls, until the losses are covered.
+            dies: i % 2 === 0 ? i / 2 < lost : Math.floor(i / 2) < lost - Math.ceil(n / 2),
+            order: i,
+            ...look,
+          } as Agent & { dies: boolean; order: number };
+        });
+      warriors.current = line(nW, lostW, 1, { tunic: "#5b6f8a" });
+      raiders.current = line(nR, lostR, -1, { tunic: "#9b1c1c" });
+    }
+
+    const age = now - started.current.at;
+    if (age > 11) {
+      warriors.current = [];
+      raiders.current = [];
+      return;
+    }
+    const dt = Math.min(delta, 0.1);
+    const step = (list: Agent[], side: number) => {
+      let falling = 0;
+      for (const raw of list) {
+        const a = raw as Agent & { dies: boolean; order: number };
+        if (a.dies) {
+          const fallAt = 0.9 + falling * 0.35;
+          falling++;
+          if (age > fallAt) {
+            a.moving = false;
+            a.fallen = Math.min(1, (age - fallAt) / 0.4);
+            continue;
+          }
+        }
+        if (age < 3) {
+          // Lunge back and forth at the enemy line.
+          const lunge = Math.sin(age * 9 + a.phase) * 0.012;
+          a.x += dx * lunge * -side;
+          a.z += dz * lunge * -side;
+          a.moving = true;
+        } else {
+          // Warriors head home; raiders flee to the boats, or push on if they won.
+          const dir = side > 0 ? 1 : battle.won ? -1 : 1;
+          const speed = side < 0 && battle.won ? 0.7 : 0.4;
+          a.x += dx * dir * speed * dt;
+          a.z += dz * dir * speed * dt;
+          a.heading = Math.atan2(dx * dir, dz * dir);
+          a.moving = true;
+        }
+      }
+    };
+    step(warriors.current, 1);
+    step(raiders.current, -1);
+  });
+
+  if (!battle) return null;
+  return (
+    <>
+      <Figures agents={warriors} max={8} weapon="spear" />
+      <Figures agents={raiders} max={10} weapon="club" />
+    </>
+  );
 }
