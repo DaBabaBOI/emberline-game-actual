@@ -14,7 +14,7 @@ export function TutorialPanel() {
   const step = TUTORIAL[state.tutorialStep];
   if (!step) return null;
   return (
-    <div className="pixel-panel pointer-events-auto absolute left-16 top-20 z-[26] max-w-xs p-3 text-sm">
+    <div className="pixel-panel pointer-events-auto absolute left-11 right-11 top-24 z-[26] p-2.5 text-xs md:left-16 md:right-auto md:top-20 md:max-w-xs md:p-3 md:text-sm">
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="font-pixel flex items-center gap-2 text-base font-semibold">
           <PixelIcon name="elder" size={28} />
@@ -46,8 +46,8 @@ export function ElderLesson() {
   return (
     <div
       className={
-        "pixel-panel pointer-events-auto absolute left-16 z-[26] max-w-xs p-3 text-sm " +
-        (state.dev ? "top-64" : "top-20")
+        "pixel-panel pointer-events-auto absolute left-11 right-11 z-[26] p-2.5 text-xs md:left-16 md:right-auto md:max-w-xs md:p-3 md:text-sm " +
+        (state.dev ? "top-64" : "top-24 md:top-20")
       }
       data-testid="elder-lesson"
     >
@@ -183,7 +183,7 @@ export function Toasts() {
   }, [state.log]);
 
   return (
-    <div className="pointer-events-none absolute right-16 top-20 flex w-64 flex-col items-end gap-1">
+    <div className="pointer-events-none absolute right-11 top-24 flex w-56 flex-col items-end gap-1 md:right-16 md:top-20 md:w-64">
       {toasts.map((t, i) => (
         <div
           key={t.id}
@@ -227,7 +227,7 @@ export function Warnings() {
   if (list.length === 0) return null;
   const shown = open ? list : list.slice(0, 1);
   return (
-    <div className="pointer-events-none absolute bottom-32 left-3 flex max-w-72 flex-col gap-1.5">
+    <div className="pointer-events-none absolute bottom-48 left-11 right-11 flex flex-col gap-1.5 md:bottom-32 md:left-3 md:right-auto md:max-w-72">
       {shown.map((w) => (
         <div
           key={w.id}

@@ -96,12 +96,12 @@ export function TreeOverlay() {
 
   return (
     <div className="pointer-events-auto absolute inset-0 z-20 flex flex-col bg-[#1f1812]/95 text-[#fdf6e3]">
-      <div className="flex items-center justify-between gap-4 px-5 pt-3">
-        <h2 className="font-pixel flex items-center gap-2 text-2xl font-semibold">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 pt-2 md:gap-4 md:px-5 md:pt-3">
+        <h2 className="font-pixel flex items-center gap-2 text-lg font-semibold md:text-2xl">
           <PixelIcon name="star" size={24} />
           Advancements
         </h2>
-        <div className="font-pixel flex items-center gap-4 text-sm">
+        <div className="font-pixel flex flex-wrap items-center gap-2 text-xs md:gap-4 md:text-sm">
           <span className="flex items-center gap-1">
             <PixelIcon name="bulb" size={16} />
             <span className="font-num">{Math.floor(state.resources.knowledge)}</span> knowledge
@@ -118,7 +118,7 @@ export function TreeOverlay() {
         </div>
       </div>
 
-      <div className="flex gap-1.5 overflow-x-auto px-5 pt-3">
+      <div className="flex gap-1.5 overflow-x-auto px-3 pt-2 md:px-5 md:pt-3">
         {ERAS.map((e, i) => (
           <button
             key={e.name}
@@ -140,7 +140,7 @@ export function TreeOverlay() {
         ))}
       </div>
 
-      <div className="relative m-5 mb-3 flex-1 overflow-auto border-[3px] border-[#140e0a] bg-[#2a211a]">
+      <div className="relative m-2 mb-2 flex-1 overflow-auto border-[3px] border-[#140e0a] bg-[#2a211a] md:m-5 md:mb-3">
         <div className="relative" style={{ width, height, minWidth: "100%" }}>
           {rowTops.map((row, i) => (
             <div
@@ -236,7 +236,7 @@ export function TreeOverlay() {
         </div>
       </div>
 
-      <div className="flex min-h-[72px] items-center justify-between gap-4 border-t-[3px] border-[#140e0a] px-5 py-3">
+      <div className="flex min-h-[72px] flex-wrap items-center justify-between gap-2 border-t-[3px] border-[#140e0a] px-3 py-2 md:flex-nowrap md:gap-4 md:px-5 md:py-3">
         {focused && focusStatus ? (
           <>
             <div className="min-w-0">

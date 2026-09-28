@@ -134,8 +134,19 @@ export function BottomBar() {
     !inTutorial && (cost.wood ?? 0) > 0 && state.resources.wood - (cost.wood ?? 0) < LOW_WOOD_AFTER_BUY;
 
   return (
-    <div className="pointer-events-auto absolute inset-x-0 bottom-3 flex justify-center px-3">
-      <div className="pixel-panel-dark font-pixel flex min-w-0 max-w-full items-stretch gap-3 p-2">
+    <div className="pointer-events-auto absolute inset-x-0 bottom-2 flex flex-col items-center gap-1.5 px-2 md:bottom-3 md:px-3">
+      {selected && (
+        // Phones have no Esc key or right click: a clear way out of build mode.
+        <button
+          type="button"
+          onClick={() => setSelected(null)}
+          className="pixel-btn font-pixel bg-[#fdf6e3] px-3 py-1 text-xs text-[#2b2119]"
+          data-testid="cancel-tool"
+        >
+          Cancel
+        </button>
+      )}
+      <div className="pixel-panel-dark font-pixel flex w-full min-w-0 max-w-full flex-col items-stretch gap-2 p-1.5 md:w-auto md:flex-row md:gap-3 md:p-2">
         <div className="hidden flex-col justify-center gap-0.5 border-r-2 border-white/10 pr-3 text-[11px] text-white/85 md:flex">
           <Stat icon="hut" title="Housing">
             {Math.floor(state.population)}/{housingCapacity(state)}
@@ -205,7 +216,7 @@ export function BottomBar() {
           })}
         </div>
 
-        <div className="flex shrink-0 gap-1.5 border-l-2 border-white/10 pl-3">
+        <div className="flex shrink-0 gap-1.5 overflow-x-auto border-t-2 border-white/10 pt-1.5 md:overflow-visible md:border-l-2 md:border-t-0 md:pl-3 md:pt-0">
           <ToolButton
             icon="coin"
             label="Sell"

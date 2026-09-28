@@ -20,8 +20,8 @@ export function SideMeters({ side }: { side: "left" | "right" }) {
   return (
     <div
       className={cn(
-        "pointer-events-auto absolute top-1/2 flex -translate-y-1/2 flex-col gap-2",
-        side === "left" ? "left-3" : "right-3",
+        "pointer-events-auto absolute top-1/2 flex -translate-y-1/2 flex-col gap-1.5 md:gap-2",
+        side === "left" ? "left-1.5 md:left-3" : "right-1.5 md:right-3",
       )}
     >
       {METERS.filter((m) => m.side === side).map((m) => {
@@ -35,13 +35,13 @@ export function SideMeters({ side }: { side: "left" | "right" }) {
             onClick={land ? () => setOpen(!open) : undefined}
             data-testid={land ? "sustain-meter" : undefined}
             className={cn(
-              "pixel-panel-dark font-pixel group relative flex w-10 flex-col items-center gap-1 px-1 py-1.5",
+              "pixel-panel-dark font-pixel group relative flex w-8 flex-col items-center gap-0.5 px-0.5 py-1 md:w-10 md:gap-1 md:px-1 md:py-1.5",
               land && "cursor-pointer hover:bg-[#3a2e24]",
               land && open && "outline outline-2 outline-emerald-400",
             )}
           >
             <PixelIcon name={m.icon} size={18} />
-            <div className="relative h-14 w-2.5 overflow-hidden bg-white/15">
+            <div className="relative h-9 w-2 overflow-hidden bg-white/15 md:h-14 md:w-2.5">
               <div
                 className={cn("absolute bottom-0 w-full transition-[height] duration-150", barColor(value))}
                 style={{ height: `${value}%` }}
@@ -84,7 +84,10 @@ function SustainabilityPanel({ onClose }: { onClose: () => void }) {
   const parts = sustainabilityBreakdown(state);
   const trend = sustainabilityTrend(state);
   return (
-    <div className="pixel-panel font-pixel absolute bottom-0 right-12 w-72 p-3 text-xs" data-testid="sustain-panel">
+    <div
+      className="pixel-panel font-pixel absolute bottom-0 right-10 w-64 max-w-[calc(100vw-4rem)] p-3 text-xs md:right-12 md:w-72"
+      data-testid="sustain-panel"
+    >
       <div className="mb-1 flex items-center justify-between">
         <span className="flex items-center gap-1.5 text-sm font-semibold">
           <PixelIcon name="leaf" size={16} />

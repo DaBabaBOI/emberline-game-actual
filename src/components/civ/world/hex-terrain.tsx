@@ -50,9 +50,11 @@ export function HexTerrain({
   // 0–1: how worn out the land around home is (dries the grass).
   wear?: number;
   onHover: (id: number | null) => void;
-  onPick: (id: number) => void;
+  // `touch` is true when the tap came from a finger (no hover on phones).
+  onPick: (id: number, touch: boolean) => void;
 }) {
   const ref = useRef<InstancedMesh>(null);
+  const lastPointer = useRef("mouse");
   const geometry = useMemo(() => new CylinderGeometry(0.985, 0.985, 1, 6, 1), []);
 
   useLayoutEffect(() => {
@@ -96,14 +98,21 @@ export function HexTerrain({
       args={[geometry, undefined, tiles.length]}
       receiveShadow
       castShadow
+      onPointerDown={(e: ThreeEvent<PointerEvent>) => {
+        lastPointer.current = e.pointerType;
+      }}
       onPointerMove={(e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
+        // Fingers dragging the map shouldn't move the preview around.
+        if (e.pointerType === "touch") return;
         onHover(e.instanceId ?? null);
       }}
-      onPointerOut={() => onHover(null)}
+      onPointerOut={(e: ThreeEvent<PointerEvent>) => {
+        if (e.pointerType !== "touch") onHover(null);
+      }}
       onClick={(e: ThreeEvent<MouseEvent>) => {
         if (e.delta > 6 || e.instanceId === undefined) return;
-        onPick(e.instanceId);
+        onPick(e.instanceId, lastPointer.current === "touch");
       }}
     >
       <meshStandardMaterial roughness={0.85} flatShading />
@@ -178,7 +187,7 @@ export function Mountains({
 }: {
   tiles: Tile[];
   onHover?: (id: number | null) => void;
-  onPick?: (id: number) => void;
+  onPick?: (id: number, touch: boolean) => void;
 }) {
   const peaks = useMemo(
     () => tiles.filter((t) => t.revealed && t.terrain === "mountain" && !t.building),
@@ -200,7 +209,7 @@ export function Mountains({
             }}
             onClick={(e) => {
               e.stopPropagation();
-              onPick?.(t.id);
+              onPick?.(t.id, e.nativeEvent instanceof PointerEvent && e.nativeEvent.pointerType === "touch");
             }}
           >
             <mesh castShadow receiveShadow position={[0, h / 2, 0]}>
