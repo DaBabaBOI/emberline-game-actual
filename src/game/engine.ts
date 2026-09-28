@@ -33,6 +33,8 @@ const BASE_HOUSING = 8;
 // Food eaten per second by each person and each warrior.
 export const FOOD_PER_PERSON = 0.15;
 export const FOOD_PER_WARRIOR = 0.1;
+// Food from each animal the hunters bring back.
+export const HUNT_FOOD = 4;
 
 export type Action =
   | { type: "tick" }
@@ -323,7 +325,7 @@ export function production(state: GameState): Resources {
       const fishNearby = state.tiles.some(
         (t) => t.deposit === "fish" && hexDistance(t, tile) === 1,
       );
-      if (fishNearby) out.food += 1.2;
+      if (fishNearby) out.food += 0.6;
     }
   }
   // Worn-out land gives smaller harvests.
@@ -335,7 +337,7 @@ export function production(state: GameState): Resources {
 
   if (state.researched.includes("spears")) out.food *= 1.15;
   if (state.culture === "farmers") out.food *= 1.25;
-  if (state.culture === "mariners") out.food += (counts.fishing ?? 0) * 0.9;
+  if (state.culture === "mariners") out.food += (counts.fishing ?? 0) * 0.45;
   if (state.culture === "scholars") out.knowledge *= 1.5;
   if (state.culture === "traders") out.currency *= 1.5;
   return out;
@@ -502,7 +504,8 @@ export function computeMeters(state: GameState): Meters {
   const stockDays = state.resources.food / Math.max(cons, 0.1);
 
   // Mostly "do we make enough for everyone?", so it drops as the tribe grows.
-  let food = (prod.food / Math.max(cons, 0.1)) * 55 + Math.min(20, stockDays / 3);
+  // 45 means "just enough"; you need about twice what you eat to reach 100.
+  let food = (prod.food / Math.max(cons, 0.1)) * 45 + Math.min(10, stockDays / 4);
   if (state.resources.food <= 0) food = Math.min(food, 5);
 
   const shelter =
@@ -948,8 +951,8 @@ function step(state: GameState, action: Action): GameState {
     case "hunt":
       return {
         ...state,
-        resources: { ...state.resources, food: state.resources.food + 6 },
-        log: [`Hunters brought down a ${action.animal} (+6 food).`, ...state.log].slice(0, 30),
+        resources: { ...state.resources, food: state.resources.food + HUNT_FOOD },
+        log: [`Hunters brought down a ${action.animal} (+${HUNT_FOOD} food).`, ...state.log].slice(0, 30),
       };
   }
 }

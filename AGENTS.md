@@ -93,8 +93,10 @@ These were decided with the project owner. Do not change them without being aske
   **marsh** (gatherers only), beach, hills, mountains. The Silk Steppe island is
   mostly steppe.
 - Food use scales with people (`FOOD_PER_PERSON`, `FOOD_PER_WARRIOR`); the food
-  meter mostly measures "do we make enough for everyone", so it drops as the
-  tribe grows.
+  meter mostly measures "do we make enough for everyone" (45 = just enough,
+  about 2× what you eat = 100), so it drops as the tribe grows. **Food should
+  be a scramble**: one gatherer (0.6/s, +0.5 on berries) does not feed a tribe;
+  farms give 1.1/s, fishing 0.9/s (+0.6 by fish), hunts `HUNT_FOOD`.
 - **Wood is scarce** in the Stone Age by design; scouting is expensive and gets
   pricier each trip (Transport advancements make it 20% cheaper each).
 - Events are rare but **hit hard** (a wildfire really burns the forest and nearby
