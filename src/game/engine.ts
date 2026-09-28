@@ -214,7 +214,7 @@ function checkSecrets(state: GameState): GameState {
       researched: [...state.researched, "cave-paintings"],
       resources: { ...state.resources, knowledge: state.resources.knowledge + 25 },
       modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + 10 },
-      log: ["✨ Secret discovered: Cave Paintings!", ...state.log].slice(0, 30),
+      log: ["Secret discovered: Cave Paintings!", ...state.log].slice(0, 30),
     };
   }
   return state;
@@ -343,7 +343,7 @@ function updateRaids(state: GameState): GameState {
         soldiers: state.soldiers - losses,
         modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + 6 },
         log: [
-          `🛡️ Raiders driven off!${losses ? ` ${losses} warrior${losses > 1 ? "s" : ""} fell.` : ""}`,
+          `Raiders driven off!${losses ? ` ${losses} warrior${losses > 1 ? "s" : ""} fell.` : ""}`,
           ...state.log,
         ].slice(0, 30),
       };
@@ -358,7 +358,7 @@ function updateRaids(state: GameState): GameState {
         wood: state.resources.wood * 0.65,
       },
       modifiers: { ...state.modifiers, happiness: state.modifiers.happiness - 12 },
-      log: ["🔥 Raiders plundered the village! Food and wood stolen.", ...state.log].slice(0, 30),
+      log: ["Raiders plundered the village! Food and wood stolen.", ...state.log].slice(0, 30),
     };
   }
 
@@ -386,7 +386,7 @@ function updateRaids(state: GameState): GameState {
         arriveTick: state.tick + 12,
       },
       nextRaidTick: state.tick + 100 + Math.floor(rand() * 60),
-      log: [`⚠️ ${strength} raiders spotted landing on the shore!`, ...state.log].slice(0, 30),
+      log: [`${strength} raiders spotted landing on the shore!`, ...state.log].slice(0, 30),
     };
   }
   return state;
@@ -507,7 +507,7 @@ export function reducer(state: GameState, action: Action): GameState {
       return {
         ...state,
         resources: { ...state.resources, food: state.resources.food + 6 },
-        log: [`🏹 Hunters brought down a ${action.animal} (+6 food).`, ...state.log].slice(0, 30),
+        log: [`Hunters brought down a ${action.animal} (+6 food).`, ...state.log].slice(0, 30),
       };
   }
 }

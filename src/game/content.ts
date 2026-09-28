@@ -1,3 +1,4 @@
+import type { IconId } from "./sprites";
 import type {
   Branch,
   BuildingDef,
@@ -22,26 +23,26 @@ export function formatYear(year: number) {
   return y < 0 ? `${Math.abs(y).toLocaleString()} BCE` : `${y} AD`;
 }
 
-export const METERS: { key: MeterKey; label: string; icon: string; side: "left" | "right" }[] = [
-  { key: "food", label: "Food & Water", icon: "🍖", side: "left" },
-  { key: "shelter", label: "Shelter & Health", icon: "🛖", side: "left" },
-  { key: "happiness", label: "Happiness", icon: "😊", side: "left" },
-  { key: "literacy", label: "Literacy", icon: "📜", side: "right" },
-  { key: "energy", label: "Energy", icon: "🔥", side: "right" },
-  { key: "sustainability", label: "Sustainability", icon: "🌿", side: "right" },
+export const METERS: { key: MeterKey; label: string; icon: IconId; side: "left" | "right" }[] = [
+  { key: "food", label: "Food & Water", icon: "meat", side: "left" },
+  { key: "shelter", label: "Shelter & Health", icon: "hut", side: "left" },
+  { key: "happiness", label: "Happiness", icon: "smile", side: "left" },
+  { key: "literacy", label: "Literacy", icon: "book", side: "right" },
+  { key: "energy", label: "Energy", icon: "flame", side: "right" },
+  { key: "sustainability", label: "Sustainability", icon: "leaf", side: "right" },
 ];
 
 export const CULTURES: Record<
   CultureId,
-  { name: string; icon: string; blurb: string }
+  { name: string; icon: IconId; blurb: string }
 > = {
-  balanced: { name: "Balanced", icon: "⚖️", blurb: "No bonuses. The pure game." },
-  traders: { name: "Traders", icon: "🐫", blurb: "+50% currency. Caravans move faster (later eras)." },
-  builders: { name: "Builders", icon: "🧱", blurb: "Buildings cost 20% less." },
-  scholars: { name: "Scholars", icon: "📚", blurb: "+50% knowledge." },
-  warriors: { name: "Warriors", icon: "🛡️", blurb: "Stronger, cheaper armies (later eras)." },
-  farmers: { name: "Farmers", icon: "🌾", blurb: "+25% food, faster population growth." },
-  mariners: { name: "Mariners", icon: "⛵", blurb: "+50% fishing, scouts see further." },
+  balanced: { name: "Balanced", icon: "scales", blurb: "No bonuses. The pure game." },
+  traders: { name: "Traders", icon: "coin", blurb: "+50% currency. Caravans move faster (later eras)." },
+  builders: { name: "Builders", icon: "bricks", blurb: "Buildings cost 20% less." },
+  scholars: { name: "Scholars", icon: "book", blurb: "+50% knowledge." },
+  warriors: { name: "Warriors", icon: "shield", blurb: "Stronger, cheaper armies (later eras)." },
+  farmers: { name: "Farmers", icon: "wheat", blurb: "+25% food, faster population growth." },
+  mariners: { name: "Mariners", icon: "boat", blurb: "+50% fishing, scouts see further." },
 };
 
 export const DIFFICULTIES: Record<
@@ -60,7 +61,7 @@ export const BUILDINGS: BuildingDef[] = [
   {
     id: "campfire",
     name: "Campfire",
-    icon: "🔥",
+    icon: "campfire",
     description: "Warmth, light and cooked food. Burns a little wood.",
     era: 0,
     cost: { wood: 5 },
@@ -70,7 +71,7 @@ export const BUILDINGS: BuildingDef[] = [
   {
     id: "hut",
     name: "Hut",
-    icon: "🛖",
+    icon: "hut",
     description: "Shelter for 6 people.",
     era: 0,
     cost: { wood: 10 },
@@ -81,7 +82,7 @@ export const BUILDINGS: BuildingDef[] = [
   {
     id: "gatherer",
     name: "Gatherer's Camp",
-    icon: "🧺",
+    icon: "basket",
     description: "Collects food. Bonus on berry bushes.",
     era: 0,
     cost: { wood: 8 },
@@ -93,7 +94,7 @@ export const BUILDINGS: BuildingDef[] = [
   {
     id: "farm",
     name: "Farmland",
-    icon: "🌾",
+    icon: "wheat",
     description: "Tilled fields of wild grain. Lots of food, but clears the land.",
     era: 0,
     cost: { wood: 12 },
@@ -105,7 +106,7 @@ export const BUILDINGS: BuildingDef[] = [
   {
     id: "warcamp",
     name: "War Camp",
-    icon: "⚔️",
+    icon: "shield",
     description: "Trains warriors to fight off raiders. Each camp holds 4 warriors.",
     era: 0,
     cost: { wood: 15, food: 10 },
@@ -115,7 +116,7 @@ export const BUILDINGS: BuildingDef[] = [
   {
     id: "woodcutter",
     name: "Woodcutter",
-    icon: "🪓",
+    icon: "axe",
     description: "Chops wood from forests. Hurts sustainability a little.",
     era: 0,
     cost: { wood: 4 },
@@ -126,7 +127,7 @@ export const BUILDINGS: BuildingDef[] = [
   {
     id: "fishing",
     name: "Fishing Spot",
-    icon: "🎣",
+    icon: "fish",
     description: "Food from the sea. Must touch water; bonus near fish.",
     era: 0,
     cost: { wood: 10 },
@@ -139,7 +140,7 @@ export const BUILDINGS: BuildingDef[] = [
   {
     id: "quarry",
     name: "Stone Quarry",
-    icon: "🪨",
+    icon: "pickaxe",
     description: "Cuts stone from hills. Bonus on stone deposits.",
     era: 0,
     cost: { wood: 15 },
@@ -152,7 +153,7 @@ export const BUILDINGS: BuildingDef[] = [
   {
     id: "elder",
     name: "Elder's Hut",
-    icon: "🪶",
+    icon: "feather",
     description: "Stories and cave paintings pass knowledge on to children.",
     era: 0,
     cost: { wood: 10, stone: 10 },
@@ -164,7 +165,7 @@ export const BUILDINGS: BuildingDef[] = [
   {
     id: "healer",
     name: "Healer's Hut",
-    icon: "🌿",
+    icon: "herb",
     description: "Herbs and care keep people healthy.",
     era: 0,
     cost: { wood: 10, stone: 5 },
@@ -349,7 +350,7 @@ export const EVENTS: EventCard[] = [
   {
     id: "wanderers",
     title: "Wanderers at the fire",
-    icon: "🚶",
+    icon: "person",
     body: "A small band of wanderers asks to join your tribe. They're hungry, but strong.",
     choices: [
       { label: "Welcome them (+4 people, −8 food)", effect: { population: 4, resources: { food: -8 } } },
@@ -359,7 +360,7 @@ export const EVENTS: EventCard[] = [
   {
     id: "wildfire",
     title: "Wildfire!",
-    icon: "🔥",
+    icon: "flame",
     body: "Dry grass has caught fire near the forest.",
     choices: [
       { label: "Fight it (−10 wood)", effect: { resources: { wood: -10 } } },
@@ -369,7 +370,7 @@ export const EVENTS: EventCard[] = [
   {
     id: "eastern-trader",
     title: "A trader from the east",
-    icon: "🐫",
+    icon: "coin",
     body: "A stranger with a pack animal offers shiny shells for your wood.",
     choices: [
       { label: "Trade 10 wood for 15 shells", effect: { resources: { wood: -10, currency: 15 } } },
@@ -379,7 +380,7 @@ export const EVENTS: EventCard[] = [
   {
     id: "good-hunt",
     title: "A great hunt",
-    icon: "🦣",
+    icon: "meat",
     body: "Your hunters brought down a mammoth. Feast or preserve?",
     choices: [
       { label: "Feast! (+10 happiness)", effect: { happiness: 10 } },
@@ -395,5 +396,5 @@ export const TUTORIAL = [
   { text: "Fires need wood. Put a Woodcutter on a forest tile.", done: "woodcutter" },
   { text: "The world is hidden. Press Scout to explore new land.", done: "scout" },
   { text: "Raiders roam these lands. Build a War Camp, then train warriors to defend us.", done: "warcamp" },
-  { text: "Open Advancements (✨) and research Early Farming, then place Farmland.", done: "early-farming" },
+  { text: "Open Advancements and research Early Farming, then place Farmland.", done: "early-farming" },
 ];

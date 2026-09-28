@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CULTURES, DIFFICULTIES } from "@/game/content";
 import type { CultureId, DifficultyId } from "@/game/types";
 import { cn } from "@/lib/utils";
+import { PixelIcon } from "@/components/civ/pixel-icon";
 
 export function TitleScreen({
   canContinue,
@@ -22,8 +23,11 @@ export function TitleScreen({
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-sky-200 via-sky-50 to-[#fbf7ef] p-4 text-stone-900">
       <div className="w-full max-w-3xl">
         <div className="mb-8 text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-700">From fire to the stars</p>
-          <h1 className="mt-2 text-5xl font-bold tracking-tight">🔥 Emberline</h1>
+          <p className="font-pixel text-sm font-semibold uppercase tracking-[0.3em] text-amber-700">From fire to the stars</p>
+          <h1 className="font-pixel mt-2 flex items-center justify-center gap-3 text-6xl font-bold">
+            <PixelIcon name="flame" size={56} />
+            Emberline
+          </h1>
           <p className="mt-3 text-stone-600">
             Lead a people at the crossroads of the world, from the first campfire to interstellar travel.
           </p>
@@ -33,14 +37,14 @@ export function TitleScreen({
           <button
             type="button"
             onClick={onContinue}
-            className="mb-6 w-full rounded-2xl bg-amber-400 py-3 text-lg font-semibold text-stone-900 shadow hover:bg-amber-300"
+            className="pixel-btn font-pixel mb-6 w-full bg-amber-400 py-3 text-lg font-semibold text-stone-900 hover:bg-amber-300"
           >
             Continue saved game
           </button>
         )}
 
-        <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-stone-200">
-          <h2 className="mb-3 font-semibold">Choose your culture</h2>
+        <div className="pixel-panel p-5">
+          <h2 className="font-pixel mb-3 text-lg font-semibold">Choose your culture</h2>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {(Object.keys(CULTURES) as CultureId[]).map((id) => {
               const c = CULTURES[id];
@@ -50,19 +54,19 @@ export function TitleScreen({
                   type="button"
                   onClick={() => setCulture(id)}
                   className={cn(
-                    "rounded-xl p-3 text-left ring-1 transition",
-                    culture === id ? "bg-amber-100 ring-2 ring-amber-400" : "bg-stone-50 ring-stone-200 hover:bg-stone-100",
+                    "pixel-btn p-3 text-left",
+                    culture === id ? "bg-amber-200" : "bg-white hover:bg-amber-50",
                   )}
                 >
-                  <div className="text-2xl">{c.icon}</div>
-                  <div className="font-medium">{c.name}</div>
+                  <PixelIcon name={c.icon} size={32} />
+                  <div className="font-pixel mt-1 font-medium">{c.name}</div>
                   <div className="text-xs text-stone-500">{c.blurb}</div>
                 </button>
               );
             })}
           </div>
 
-          <h2 className="mb-3 mt-6 font-semibold">Difficulty</h2>
+          <h2 className="font-pixel mb-3 mt-6 text-lg font-semibold">Difficulty</h2>
           <div className="grid grid-cols-3 gap-2">
             {(Object.keys(DIFFICULTIES) as DifficultyId[]).map((id) => {
               const d = DIFFICULTIES[id];
@@ -72,11 +76,11 @@ export function TitleScreen({
                   type="button"
                   onClick={() => setDifficulty(id)}
                   className={cn(
-                    "rounded-xl p-3 text-left ring-1 transition",
-                    difficulty === id ? "bg-emerald-100 ring-2 ring-emerald-400" : "bg-stone-50 ring-stone-200 hover:bg-stone-100",
+                    "pixel-btn p-3 text-left",
+                    difficulty === id ? "bg-emerald-200" : "bg-white hover:bg-emerald-50",
                   )}
                 >
-                  <div className="font-medium">{d.name}</div>
+                  <div className="font-pixel font-medium">{d.name}</div>
                   <div className="text-xs text-stone-500">{d.blurb}</div>
                 </button>
               );
@@ -86,7 +90,7 @@ export function TitleScreen({
           <button
             type="button"
             onClick={() => onStart(culture, difficulty)}
-            className="mt-6 w-full rounded-2xl bg-emerald-600 py-3 text-lg font-semibold text-white hover:bg-emerald-500"
+            className="pixel-btn font-pixel mt-6 w-full bg-emerald-600 py-3 text-xl font-semibold text-white hover:bg-emerald-500"
           >
             {canContinue ? "Start a new game" : "Start"}
           </button>

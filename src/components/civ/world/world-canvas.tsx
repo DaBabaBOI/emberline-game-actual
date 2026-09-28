@@ -107,7 +107,7 @@ export function WorldCanvas() {
           <Ghost opacity={0.45} />
           {error && (
             <Html center position={[0, 0.8, 0]} style={{ pointerEvents: "none" }}>
-              <div className="whitespace-nowrap rounded-md bg-black/75 px-2 py-1 text-xs text-white">
+              <div className="pixel-panel-dark font-pixel whitespace-nowrap px-2 py-1 text-xs">
                 {error}
               </div>
             </Html>
