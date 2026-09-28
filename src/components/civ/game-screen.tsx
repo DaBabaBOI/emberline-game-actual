@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import { clearSave, loadGame, newGame } from "@/game/engine";
+import { clearSave, loadGame, newGame, type NewGameOptions } from "@/game/engine";
 import type { CultureId, DifficultyId, GameState } from "@/game/types";
 import { GameProvider, useGame } from "./game-provider";
 import { TitleScreen } from "./title-screen";
@@ -10,7 +10,7 @@ import { TopBar } from "./hud/top-bar";
 import { SideMeters } from "./hud/side-meters";
 import { BottomBar } from "./hud/bottom-bar";
 import { TreeOverlay } from "./hud/tree-overlay";
-import { EventModal, GameOver, RaidBanner, Toasts, TutorialPanel } from "./hud/overlays";
+import { DevPanel, EventModal, GameOver, NoFireWarning, RaidBanner, Toasts, TutorialPanel } from "./hud/overlays";
 
 const WorldCanvas = dynamic(
   () => import("./world/world-canvas").then((m) => m.WorldCanvas),
@@ -36,6 +36,8 @@ function Hud({ onRestart }: { onRestart: () => void }) {
       <TutorialPanel />
       <Toasts />
       <RaidBanner />
+      <NoFireWarning />
+      <DevPanel />
       <BottomBar />
       {panel === "tree" && <TreeOverlay />}
       <EventModal />
@@ -53,9 +55,9 @@ export function GameScreen() {
       <TitleScreen
         canContinue={Boolean(saved && saved.phase === "playing")}
         onContinue={() => setGame(saved)}
-        onStart={(culture: CultureId, difficulty: DifficultyId) => {
+        onStart={(culture: CultureId, difficulty: DifficultyId, options?: NewGameOptions) => {
           clearSave();
-          setGame(newGame(culture, difficulty));
+          setGame(newGame(culture, difficulty, options));
         }}
       />
     );

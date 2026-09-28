@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CULTURES, DIFFICULTIES } from "@/game/content";
+import { CULTURES, DIFFICULTIES, ERAS } from "@/game/content";
+import type { NewGameOptions } from "@/game/engine";
 import type { CultureId, DifficultyId } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { PixelIcon } from "@/components/civ/pixel-icon";
@@ -14,8 +15,15 @@ export function TitleScreen({
 }: {
   canContinue: boolean;
   onContinue: () => void;
-  onStart: (culture: CultureId, difficulty: DifficultyId) => void;
+  onStart: (culture: CultureId, difficulty: DifficultyId, options?: NewGameOptions) => void;
 }) {
+  const [devMode] = useState(() => {
+    try {
+      return new URLSearchParams(window.location.search).has("dev");
+    } catch {
+      return false;
+    }
+  });
   const [culture, setCulture] = useState<CultureId>("balanced");
   const [difficulty, setDifficulty] = useState<DifficultyId>("normal");
 
@@ -95,6 +103,27 @@ export function TitleScreen({
             {canContinue ? "Start a new game" : "Start"}
           </button>
         </div>
+
+        {devMode && (
+          <div className="pixel-panel mt-6 border-dashed p-4">
+            <h2 className="font-pixel mb-1 text-lg font-semibold">Dev mode</h2>
+            <p className="mb-3 text-xs text-stone-500">
+              Start in any era with 999 of everything and earlier advancements done.
+            </p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {ERAS.map((era, i) => (
+                <button
+                  key={era.name}
+                  type="button"
+                  onClick={() => onStart(culture, difficulty, { dev: true, startEra: i })}
+                  className="pixel-btn font-pixel bg-sky-100 px-2 py-2 text-sm hover:bg-sky-200"
+                >
+                  {era.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <p className="mt-6 text-center text-sm text-stone-500">
           <Link href="/" className="underline">

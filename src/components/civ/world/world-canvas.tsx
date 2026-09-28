@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Html, MapControls } from "@react-three/drei";
 import { BUILDINGS_BY_ID } from "@/game/content";
-import { placementError } from "@/game/engine";
+import { DEMOLISH_TOOL, demolishError, demolishRefund, placementError } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
 import { Deposits, Forests, HexTerrain, Mountains, tileTop } from "./hex-terrain";
 import { MODELS } from "./building-models";
@@ -29,11 +29,27 @@ export function WorldCanvas() {
 
   const buildings = useMemo(() => state.tiles.filter((t) => t.building), [state.tiles]);
   const hoverTile = hovered !== null ? state.tiles[hovered] : null;
-  const def = selected ? BUILDINGS_BY_ID[selected] : null;
+  const demolishing = selected === DEMOLISH_TOOL;
+  const def = selected && !demolishing ? BUILDINGS_BY_ID[selected] : null;
   const error = hoverTile && def ? placementError(state, hoverTile, def) : null;
+  const demolishNote = (() => {
+    if (!demolishing || !hoverTile) return null;
+    const problem = demolishError(state, hoverTile);
+    if (problem) return { ok: false, text: problem };
+    const target = BUILDINGS_BY_ID[hoverTile.building!];
+    const refund = Object.entries(demolishRefund(target))
+      .filter(([, v]) => (v ?? 0) > 0)
+      .map(([k, v]) => `+${v} ${k}`)
+      .join(", ");
+    return { ok: true, text: `Demolish ${target.name}${refund ? ` (${refund})` : ""}` };
+  })();
   const Ghost = def ? MODELS[def.id] : null;
 
   function pick(id: number) {
+    if (demolishing) {
+      dispatch({ type: "demolish", tileId: id });
+      return;
+    }
     if (!selected) return;
     dispatch({ type: "place", tileId: id, buildingId: selected });
   }
@@ -99,8 +115,23 @@ export function WorldCanvas() {
           x={hoverTile.x}
           y={tileTop(hoverTile)}
           z={hoverTile.z}
-          color={def ? (error ? "#ef4444" : "#22c55e") : "#ffffff"}
+          color={
+            demolishNote
+              ? demolishNote.ok
+                ? "#f59e0b"
+                : "#ef4444"
+              : def
+                ? error
+                  ? "#ef4444"
+                  : "#22c55e"
+                : "#ffffff"
+          }
         />
+      )}
+      {hoverTile && demolishNote && hoverTile.building && (
+        <Html center position={[hoverTile.x, tileTop(hoverTile) + 1.2, hoverTile.z]} style={{ pointerEvents: "none" }}>
+          <div className="pixel-panel-dark font-pixel whitespace-nowrap px-2 py-1 text-xs">{demolishNote.text}</div>
+        </Html>
       )}
       {hoverTile && Ghost && (
         <group position={[hoverTile.x, tileTop(hoverTile), hoverTile.z]} scale={1.55}>

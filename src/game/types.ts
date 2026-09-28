@@ -138,6 +138,8 @@ export interface GameState {
   researched: string[];
   secretsFound: string[];
   flags: { rocket: boolean; scouted: boolean };
+  scoutsSent: number;
+  dev: boolean;
   tutorialStep: number;
   event: EventCard | null;
   nextEventTick: number;

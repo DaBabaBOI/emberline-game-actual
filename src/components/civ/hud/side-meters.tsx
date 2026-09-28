@@ -28,11 +28,14 @@ export function SideMeters({ side }: { side: "left" | "right" }) {
             className="pixel-panel-dark font-pixel group relative flex w-10 flex-col items-center gap-1 px-1 py-1.5"
           >
             <PixelIcon name={m.icon} size={18} />
-            <div className="relative h-14 w-2 overflow-hidden bg-white/15">
+            <div className="relative h-14 w-2.5 overflow-hidden bg-white/15">
               <div
-                className={cn("absolute bottom-0 w-full transition-all duration-700", barColor(value))}
+                className={cn("absolute bottom-0 w-full transition-[height] duration-150", barColor(value))}
                 style={{ height: `${value}%` }}
               />
+              {[25, 50, 75].map((mark) => (
+                <div key={mark} className="absolute inset-x-0 h-px bg-black/50" style={{ bottom: `${mark}%` }} />
+              ))}
             </div>
             <span className="text-[10px] font-semibold tabular-nums">{value}</span>
             <span
