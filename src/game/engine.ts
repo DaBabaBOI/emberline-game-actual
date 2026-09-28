@@ -238,8 +238,29 @@ export function landStrain(state: GameState) {
 
 const treesNear = (state: GameState, tile: Tile) =>
   state.tiles.filter(
-    (t) => t.terrain === "forest" && !t.building && t.growth > 0.05 && hexDistance(t, tile) <= LAND.woodcutterReach,
+    (t) =>
+      t.terrain === "forest" &&
+      !t.building &&
+      t.growth > 0.05 &&
+      hexDistance(t, tile) <= LAND.woodcutterReach &&
+      !state.protectedTiles?.includes(t.id),
   );
+
+// The biggest forest tiles near the village (for grove events).
+function oldestForest(state: GameState, n: number) {
+  const home = state.tiles[state.startTile];
+  return state.tiles
+    .filter(
+      (t) =>
+        t.terrain === "forest" &&
+        !t.building &&
+        t.revealed &&
+        hexDistance(t, home) <= LAND.radius &&
+        !state.protectedTiles?.includes(t.id),
+    )
+    .sort((a, b) => b.growth - a.growth || hexDistance(a, home) - hexDistance(b, home))
+    .slice(0, n);
+}
 
 // 0–1: a woodcutter with no trees left nearby makes no wood.
 export function loggingMode(state: GameState, tile: Tile) {
@@ -286,7 +307,8 @@ export function fireRisk(state: GameState) {
 
 function pickEvent(roll: number, state: GameState) {
   const wildfire = Math.min(FIRE_RISK.max, FIRE_RISK.base + FIRE_RISK.perForestTile * fireRisk(state));
-  const weights = EVENTS.map((e) => (e.id === "wildfire" ? wildfire : 1));
+  // Never the same card twice in a row.
+  const weights = EVENTS.map((e) => (e.id === state.lastEvent ? 0 : e.id === "wildfire" ? wildfire : 1));
   let r = roll * weights.reduce((a, b) => a + b, 0);
   for (let i = 0; i < EVENTS.length; i++) {
     r -= weights[i];
@@ -883,7 +905,7 @@ function tick(state: GameState): GameState {
   if (!inTutorial && next.tick >= next.nextEventTick) {
     const rand = mulberry32(next.seed + next.tick);
     const event = pickEvent(rand(), next);
-    next = { ...next, event, nextEventTick: next.tick + 180 + Math.floor(rand() * 120) };
+    next = { ...next, event, lastEvent: event.id, nextEventTick: next.tick + 180 + Math.floor(rand() * 120) };
   }
 
   next = stepDisease(next, housingCapacity(next), mulberry32(next.seed + next.tick * 31));
@@ -1128,10 +1150,24 @@ function step(state: GameState, action: Action): GameState {
       const resources = { ...state.resources };
       for (const [k, v] of Object.entries(effect.resources ?? {}))
         resources[k as keyof Resources] = Math.max(0, resources[k as keyof Resources] + (v ?? 0));
-      const burned = effect.burn !== undefined ? burnForest(state, effect.burn) : null;
+      // A gamble is rolled now: it either happens or it doesn't.
+      const gamble = effect.gamble;
+      const unlucky = gamble ? mulberry32(state.seed + state.tick * 43)() < gamble.chance : false;
+      if (gamble && unlucky) {
+        for (const [k, v] of Object.entries(gamble.resources ?? {}))
+          resources[k as keyof Resources] = Math.max(0, resources[k as keyof Resources] + (v ?? 0));
+      }
+      const burnRadius = effect.burn ?? (gamble && unlucky ? gamble.burn : undefined);
+      const burned = burnRadius !== undefined ? burnForest(state, burnRadius) : null;
+      const cleared = effect.clearForest ? oldestForest(state, effect.clearForest).map((t) => t.id) : [];
+      const guarded = effect.protectForest ? oldestForest(state, effect.protectForest).map((t) => t.id) : [];
+      const baseTiles = burned?.tiles ?? state.tiles;
       const resolved = withMeters({
         ...state,
-        tiles: burned?.tiles ?? state.tiles,
+        tiles: cleared.length
+          ? baseTiles.map((t) => (cleared.includes(t.id) ? { ...t, growth: 0.02 } : t))
+          : baseTiles,
+        protectedTiles: guarded.length ? [...(state.protectedTiles ?? []), ...guarded] : state.protectedTiles,
         nextRaidTick: state.nextRaidTick - (effect.raidSooner ?? 0),
         event: null,
         resources,
@@ -1141,23 +1177,24 @@ function step(state: GameState, action: Action): GameState {
           : state.fireVictims,
         modifiers: {
           sustainability: state.modifiers.sustainability + (effect.sustainability ?? 0),
-          happiness: state.modifiers.happiness + (effect.happiness ?? 0),
+          happiness:
+            state.modifiers.happiness + (effect.happiness ?? 0) + (gamble && unlucky ? gamble.happiness ?? 0 : 0),
         },
         log: [
+          ...(gamble ? [unlucky ? gamble.message : gamble.safeMessage] : []),
           ...(burned ? [burned.message] : []),
+          ...(guarded.length ? ["The old grove is protected. No woodcutter may touch it."] : []),
           `${state.event?.title}: ${choice.label}`,
           ...state.log,
         ].slice(0, 30),
       });
-      // Newcomers sometimes carry sickness with them.
-      return state.event?.id === "wanderers" && (effect.population ?? 0) > 0
-        ? maybeOutbreak(
-            resolved,
-            DISEASE.wanderers,
-            mulberry32(state.seed + state.tick * 41)(),
-            "The wanderers brought it with them.",
-          )
-        : resolved;
+      // Newcomers sometimes carry sickness with them; some choices risk it too.
+      const roll = mulberry32(state.seed + state.tick * 41)();
+      if (state.event?.id === "wanderers" && (effect.population ?? 0) > 0) {
+        return maybeOutbreak(resolved, DISEASE.wanderers, roll, "The wanderers brought it with them.");
+      }
+      if (effect.sickness) return maybeOutbreak(resolved, effect.sickness, roll, "It came from the smoke and the filth.");
+      return resolved;
     }
 
     case "skipTutorial": {

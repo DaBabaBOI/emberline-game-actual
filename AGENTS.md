@@ -63,6 +63,12 @@ These were decided with the project owner. Do not change them without being aske
   Culture & Trade). Knowledge comes from literacy, goals, exploration and trade.
 - Secret goals show as locked `???` slots and give big bonuses.
 - Politics = event cards with choices + simple diplomacy with AI nations.
+- **Event cards are trade-offs** (`EVENTS`): every choice gains something and
+  costs something, and each card has a `realWorld` line linking it to today.
+  Keep those lines modest and general, with no statistics. Effects available:
+  resources, population, happiness, sustainability, burn, raidSooner,
+  clearForest, protectForest (woodcutters never cut protected tiles),
+  sickness (a chance) and gamble (rolled when chosen).
 - "AI" in the future era means **in-game tech** (automation, data centers), not an
   AI chatbot.
 - In the tutorial the player builds their own woodcutter (step 2). Skipping
