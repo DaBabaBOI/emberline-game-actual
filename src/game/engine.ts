@@ -1,4 +1,6 @@
 import {
+  AFTER_TUTORIAL_RESERVE,
+  GRACE_AFTER_TUTORIAL,
   BUILDINGS,
   BUILDINGS_BY_ID,
   DIFFICULTIES,
@@ -55,7 +57,6 @@ export function newGame(
 ): GameState {
   const seed = Math.floor(Math.random() * 1e9);
   const { tiles, startTile } = generateMap(seed);
-  giveStartingWoodcutter(tiles, tiles[startTile]);
   const state: GameState = {
     version: SAVE_VERSION,
     phase: "playing",
@@ -88,6 +89,9 @@ export function newGame(
     nextEventTick: 90,
     log: ["Your tribe gathers on the shores of Westmarch."],
   };
+  const budget = tutorialBudget(state);
+  for (const [k, v] of Object.entries(AFTER_TUTORIAL_RESERVE)) budget[k as keyof Resources] += v ?? 0;
+  state.resources = budget;
   const started = options.dev ? applyDevStart(state, options.startEra ?? 0) : state;
   return { ...started, meters: computeMeters(started) };
 }
@@ -98,6 +102,7 @@ function applyDevStart(state: GameState, era: number): GameState {
   const researched = TREE.filter((n) => !n.comingSoon && !n.secret && n.era < Math.max(1, era)).map(
     (n) => n.id,
   );
+  giveStartingWoodcutter(state.tiles, state.tiles[state.startTile]);
   return {
     ...devJumpToEra(state, era),
     tutorialStep: TUTORIAL.length,
@@ -260,6 +265,22 @@ export function consumption(state: GameState) {
 
 // Every game starts with one woodcutter already working, so the player can
 // never end up with no wood and no way to get more.
+// Exactly what the tutorial makes the player buy, so they never have to wait.
+export function tutorialBudget(state: GameState): Resources {
+  const total: Resources = { food: 0, wood: 0, stone: 0, knowledge: 0, currency: 0 };
+  const add = (cost: Partial<Resources>) => {
+    for (const [k, v] of Object.entries(cost)) total[k as keyof Resources] += v ?? 0;
+  };
+  for (const id of TUTORIAL.flatMap((step) => step.buys)) {
+    if (id === "scout") add(scoutCost(state));
+    else if (id === "train") add(TRAIN_COST);
+    else if (BUILDINGS_BY_ID[id]) add(buildingCost(state, BUILDINGS_BY_ID[id]));
+    else if (TREE_BY_ID[id]) add({ knowledge: TREE_BY_ID[id].cost });
+  }
+  return total;
+}
+
+// Games that skip the tutorial get their woodcutter for free, so wood can never run dry for good.
 function giveStartingWoodcutter(tiles: Tile[], home: Tile) {
   const forest = tiles
     .filter((t) => t.terrain === "forest" && t.island === home.island)
@@ -445,7 +466,18 @@ function advanceTutorial(state: GameState): GameState {
       : step.done === "train"
         ? state.soldiers > 0
         : state.researched.includes(step.done) || (counts[step.done] ?? 0) > 0;
-  return done ? { ...state, tutorialStep: state.tutorialStep + 1 } : state;
+  if (!done) return state;
+  const next = { ...state, tutorialStep: state.tutorialStep + 1 };
+  return next.tutorialStep >= TUTORIAL.length ? startGrace(next) : next;
+}
+
+// The world's troubles start a little after the tutorial ends, not during it.
+function startGrace(state: GameState): GameState {
+  return {
+    ...state,
+    nextEventTick: Math.max(state.nextEventTick, state.tick + GRACE_AFTER_TUTORIAL.event),
+    nextRaidTick: Math.max(state.nextRaidTick, state.tick + GRACE_AFTER_TUTORIAL.raid),
+  };
 }
 
 function tick(state: GameState): GameState {
@@ -501,7 +533,8 @@ function tick(state: GameState): GameState {
   };
 
   if (next.tick % 3 === 0) next = growForests(next);
-  next = updateRaids(next);
+  // No raids or events while a new player is still learning.
+  if (!inTutorial) next = updateRaids(next);
 
   if (famineTicks >= DIFFICULTIES[state.difficulty].famineLimit) {
     return { ...next, phase: "gameover", lostTo: "famine", log: ["Famine has wiped out the tribe.", ...next.log] };
@@ -510,7 +543,7 @@ function tick(state: GameState): GameState {
     return { ...next, phase: "gameover", lostTo: "unrest", log: ["Your people lost hope and left.", ...next.log] };
   }
 
-  if (next.tick >= next.nextEventTick) {
+  if (!inTutorial && next.tick >= next.nextEventTick) {
     const rand = mulberry32(next.seed + next.tick);
     const event = pickEvent(rand());
     next = { ...next, event, nextEventTick: next.tick + 110 + Math.floor(rand() * 90) };
@@ -635,6 +668,12 @@ function withMeters(state: GameState): GameState {
 }
 
 export function reducer(state: GameState, action: Action): GameState {
+  const next = step(state, action);
+  // The clock is held during the tutorial, so check progress after every action too.
+  return action.type !== "tick" && next !== state ? advanceTutorial(next) : next;
+}
+
+function step(state: GameState, action: Action): GameState {
   switch (action.type) {
     case "tick":
       return tick(state);
@@ -732,8 +771,13 @@ export function reducer(state: GameState, action: Action): GameState {
       });
     }
 
-    case "skipTutorial":
-      return { ...state, tutorialStep: TUTORIAL.length };
+    case "skipTutorial": {
+      const skipped = startGrace({ ...state, tutorialStep: TUTORIAL.length });
+      if (countBuildings(state).woodcutter) return skipped;
+      const tiles = state.tiles.map((t) => ({ ...t }));
+      giveStartingWoodcutter(tiles, tiles[state.startTile]);
+      return withMeters({ ...skipped, tiles });
+    }
 
     case "train": {
       if (tutorialLocked(state, "train") || state.soldiers >= warriorCap(state) || !canAfford(state, TRAIN_COST))
