@@ -155,7 +155,7 @@ export function WorldCanvas() {
       }}
     >
       <color attach="background" args={["#a8dcf5"]} />
-      <Haze fires={burning.length} />
+      <Haze fires={burning.length + 2 * buildings.filter((t) => t.building === "smithy").length} />
       <hemisphereLight args={["#d6f1ff", "#6f8f4e", 0.75]} />
       <directionalLight
         position={[home.x + 25, 40, home.z + 15]}
@@ -215,7 +215,7 @@ export function WorldCanvas() {
         homeTile={home}
         onHunt={(animal) => dispatch({ type: "hunt", animal })}
       />
-      <CampfireSmoke fires={burning} />
+      <CampfireSmoke fires={[...burning, ...buildings.filter((t) => t.building === "smithy")]} />
       {!guide.target &&
         outFires.map((t) => (
           <Html zIndexRange={[15, 0]} key={t.id} center position={[t.x, tileTop(t) + 1.3, t.z]}>

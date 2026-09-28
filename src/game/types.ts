@@ -185,6 +185,8 @@ export interface EventCard {
   choices: EventChoice[];
   // A short, modest real-world connection shown under the card.
   realWorld: string;
+  // The earliest era this card can appear in (default: the Stone Age).
+  era?: number;
 }
 
 export interface GameState {

@@ -219,6 +219,108 @@ export const BUILDINGS: BuildingDef[] = [
     produces: { food: 0.5 },
     reveal: 1,
   },
+  // ---- Ancient era ---------------------------------------------------------
+  {
+    id: "house",
+    name: "Mud-brick House",
+    icon: "bricks",
+    description: "Sturdy homes of sun-dried and fired brick. Built by upgrading a Hut (click it), or new.",
+    gain: "Room for 12 people",
+    landCost: "Bricks are fired in kilns that burn wood",
+    landImpact: 1,
+    era: 1,
+    cost: { wood: 14, stone: 8 },
+    terrain: ["grass", "steppe"],
+    requires: "agriculture",
+    housing: 12,
+    reveal: 1,
+  },
+  {
+    id: "school",
+    name: "Scribe School",
+    icon: "book",
+    description: "Children learn to write on clay tablets. Knowledge no longer dies with the elders.",
+    gain: "Knowledge and literacy for the whole village",
+    landCost: "Nothing from the land",
+    landImpact: 0,
+    era: 1,
+    cost: { wood: 20, stone: 15 },
+    terrain: ["grass", "steppe"],
+    requires: "writing",
+    produces: { knowledge: 0.4 },
+    reveal: 1,
+  },
+  {
+    id: "smithy",
+    name: "Bronze Smithy",
+    icon: "hammer",
+    description: "Smelts copper and tin into bronze tools. Better tools mean more food and wood from every worker.",
+    gain: "+20% food and wood from bronze tools (up to 3 smithies)",
+    landCost: "Burns wood for charcoal all the time, and its smoke is heavy",
+    landImpact: 3,
+    era: 1,
+    cost: { wood: 20, stone: 20 },
+    terrain: ["grass", "steppe", "hills"],
+    requires: "bronze",
+    reveal: 1,
+  },
+  {
+    id: "canal",
+    name: "Irrigation Canal",
+    icon: "boat",
+    description: "Channels river water to the fields next to it.",
+    gain: "Every farm next to it grows 50% more food",
+    landCost: "Watered soil slowly turns salty, and the land wears out",
+    landImpact: 2,
+    era: 1,
+    cost: { wood: 10, stone: 10 },
+    terrain: ["grass", "steppe"],
+    needsWaterNeighbor: true,
+    requires: "irrigation",
+    reveal: 1,
+  },
+  {
+    id: "granary",
+    name: "Granary",
+    icon: "amphora",
+    description: "Sealed clay jars and dry storage. Food keeps for much longer.",
+    gain: "150 more food keeps without rotting",
+    landCost: "Nothing from the land",
+    landImpact: 0,
+    era: 1,
+    cost: { wood: 15, stone: 10 },
+    terrain: ["grass", "steppe"],
+    requires: "pottery",
+    reveal: 1,
+  },
+  {
+    id: "forester",
+    name: "Forester's Lodge",
+    icon: "sapling",
+    description: "Foresters tend young trees and replant what the woodcutters take.",
+    gain: "Replants cut forest around it, a little at a time",
+    landCost: "Its land can't be farmed or built on",
+    landImpact: 0,
+    era: 1,
+    cost: { wood: 15, food: 10 },
+    terrain: ["grass", "steppe", "forest"],
+    requires: "forestry",
+    reveal: 2,
+  },
+  {
+    id: "walls",
+    name: "Stone Walls",
+    icon: "castle",
+    description: "A ring of stone walls. Each adds 4 to your defense.",
+    gain: "+4 defense against raiders",
+    landCost: "Stone quarried out of the hills",
+    landImpact: 1,
+    era: 1,
+    cost: { wood: 10, stone: 30 },
+    terrain: ["grass", "steppe", "hills"],
+    requires: "bronze-arms",
+    reveal: 1,
+  },
 ];
 
 export const BUILDINGS_BY_ID = Object.fromEntries(BUILDINGS.map((b) => [b.id, b]));
@@ -235,11 +337,7 @@ export const BRANCHES: { id: Branch; name: string; color: string }[] = [
 type NodeSeed = [id: string, name: string, branch: Branch, era: number, cost: number, requires: string[], description: string];
 
 const LATER_NODES: NodeSeed[] = [
-  ["writing", "Writing", "knowledge", 1, 0, ["agriculture"], "Clay tablets and the first scribes."],
-  ["bronze", "Bronze Working", "construction", 1, 0, ["agriculture"], "Copper + tin = tools, weapons and trade goods."],
-  ["irrigation", "Irrigation", "energy", 1, 0, ["agriculture"], "Canals feed bigger fields."],
   ["wheel", "The Wheel", "transport", 1, 0, ["agriculture"], "Carts and the first trade caravans."],
-  ["bronze-arms", "Bronze Weapons", "military", 1, 0, ["bronze"], "Spearmen with bronze tips and shields."],
   ["barter-roads", "Silk Road Contact", "culture", 1, 0, ["wheel"], "Traders from the east arrive."],
   ["philosophy", "Philosophy", "knowledge", 2, 0, ["writing"], "Academies and great thinkers."],
   ["concrete", "Roman Concrete", "construction", 2, 0, ["bronze"], "Limestone + ash → aqueducts and domes."],
@@ -382,6 +480,67 @@ export const TREE: TreeNode[] = [
     era: 0,
     cost: 40,
     requires: ["early-farming", "toolmaking"],
+  },
+  // ---- Ancient era ---------------------------------------------------------
+  {
+    id: "writing",
+    name: "Writing",
+    description: "Clay tablets and the first scribes. Unlocks the Scribe School.",
+    branch: "knowledge",
+    era: 1,
+    cost: 30,
+    requires: ["agriculture"],
+    unlocks: ["school"],
+  },
+  {
+    id: "pottery",
+    name: "Pottery & Storage",
+    description: "Fired jars keep grain dry and safe. Unlocks the Granary.",
+    branch: "construction",
+    era: 1,
+    cost: 20,
+    requires: ["agriculture"],
+    unlocks: ["granary"],
+  },
+  {
+    id: "bronze",
+    name: "Bronze Working",
+    description: "Copper and tin make bronze tools. Unlocks the Bronze Smithy.",
+    branch: "construction",
+    era: 1,
+    cost: 35,
+    requires: ["pottery"],
+    unlocks: ["smithy"],
+  },
+  {
+    id: "irrigation",
+    name: "Irrigation",
+    description: "Canals carry water to the fields. Unlocks the Irrigation Canal.",
+    branch: "energy",
+    era: 1,
+    cost: 30,
+    requires: ["agriculture"],
+    unlocks: ["canal"],
+  },
+  {
+    id: "forestry",
+    name: "Forest Stewardship",
+    description: "Tend the forest instead of just cutting it. Unlocks the Forester's Lodge.",
+    branch: "culture",
+    era: 1,
+    cost: 25,
+    requires: ["agriculture"],
+    unlocks: ["forester"],
+  },
+  {
+    id: "bronze-arms",
+    name: "Bronze Weapons",
+    description: "Bronze spears and shields: each warrior fights twice as hard. Unlocks Stone Walls.",
+    branch: "military",
+    era: 1,
+    cost: 35,
+    requires: ["bronze"],
+    unlocks: ["walls"],
   },
   {
     id: "silk-secret",
@@ -562,6 +721,30 @@ export const EVENTS: EventCard[] = [
     ],
     realWorld: "Archaeologists learn a lot from ancient rubbish heaps called middens. Today, handling waste safely is part of SDG 11.6.",
   },
+  {
+    id: "charcoal-burners",
+    title: "The charcoal burners",
+    icon: "hammer",
+    body: "The smiths need more charcoal. They want to cut the whole forest on the far hill and burn it slowly in covered pits.",
+    era: 1,
+    choices: [
+      { label: "Let them (+60 wood of charcoal, the hill forest is gone)", effect: { clearForest: 5, resources: { wood: 60 } } },
+      { label: "Only dead wood and fallen branches (+15 wood)", effect: { resources: { wood: 15 }, sustainability: 3 } },
+    ],
+    realWorld: "Making bronze and iron took huge amounts of charcoal, and in some places early metalworking helped clear the forests around it.",
+  },
+  {
+    id: "salty-fields",
+    title: "White crust on the fields",
+    icon: "wheat",
+    body: "A white crust is forming on the oldest watered fields and the grain is coming up thin. The farmers say the canals are to blame.",
+    era: 1,
+    choices: [
+      { label: "Rest the fields for a season (−40 food, the soil recovers)", effect: { resources: { food: -40 }, sustainability: 8 } },
+      { label: "Keep watering (+20 food now, the land wears out)", effect: { resources: { food: 20 }, sustainability: -15 } },
+    ],
+    realWorld: "In ancient Mesopotamia, centuries of irrigation left salt in the soil, and historians think it helped push farmers to hardier crops like barley.",
+  },
 ];
 
 // Each step unlocks the buildings/tools it introduces. Until the tutorial ends
@@ -693,6 +876,30 @@ export const LESSONS: { id: string; title: string; text: string; sdg: string }[]
     sdg: "SDG 15.3: restore damaged land and soil",
   },
   {
+    id: "charcoal",
+    title: "Bronze needs fire, fire needs trees",
+    text: "Every bronze tool was paid for in charcoal, and charcoal is made from whole trees. Better tools make every worker richer, but the smithy eats the forest.",
+    sdg: "SDG 12.2: use natural resources wisely",
+  },
+  {
+    id: "salt",
+    title: "Salt in the fields",
+    text: "Water from the canals makes the fields rich, but as it dries it leaves a little salt behind. Year after year, the soil can turn too salty to grow anything.",
+    sdg: "SDG 15.3: restore damaged land and soil",
+  },
+  {
+    id: "stewardship",
+    title: "Tending the forest",
+    text: "Our foresters plant as the woodcutters cut. A forest looked after like a field can give wood for ever.",
+    sdg: "SDG 15.2: manage forests so they last",
+  },
+  {
+    id: "writing",
+    title: "Words that outlive us",
+    text: "Now that our children can write, what the elders know is no longer lost when they die. Every generation starts where the last one stopped.",
+    sdg: "SDG 4.6: everyone learns to read and write",
+  },
+  {
     id: "restore",
     title: "Planting for the future",
     text: "These saplings won't give us wood for a long time, but our grandchildren will walk in a forest because of them.",
@@ -719,6 +926,15 @@ export const METER_SDG: Record<MeterKey, string> = {
   energy: "SDG 7.1: modern energy for everyone",
   sustainability: "SDG 15.2: halt deforestation and restore forests",
 };
+
+// Ancient-era numbers. Smithies burn this much wood per tick for charcoal;
+// granaries keep this much more food from rotting; foresters add this much
+// growth to one thinned forest tile within reach every 3 ticks; walls add defense.
+export const SMITHY_CHARCOAL = 0.35;
+export const GRANARY_KEEPS = 150;
+export const FORESTER_GROWTH = 0.12;
+export const FORESTER_REACH = 3;
+export const WALL_DEFENSE = 4;
 
 // Buying something that leaves less wood than this shows a "save up" warning.
 export const LOW_WOOD_AFTER_BUY = 10;
