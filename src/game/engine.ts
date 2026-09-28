@@ -81,7 +81,7 @@ export function newGame(
     dev: Boolean(options.dev),
     tutorialStep: 0,
     event: null,
-    nextEventTick: 40,
+    nextEventTick: 90,
     log: ["Your tribe gathers on the shores of Westmarch."],
   };
   const started = options.dev ? applyDevStart(state, options.startEra ?? 0) : state;
@@ -106,6 +106,19 @@ function applyDevStart(state: GameState, era: number): GameState {
 
 function devJumpToEra(state: GameState, era: number): GameState {
   return { ...state, era, year: ERAS[era].startYear };
+}
+
+// Some events should be rarer than others (weights are relative).
+const EVENT_WEIGHTS: Record<string, number> = { wildfire: 0.35 };
+
+function pickEvent(roll: number) {
+  const weights = EVENTS.map((e) => EVENT_WEIGHTS[e.id] ?? 1);
+  let r = roll * weights.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < EVENTS.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return EVENTS[i];
+  }
+  return EVENTS[EVENTS.length - 1];
 }
 
 export function scoutCost(state: GameState): Partial<Resources> {
@@ -369,8 +382,8 @@ function tick(state: GameState): GameState {
 
   if (next.tick >= next.nextEventTick) {
     const rand = mulberry32(next.seed + next.tick);
-    const event = EVENTS[Math.floor(rand() * EVENTS.length)];
-    next = { ...next, event, nextEventTick: next.tick + 45 + Math.floor(rand() * 30) };
+    const event = pickEvent(rand());
+    next = { ...next, event, nextEventTick: next.tick + 110 + Math.floor(rand() * 90) };
   }
 
   next = checkSecrets(next);
