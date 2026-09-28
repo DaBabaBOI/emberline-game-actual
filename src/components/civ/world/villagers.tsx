@@ -19,7 +19,12 @@ interface Walker extends Agent {
   wait: number;
   child: boolean;
   sitAt: Tile | null;
+  // What they look like and how fast they walk when healthy.
+  baseTunic?: string;
+  baseSpeed?: number;
 }
+
+const SICK_TUNIC = "#9db38a";
 
 function hash(n: number) {
   const x = Math.sin(n * 91.7) * 43758.5453;
@@ -131,11 +136,14 @@ export function Villagers({
   soldiers,
   homeTile,
   litFires,
+  sick = 0,
 }: {
   tiles: Tile[];
   population: number;
   soldiers: number;
   homeTile: Tile;
+  // Share of the tribe that is sick (0–1): that many figures look ill and shuffle.
+  sick?: number;
   // Tile ids of campfires that are burning; people only gather at those.
   litFires: number[];
 }) {
@@ -157,6 +165,7 @@ export function Villagers({
 
   const ground = useMemo(() => makeGround(tiles), [tiles]);
   const count = figureCounts(population, soldiers).villagers;
+  const sickFigures = Math.min(count, Math.round(count * sick + (sick > 0 ? 0.49 : 0)));
 
   useFrame((_, delta) => {
     const list = walkers.current;
@@ -172,6 +181,13 @@ export function Villagers({
       );
     }
     list.length = count;
+    list.forEach((w, i) => {
+      w.baseTunic ??= w.tunic;
+      w.baseSpeed ??= w.speed;
+      const ill = i < sickFigures;
+      w.tunic = ill ? SICK_TUNIC : w.baseTunic;
+      w.speed = ill ? w.baseSpeed * 0.35 : w.baseSpeed;
+    });
     const dt = Math.min(delta, 0.1);
     for (const w of list) {
       stepWalker(w, dt, ground, () => {
@@ -183,7 +199,7 @@ export function Villagers({
     }
   });
 
-  return <Figures agents={walkers} max={MAX_FIGURES} />;
+  return <Figures agents={walkers} max={MAX_FIGURES} colorKey={sickFigures} />;
 }
 
 export function Warriors({

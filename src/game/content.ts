@@ -427,6 +427,29 @@ export const FIRE_RISK = { base: 0.1, perForestTile: 0.06, max: 1.5 };
 export const CAMPFIRE_BURN_TICKS = 40;
 export const RELIGHT_WOOD = 1;
 
+// Disease. Before Herbalism the tribe calls it a curse from the gods; after it,
+// Healer's Huts slow it down. All chances are per second unless noted.
+export const DISEASE = {
+  // An outbreak starting on its own: per person, more when people are crowded.
+  perPerson: 0.00012,
+  crowding: 2,
+  // Each hunt (per animal brought back) and each fishing spot.
+  hunt: 0.05,
+  fishing: 0.0012,
+  // Welcomed wanderers bring it with them this often (per event).
+  wanderers: 0.4,
+  // Each sick person infects this many healthy people per second (× healthy share).
+  spread: 0.09,
+  // Share of the sick who get better, or die, each second.
+  recover: 0.045,
+  death: 0.015,
+  // People who got better can't catch it again for a while (share lost per second).
+  immunityFades: 0.004,
+  // Each Healer's Hut: extra recovery, and cuts to spread and deaths (up to 75%).
+  healerRecover: 0.03,
+  healerCut: 0.25,
+};
+
 // Buying something that leaves less wood than this shows a "save up" warning.
 export const LOW_WOOD_AFTER_BUY = 10;
 

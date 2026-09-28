@@ -1,5 +1,6 @@
 import {
   AFTER_TUTORIAL_RESERVE,
+  DISEASE,
   CAMPFIRE_BURN_TICKS,
   RELIGHT_WOOD,
   FIRE_RISK,
@@ -16,6 +17,7 @@ import {
   TUTORIAL,
   WARRIORS_PER_CAMP,
 } from "./content";
+import { diseaseName, maybeOutbreak, sickShare, stepDisease } from "./disease";
 import { hexDistance } from "./hex";
 import { generateMap, isLand, revealAround, terrainHeight } from "./map";
 import { mulberry32 } from "./noise";
@@ -52,6 +54,7 @@ export type Action =
   | { type: "devGrant" }
   | { type: "devPeople" }
   | { type: "devFiresOut" }
+  | { type: "devOutbreak" }
   | { type: "relight"; tileId: number }
   | { type: "devEra"; era: number }
   | { type: "devReveal" }
@@ -340,6 +343,10 @@ export function production(state: GameState): Resources {
   }
   // Worn-out land gives smaller harvests.
   out.food *= 1 - 0.4 * landStrain(state);
+  // The sick can't work (but they still eat).
+  const workforce = 1 - 0.8 * sickShare(state);
+  out.food *= workforce;
+  out.wood *= workforce;
   const counts = countBuildings(state);
   out.currency += state.population * 0.02;
   out.knowledge += state.meters.literacy * 0.005;
@@ -416,7 +423,7 @@ export const NO_FIRE_PENALTY = 15;
 export const UNREST_LEVEL = 15;
 
 export interface Warning {
-  id: "fire" | "food" | "wood" | "famine" | "unrest" | "land";
+  id: "fire" | "food" | "wood" | "famine" | "unrest" | "land" | "sick";
   icon: IconId;
   text: string;
   severe: boolean;
@@ -453,6 +460,19 @@ export function warnings(state: GameState): Warning[] {
       icon: "sad",
       text: `Your people are miserable! They will leave in ${Math.max(0, unrestLimit - state.unrestTicks)}s unless you cheer them up.`,
       severe: true,
+    });
+  }
+
+  if ((state.sick ?? 0) >= 0.5) {
+    const n = Math.round(state.sick ?? 0);
+    out.push({
+      id: "sick",
+      icon: "ill",
+      text:
+        diseaseName(state) === "curse"
+          ? `A curse from the gods: ${n} of your people lie with fever and coughing and can't work. The elders have no cure. Research Herbalism.`
+          : `${n} people are sick with fever and can't work. Healer's Huts help them recover and stop the spread.`,
+      severe: sickShare(state) > 0.2,
     });
   }
 
@@ -561,7 +581,8 @@ export function computeMeters(state: GameState): Meters {
     (counts.elder ? 5 : 0) -
     // No cold penalty while the tutorial is still teaching you to light a fire.
     (hasLitFire(state) || state.tutorialStep < TUTORIAL.length ? 0 : NO_FIRE_PENALTY) -
-    (100 - clamp(sustainability)) * 0.15 +
+    (100 - clamp(sustainability)) * 0.15 -
+    sickShare(state) * 30 +
     state.modifiers.happiness;
 
   return {
@@ -704,6 +725,7 @@ function tick(state: GameState): GameState {
     next = { ...next, event, nextEventTick: next.tick + 110 + Math.floor(rand() * 90) };
   }
 
+  next = stepDisease(next, housingCapacity(next), mulberry32(next.seed + next.tick * 31));
   next = checkSecrets(next);
   next = advanceTutorial(next);
   return { ...next, meters: computeMeters(next) };
@@ -908,7 +930,7 @@ function step(state: GameState, action: Action): GameState {
       for (const [k, v] of Object.entries(effect.resources ?? {}))
         resources[k as keyof Resources] = Math.max(0, resources[k as keyof Resources] + (v ?? 0));
       const burned = effect.burn !== undefined ? burnForest(state, effect.burn) : null;
-      return withMeters({
+      const resolved = withMeters({
         ...state,
         tiles: burned?.tiles ?? state.tiles,
         nextRaidTick: state.nextRaidTick - (effect.raidSooner ?? 0),
@@ -928,6 +950,15 @@ function step(state: GameState, action: Action): GameState {
           ...state.log,
         ].slice(0, 30),
       });
+      // Newcomers sometimes carry sickness with them.
+      return state.event?.id === "wanderers" && (effect.population ?? 0) > 0
+        ? maybeOutbreak(
+            resolved,
+            DISEASE.wanderers,
+            mulberry32(state.seed + state.tick * 41)(),
+            "The wanderers brought it with them.",
+          )
+        : resolved;
     }
 
     case "skipTutorial": {
@@ -976,6 +1007,10 @@ function step(state: GameState, action: Action): GameState {
       });
     }
 
+    case "devOutbreak":
+      if (!state.dev) return state;
+      return withMeters(maybeOutbreak({ ...state, sick: (state.sick ?? 0) + 4 }, 1, 0, "Dev: outbreak."));
+
     case "devFiresOut":
       if (!state.dev) return state;
       return withMeters({ ...state, fires: {}, log: ["Dev: all campfires put out.", ...state.log].slice(0, 30) });
@@ -1010,11 +1045,11 @@ function step(state: GameState, action: Action): GameState {
       return { ...state, tiles: state.tiles.map((t) => (t.revealed ? t : { ...t, revealed: true })) };
 
     case "hunt":
-      return {
+      return maybeOutbreak({
         ...state,
         resources: { ...state.resources, food: state.resources.food + HUNT_FOOD },
         log: [`Hunters brought down a ${action.animal} (+${HUNT_FOOD} food).`, ...state.log].slice(0, 30),
-      };
+      }, DISEASE.hunt, mulberry32(state.seed + state.tick * 37 + Math.round(state.resources.food))(), "It came with the meat from the hunt.");
   }
 }
 

@@ -157,6 +157,7 @@ export function WorldCanvas() {
         soldiers={state.soldiers}
         homeTile={home}
         litFires={burningIds}
+        sick={state.population > 0 ? (state.sick ?? 0) / state.population : 0}
       />
       <Warriors tiles={state.tiles} population={state.population} soldiers={state.soldiers} homeTile={home} />
       <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} />

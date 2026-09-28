@@ -33,10 +33,13 @@ export function Figures({
   agents,
   max,
   weapon,
+  colorKey = "",
 }: {
   agents: React.RefObject<Agent[]>;
   max: number;
   weapon?: "spear" | "club";
+  // Change this when agents' colours change so they get repainted.
+  colorKey?: string | number;
 }) {
   const torso = useRef<InstancedMesh>(null);
   const head = useRef<InstancedMesh>(null);
@@ -44,10 +47,10 @@ export function Figures({
   const legs = useRef<InstancedMesh>(null);
   const arms = useRef<InstancedMesh>(null);
   const tool = useRef<InstancedMesh>(null);
-  const colored = useRef(0);
+  const colored = useRef("");
 
   useLayoutEffect(() => {
-    colored.current = -1;
+    colored.current = "";
   });
 
   useFrame(({ clock }) => {
@@ -55,7 +58,8 @@ export function Figures({
     const n = Math.min(list.length, max);
     const t = clock.elapsedTime;
 
-    if (colored.current !== n) {
+    const paintKey = `${n}|${colorKey}`;
+    if (colored.current !== paintKey) {
       const c = new Color();
       list.slice(0, n).forEach((a, i) => {
         torso.current?.setColorAt(i, c.set(a.tunic));
@@ -67,7 +71,7 @@ export function Figures({
       for (const m of [torso, head, hair, arms]) {
         if (m.current?.instanceColor) m.current.instanceColor.needsUpdate = true;
       }
-      colored.current = n;
+      colored.current = paintKey;
     }
 
     const put = (mesh: InstancedMesh | null, i: number) => {
