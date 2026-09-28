@@ -15,6 +15,7 @@ export interface Agent {
   skin: string;
   hair: string;
   phase: number;
+  sitting?: boolean;
 }
 
 export const SKINS = ["#f1c7a0", "#e0ac69", "#c68642", "#8d5524", "#f5d0b0"];
@@ -77,7 +78,8 @@ export function Figures({
       const a = list[i];
       const swing = a.moving ? Math.sin(t * 9 + a.phase) * 0.6 : 0;
       const bob = a.moving ? Math.abs(Math.sin(t * 9 + a.phase)) * 0.015 : 0;
-      fig.position.set(a.x, a.y + bob, a.z);
+      // Sitting: hips drop to the ground, legs point forward, hands reach out.
+      fig.position.set(a.x, a.y + bob - (a.sitting ? 0.15 * a.scale : 0), a.z);
       fig.rotation.set(0, a.heading, 0);
       fig.scale.setScalar(a.scale);
       fig.updateMatrix();
@@ -95,13 +97,12 @@ export function Figures({
 
       for (const side of [-1, 1]) {
         const k = side < 0 ? 0 : 1;
-        local.rotation.set(swing * side, 0, 0);
-        local.position.set(0.035 * side, 0.1, 0);
-        local.position.y = 0.19 - 0.09 * Math.cos(swing);
-        local.position.z = -0.09 * Math.sin(swing * side);
+        const legAngle = a.sitting ? -Math.PI / 2 + 0.15 : swing * side;
+        local.rotation.set(legAngle, 0, 0);
+        local.position.set(0.035 * side, 0.19 - 0.09 * Math.cos(legAngle), -0.09 * Math.sin(legAngle));
         put(legs.current, i * 2 + k);
 
-        const armSwing = -swing * side * 0.8;
+        const armSwing = a.sitting ? -0.75 : -swing * side * 0.8;
         local.rotation.set(armSwing, 0, side * 0.12);
         local.position.set(0.078 * side, 0.37 - 0.075 * Math.cos(armSwing), -0.075 * Math.sin(armSwing));
         put(arms.current, i * 2 + k);

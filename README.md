@@ -51,6 +51,8 @@ fuel and smog rolls in, the sky turns grey and your people suffer.
 - **Event cards** (wanderers, wildfires, traders from the east, great hunts).
 - **Seven cultures** (Balanced, Traders, Builders, Scholars, Warriors, Farmers,
   Mariners) and three difficulties. Famine is the only way to lose.
+- **Demolish** any building to make room (you get half its cost back).
+- **Campfires** your people gather around. No fire means unhappy people.
 - **Autosave** in the browser, a guided tutorial, and speed controls.
 
 ### How it connects to the SDGs
@@ -122,6 +124,10 @@ Every push to `main` deploys automatically to GitHub Pages.
 `feat/<name>-<thing>` (or `fix/`, `chore/`, `docs/`), open a pull request, and
 have someone else review it. Commit messages are imperative ("add farmland", not
 "added farmland").
+
+**Testing a later era?** Open `/play/?dev` (e.g.
+https://dabababoi.github.io/shistech-hackathon/play/?dev) to get dev mode: start
+in any era with plenty of resources, reveal the map, and jump between eras.
 
 **Using an AI assistant?** Point it at [`AGENTS.md`](AGENTS.md) first. It holds
 the design decisions the game must stay true to.

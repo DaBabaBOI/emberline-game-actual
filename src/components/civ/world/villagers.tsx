@@ -17,6 +17,7 @@ interface Walker extends Agent {
   speed: number;
   wait: number;
   child: boolean;
+  sitAt: Tile | null;
 }
 
 function hash(n: number) {
@@ -43,15 +44,28 @@ function makeWalker(i: number, at: Tile, ground: Ground, look: Partial<Walker> =
     speed: 0.35 + hash(i + 5) * 0.25,
     wait: hash(i + 9) * 2,
     child: false,
+    sitAt: null,
     ...look,
   };
 }
 
+// Radius of the log seats around a campfire (model radius × building scale).
+const FIRE_SEAT = 0.78;
+
 function retarget(w: Walker, ground: Ground, pickTarget: () => Tile) {
   const target = pickTarget();
+  if (target.building === "campfire") {
+    // Sit on the near side so the walk there doesn't cross the fire itself.
+    const a = Math.atan2(w.z - target.z, w.x - target.x) + (Math.random() - 0.5) * 1.6;
+    w.tx = target.x + Math.cos(a) * FIRE_SEAT;
+    w.tz = target.z + Math.sin(a) * FIRE_SEAT;
+    w.sitAt = target;
+    return;
+  }
   const spot = ground.spotOn(target);
   w.tx = spot.x;
   w.tz = spot.z;
+  w.sitAt = null;
 }
 
 // Walks toward the target, standing on whatever tile is underfoot. If the next
@@ -62,8 +76,14 @@ function stepWalker(w: Walker, dt: number, ground: Ground, pickTarget: () => Til
   const dist = Math.hypot(dx, dz);
   if (dist < 0.05) {
     w.moving = false;
+    if (w.sitAt && !w.sitting) {
+      w.sitting = true;
+      w.heading = Math.atan2(w.sitAt.x - w.x, w.sitAt.z - w.z);
+      w.wait = 6 + Math.random() * 8;
+    }
     w.wait -= dt;
     if (w.wait <= 0) {
+      w.sitting = false;
       retarget(w, ground, pickTarget);
       w.wait = 1 + Math.random() * 3;
     }
@@ -108,6 +128,7 @@ export function Villagers({
       wander: wander.length ? wander : [homeTile],
       school: built.filter((t) => t.building === "elder"),
       fields: built.filter((t) => t.building === "farm"),
+      fires: built.filter((t) => t.building === "campfire"),
     };
   }, [tiles, homeTile]);
 
@@ -131,6 +152,7 @@ export function Villagers({
     const dt = Math.min(delta, 0.1);
     for (const w of list) {
       stepWalker(w, dt, ground, () => {
+        if (spots.fires.length && Math.random() < 0.45) return pick(spots.fires);
         if (w.child && spots.school.length && Math.random() < 0.6) return pick(spots.school);
         if (spots.fields.length && Math.random() < 0.3) return pick(spots.fields);
         return Math.random() < 0.4 ? pick(spots.wander) : pick(spots.all);

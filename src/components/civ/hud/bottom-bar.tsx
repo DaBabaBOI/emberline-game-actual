@@ -7,9 +7,11 @@ import {
   canAfford,
   consumption,
   defenseStrength,
+  DEMOLISH_TOOL,
   housingCapacity,
   isUnlocked,
   production,
+  scoutCost,
   warriorCap,
 } from "@/game/engine";
 import type { Resources } from "@/game/types";
@@ -143,15 +145,24 @@ export function BottomBar() {
         </div>
 
         <div className="flex gap-1.5 border-l-2 border-white/10 pl-3">
+          <ToolButton
+            icon="hammer"
+            label="Demolish"
+            onClick={() => setSelected(selected === DEMOLISH_TOOL ? null : DEMOLISH_TOOL)}
+            title="Knock down a building to make room. You get half its cost back."
+            tone={selected === DEMOLISH_TOOL ? "bg-amber-400 text-[#2b2119]" : "bg-[#4a3b2e] hover:bg-[#5c4a3a]"}
+          />
           <ArmyButton />
           <ToolButton
             icon="spyglass"
             label="Scout"
             onClick={() => dispatch({ type: "scout" })}
-            disabled={state.resources.food < 10}
-            title="Send scouts to reveal new land (costs 10 food)"
+            disabled={!canAfford(state, scoutCost(state))}
+            title="Send scouts to reveal new land. Each trip costs more than the last."
             tone="bg-[#4a3b2e] hover:bg-[#5c4a3a]"
-          />
+          >
+            <Cost cost={scoutCost(state)} bad={!canAfford(state, scoutCost(state))} />
+          </ToolButton>
           <ToolButton
             icon="star"
             label="Advancements"

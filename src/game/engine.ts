@@ -5,6 +5,7 @@ import {
   ERAS,
   EVENTS,
   TRAIN_COST,
+  TREE,
   TREE_BY_ID,
   TUTORIAL,
   WARRIORS_PER_CAMP,
@@ -22,7 +23,7 @@ import type {
   Tile,
 } from "./types";
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 const BASE_HOUSING = 8;
 
 export type Action =
@@ -34,11 +35,25 @@ export type Action =
   | { type: "resolveEvent"; choice: number }
   | { type: "skipTutorial" }
   | { type: "train" }
-  | { type: "hunt"; animal: string };
+  | { type: "hunt"; animal: string }
+  | { type: "demolish"; tileId: number }
+  | { type: "devGrant" }
+  | { type: "devEra"; era: number }
+  | { type: "devReveal" };
 
-export function newGame(culture: CultureId, difficulty: DifficultyId): GameState {
+export interface NewGameOptions {
+  dev?: boolean;
+  startEra?: number;
+}
+
+export function newGame(
+  culture: CultureId,
+  difficulty: DifficultyId,
+  options: NewGameOptions = {},
+): GameState {
   const seed = Math.floor(Math.random() * 1e9);
   const { tiles, startTile } = generateMap(seed);
+  giveStartingWoodcutter(tiles, tiles[startTile]);
   const state: GameState = {
     version: SAVE_VERSION,
     phase: "playing",
@@ -62,12 +77,40 @@ export function newGame(culture: CultureId, difficulty: DifficultyId): GameState
     researched: ["fire"],
     secretsFound: [],
     flags: { rocket: false, scouted: false },
+    scoutsSent: 0,
+    dev: Boolean(options.dev),
     tutorialStep: 0,
     event: null,
     nextEventTick: 40,
     log: ["Your tribe gathers on the shores of Westmarch."],
   };
-  return { ...state, meters: computeMeters(state) };
+  const started = options.dev ? applyDevStart(state, options.startEra ?? 0) : state;
+  return { ...started, meters: computeMeters(started) };
+}
+
+// Dev mode: skip ahead for testing. Lots of resources, the map revealed, and
+// every playable advancement of the earlier eras already researched.
+function applyDevStart(state: GameState, era: number): GameState {
+  const researched = TREE.filter((n) => !n.comingSoon && !n.secret && n.era < Math.max(1, era)).map(
+    (n) => n.id,
+  );
+  return {
+    ...devJumpToEra(state, era),
+    tutorialStep: TUTORIAL.length,
+    researched: Array.from(new Set([...state.researched, ...researched])),
+    resources: { food: 999, wood: 999, stone: 999, knowledge: 999, currency: 999 },
+    population: 8,
+    log: [`Dev mode: started in the ${ERAS[era].name}.`, ...state.log],
+  };
+}
+
+function devJumpToEra(state: GameState, era: number): GameState {
+  return { ...state, era, year: ERAS[era].startYear };
+}
+
+export function scoutCost(state: GameState): Partial<Resources> {
+  const n = state.scoutsSent;
+  return { food: 12 + n * 6, wood: 4 + n * 3 };
 }
 
 export function countBuildings(state: GameState) {
@@ -149,6 +192,40 @@ export function consumption(state: GameState) {
   );
 }
 
+// Every game starts with one woodcutter already working, so the player can
+// never end up with no wood and no way to get more.
+function giveStartingWoodcutter(tiles: Tile[], home: Tile) {
+  const forest = tiles
+    .filter((t) => t.terrain === "forest" && t.island === home.island)
+    .sort((a, b) => hexDistance(a, home) - hexDistance(b, home))[0];
+  if (!forest) return;
+  forest.building = "woodcutter";
+  revealAround(tiles, forest, 2);
+}
+
+export function demolishRefund(def: BuildingDef): Partial<Resources> {
+  return Object.fromEntries(
+    Object.entries(def.cost).map(([k, v]) => [k, Math.floor((v ?? 0) / 2)]),
+  );
+}
+
+export function demolishError(state: GameState, tile: Tile): string | null {
+  if (!tile.building) return "Nothing to demolish";
+  if (tile.building === "woodcutter" && (countBuildings(state).woodcutter ?? 0) <= 1) {
+    return "You need at least one woodcutter";
+  }
+  return null;
+}
+
+export const DEMOLISH_TOOL = "__demolish";
+
+export const NO_FIRE_PENALTY = 15;
+
+// A fire only counts if there's wood to keep it burning.
+export function hasLitFire(state: GameState) {
+  return (countBuildings(state).campfire ?? 0) > 0 && state.resources.wood > 0;
+}
+
 export function warriorCap(state: GameState) {
   return (countBuildings(state).warcamp ?? 0) * WARRIORS_PER_CAMP;
 }
@@ -192,6 +269,7 @@ export function computeMeters(state: GameState): Meters {
     clamp(shelter) * 0.35 +
     Math.min(3, counts.campfire ?? 0) * 6 +
     (counts.elder ? 5 : 0) -
+    (hasLitFire(state) ? 0 : NO_FIRE_PENALTY) -
     (100 - clamp(sustainability)) * 0.15 +
     state.modifiers.happiness;
 
@@ -431,7 +509,8 @@ export function reducer(state: GameState, action: Action): GameState {
     }
 
     case "scout": {
-      if (state.resources.food < 10) return state;
+      const cost = scoutCost(state);
+      if (!canAfford(state, cost)) return state;
       const frontier = state.tiles.filter(
         (t) =>
           !t.revealed &&
@@ -446,7 +525,8 @@ export function reducer(state: GameState, action: Action): GameState {
         ...state,
         tiles,
         flags: { ...state.flags, scouted: true },
-        resources: { ...state.resources, food: state.resources.food - 10 },
+        scoutsSent: state.scoutsSent + 1,
+        resources: spend(state.resources, cost),
         log: ["Scouts returned with news of new land.", ...state.log].slice(0, 30),
       });
     }
@@ -502,6 +582,41 @@ export function reducer(state: GameState, action: Action): GameState {
         resources: spend(state.resources, TRAIN_COST),
       });
     }
+
+    case "demolish": {
+      const tile = state.tiles[action.tileId];
+      if (!tile || demolishError(state, tile)) return state;
+      const def = BUILDINGS_BY_ID[tile.building!];
+      const refund = demolishRefund(def);
+      const resources = { ...state.resources };
+      for (const [k, v] of Object.entries(refund)) resources[k as keyof Resources] += v ?? 0;
+      return withMeters({
+        ...state,
+        tiles: state.tiles.map((t) => (t.id === tile.id ? { ...t, building: null } : t)),
+        resources,
+        log: [`Demolished a ${def.name}.`, ...state.log].slice(0, 30),
+      });
+    }
+
+    case "devGrant":
+      if (!state.dev) return state;
+      return {
+        ...state,
+        resources: Object.fromEntries(
+          Object.entries(state.resources).map(([k, v]) => [k, v + 500]),
+        ) as Resources,
+      };
+
+    case "devEra":
+      if (!state.dev || !ERAS[action.era]) return state;
+      return withMeters({
+        ...devJumpToEra(state, action.era),
+        log: [`Dev mode: jumped to the ${ERAS[action.era].name}.`, ...state.log].slice(0, 30),
+      });
+
+    case "devReveal":
+      if (!state.dev) return state;
+      return { ...state, tiles: state.tiles.map((t) => (t.revealed ? t : { ...t, revealed: true })) };
 
     case "hunt":
       return {

@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { formatYear, TUTORIAL } from "@/game/content";
-import { clearSave, defenseStrength } from "@/game/engine";
+import { ERAS, formatYear, TUTORIAL } from "@/game/content";
+import { clearSave, defenseStrength, hasLitFire, NO_FIRE_PENALTY } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 
@@ -127,6 +127,51 @@ export function RaidBanner() {
         <PixelIcon name="warning" size={18} />
         {state.raid.strength} raiders arriving in {eta}s · Your defense: {defense}
         {safe ? " (you can hold them)" : " (train more warriors!)"}
+      </div>
+    </div>
+  );
+}
+
+export function NoFireWarning() {
+  const { state } = useGame();
+  if (hasLitFire(state)) return null;
+  const noCampfire = !state.tiles.some((t) => t.building === "campfire");
+  return (
+    <div className="pixel-panel-dark font-pixel pointer-events-none absolute bottom-28 left-3 flex max-w-60 items-center gap-2 px-2.5 py-1.5 text-xs">
+      <PixelIcon name="flame" size={20} />
+      <span>
+        {noCampfire ? "No campfire!" : "The fire is out: no wood!"} Your people are cold.{" "}
+        <span className="text-red-300">−{NO_FIRE_PENALTY} happiness</span>
+      </span>
+    </div>
+  );
+}
+
+export function DevPanel() {
+  const { state, dispatch } = useGame();
+  if (!state.dev) return null;
+  return (
+    <div className="pixel-panel-dark font-pixel pointer-events-auto absolute left-16 top-20 flex max-w-xs flex-col gap-1.5 p-2 text-xs">
+      <span className="text-amber-300">Dev mode</span>
+      <div className="flex gap-1">
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devGrant" })}>
+          +500 all
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devReveal" })}>
+          Reveal map
+        </button>
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {ERAS.map((era, i) => (
+          <button
+            key={era.name}
+            type="button"
+            onClick={() => dispatch({ type: "devEra", era: i })}
+            className={"pixel-btn px-2 py-1 " + (state.era === i ? "bg-amber-400 text-[#2b2119]" : "bg-[#4a3b2e]")}
+          >
+            {i + 1}
+          </button>
+        ))}
       </div>
     </div>
   );

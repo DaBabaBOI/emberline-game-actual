@@ -62,7 +62,7 @@ export const BUILDINGS: BuildingDef[] = [
     id: "campfire",
     name: "Campfire",
     icon: "campfire",
-    description: "Warmth, light and cooked food. Burns a little wood.",
+    description: "Warmth, light and cooked food. People gather to sit around it. Without a lit fire, happiness drops. Burns a little wood.",
     era: 0,
     cost: { wood: 5 },
     terrain: ["grass", "forest", "beach", "hills"],
@@ -121,7 +121,7 @@ export const BUILDINGS: BuildingDef[] = [
     era: 0,
     cost: { wood: 4 },
     terrain: ["forest"],
-    produces: { wood: 1 },
+    produces: { wood: 0.45 },
     reveal: 2,
   },
   {
@@ -380,7 +380,7 @@ export const EVENTS: EventCard[] = [
   {
     id: "good-hunt",
     title: "A great hunt",
-    icon: "meat",
+    icon: "mammoth",
     body: "Your hunters brought down a mammoth. Feast or preserve?",
     choices: [
       { label: "Feast! (+10 happiness)", effect: { happiness: 10 } },
@@ -390,10 +390,9 @@ export const EVENTS: EventCard[] = [
 ];
 
 export const TUTORIAL = [
-  { text: "Our people are cold. Pick the Campfire from the bar below and place it on a green tile.", done: "campfire" },
+  { text: "Our people are cold, and without a fire they grow unhappy. Pick the Campfire from the bar below and place it on a green tile.", done: "campfire" },
   { text: "Good! Now build a Hut so more people have shelter.", done: "hut" },
   { text: "We need food. Place a Gatherer's Camp. Berry bushes give a bonus.", done: "gatherer" },
-  { text: "Fires need wood. Put a Woodcutter on a forest tile.", done: "woodcutter" },
   { text: "The world is hidden. Press Scout to explore new land.", done: "scout" },
   { text: "Raiders roam these lands. Build a War Camp, then train warriors to defend us.", done: "warcamp" },
   { text: "Open Advancements and research Early Farming, then place Farmland.", done: "early-farming" },

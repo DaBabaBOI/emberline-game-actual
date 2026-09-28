@@ -65,6 +65,15 @@ These were decided with the project owner. Do not change them without being aske
 - Politics = event cards with choices + simple diplomacy with AI nations.
 - "AI" in the future era means **in-game tech** (automation, data centers), not an
   AI chatbot.
+- Every game starts with one free woodcutter, and the last woodcutter can't be
+  demolished, so the player can never soft-lock with no wood.
+- Buildings can be demolished for a 50% refund.
+- A lit campfire (and wood to burn) is needed; without one happiness drops and a
+  warning is shown. Villagers sit around campfires.
+- Scouting costs food and wood and gets more expensive with each trip.
+- **Dev mode** (`/play/?dev`): start in any era with plenty of resources; an
+  in-game dev panel can grant resources, reveal the map and jump eras. Keep it
+  working when adding eras. It must never show without `?dev`.
 - Seven cultures (Balanced + six with bonuses), three difficulties. Famine is the
   only game over; everything else is a setback.
 - Multiplayer is **later**; design state so AI nations could be replaced by humans,
