@@ -74,6 +74,15 @@ export type Action =
 export interface NewGameOptions {
   dev?: boolean;
   startEra?: number;
+  nation?: string;
+}
+
+export const DEFAULT_NATION = "The Emberfolk";
+
+// Tidy a player-typed name: trimmed, single-spaced, at most 24 characters.
+export function cleanNation(name: string | undefined) {
+  const clean = (name ?? "").replace(/\s+/g, " ").trim().slice(0, 24);
+  return clean || DEFAULT_NATION;
 }
 
 export function newGame(
@@ -90,6 +99,7 @@ export function newGame(
     seed,
     culture,
     difficulty,
+    nation: cleanNation(options.nation),
     tiles,
     startTile,
     era: 0,
@@ -115,7 +125,7 @@ export function newGame(
     tutorialStep: 0,
     event: null,
     nextEventTick: 90,
-    log: ["Your tribe gathers on the shores of Westmarch."],
+    log: [`${cleanNation(options.nation)} gather on the shores of Westmarch.`],
   };
   state.forestBaseline = forestGrowthNearHome(state);
   const budget = tutorialBudget(state);

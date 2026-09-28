@@ -169,6 +169,8 @@ export interface GameState {
   seed: number;
   culture: CultureId;
   difficulty: DifficultyId;
+  // The name the player gave their people.
+  nation?: string;
   tiles: Tile[];
   startTile: number;
   era: number;
