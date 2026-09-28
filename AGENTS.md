@@ -74,6 +74,11 @@ These were decided with the project owner. Do not change them without being aske
 - Bright, stylized low-poly (Mini Empires). Build models from multiple composed
   primitives with real detail (roofs, doors, props), never a single box or sphere.
 - Smog, haze and grey sky appear as sustainability drops.
+- **No emojis in the UI.** All icons are hand-drawn 12×12 pixel sprites in
+  `src/game/sprites.ts`, rendered with `<PixelIcon>`. Need a new icon? Draw it there.
+- The 2D UI is **pixel style**: the `pixel-panel` / `pixel-panel-dark` /
+  `pixel-btn` classes (hard edges, chunky outlines, offset shadows, no blur,
+  no rounded corners) and the Pixelify Sans `font-pixel` for headings and HUD text.
 
 ## Code rules
 
