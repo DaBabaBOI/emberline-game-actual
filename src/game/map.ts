@@ -23,6 +23,8 @@ const HEIGHTS: Record<Terrain, number> = {
   shallow: 0.2,
   beach: 0.34,
   grass: 0.5,
+  steppe: 0.48,
+  marsh: 0.4,
   forest: 0.55,
   hills: 0.85,
   mountain: 1.35,
@@ -64,6 +66,8 @@ export function generateMap(seed: number): { tiles: Tile[]; startTile: number } 
       const { value, island } = landValue(x, z);
       const detail = fbm(x * 0.25, z * 0.25, SHAPE_SEED + 7);
       const forestNoise = fbm(x * 0.18, z * 0.18, SHAPE_SEED + 23);
+      // The Silk Steppe island is dry; everywhere else moisture varies.
+      const moisture = fbm(x * 0.14, z * 0.14, SHAPE_SEED + 41) - (island === 1 ? 0.22 : 0);
 
       let terrain: Terrain;
       if (value < 0.1) terrain = "deep";
@@ -71,7 +75,9 @@ export function generateMap(seed: number): { tiles: Tile[]; startTile: number } 
       else if (value < 0.33) terrain = "beach";
       else if (value > 0.6 && detail > 0.66) terrain = "mountain";
       else if (value > 0.5 && detail > 0.56) terrain = "hills";
-      else if (forestNoise > 0.54) terrain = "forest";
+      else if (value < 0.42 && moisture > 0.6) terrain = "marsh";
+      else if (forestNoise > 0.6 && moisture > 0.4) terrain = "forest";
+      else if (moisture < 0.4) terrain = "steppe";
       else terrain = "grass";
 
       tiles.push({
@@ -103,7 +109,7 @@ export function generateMap(seed: number): { tiles: Tile[]; startTile: number } 
     let deposit: Deposit | null = null;
     if (tile.terrain === "hills" && roll < 0.45) deposit = "stone";
     else if (tile.terrain === "mountain" && roll < 0.3) deposit = "stone";
-    else if ((tile.terrain === "grass" || tile.terrain === "forest") && roll < 0.1)
+    else if ((tile.terrain === "grass" || tile.terrain === "forest" || tile.terrain === "marsh") && roll < 0.1)
       deposit = "berries";
     else if (tile.terrain === "beach" && roll < 0.2) deposit = "clay";
     else if (

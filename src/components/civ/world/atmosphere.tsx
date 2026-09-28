@@ -9,17 +9,16 @@ import { Flame } from "./building-models";
 const CLEAN_SKY = new Color("#a8dcf5");
 const SMOG = new Color("#8f8b80");
 
-// Sustainability drives how hazy the world gets: clean air far away, smog
-// that closes in and greys the sky as it drops.
-export function Haze({ sustainability }: { sustainability: number }) {
+// Wood smoke: with many fires burning, a haze settles over the valley.
+export function Haze({ fires }: { fires: number }) {
   const goal = useMemo(() => {
-    const dirty = Math.max(0, (70 - sustainability) / 70);
+    const dirty = Math.min(0.6, Math.max(0, (fires - 2) / 10));
     return {
       near: 60 - dirty * 45,
       far: 160 - dirty * 110,
       color: CLEAN_SKY.clone().lerp(SMOG, dirty),
     };
-  }, [sustainability]);
+  }, [fires]);
 
   useFrame(({ scene }) => {
     if (!(scene.fog instanceof Fog)) scene.fog = new Fog(CLEAN_SKY, 60, 160);
@@ -57,15 +56,11 @@ export function Plume({ x, y, z, strength, seed }: { x: number; y: number; z: nu
   );
 }
 
-const POLLUTERS = new Set(["woodcutter", "quarry", "campfire"]);
-
-export function SmogPlumes({ tiles, sustainability }: { tiles: Tile[]; sustainability: number }) {
-  const strength = Math.max(0, (60 - sustainability) / 60);
-  const sources = useMemo(
-    () => tiles.filter((t) => t.building && POLLUTERS.has(t.building)).slice(0, 25),
-    [tiles],
-  );
-  if (strength <= 0) return null;
+// Only fires make smoke. The more campfires, the thicker it gets.
+export function CampfireSmoke({ tiles }: { tiles: Tile[] }) {
+  const sources = useMemo(() => tiles.filter((t) => t.building === "campfire").slice(0, 25), [tiles]);
+  const strength = Math.min(1, 0.3 + sources.length * 0.12);
+  if (!sources.length) return null;
   return (
     <group>
       {sources.map((t) => (
