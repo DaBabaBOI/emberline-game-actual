@@ -138,7 +138,7 @@ export function WorldCanvas() {
 
       <HexTerrain tiles={state.tiles} home={home} wear={landStrain(state)} onHover={setHovered} onPick={pick} />
       <Forests tiles={state.tiles} />
-      <Mountains tiles={state.tiles} />
+      <Mountains tiles={state.tiles} onHover={setHovered} onPick={pick} />
       <Deposits tiles={state.tiles} />
       <BiomeDetails tiles={state.tiles} />
 
