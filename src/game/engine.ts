@@ -423,6 +423,8 @@ export interface Warning {
 }
 
 export function warnings(state: GameState): Warning[] {
+  // During the tutorial Elder Ama explains what to do; warnings would only nag.
+  if (state.tutorialStep < TUTORIAL.length) return [];
   const out: Warning[] = [];
   const prod = production(state);
   const netFood = prod.food - consumption(state);
