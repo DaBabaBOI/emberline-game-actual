@@ -377,19 +377,22 @@ export const TREE: TreeNode[] = [
 
 export const TREE_BY_ID = Object.fromEntries(TREE.map((n) => [n.id, n]));
 
+// Event cards are trade-offs: every choice gains something and costs something.
+// `realWorld` links the card to today. Keep those lines modest, with no statistics.
 export const EVENTS: EventCard[] = [
   {
     id: "wanderers",
     title: "Wanderers at the fire",
     icon: "person",
-    body: "A band of eight hungry wanderers asks to join your tribe. They're strong workers, but they'll eat a lot. Turned away, they may not forget it.",
+    body: "A band of eight hungry wanderers asks to join your tribe. They're strong workers, but they'll eat a lot, and strangers can carry sickness. Turned away, they may not forget it.",
     choices: [
-      { label: "Welcome them (+8 people, −25 food)", effect: { population: 8, resources: { food: -25 } } },
+      { label: "Welcome them (+8 people, −25 food, they may bring sickness)", effect: { population: 8, resources: { food: -25 } } },
       {
         label: "Send them away (−12 happiness, raiders come sooner)",
         effect: { happiness: -12, raidSooner: 40 },
       },
     ],
+    realWorld: "People have always moved to find food and safety. Newcomers bring new skills and ideas, but large movements of people can also spread disease.",
   },
   {
     id: "wildfire",
@@ -402,10 +405,11 @@ export const EVENTS: EventCard[] = [
         effect: { resources: { wood: -25 }, happiness: -5, burn: 0 },
       },
       {
-        label: "Let it burn (the forest and buildings nearby are lost)",
+        label: "Let it burn (the forest, buildings and people nearby are lost)",
         effect: { burn: 2, sustainability: -25, happiness: -12 },
       },
     ],
+    realWorld: "Wildfires happen naturally, but many are started by people, often by accident. Fires close to homes are the most dangerous.",
   },
   {
     id: "eastern-trader",
@@ -419,6 +423,7 @@ export const EVENTS: EventCard[] = [
       },
       { label: "Turn her away", effect: {} },
     ],
+    realWorld: "Long before the Silk Road, traders carried goods, ideas and inventions across Eurasia.",
   },
   {
     id: "good-hunt",
@@ -427,8 +432,102 @@ export const EVENTS: EventCard[] = [
     body: "Your hunters brought down a mammoth! There's enough meat for weeks, or for one unforgettable night.",
     choices: [
       { label: "Feast! (+25 happiness)", effect: { happiness: 25 } },
-      { label: "Preserve it (+60 food)", effect: { resources: { food: 60 } } },
+      { label: "Dry and smoke the meat (+60 food)", effect: { resources: { food: 60 } } },
     ],
+    realWorld: "Drying and smoking let people store meat for lean times, thousands of years before fridges.",
+  },
+  {
+    id: "sacred-grove",
+    title: "The old grove",
+    icon: "leaf",
+    body: "The elders ask you to protect the ancient grove near the village. Its trees are the oldest and tallest we have, and the woodcutters have their eyes on them.",
+    choices: [
+      {
+        label: "Protect the grove forever (+8 happiness, woodcutters must leave it)",
+        effect: { protectForest: 4, happiness: 8 },
+      },
+      { label: "Cut it down (+40 wood, the grove is gone)", effect: { clearForest: 4, resources: { wood: 40 }, happiness: -4 } },
+    ],
+    realWorld: "Many cultures have protected sacred groves, and some of them still stand today as islands of old forest.",
+  },
+  {
+    id: "thinning-herds",
+    title: "The herds are thinning",
+    icon: "meat",
+    body: "The hunters are bringing back fewer deer each season. Some want one last big hunt before winter; others say to let the herds recover.",
+    choices: [
+      { label: "One big hunt (+50 food now, the land suffers)", effect: { resources: { food: 50 }, sustainability: -15 } },
+      { label: "Hunt only the old animals (+12 food, the herds recover)", effect: { resources: { food: 12 }, sustainability: 5 } },
+    ],
+    realWorld: "Overhunting has wiped out animals before. Many scientists think people helped drive mammoths and other big Ice Age animals to extinction.",
+  },
+  {
+    id: "floodplain",
+    title: "Rich soil by the river",
+    icon: "wheat",
+    body: "The flat land by the river is dark and rich, perfect for gathering and planting. But the old ones say the river rises in spring.",
+    choices: [
+      {
+        label: "Settle the riverbank (+45 food now, a flood may come)",
+        effect: {
+          resources: { food: 45 },
+          gamble: {
+            chance: 0.5,
+            resources: { food: -70, wood: -20 },
+            happiness: -10,
+            message: "The spring flood came. Stores were washed away.",
+            safeMessage: "The river stayed in its banks this year.",
+          },
+        },
+      },
+      { label: "Stay on higher ground (+10 food, safe)", effect: { resources: { food: 10 } } },
+    ],
+    realWorld: "Building on flood plains puts homes and fields in harm's way. Today, planners map flood zones before towns grow (SDG 11.5).",
+  },
+  {
+    id: "indoor-fire",
+    title: "Fire inside the hut",
+    icon: "hut",
+    body: "The nights are bitter. Families want to keep fires burning inside their huts, but the smoke has nowhere to go.",
+    choices: [
+      { label: "Fires indoors (+12 happiness, smoke may make people sick)", effect: { happiness: 12, sickness: 0.6 } },
+      { label: "Keep fires outside (−4 happiness, clean air)", effect: { happiness: -4 } },
+    ],
+    realWorld: "Smoke from cooking and heating fires indoors is still a serious health risk in many homes today, which is why SDG 7 includes clean cooking.",
+  },
+  {
+    id: "burn-scrub",
+    title: "Burn the scrub?",
+    icon: "flame",
+    body: "Thick brush chokes the land near the forest. Setting fire to it would clear it fast and bring fresh growth, if the fire behaves.",
+    choices: [
+      {
+        label: "Burn it (+30 food from new growth, the fire may spread)",
+        effect: {
+          resources: { food: 30 },
+          gamble: {
+            chance: 0.4,
+            burn: 1,
+            happiness: -6,
+            message: "The wind turned and the fire spread into the forest.",
+            safeMessage: "The burn went well and fresh shoots are coming up.",
+          },
+        },
+      },
+      { label: "Clear it by hand (−15 food of work, slow but safe)", effect: { resources: { food: -15 } } },
+    ],
+    realWorld: "People have used fire to shape the land for thousands of years. Careful burns can help, but fires that get away destroy forests and homes.",
+  },
+  {
+    id: "midden",
+    title: "The rubbish heap",
+    icon: "skull",
+    body: "Bones, scraps and ashes pile up at the edge of the village. It smells, and flies swarm over it.",
+    choices: [
+      { label: "Bury it far away (−10 food of work, no flies)", effect: { resources: { food: -10 } } },
+      { label: "Leave it (sickness may spread)", effect: { sickness: 0.5 } },
+    ],
+    realWorld: "Archaeologists learn a lot from ancient rubbish heaps called middens. Today, handling waste safely is part of SDG 11.6.",
   },
 ];
 

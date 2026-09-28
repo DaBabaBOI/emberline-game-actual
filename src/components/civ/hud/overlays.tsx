@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ERAS, formatYear, LESSONS, TUTORIAL } from "@/game/content";
+import { ERAS, EVENTS, formatYear, LESSONS, TUTORIAL } from "@/game/content";
 import { clearSave, defenseStrength, secs, warnings } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
@@ -83,7 +83,13 @@ export function EventModal() {
       <div className="pixel-panel w-[min(92vw,380px)] p-5">
         <PixelIcon name={event.icon} size={48} className="mb-2" />
         <h3 className="font-pixel text-xl font-bold">{event.title}</h3>
-        <p className="mb-4 text-sm text-stone-700">{event.body}</p>
+        <p className="mb-3 text-sm text-stone-700">{event.body}</p>
+        {event.realWorld && (
+          <p className="font-pixel mb-4 flex items-start gap-1.5 border-l-4 border-[#1e4f9c] bg-[#1e4f9c]/5 px-2 py-1.5 text-xs text-[#1e4f9c]">
+            <PixelIcon name="leaf" size={14} />
+            <span>In the real world: {event.realWorld}</span>
+          </p>
+        )}
         <div className="flex flex-col gap-2">
           {event.choices.map((c, i) => (
             <button
@@ -249,6 +255,7 @@ export function Warnings() {
 
 export function DevPanel() {
   const { state, dispatch } = useGame();
+  const [eventIndex, setEventIndex] = useState(0);
   if (!state.dev) return null;
   return (
     <div className="pixel-panel-dark font-pixel pointer-events-auto absolute left-16 top-20 flex max-w-xs flex-col gap-1.5 p-2 text-xs">
@@ -277,6 +284,17 @@ export function DevPanel() {
         </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devLesson" })}>
           Lesson
+        </button>
+        <button
+          type="button"
+          className="pixel-btn bg-[#4a3b2e] px-2 py-1"
+          title={`Next: ${EVENTS[eventIndex % EVENTS.length].title}`}
+          onClick={() => {
+            dispatch({ type: "devEvent", id: EVENTS[eventIndex % EVENTS.length].id });
+            setEventIndex(eventIndex + 1);
+          }}
+        >
+          Event
         </button>
       </div>
       <div className="flex flex-wrap gap-1">

@@ -133,6 +133,21 @@ export interface EventChoice {
     burn?: number;
     // Ticks to bring the next raid forward by.
     raidSooner?: number;
+    // Cut down this many of the biggest forest tiles near the village.
+    clearForest?: number;
+    // Protect this many of the oldest forest tiles near the village for good.
+    protectForest?: number;
+    // Chance (0–1) that sickness breaks out because of this choice.
+    sickness?: number;
+    // Something that may or may not happen: rolled when the choice is made.
+    gamble?: {
+      chance: number;
+      resources?: Partial<Resources>;
+      happiness?: number;
+      burn?: number;
+      message: string;
+      safeMessage: string;
+    };
   };
 }
 
@@ -142,6 +157,8 @@ export interface EventCard {
   body: string;
   icon: IconId;
   choices: EventChoice[];
+  // A short, modest real-world connection shown under the card.
+  realWorld: string;
 }
 
 export interface GameState {
@@ -180,6 +197,10 @@ export interface GameState {
   lessonTick?: number;
   // Saplings planted so far.
   planted?: number;
+  // The last event card shown, so it isn't repeated right away.
+  lastEvent?: string;
+  // Forest tiles the tribe has chosen to protect: woodcutters never cut them.
+  protectedTiles?: number[];
   // How each woodcutter works, by tile id: clear-cut (default) or selective.
   logging?: Record<number, "clear" | "selective">;
   // Sustainability sampled every 5 ticks, oldest first (for the trend arrow).
