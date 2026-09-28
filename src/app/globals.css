@@ -79,3 +79,28 @@ body {
   line-height: 1;
   letter-spacing: 0.02em;
 }
+
+/* Tutorial hand: bobs toward what it points at. */
+.guide-hand {
+  animation: guide-bob 0.8s steps(4) infinite alternate;
+  filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.35));
+}
+
+.guide-ring {
+  animation: guide-blink 0.9s steps(2) infinite;
+}
+
+@keyframes guide-bob {
+  from {
+    transform: translateY(-8px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes guide-blink {
+  50% {
+    border-color: #fdf6e3;
+  }
+}

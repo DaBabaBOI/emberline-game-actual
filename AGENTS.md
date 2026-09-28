@@ -73,7 +73,7 @@ These were decided with the project owner. Do not change them without being aske
   pricier each trip (Transport advancements make it 20% cheaper each).
 - Events are rare but **hit hard** (a wildfire really burns the forest and nearby
   buildings, leaving charred ground that heals). Keep events meaningful.
-- **Low-resource warnings** (food, wood, famine, no fire) show bottom-left and the
+- **Low-resource warnings** (food, wood, famine, unrest, no fire) show bottom-left and the
   top-bar number flashes red. Add new ones in `warnings()` in `engine.ts`.
 - Numbers in the UI use the `font-num` class (VT323): Pixelify's digits 2/5/8
   are too similar.
@@ -89,8 +89,15 @@ These were decided with the project owner. Do not change them without being aske
 - **Dev mode** (`/play/?dev`): start in any era with plenty of resources; an
   in-game dev panel can grant resources, reveal the map and jump eras. Keep it
   working when adding eras. It must never show without `?dev`.
-- Seven cultures (Balanced + six with bonuses), three difficulties. Famine is the
-  only game over; everything else is a setback.
+- Seven cultures (Balanced + six with bonuses), three difficulties. There are two
+  ways to lose: **famine** (no food for too long) and **unrest** (happiness below
+  15 for too long, after the tutorial). Both show a countdown warning first.
+  Everything else is a setback.
+- **Tutorial hand:** during the tutorial a pixel hand points at the next click
+  and the rest of the screen is blocked (`guideFor()` in
+  `src/components/civ/guide.ts`, drawn by `hud/guide-overlay.tsx`). Targets are
+  elements with `data-guide="…"` or a map tile. While the player is saving up
+  resources the hand lets go. New tutorial steps need a case in `guideFor()`.
 - Multiplayer is **later**; design state so AI nations could be replaced by humans,
   but do not add a backend now.
 

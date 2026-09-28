@@ -24,7 +24,7 @@ import type {
   Tile,
 } from "./types";
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 const BASE_HOUSING = 8;
 
 export type Action =
@@ -59,6 +59,7 @@ export function newGame(
   const state: GameState = {
     version: SAVE_VERSION,
     phase: "playing",
+    lostTo: null,
     seed,
     culture,
     difficulty,
@@ -71,6 +72,7 @@ export function newGame(
     resources: { food: 60, wood: 35, stone: 0, knowledge: 0, currency: 0 },
     population: 8,
     famineTicks: 0,
+    unrestTicks: 0,
     soldiers: 0,
     raid: null,
     nextRaidTick: 110,
@@ -290,9 +292,11 @@ export function tutorialLocked(state: GameState, id: string) {
 }
 
 export const NO_FIRE_PENALTY = 15;
+// Below this happiness the tribe starts to fall apart (see unrestLimit).
+export const UNREST_LEVEL = 15;
 
 export interface Warning {
-  id: "fire" | "food" | "wood" | "famine";
+  id: "fire" | "food" | "wood" | "famine" | "unrest";
   icon: IconId;
   text: string;
   severe: boolean;
@@ -317,6 +321,16 @@ export function warnings(state: GameState): Warning[] {
       icon: "meat",
       text: `Food is running low: about ${Math.ceil(state.resources.food / -netFood)}s left. Build gatherers or farms.`,
       severe: state.resources.food / -netFood < 20,
+    });
+  }
+
+  if (state.unrestTicks > 0) {
+    const unrestLimit = DIFFICULTIES[state.difficulty].unrestLimit;
+    out.push({
+      id: "unrest",
+      icon: "sad",
+      text: `Your people are miserable! They will leave in ${Math.max(0, unrestLimit - state.unrestTicks)}s unless you cheer them up.`,
+      severe: true,
     });
   }
 
@@ -428,7 +442,9 @@ function advanceTutorial(state: GameState): GameState {
   const done =
     step.done === "scout"
       ? state.flags.scouted
-      : state.researched.includes(step.done) || (counts[step.done] ?? 0) > 0;
+      : step.done === "train"
+        ? state.soldiers > 0
+        : state.researched.includes(step.done) || (counts[step.done] ?? 0) > 0;
   return done ? { ...state, tutorialStep: state.tutorialStep + 1 } : state;
 }
 
@@ -461,6 +477,13 @@ function tick(state: GameState): GameState {
     }
   }
 
+  // Unrest only builds up once the tutorial is over, so new players get a fair start.
+  const inTutorial = state.tutorialStep < TUTORIAL.length;
+  const unrestTicks =
+    state.meters.happiness < UNREST_LEVEL && !inTutorial
+      ? state.unrestTicks + 1
+      : Math.max(0, state.unrestTicks - 2);
+
   const modifiers = {
     sustainability: state.modifiers.sustainability * 0.995,
     happiness: state.modifiers.happiness * 0.993,
@@ -473,6 +496,7 @@ function tick(state: GameState): GameState {
     resources,
     population,
     famineTicks,
+    unrestTicks,
     modifiers,
   };
 
@@ -480,7 +504,10 @@ function tick(state: GameState): GameState {
   next = updateRaids(next);
 
   if (famineTicks >= DIFFICULTIES[state.difficulty].famineLimit) {
-    return { ...next, phase: "gameover", log: ["Famine has wiped out the tribe.", ...next.log] };
+    return { ...next, phase: "gameover", lostTo: "famine", log: ["Famine has wiped out the tribe.", ...next.log] };
+  }
+  if (unrestTicks >= DIFFICULTIES[state.difficulty].unrestLimit) {
+    return { ...next, phase: "gameover", lostTo: "unrest", log: ["Your people lost hope and left.", ...next.log] };
   }
 
   if (next.tick >= next.nextEventTick) {

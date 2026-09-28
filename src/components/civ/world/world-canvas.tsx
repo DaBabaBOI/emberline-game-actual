@@ -1,11 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { Vector3 } from "three";
 import { Html, MapControls } from "@react-three/drei";
 import { BUILDINGS_BY_ID } from "@/game/content";
 import { DEMOLISH_TOOL, demolishError, demolishRefund, placementError } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
+import { tileAnchor } from "@/components/civ/guide";
+import { useGuide } from "@/components/civ/hud/guide-overlay";
+import type { Tile } from "@/game/types";
 import { Deposits, Forests, HexTerrain, Mountains, tileTop } from "./hex-terrain";
 import { MODELS } from "./building-models";
 import { Raiders, Villagers, Warriors } from "./villagers";
@@ -21,9 +25,38 @@ function HexOutline({ x, y, z, color }: { x: number; y: number; z: number; color
   );
 }
 
+const probe = new Vector3();
+
+// Tells the tutorial overlay where the tile it points at is on screen.
+function GuideAnchor({ tile }: { tile: Tile | null }) {
+  useFrame(({ camera, size }) => {
+    if (!tile) {
+      tileAnchor.visible = false;
+      return;
+    }
+    const top = tileTop(tile);
+    probe.set(tile.x, top, tile.z).project(camera);
+    const x = ((probe.x + 1) / 2) * size.width;
+    const y = ((1 - probe.y) / 2) * size.height;
+    const inFront = probe.z < 1;
+    probe.set(tile.x + 0.9, top, tile.z).project(camera);
+    const ex = ((probe.x + 1) / 2) * size.width;
+    const ey = ((1 - probe.y) / 2) * size.height;
+    tileAnchor.x = x;
+    tileAnchor.y = y;
+    tileAnchor.r = Math.max(26, Math.hypot(ex - x, ey - y) * 1.3);
+    tileAnchor.visible = inFront;
+  });
+  return null;
+}
+
 export function WorldCanvas() {
   const { state, dispatch, selected, setSelected } = useGame();
-  const [hovered, setHovered] = useState<number | null>(null);
+  const [rawHovered, setHovered] = useState<number | null>(null);
+  const guide = useGuide();
+  const guideTile = guide.target?.kind === "tile" ? guide.target.tileId : null;
+  // While the tutorial points at a tile, that is the only one you can build on.
+  const hovered = guideTile === null || rawHovered === guideTile ? rawHovered : null;
   const home = state.tiles[state.startTile];
   const target = useMemo<[number, number, number]>(() => [home.x, 0, home.z], [home.x, home.z]);
 
@@ -46,6 +79,7 @@ export function WorldCanvas() {
   const Ghost = def ? MODELS[def.id] : null;
 
   function pick(id: number) {
+    if (guideTile !== null && id !== guideTile) return;
     if (demolishing) {
       dispatch({ type: "demolish", tileId: id });
       return;
@@ -147,7 +181,10 @@ export function WorldCanvas() {
         </group>
       )}
 
+      <GuideAnchor tile={guideTile === null ? null : state.tiles[guideTile]} />
+
       <MapControls
+        enabled={!guide.target}
         target={target}
         enableDamping
         dampingFactor={0.12}

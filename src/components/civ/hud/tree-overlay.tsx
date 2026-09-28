@@ -109,6 +109,7 @@ export function TreeOverlay() {
           <span>Secrets found: <span className="font-num">{state.secretsFound.length}</span></span>
           <button
             type="button"
+            data-guide="tree-close"
             onClick={() => setPanel(null)}
             className="pixel-btn bg-[#fdf6e3] px-3 py-1.5 text-[#2b2119]"
           >
@@ -192,6 +193,7 @@ export function TreeOverlay() {
               <button
                 key={node.id}
                 type="button"
+                data-guide={`tree-node-${node.id}`}
                 onClick={() => setFocus(node.id)}
                 className={cn(
                   "font-pixel absolute flex flex-col justify-center border-[3px] px-2 text-left",
@@ -262,6 +264,7 @@ export function TreeOverlay() {
             {focusStatus === "available" && (
               <button
                 type="button"
+                data-guide="tree-research"
                 disabled={locked || state.resources.knowledge < focused.cost}
                 onClick={() => dispatch({ type: "research", nodeId: focused.id })}
                 className="pixel-btn font-pixel flex shrink-0 items-center gap-1.5 bg-emerald-500 px-4 py-2 text-base font-semibold text-[#2b2119] hover:bg-emerald-400 disabled:opacity-40"

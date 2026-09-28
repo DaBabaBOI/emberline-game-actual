@@ -5,13 +5,15 @@ import { ERAS, formatYear, TUTORIAL } from "@/game/content";
 import { clearSave, defenseStrength, warnings } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
+import { useGuide } from "./guide-overlay";
 
 export function TutorialPanel() {
   const { state, dispatch } = useGame();
+  const { waiting } = useGuide();
   const step = TUTORIAL[state.tutorialStep];
   if (!step) return null;
   return (
-    <div className="pixel-panel pointer-events-auto absolute left-16 top-20 max-w-xs p-3 text-sm">
+    <div className="pixel-panel pointer-events-auto absolute left-16 top-20 z-[26] max-w-xs p-3 text-sm">
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="font-pixel flex items-center gap-2 text-base font-semibold">
           <PixelIcon name="elder" size={28} />
@@ -22,6 +24,7 @@ export function TutorialPanel() {
         </span>
       </div>
       <p>{step.text}</p>
+      {waiting && <p className="mt-1 text-xs italic text-amber-800">{waiting}</p>}
       <button
         type="button"
         onClick={() => dispatch({ type: "skipTutorial" })}
@@ -63,13 +66,17 @@ export function EventModal() {
 export function GameOver({ onRestart }: { onRestart: () => void }) {
   const { state } = useGame();
   if (state.phase !== "gameover") return null;
+  const unrest = state.lostTo === "unrest";
   return (
     <div className="pointer-events-auto absolute inset-0 z-40 flex items-center justify-center bg-black/60">
       <div className="pixel-panel w-[min(92vw,400px)] p-6 text-center">
-        <PixelIcon name="skull" size={64} className="mx-auto mb-2" />
-        <h2 className="font-pixel text-3xl font-bold">Famine</h2>
+        <PixelIcon name={unrest ? "sad" : "skull"} size={64} className="mx-auto mb-2" />
+        <h2 className="font-pixel text-3xl font-bold">{unrest ? "The tribe has left" : "Famine"}</h2>
         <p className="mt-2 text-sm text-stone-600">
-          Your people ran out of food in {formatYear(state.year)}. They built{" "}
+          {unrest
+            ? `Your people were too unhappy for too long and wandered away in ${formatYear(state.year)}.`
+            : `Your people ran out of food in ${formatYear(state.year)}.`}{" "}
+          They built{" "}
           {state.tiles.filter((t) => t.building).length} structures and made{" "}
           {state.researched.length - 1} discoveries.
         </p>
