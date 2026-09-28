@@ -1,3 +1,5 @@
+import type { IconId } from "./sprites";
+
 export type Terrain =
   | "deep"
   | "shallow"
@@ -69,7 +71,7 @@ export type DifficultyId = "easy" | "normal" | "hard";
 export interface BuildingDef {
   id: string;
   name: string;
-  icon: string;
+  icon: IconId;
   description: string;
   era: number;
   cost: Partial<Resources>;
@@ -109,7 +111,7 @@ export interface EventCard {
   id: string;
   title: string;
   body: string;
-  icon: string;
+  icon: IconId;
   choices: EventChoice[];
 }
 

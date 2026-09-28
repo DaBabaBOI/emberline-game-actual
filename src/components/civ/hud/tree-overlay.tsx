@@ -5,6 +5,7 @@ import { BRANCHES, BUILDINGS_BY_ID, ERAS, TREE, TREE_BY_ID } from "@/game/conten
 import { useGame } from "@/components/civ/game-provider";
 import type { TreeNode } from "@/game/types";
 import { cn } from "@/lib/utils";
+import { PixelIcon } from "@/components/civ/pixel-icon";
 
 const COL = 170;
 const ROW = 96;
@@ -76,18 +77,18 @@ export function TreeOverlay() {
   const hidden = focusStatus === "secret";
 
   return (
-    <div className="pointer-events-auto absolute inset-0 z-20 flex flex-col bg-slate-950/85 text-white backdrop-blur-sm">
+    <div className="pointer-events-auto absolute inset-0 z-20 flex flex-col bg-[#1f1812]/95 text-[#fdf6e3]">
       <div className="flex items-center justify-between px-5 py-3">
         <div>
-          <h2 className="text-lg font-semibold">Advancements</h2>
-          <p className="text-xs text-white/60">
-            💡 {Math.floor(state.resources.knowledge)} knowledge · Secrets found: {state.secretsFound.length}
+          <h2 className="font-pixel flex items-center gap-2 text-xl font-semibold"><PixelIcon name="star" size={22} />Advancements</h2>
+          <p className="flex items-center gap-1 text-xs text-white/60">
+            <PixelIcon name="bulb" size={12} /> {Math.floor(state.resources.knowledge)} knowledge · Secrets found: {state.secretsFound.length}
           </p>
         </div>
         <button
           type="button"
           onClick={() => setPanel(null)}
-          className="rounded-lg bg-white/10 px-3 py-1.5 text-sm hover:bg-white/20"
+          className="pixel-btn font-pixel bg-[#fdf6e3] px-3 py-1.5 text-sm text-[#2b2119]"
         >
           Close ✕
         </button>
@@ -153,11 +154,11 @@ export function TreeOverlay() {
                 type="button"
                 onClick={() => setFocus(node.id)}
                 className={cn(
-                  "absolute flex flex-col justify-center rounded-lg border-2 px-2 text-left transition",
+                  "font-pixel absolute flex flex-col justify-center border-[3px] px-2 text-left transition",
                   s === "done" && "text-slate-950",
-                  s === "available" && "animate-pulse bg-slate-800",
-                  (s === "locked" || s === "soon") && "bg-slate-900 opacity-50",
-                  s === "secret" && "border-dashed bg-slate-900 opacity-70",
+                  s === "available" && "animate-pulse bg-[#3a2e24]",
+                  (s === "locked" || s === "soon") && "bg-[#2a211a] opacity-50",
+                  s === "secret" && "border-dashed bg-[#2a211a] opacity-70",
                   focus === node.id && "ring-2 ring-white",
                 )}
                 style={{
@@ -174,8 +175,8 @@ export function TreeOverlay() {
                 </span>
                 <span className="text-[10px] opacity-75">
                   {s === "done" && "✓ discovered"}
-                  {s === "available" && `💡 ${node.cost}`}
-                  {s === "locked" && "🔒 locked"}
+                  {s === "available" && `${node.cost} knowledge`}
+                  {s === "locked" && "locked"}
                   {s === "soon" && "coming soon"}
                   {s === "secret" && "hidden goal"}
                 </span>
@@ -205,9 +206,9 @@ export function TreeOverlay() {
             type="button"
             disabled={state.resources.knowledge < focused.cost}
             onClick={() => dispatch({ type: "research", nodeId: focused.id })}
-            className="shrink-0 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400 disabled:opacity-40"
+            className="pixel-btn font-pixel flex shrink-0 items-center gap-1.5 bg-emerald-500 px-4 py-2 text-sm font-semibold text-[#2b2119] hover:bg-emerald-400 disabled:opacity-40"
           >
-            Research (💡 {focused.cost})
+            Research <PixelIcon name="bulb" size={14} /> {focused.cost}
           </button>
         )}
       </div>

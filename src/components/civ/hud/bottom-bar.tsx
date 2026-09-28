@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { BUILDINGS, TRAIN_COST, TREE_BY_ID } from "@/game/content";
 import {
   buildingCost,
@@ -11,13 +12,79 @@ import {
   production,
   warriorCap,
 } from "@/game/engine";
+import type { Resources } from "@/game/types";
+import type { IconId } from "@/game/sprites";
 import { useGame } from "@/components/civ/game-provider";
+import { PixelIcon } from "@/components/civ/pixel-icon";
 import { cn } from "@/lib/utils";
 
-const COST_ICONS: Record<string, string> = { wood: "🪵", stone: "🪨", food: "🍖", currency: "🐚", knowledge: "💡" };
+const COST_ICONS: Record<keyof Resources, IconId> = {
+  wood: "log",
+  stone: "rock",
+  food: "meat",
+  currency: "coin",
+  knowledge: "bulb",
+};
 
 function rate(n: number) {
   return `${n >= 0 ? "+" : ""}${n.toFixed(1)}`;
+}
+
+function Cost({ cost, bad }: { cost: Partial<Resources>; bad?: boolean }) {
+  return (
+    <span className={cn("flex items-center gap-1 text-[10px]", bad && "text-red-300")}>
+      {Object.entries(cost).map(([k, v]) => (
+        <span key={k} className="flex items-center gap-0.5">
+          <PixelIcon name={COST_ICONS[k as keyof Resources]} size={11} />
+          {v}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function Stat({ icon, children, title, bad }: { icon: IconId; children: ReactNode; title: string; bad?: boolean }) {
+  return (
+    <span title={title} className={cn("flex items-center gap-1", bad && "text-red-300")}>
+      <PixelIcon name={icon} size={12} />
+      {children}
+    </span>
+  );
+}
+
+function ToolButton({
+  icon,
+  label,
+  onClick,
+  disabled,
+  title,
+  tone,
+  children,
+}: {
+  icon: IconId;
+  label: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  title: string;
+  tone: string;
+  children?: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className={cn(
+        "pixel-btn flex min-w-16 flex-col items-center justify-center gap-0.5 px-2 py-1 text-[11px] disabled:opacity-40",
+        tone,
+      )}
+    >
+      <PixelIcon name={icon} size={24} />
+      {label}
+      {children}
+    </button>
+  );
 }
 
 export function BottomBar() {
@@ -28,15 +95,23 @@ export function BottomBar() {
 
   return (
     <div className="pointer-events-auto absolute inset-x-0 bottom-3 flex justify-center px-3">
-      <div className="flex max-w-full items-stretch gap-3 rounded-2xl bg-slate-950/65 p-2 text-white shadow-lg ring-1 ring-white/10 backdrop-blur">
-        <div className="hidden flex-col justify-center gap-0.5 border-r border-white/10 pr-3 text-[11px] text-white/80 md:flex">
-          <span title="Housing">🏠 {Math.floor(state.population)}/{housingCapacity(state)}</span>
-          <span title="Food per second" className={net < 0 ? "text-red-300" : ""}>🍖 {rate(net)}/s</span>
-          <span title="Wood per second">🪵 {rate(prod.wood)}/s</span>
-          <span title="Knowledge per second">💡 {rate(prod.knowledge)}/s</span>
+      <div className="pixel-panel-dark font-pixel flex max-w-full items-stretch gap-3 p-2">
+        <div className="hidden flex-col justify-center gap-0.5 border-r-2 border-white/10 pr-3 text-[11px] text-white/85 md:flex">
+          <Stat icon="hut" title="Housing">
+            {Math.floor(state.population)}/{housingCapacity(state)}
+          </Stat>
+          <Stat icon="meat" title="Food per second" bad={net < 0}>
+            {rate(net)}/s
+          </Stat>
+          <Stat icon="log" title="Wood per second" bad={prod.wood < 0}>
+            {rate(prod.wood)}/s
+          </Stat>
+          <Stat icon="bulb" title="Knowledge per second">
+            {rate(prod.knowledge)}/s
+          </Stat>
         </div>
 
-        <div className="flex gap-1.5 overflow-x-auto">
+        <div className="flex gap-1.5 overflow-x-auto pb-1">
           {eraBuildings.map((b) => {
             const unlocked = isUnlocked(state, b);
             const cost = buildingCost(state, b);
@@ -54,56 +129,38 @@ export function BottomBar() {
                     : `Research ${TREE_BY_ID[b.requires ?? ""]?.name ?? "more"} to unlock`
                 }
                 className={cn(
-                  "flex w-20 shrink-0 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-center transition",
-                  active ? "bg-amber-400 text-slate-950" : "bg-white/5 hover:bg-white/15",
-                  !unlocked && "cursor-not-allowed opacity-35",
+                  "pixel-btn flex w-20 shrink-0 flex-col items-center gap-0.5 px-1 py-1.5 text-center",
+                  active ? "bg-amber-400 text-[#2b2119]" : "bg-[#4a3b2e] hover:bg-[#5c4a3a]",
+                  !unlocked && "cursor-not-allowed opacity-40",
                 )}
               >
-                <span className="text-xl leading-none">{unlocked ? b.icon : "🔒"}</span>
-                <span className="text-[11px] font-medium leading-tight">{b.name}</span>
-                <span className={cn("flex gap-1 text-[10px]", !affordable && !active && "text-red-300")}>
-                  {Object.entries(cost).map(([k, v]) => (
-                    <span key={k}>
-                      {COST_ICONS[k]}
-                      {v}
-                    </span>
-                  ))}
-                </span>
+                <PixelIcon name={unlocked ? b.icon : "lock"} size={24} />
+                <span className="text-[11px] leading-tight">{b.name}</span>
+                <Cost cost={cost} bad={!affordable && !active} />
               </button>
             );
           })}
         </div>
 
-        <div className="flex gap-1.5 border-l border-white/10 pl-3">
+        <div className="flex gap-1.5 border-l-2 border-white/10 pl-3">
           <ArmyButton />
-          <button
-            type="button"
+          <ToolButton
+            icon="spyglass"
+            label="Scout"
             onClick={() => dispatch({ type: "scout" })}
             disabled={state.resources.food < 10}
             title="Send scouts to reveal new land (costs 10 food)"
-            className="flex w-16 flex-col items-center justify-center gap-0.5 rounded-xl bg-white/5 text-[11px] hover:bg-white/15 disabled:opacity-40"
-          >
-            <span className="text-xl leading-none">🧭</span>
-            Scout
-          </button>
-          <button
-            type="button"
+            tone="bg-[#4a3b2e] hover:bg-[#5c4a3a]"
+          />
+          <ToolButton
+            icon="star"
+            label="Advancements"
             onClick={() => setPanel("tree")}
             title="Research new technology and see your goals"
-            className="flex w-24 flex-col items-center justify-center gap-0.5 rounded-xl bg-emerald-500/25 text-[11px] hover:bg-emerald-500/40"
-          >
-            <span className="text-xl leading-none">✨</span>
-            Advancements
-          </button>
+            tone="bg-emerald-700 hover:bg-emerald-600"
+          />
           {state.flags.rocket && (
-            <button
-              type="button"
-              title="Zoom out to space"
-              className="flex w-16 flex-col items-center justify-center gap-0.5 rounded-xl bg-indigo-500/30 text-[11px] hover:bg-indigo-500/50"
-            >
-              <span className="text-xl leading-none">🚀</span>
-              Space
-            </button>
+            <ToolButton icon="rocket" label="Space" title="Zoom out to space" tone="bg-indigo-700 hover:bg-indigo-600" />
           )}
         </div>
       </div>
@@ -121,20 +178,17 @@ function ArmyButton() {
       ? "Build a War Camp to train warriors"
       : full
         ? "All War Camps are full. Build another to train more."
-        : `Train a warrior (🍖${TRAIN_COST.food} 🪵${TRAIN_COST.wood}). Defense: ${defenseStrength(state)}`;
+        : `Train a warrior. Defense: ${defenseStrength(state)}`;
   return (
-    <button
-      type="button"
+    <ToolButton
+      icon="sword"
+      label={`Train ${state.soldiers}/${cap}`}
       onClick={() => dispatch({ type: "train" })}
       disabled={cap === 0 || full || !affordable}
       title={title}
-      className="flex w-20 flex-col items-center justify-center gap-0.5 rounded-xl bg-red-500/20 text-[11px] hover:bg-red-500/35 disabled:opacity-45"
+      tone="bg-red-800 hover:bg-red-700"
     >
-      <span className="text-xl leading-none">🗡️</span>
-      Train {state.soldiers}/{cap}
-      <span className="text-[10px] text-white/70">
-        🍖{TRAIN_COST.food} 🪵{TRAIN_COST.wood}
-      </span>
-    </button>
+      <Cost cost={TRAIN_COST} />
+    </ToolButton>
   );
 }
