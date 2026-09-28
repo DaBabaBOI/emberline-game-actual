@@ -31,16 +31,20 @@ Every building that feeds or shelters your people pulls on the land:
 
 | You build… | You get… | The land pays… |
 | --- | --- | --- |
-| Woodcutter | Wood for fires and buildings | Sustainability drops; nearby forest thins out |
-| Stone Quarry | Stone for better buildings | Sustainability drops |
-| Farmland | Steady food | Sustainability drops a little |
-| Campfire | Warmth and happiness | Burns wood; Sustainability drops slightly |
+| Woodcutter | Wood for fires and buildings | It fells the trees around it; once they're gone it makes no wood |
+| Campfire | Warmth and happiness | Burns wood, adds smoke, and raises the risk of a wildfire in nearby trees |
+| Hut | Room for more people | More people eat more food |
+| Farmland | Steady food | Clears land |
+| Stone Quarry | Stone for better buildings | Digs pits into the land |
 
-When Sustainability falls, you can **see it and feel it**. Below 70 a haze starts
-to grey the sky; below 60 smoke rises from woodcutters, quarries and fires. Low
-Sustainability also drags down Happiness, and if your people stay miserable for
-too long, they leave. Events push the same way: let a wildfire burn and the
-forest and nearby buildings are lost, leaving charred ground that heals slowly.
+**Sustainability measures how much forest is still standing** around the
+village. Cut trees faster than they regrow and it falls; stop cutting and it
+recovers only as slowly as the forest grows back. Push it too low for too long
+and the land wears out: forests stop regrowing, harvests shrink and the grass
+dries up. Along the way you can see the damage on the map. Stumps and bare
+ground replace the trees, smoke thickens over your fires, and there are fewer
+deer and boar to hunt. Low Sustainability also drags down Happiness, and if your
+people stay miserable for too long, they leave.
 
 The player is always choosing between **more now** and **a healthy settlement
 later**.
@@ -52,15 +56,15 @@ supported by three mechanics tied to other goals:
 
 | Goal | Role | In the game |
 | --- | --- | --- |
-| **11 · Sustainable Cities & Communities** | Core trade-off | The Sustainability meter, haze and smoke, shelter for a growing population, forests that regrow only if you let them |
+| **11 · Sustainable Cities & Communities** | Core trade-off | The Sustainability meter (forest health), shelter and food for a growing population, forests that regrow only if you let them |
 | 4 · Quality Education | Supporting | Literacy is one of the six meters; knowledge unlocks every advancement |
 | 7 · Affordable & Clean Energy | Supporting | Energy comes from fire, and fire needs wood, so energy has a direct cost to the land |
 | 9 · Industry, Innovation & Infrastructure | Supporting | The advancement tree: each new technology opens new buildings and new trade-offs |
 
 ## What you can do in the Stone Age slice
 
-- **Explore a hex island** hidden under cloud. Scouting costs food and wood and
-  gets pricier each trip.
+- **Explore hex islands** of grassland, forest, dry steppe, marsh and hills,
+  hidden under cloud. Scouting costs food and wood and gets pricier each trip.
 - **Place ten buildings** (campfire, hut, gatherer, woodcutter, farmland, war camp,
   fishing spot, quarry, elder's hut, healer's hut) with a see-through preview
   first. Sell any of them back for half the cost.
@@ -72,7 +76,8 @@ supported by three mechanics tied to other goals:
 - **Respond to events** (wildfires, wanderers, traders, great hunts) whose choices
   have lasting effects.
 - **Pick a culture and difficulty**: seven cultures, three difficulties.
-- **Learn by doing**: a guided tutorial where a pointing hand shows each step.
+- **Learn by doing**: a guided tutorial where a pointing hand shows each step,
+  with exactly the resources it needs and no raids until it's done.
 - **Two ways to lose**: famine (no food for too long) or unrest (people too
   unhappy for too long). Both warn you with a countdown first.
 
@@ -107,7 +112,13 @@ trade-off into later eras, where the stakes get bigger:
 - **Balance took several passes.** Scouting could be spammed and woodcutters made
   too much wood, so we made wood scarce and scouting expensive. Wildfires first
   came too often. We made them rarer, but then they didn't matter enough. In the
-  end they became rare but damaging.
+  end they became rare but damaging, and more likely the more campfires you
+  build next to trees.
+- **Our pollution wasn't realistic.** Early on, woodcutters and quarries
+  produced smog and grey skies, which doesn't fit the Stone Age, and forests
+  spread over the whole island. We rebuilt Sustainability around the forest
+  that's actually left, made smoke come only from fires, stopped forests from
+  spreading, and added steppe and marsh biomes.
 - **The tutorial let players skip ahead.** We locked anything the tutorial hadn't
   introduced yet, limited it to one of each building, and added a pointing hand
   that blocks other clicks.
