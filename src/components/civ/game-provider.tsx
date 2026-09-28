@@ -9,7 +9,7 @@ import {
   type Dispatch,
   type ReactNode,
 } from "react";
-import { TUTORIAL } from "@/game/content";
+import { TICK_SECONDS, TUTORIAL } from "@/game/content";
 import { reducer, saveGame, type Action } from "@/game/engine";
 import { guideFor } from "./guide";
 import type { GameState } from "@/game/types";
@@ -50,7 +50,7 @@ export function GameProvider({
 
   useEffect(() => {
     if (state.speed === 0 || state.phase !== "playing" || panel || held) return;
-    const id = setInterval(() => dispatch({ type: "tick" }), 1000 / state.speed);
+    const id = setInterval(() => dispatch({ type: "tick" }), (TICK_SECONDS * 1000) / state.speed);
     return () => clearInterval(id);
   }, [state.speed, state.phase, panel, held]);
 

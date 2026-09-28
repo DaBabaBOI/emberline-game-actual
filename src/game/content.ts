@@ -88,8 +88,8 @@ export const BUILDINGS: BuildingDef[] = [
     era: 0,
     cost: { wood: 8 },
     terrain: ["grass", "steppe", "forest", "marsh"],
-    produces: { food: 0.6 },
-    depositBonus: { deposit: "berries", amount: { food: 0.5 } },
+    produces: { food: 0.9 },
+    depositBonus: { deposit: "berries", amount: { food: 0.6 } },
     reveal: 2,
   },
   {
@@ -101,7 +101,7 @@ export const BUILDINGS: BuildingDef[] = [
     cost: { wood: 12 },
     terrain: ["grass"],
     requires: "early-farming",
-    produces: { food: 1.1 },
+    produces: { food: 1.5 },
     reveal: 1,
   },
   {
@@ -135,7 +135,7 @@ export const BUILDINGS: BuildingDef[] = [
     terrain: ["beach"],
     needsWaterNeighbor: true,
     requires: "fishing",
-    produces: { food: 0.9 },
+    produces: { food: 1.2 },
     reveal: 3,
   },
   {
@@ -422,9 +422,13 @@ export const LAND = {
 // Wildfire odds: a little from lightning, more for every campfire near trees.
 export const FIRE_RISK = { base: 0.1, perForestTile: 0.06, max: 1.5 };
 
-// A campfire burns this many seconds on one load of wood, then goes out until
+// Real seconds per game tick at 1× speed. Everything in the engine counts in
+// ticks; the UI converts to seconds with this. Raising it slows the whole game.
+export const TICK_SECONDS = 1.5;
+
+// A campfire burns this many ticks on one load of wood, then goes out until
 // the player clicks it to relight it (costs RELIGHT_WOOD). Firekeeping: ×1.5.
-export const CAMPFIRE_BURN_TICKS = 40;
+export const CAMPFIRE_BURN_TICKS = 60;
 export const RELIGHT_WOOD = 1;
 
 // Disease. Before Herbalism the tribe calls it a curse from the gods; after it,
@@ -434,8 +438,8 @@ export const DISEASE = {
   perPerson: 0.00012,
   crowding: 2,
   // Each hunt (per animal brought back) and each fishing spot.
-  hunt: 0.05,
-  fishing: 0.0012,
+  hunt: 0.02,
+  fishing: 0.0006,
   // Welcomed wanderers bring it with them this often (per event).
   wanderers: 0.4,
   // Each sick person infects this many healthy people per second (× healthy share).
@@ -453,7 +457,7 @@ export const DISEASE = {
 // Pressure that grows with the tribe, so developing is as hard as surviving.
 export const GROWTH_PRESSURE = {
   // No way to preserve food yet: stored food above this rots away (share per second).
-  foodKeeps: 60,
+  foodKeeps: 100,
   foodRots: 0.015,
   // Each lit campfire warms this many people; the rest are cold.
   peoplePerFire: 10,
@@ -464,10 +468,11 @@ export const GROWTH_PRESSURE = {
 // Buying something that leaves less wood than this shows a "save up" warning.
 export const LOW_WOOD_AFTER_BUY = 10;
 
-// After the tutorial, how long before the first event and the first raid.
-export const GRACE_AFTER_TUTORIAL = { event: 90, raid: 150 };
+// After the tutorial, how long (ticks) before the first event, the first raid,
+// and the first disease that isn't the player's own choice. The early game is calm.
+export const GRACE_AFTER_TUTORIAL = { event: 150, raid: 300, disease: 300 };
 
-export const AFTER_TUTORIAL_RESERVE: Partial<Resources> = { food: 40, wood: 10 };
+export const AFTER_TUTORIAL_RESERVE: Partial<Resources> = { food: 60, wood: 15 };
 
 // `buys` lists what the step pays for: building ids, "scout", "train" or an
 // advancement id. The starting resources are worked out from it.

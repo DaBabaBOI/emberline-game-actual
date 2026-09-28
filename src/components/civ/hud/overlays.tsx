@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { ERAS, formatYear, TUTORIAL } from "@/game/content";
-import { clearSave, defenseStrength, warnings } from "@/game/engine";
+import { clearSave, defenseStrength, secs, warnings } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { useGuide } from "./guide-overlay";
@@ -100,17 +101,53 @@ export function GameOver({ onRestart }: { onRestart: () => void }) {
   );
 }
 
+const TOAST_MS = 5000;
+const MAX_TOASTS = 2;
+
+// New log lines pop up briefly (at most two at a time) and then fade away,
+// so the screen never fills with messages.
 export function Toasts() {
   const { state } = useGame();
+  const [toasts, setToasts] = useState<{ id: number; text: string }[]>([]);
+  const seen = useRef(state.log);
+  const nextId = useRef(0);
+
+  useEffect(() => {
+    const prev = seen.current;
+    seen.current = state.log;
+    if (state.log === prev) return;
+    // New lines are added to the front; find where the old log starts.
+    let fresh = state.log.length;
+    for (let k = 0; k < state.log.length; k++) {
+      if (state.log[k] === prev[0] && state.log[k + 1] === prev[1]) {
+        fresh = k;
+        break;
+      }
+    }
+    const added = state.log.slice(0, Math.min(fresh, MAX_TOASTS)).reverse();
+    if (!added.length) return;
+    const ids = added.map(() => nextId.current++);
+    const show = setTimeout(() => {
+      setToasts((list) =>
+        [...added.map((text, i) => ({ id: ids[i], text })).reverse(), ...list].slice(0, MAX_TOASTS),
+      );
+    }, 0);
+    // The hide timer is left running on purpose, even if the log changes again.
+    setTimeout(() => {
+      setToasts((list) => list.filter((t) => !ids.includes(t.id)));
+    }, TOAST_MS);
+    return () => clearTimeout(show);
+  }, [state.log]);
+
   return (
     <div className="pointer-events-none absolute right-16 top-20 flex w-64 flex-col items-end gap-1">
-      {state.log.slice(0, 3).map((line, i) => (
+      {toasts.map((t, i) => (
         <div
-          key={`${line}-${i}`}
+          key={t.id}
           className="pixel-panel-dark font-pixel px-2.5 py-1 text-xs"
-          style={{ opacity: 1 - i * 0.3 }}
+          style={{ opacity: 1 - i * 0.35 }}
         >
-          {line}
+          {t.text}
         </div>
       ))}
     </div>
@@ -132,31 +169,43 @@ export function RaidBanner() {
         }
       >
         <PixelIcon name="warning" size={18} />
-        {state.raid.strength} raiders arriving in {eta}s · Your defense: {defense}
+        {state.raid.strength} raiders arriving in {secs(eta)}s · Your defense: {defense}
         {safe ? " (you can hold them)" : " (train more warriors!)"}
       </div>
     </div>
   );
 }
 
+// Only the most urgent warning is shown; the rest wait behind a "+N more" button.
 export function Warnings() {
   const { state } = useGame();
-  const list = warnings(state);
+  const [open, setOpen] = useState(false);
+  const list = [...warnings(state)].sort((a, b) => Number(b.severe) - Number(a.severe));
   if (list.length === 0) return null;
+  const shown = open ? list : list.slice(0, 1);
   return (
     <div className="pointer-events-none absolute bottom-32 left-3 flex max-w-72 flex-col gap-1.5">
-      {list.map((w) => (
+      {shown.map((w) => (
         <div
           key={w.id}
           className={
             "pixel-panel-dark font-pixel flex items-center gap-2 px-2.5 py-1.5 text-xs " +
-            (w.severe ? "!border-red-700 animate-pulse" : "")
+            (w.severe ? "!border-red-700" : "")
           }
         >
           <PixelIcon name={w.icon} size={20} />
           <span>{w.text}</span>
         </div>
       ))}
+      {list.length > 1 && (
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          className="pixel-btn font-pixel pointer-events-auto self-start bg-[#4a3b2e] px-2 py-0.5 text-[11px] text-white"
+        >
+          {open ? "Show less" : `+${list.length - 1} more`}
+        </button>
+      )}
     </div>
   );
 }

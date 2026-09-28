@@ -101,6 +101,13 @@ These were decided with the project owner. Do not change them without being aske
   pricier each trip (Transport advancements make it 20% cheaper each).
 - Events are rare but **hit hard** (a wildfire really burns the forest and nearby
   buildings, leaving charred ground that heals). Keep events meaningful.
+- **Pace:** one game tick = `TICK_SECONDS` (1.5 s) at 1× speed. The engine
+  counts in ticks; anything shown to the player in seconds goes through
+  `secs()` / `perSecond()`. The early game is deliberately calm and easy
+  (`GRACE_AFTER_TUTORIAL`: first event after 150 ticks, first raid after 300,
+  no disease out of nowhere for 300); pressure builds as the tribe grows.
+- **Never flood the screen:** at most 2 toasts at once, each gone after ~5 s,
+  and only the most urgent warning is shown (the rest behind "+N more").
 - **Low-resource warnings** (food, wood, famine, unrest, no fire) show bottom-left and the
   top-bar number flashes red. Add new ones in `warnings()` in `engine.ts`.
 - Numbers in the UI use the `font-num` class (VT323): Pixelify's digits 2/5/8
