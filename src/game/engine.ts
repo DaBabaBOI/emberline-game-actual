@@ -489,6 +489,16 @@ export function warnings(state: GameState): Warning[] {
     });
   }
 
+  const trend = sustainabilityTrend(state);
+  if (trend <= -4 && state.strainTicks === 0) {
+    out.push({
+      id: "land",
+      icon: "leaf",
+      text: `The land is getting worse: Sustainability fell ${Math.round(-trend)} in the last minute. Click the leaf meter to see why.`,
+      severe: false,
+    });
+  }
+
   if (state.strainTicks > 0) {
     out.push({
       id: "land",
@@ -540,6 +550,55 @@ export function warnings(state: GameState): Warning[] {
 // A fire only counts if there's wood to keep it burning.
 export function hasLitFire(state: GameState) {
   return litFires(state).length > 0;
+}
+
+export interface SustainPart {
+  label: string;
+  value: number;
+  hint: string;
+}
+
+// Everything that pushes Sustainability up or down, so the player can see
+// exactly what their choices are costing the land. computeMeters sums these.
+export function sustainabilityBreakdown(state: GameState): SustainPart[] {
+  const counts = countBuildings(state);
+  const lit = litFires(state).length;
+  const cover = forestCover(state);
+  const parts: SustainPart[] = [
+    {
+      label: `Forest standing: ${Math.round(cover * 100)}%`,
+      value: -(1 - cover) * 85,
+      hint: "Woodcutters fell trees faster than they grow back. Selective logging and replanting help.",
+    },
+    {
+      label: `Smoke from ${lit} fire${lit === 1 ? "" : "s"}`,
+      value: -lit * 2,
+      hint: "Every fire burns wood and fills the air with smoke.",
+    },
+    {
+      label: `${counts.quarry ?? 0} quarr${counts.quarry === 1 ? "y" : "ies"} digging pits`,
+      value: -(counts.quarry ?? 0) * 3,
+      hint: "Quarries tear up the ground for stone.",
+    },
+    {
+      label: `${counts.farm ?? 0} field${counts.farm === 1 ? "" : "s"} cleared`,
+      value: -(counts.farm ?? 0) * 1,
+      hint: "Farmland replaces wild land.",
+    },
+    {
+      label: "Recent events",
+      value: state.modifiers.sustainability,
+      hint: "Fires and choices you made in events. This fades over time.",
+    },
+  ];
+  return parts.filter((p, i) => i === 0 || Math.abs(p.value) >= 0.5);
+}
+
+// How much Sustainability changed over roughly the last minute of play.
+export function sustainabilityTrend(state: GameState) {
+  const trail = state.sustainTrail ?? [];
+  if (trail.length < 2) return 0;
+  return state.meters.sustainability - trail[0];
 }
 
 // Share of the tribe with no fire to warm them (each fire warms peoplePerFire).
@@ -596,15 +655,8 @@ export function computeMeters(state: GameState): Meters {
   const energy =
     lit * 20 * fireBoost;
 
-  // How healthy the land is: mostly the forest still standing around the village,
-  // plus wood smoke from fires and the pits and fields dug into the ground.
-  const sustainability =
-    100 -
-    (1 - forestCover(state)) * 85 -
-    lit * 2 -
-    (counts.quarry ?? 0) * 3 -
-    (counts.farm ?? 0) * 1 +
-    state.modifiers.sustainability;
+  // How healthy the land is (see sustainabilityBreakdown for the parts).
+  const sustainability = 100 + sustainabilityBreakdown(state).reduce((sum, p) => sum + p.value, 0);
 
   const literacy = (counts.elder ?? 0) * 12 + (state.researched.length - 1) * 2;
 
@@ -762,6 +814,10 @@ function tick(state: GameState): GameState {
   }
 
   next = stepDisease(next, housingCapacity(next), mulberry32(next.seed + next.tick * 31));
+  // Remember Sustainability every 5 ticks for the trend (about the last minute).
+  if (next.tick % 5 === 0) {
+    next = { ...next, sustainTrail: [...(next.sustainTrail ?? []), next.meters.sustainability].slice(-8) };
+  }
   next = checkSecrets(next);
   next = advanceTutorial(next);
   return { ...next, meters: computeMeters(next) };

@@ -78,6 +78,12 @@ These were decided with the project owner. Do not change them without being aske
   population.
 - Buildings can be **sold** (the "Sell" tool) for a 50% refund.
 - During the tutorial the player can only build **one of each** building.
+- **Trade-offs are the point of the game. Always show them.** Every building
+  has `gain`, `landCost` and `landImpact` (0–3 stumps on its card); the
+  placement preview shows the trade-off. Clicking the Sustainability meter
+  shows `sustainabilityBreakdown()` (every part pushing it down or up) and the
+  trend over the last minute. A new building or mechanic that affects the land
+  must add its own line to the breakdown and its own gain/cost text.
 - **Sustainability = land health** (`computeMeters`): mostly the share of
   forest still standing within `LAND.radius` of the start (`forestCover`), minus
   a little for campfire smoke, quarries and fields. Woodcutters really fell the
