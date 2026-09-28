@@ -57,6 +57,7 @@ export type Action =
   | { type: "devPeople" }
   | { type: "devFiresOut" }
   | { type: "devOutbreak" }
+  | { type: "devRaid" }
   | { type: "relight"; tileId: number }
   | { type: "devEra"; era: number }
   | { type: "devReveal" }
@@ -811,11 +812,22 @@ function updateRaids(state: GameState): GameState {
   const { raid } = state;
   if (raid && state.tick >= raid.arriveTick) {
     const defense = defenseStrength(state);
+    const battleAt = raid.meetTile ?? raid.targetTile;
     if (defense >= raid.strength) {
       const losses = Math.min(state.soldiers, Math.floor(raid.strength / 3));
       return {
         ...state,
         raid: null,
+        battle: {
+          tick: state.tick,
+          tile: battleAt,
+          fromTile: raid.fromTile,
+          warriors: state.soldiers,
+          raiders: raid.strength,
+          warriorsLost: losses,
+          raidersLost: Math.min(raid.strength, Math.max(1, Math.ceil(raid.strength * 0.6))),
+          won: true,
+        },
         soldiers: state.soldiers - losses,
         modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + 6 },
         log: [
@@ -827,6 +839,16 @@ function updateRaids(state: GameState): GameState {
     return {
       ...state,
       raid: null,
+      battle: {
+        tick: state.tick,
+        tile: battleAt,
+        fromTile: raid.fromTile,
+        warriors: state.soldiers,
+        raiders: raid.strength,
+        warriorsLost: Math.min(state.soldiers, raid.strength),
+        raidersLost: Math.min(raid.strength - 1, Math.floor(defense / 2)),
+        won: false,
+      },
       soldiers: Math.max(0, state.soldiers - raid.strength),
       resources: {
         ...state.resources,
@@ -848,6 +870,14 @@ function updateRaids(state: GameState): GameState {
     });
     if (shores.length === 0) return { ...state, nextRaidTick: state.tick + 60 };
     const from = shores[Math.floor(rand() * shores.length)];
+    // The warriors meet them most of the way to the village, on open ground.
+    const mx = from.x + (home.x - from.x) * 0.7;
+    const mz = from.z + (home.z - from.z) * 0.7;
+    const meet = state.tiles
+      .filter((t) => isLand(t.terrain) && t.terrain !== "mountain" && t.revealed)
+      .reduce((best, t) =>
+        Math.hypot(t.x - mx, t.z - mz) < Math.hypot(best.x - mx, best.z - mz) ? t : best,
+      );
     const strength = Math.max(
       2,
       Math.round(
@@ -861,6 +891,7 @@ function updateRaids(state: GameState): GameState {
         strength,
         fromTile: from.id,
         targetTile: home.id,
+        meetTile: meet.id,
         startTick: state.tick,
         arriveTick: state.tick + 12,
       },
@@ -1044,6 +1075,10 @@ function step(state: GameState, action: Action): GameState {
         log: ["Relit the campfire.", ...state.log].slice(0, 30),
       });
     }
+
+    case "devRaid":
+      if (!state.dev || state.raid) return state;
+      return { ...state, nextRaidTick: state.tick };
 
     case "devOutbreak":
       if (!state.dev) return state;
