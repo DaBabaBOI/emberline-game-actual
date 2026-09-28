@@ -55,7 +55,9 @@ export function GameProvider({
   }, [state.speed, state.phase, panel, held]);
 
   useEffect(() => {
-    if (state.tick % 5 === 0 || inTutorial) saveGame(state);
+    // Save every few ticks, and always the moment the game ends, so a lost game
+    // can never be "continued" from a save made a few seconds earlier.
+    if (state.tick % 5 === 0 || inTutorial || state.phase !== "playing") saveGame(state);
   }, [state, inTutorial]);
 
   return (
