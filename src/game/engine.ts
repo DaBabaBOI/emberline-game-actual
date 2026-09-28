@@ -46,6 +46,7 @@ export type Action =
   | { type: "hunt"; animal: string }
   | { type: "demolish"; tileId: number }
   | { type: "devGrant" }
+  | { type: "devPeople" }
   | { type: "devEra"; era: number }
   | { type: "devReveal" }
   | { type: "devEvent"; id: string };
@@ -128,7 +129,10 @@ function devJumpToEra(state: GameState, era: number): GameState {
 // A wildfire burns the forest nearest the village: trees are lost, the ground
 // is charred (it heals over time) and buildings caught in it are destroyed.
 // The last woodcutter always survives so the player can't be locked out.
-function burnForest(state: GameState, radius: number): { tiles: Tile[]; message: string } {
+function burnForest(
+  state: GameState,
+  radius: number,
+): { tiles: Tile[]; message: string; deaths: number; victims: number[] } {
   // Fires start in the trees next to a campfire when there is one, else near the village.
   const campfires = state.tiles.filter((t) => t.building === "campfire");
   const from = campfires.length
@@ -138,7 +142,7 @@ function burnForest(state: GameState, radius: number): { tiles: Tile[]; message:
     .filter((t) => t.revealed && t.terrain === "forest" && t.growth > 0.2 && !t.building)
     .sort((a, b) => hexDistance(a, from) - hexDistance(b, from));
   const center = forests[Math.floor(mulberry32(state.seed + state.tick * 17)() * Math.min(3, forests.length))];
-  if (!center) return { tiles: state.tiles, message: "The fire burned out on its own." };
+  if (!center) return { tiles: state.tiles, message: "The fire burned out on its own.", deaths: 0, victims: [] };
 
   let woodcuttersLeft = countBuildings(state).woodcutter ?? 0;
   const lost: string[] = [];
@@ -159,12 +163,31 @@ function burnForest(state: GameState, radius: number): { tiles: Tile[]; message:
       growth: t.terrain === "forest" ? 0.02 : t.growth,
     };
   });
+  // People working near the burning land get caught: roughly one for every
+  // burnt tile that sits close to a building.
+  const built = state.tiles.filter((t) => t.building);
+  const nearPeople = tiles
+    .filter((t) => t.scorch === 1 && hexDistance(t, center) <= radius && built.some((b) => hexDistance(b, t) <= 2))
+    .sort((a, b) => hexDistance(a, center) - hexDistance(b, center));
+  const deaths =
+    radius === 0 || nearPeople.length === 0
+      ? 0
+      : Math.max(
+          0,
+          Math.min(
+            Math.floor(state.population) - 1,
+            Math.ceil(state.population * FIRE_DEATH_SHARE),
+            Math.max(1, Math.round(nearPeople.length * 0.4)),
+          ),
+        );
   const message =
     radius === 0
       ? "The fire was stopped at the forest's edge."
       : `The fire burned ${burntForest} forest tile${burntForest === 1 ? "" : "s"}` +
-        (lost.length ? ` and destroyed: ${lost.join(", ")}.` : ".");
-  return { tiles, message };
+        (lost.length ? ` and destroyed: ${lost.join(", ")}` : "") +
+        (deaths ? `. ${deaths} ${deaths === 1 ? "person" : "people"} died in the flames.` : ".");
+  const victims = Array.from({ length: Math.min(deaths, 6) }, (_, i) => nearPeople[i % nearPeople.length].id);
+  return { tiles, message, deaths, victims };
 }
 
 // Some events should be rarer than others (weights are relative).
@@ -327,6 +350,9 @@ export function consumption(state: GameState) {
 
 // Every game starts with one woodcutter already working, so the player can
 // never end up with no wood and no way to get more.
+// A wildfire never kills more than this share of the tribe at once.
+const FIRE_DEATH_SHARE = 0.25;
+
 // Exactly what the tutorial makes the player buy, so they never have to wait.
 export function tutorialBudget(state: GameState): Resources {
   const total: Resources = { food: 0, wood: 0, stone: 0, knowledge: 0, currency: 0 };
@@ -841,7 +867,10 @@ function step(state: GameState, action: Action): GameState {
         nextRaidTick: state.nextRaidTick - (effect.raidSooner ?? 0),
         event: null,
         resources,
-        population: state.population + (effect.population ?? 0),
+        population: Math.max(1, state.population + (effect.population ?? 0) - (burned?.deaths ?? 0)),
+        fireVictims: burned?.victims.length
+          ? burned.victims.map((tile) => ({ tile, tick: state.tick }))
+          : state.fireVictims,
         modifiers: {
           sustainability: state.modifiers.sustainability + (effect.sustainability ?? 0),
           happiness: state.modifiers.happiness + (effect.happiness ?? 0),
@@ -886,6 +915,10 @@ function step(state: GameState, action: Action): GameState {
         log: [`Sold a ${def.name}.`, ...state.log].slice(0, 30),
       });
     }
+
+    case "devPeople":
+      if (!state.dev) return state;
+      return withMeters({ ...state, population: state.population + 10, log: ["Dev: +10 people.", ...state.log].slice(0, 30) });
 
     case "devGrant":
       if (!state.dev) return state;

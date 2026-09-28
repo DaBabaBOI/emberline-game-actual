@@ -114,7 +114,11 @@ These were decided with the project owner. Do not change them without being aske
 - Scouting costs food and wood and gets more expensive with each trip.
 - **Dev mode** (`/play/?dev`): start in any era with plenty of resources; an
   in-game dev panel can grant resources, reveal the map and jump eras. Keep it
-  working when adding eras. It must never show without `?dev`.
+  working when adding eras. It must never show without `?dev`. **Every new
+  feature gets a dev-panel button (or dev option) to trigger or test it**, e.g.
+  Wildfire, +10 people.
+- Letting a wildfire burn near the village kills people (at most a quarter of
+  the tribe); a few visibly stagger and fall in the flames (`FireVictims`).
 - Seven cultures (Balanced + six with bonuses), three difficulties. There are two
   ways to lose: **famine** (no food for too long) and **unrest** (happiness below
   15 for too long, after the tutorial). Both show a countdown warning first.
