@@ -17,7 +17,7 @@ import {
   WARRIORS_PER_CAMP,
 } from "./content";
 import { hexDistance } from "./hex";
-import { generateMap, isLand, revealAround } from "./map";
+import { generateMap, isLand, revealAround, terrainHeight } from "./map";
 import { mulberry32 } from "./noise";
 import type { IconId } from "./sprites";
 import type {
@@ -118,8 +118,15 @@ function applyDevStart(state: GameState, era: number): GameState {
     (n) => n.id,
   );
   giveStartingWoodcutter(state.tiles, state.tiles[state.startTile]);
+  // A lit campfire too, so testers aren't racing unrest from the first second.
+  const home = state.tiles[state.startTile];
+  const firePit = state.tiles
+    .filter((t) => t.revealed && t.terrain === "grass" && !t.building)
+    .sort((a, b) => hexDistance(a, home) - hexDistance(b, home))[0];
+  if (firePit) firePit.building = "campfire";
   return {
     ...devJumpToEra(state, era),
+    fires: firePit ? { [firePit.id]: 9999 } : {},
     tutorialStep: TUTORIAL.length,
     researched: Array.from(new Set([...state.researched, ...researched])),
     resources: { food: 999, wood: 999, stone: 999, knowledge: 999, currency: 999 },
@@ -416,6 +423,8 @@ export interface Warning {
 }
 
 export function warnings(state: GameState): Warning[] {
+  // During the tutorial Elder Ama explains what to do; warnings would only nag.
+  if (state.tutorialStep < TUTORIAL.length) return [];
   const out: Warning[] = [];
   const prod = production(state);
   const netFood = prod.food - consumption(state);
@@ -550,7 +559,8 @@ export function computeMeters(state: GameState): Meters {
     clamp(shelter) * 0.35 +
     Math.min(3, lit) * 6 +
     (counts.elder ? 5 : 0) -
-    (hasLitFire(state) ? 0 : NO_FIRE_PENALTY) -
+    // No cold penalty while the tutorial is still teaching you to light a fire.
+    (hasLitFire(state) || state.tutorialStep < TUTORIAL.length ? 0 : NO_FIRE_PENALTY) -
     (100 - clamp(sustainability)) * 0.15 +
     state.modifiers.happiness;
 
@@ -1023,7 +1033,10 @@ export function loadGame(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as GameState;
-    return parsed.version === SAVE_VERSION ? parsed : null;
+    if (parsed.version !== SAVE_VERSION) return null;
+    // Mountains used to be tall pillars; older saves keep the new, lower base.
+    for (const t of parsed.tiles) if (t.terrain === "mountain") t.height = terrainHeight("mountain");
+    return parsed;
   } catch {
     return null;
   }
