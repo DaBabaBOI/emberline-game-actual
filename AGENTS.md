@@ -68,6 +68,10 @@ These were decided with the project owner. Do not change them without being aske
 - Every game starts with one free woodcutter, and the last woodcutter can't be
   demolished, so the player can never soft-lock with no wood.
 - Buildings can be demolished for a 50% refund.
+- **Tutorial locks:** while the tutorial runs, only what it has introduced so far
+  can be used (`TUTORIAL[].unlocks`, `tutorialLocked()`); the rest shows a lock
+  until the tutorial is finished or skipped. When adding a building or tool,
+  decide which tutorial step (if any) introduces it.
 - A lit campfire (and wood to burn) is needed; without one happiness drops and a
   warning is shown. Villagers sit around campfires.
 - Scouting costs food and wood and gets more expensive with each trip.

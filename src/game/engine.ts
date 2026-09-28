@@ -133,6 +133,7 @@ export function canAfford(state: GameState, cost: Partial<Resources>) {
 }
 
 export function isUnlocked(state: GameState, def: BuildingDef) {
+  if (tutorialLocked(state, def.id)) return false;
   return def.era <= state.era && (!def.requires || state.researched.includes(def.requires));
 }
 
@@ -218,6 +219,12 @@ export function demolishError(state: GameState, tile: Tile): string | null {
 }
 
 export const DEMOLISH_TOOL = "__demolish";
+
+// During the tutorial only what it has introduced so far can be used.
+export function tutorialLocked(state: GameState, id: string) {
+  if (state.tutorialStep >= TUTORIAL.length) return false;
+  return !TUTORIAL.slice(0, state.tutorialStep + 1).some((step) => step.unlocks.includes(id));
+}
 
 export const NO_FIRE_PENALTY = 15;
 
@@ -492,7 +499,7 @@ export function reducer(state: GameState, action: Action): GameState {
     case "place": {
       const def = BUILDINGS_BY_ID[action.buildingId];
       const tile = state.tiles[action.tileId];
-      if (!def || !tile || placementError(state, tile, def)) return state;
+      if (!def || !tile || !isUnlocked(state, def) || placementError(state, tile, def)) return state;
       const tiles = state.tiles.map((t) =>
         t.id === tile.id ? { ...t, building: def.id } : t,
       );
@@ -510,7 +517,7 @@ export function reducer(state: GameState, action: Action): GameState {
 
     case "scout": {
       const cost = scoutCost(state);
-      if (!canAfford(state, cost)) return state;
+      if (tutorialLocked(state, "scout") || !canAfford(state, cost)) return state;
       const frontier = state.tiles.filter(
         (t) =>
           !t.revealed &&
@@ -534,6 +541,7 @@ export function reducer(state: GameState, action: Action): GameState {
     case "research": {
       const node = TREE_BY_ID[action.nodeId];
       if (
+        tutorialLocked(state, "advancements") ||
         !node ||
         node.comingSoon ||
         node.secret ||
@@ -575,7 +583,8 @@ export function reducer(state: GameState, action: Action): GameState {
       return { ...state, tutorialStep: TUTORIAL.length };
 
     case "train": {
-      if (state.soldiers >= warriorCap(state) || !canAfford(state, TRAIN_COST)) return state;
+      if (tutorialLocked(state, "train") || state.soldiers >= warriorCap(state) || !canAfford(state, TRAIN_COST))
+        return state;
       return withMeters({
         ...state,
         soldiers: state.soldiers + 1,
@@ -585,7 +594,7 @@ export function reducer(state: GameState, action: Action): GameState {
 
     case "demolish": {
       const tile = state.tiles[action.tileId];
-      if (!tile || demolishError(state, tile)) return state;
+      if (tutorialLocked(state, "demolish") || !tile || demolishError(state, tile)) return state;
       const def = BUILDINGS_BY_ID[tile.building!];
       const refund = demolishRefund(def);
       const resources = { ...state.resources };
