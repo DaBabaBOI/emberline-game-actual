@@ -65,8 +65,10 @@ These were decided with the project owner. Do not change them without being aske
 - Politics = event cards with choices + simple diplomacy with AI nations.
 - "AI" in the future era means **in-game tech** (automation, data centers), not an
   AI chatbot.
-- In the tutorial the player builds their own woodcutter (step 2). Games that
-  skip the tutorial (or dev starts) get one free. The last woodcutter can't be
+- In the tutorial the player builds their own woodcutter (step 2). Skipping
+  the tutorial gives the basics it would have built (woodcutter, lit campfire,
+  gatherer); dev starts get a woodcutter and a campfire. Unrest can't start
+  during the calm period after the tutorial. The last woodcutter can't be
   sold, so the player can never soft-lock with no wood.
 - **Tutorial budget:** a new game starts with exactly what the tutorial buys
   (`tutorialBudget()`, from `TUTORIAL[].buys`) plus `AFTER_TUTORIAL_RESERVE`,
