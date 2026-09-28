@@ -559,7 +559,8 @@ export function computeMeters(state: GameState): Meters {
     clamp(shelter) * 0.35 +
     Math.min(3, lit) * 6 +
     (counts.elder ? 5 : 0) -
-    (hasLitFire(state) ? 0 : NO_FIRE_PENALTY) -
+    // No cold penalty while the tutorial is still teaching you to light a fire.
+    (hasLitFire(state) || state.tutorialStep < TUTORIAL.length ? 0 : NO_FIRE_PENALTY) -
     (100 - clamp(sustainability)) * 0.15 +
     state.modifiers.happiness;
 
