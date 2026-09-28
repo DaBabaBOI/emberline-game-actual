@@ -88,8 +88,8 @@ export const BUILDINGS: BuildingDef[] = [
     era: 0,
     cost: { wood: 8 },
     terrain: ["grass", "steppe", "forest", "marsh"],
-    produces: { food: 1.2 },
-    depositBonus: { deposit: "berries", amount: { food: 1.2 } },
+    produces: { food: 0.6 },
+    depositBonus: { deposit: "berries", amount: { food: 0.5 } },
     reveal: 2,
   },
   {
@@ -101,7 +101,7 @@ export const BUILDINGS: BuildingDef[] = [
     cost: { wood: 12 },
     terrain: ["grass"],
     requires: "early-farming",
-    produces: { food: 2.2 },
+    produces: { food: 1.1 },
     reveal: 1,
   },
   {
@@ -135,7 +135,7 @@ export const BUILDINGS: BuildingDef[] = [
     terrain: ["beach"],
     needsWaterNeighbor: true,
     requires: "fishing",
-    produces: { food: 1.8 },
+    produces: { food: 0.9 },
     reveal: 3,
   },
   {
