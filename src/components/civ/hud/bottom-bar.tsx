@@ -12,6 +12,7 @@ import {
   isUnlocked,
   production,
   scoutCost,
+  tutorialLocked,
   warriorCap,
 } from "@/game/engine";
 import type { Resources } from "@/game/types";
@@ -62,7 +63,9 @@ function ToolButton({
   title,
   tone,
   children,
+  locked,
 }: {
+  locked?: boolean;
   icon: IconId;
   label: string;
   onClick?: () => void;
@@ -75,16 +78,16 @@ function ToolButton({
     <button
       type="button"
       onClick={onClick}
-      disabled={disabled}
-      title={title}
+      disabled={disabled || locked}
+      title={locked ? "Unlocks later in the tutorial" : title}
       className={cn(
         "pixel-btn flex min-w-16 flex-col items-center justify-center gap-0.5 px-2 py-1 text-[11px] disabled:opacity-40",
-        tone,
+        locked ? "bg-[#4a3b2e]" : tone,
       )}
     >
-      <PixelIcon name={icon} size={24} />
+      <PixelIcon name={locked ? "lock" : icon} size={24} />
       {label}
-      {children}
+      {!locked && children}
     </button>
   );
 }
@@ -128,7 +131,9 @@ export function BottomBar() {
                 title={
                   unlocked
                     ? b.description
-                    : `Research ${TREE_BY_ID[b.requires ?? ""]?.name ?? "more"} to unlock`
+                    : tutorialLocked(state, b.id)
+                      ? "Unlocks later in the tutorial"
+                      : `Research ${TREE_BY_ID[b.requires ?? ""]?.name ?? "more"} to unlock`
                 }
                 className={cn(
                   "pixel-btn flex w-20 shrink-0 flex-col items-center gap-0.5 px-1 py-1.5 text-center",
@@ -146,6 +151,7 @@ export function BottomBar() {
 
         <div className="flex gap-1.5 border-l-2 border-white/10 pl-3">
           <ToolButton
+            locked={tutorialLocked(state, "demolish")}
             icon="hammer"
             label="Demolish"
             onClick={() => setSelected(selected === DEMOLISH_TOOL ? null : DEMOLISH_TOOL)}
@@ -154,6 +160,7 @@ export function BottomBar() {
           />
           <ArmyButton />
           <ToolButton
+            locked={tutorialLocked(state, "scout")}
             icon="spyglass"
             label="Scout"
             onClick={() => dispatch({ type: "scout" })}
@@ -164,6 +171,7 @@ export function BottomBar() {
             <Cost cost={scoutCost(state)} bad={!canAfford(state, scoutCost(state))} />
           </ToolButton>
           <ToolButton
+            locked={tutorialLocked(state, "advancements")}
             icon="star"
             label="Advancements"
             onClick={() => setPanel("tree")}
@@ -192,6 +200,7 @@ function ArmyButton() {
         : `Train a warrior. Defense: ${defenseStrength(state)}`;
   return (
     <ToolButton
+      locked={tutorialLocked(state, "train")}
       icon="sword"
       label={`Train ${state.soldiers}/${cap}`}
       onClick={() => dispatch({ type: "train" })}

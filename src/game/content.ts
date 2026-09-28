@@ -389,11 +389,13 @@ export const EVENTS: EventCard[] = [
   },
 ];
 
-export const TUTORIAL = [
-  { text: "Our people are cold, and without a fire they grow unhappy. Pick the Campfire from the bar below and place it on a green tile.", done: "campfire" },
-  { text: "Good! Now build a Hut so more people have shelter.", done: "hut" },
-  { text: "We need food. Place a Gatherer's Camp. Berry bushes give a bonus.", done: "gatherer" },
-  { text: "The world is hidden. Press Scout to explore new land.", done: "scout" },
-  { text: "Raiders roam these lands. Build a War Camp, then train warriors to defend us.", done: "warcamp" },
-  { text: "Open Advancements and research Early Farming, then place Farmland.", done: "early-farming" },
+// Each step unlocks the buildings/tools it introduces. Until the tutorial ends
+// (or is skipped), anything not yet introduced stays locked.
+export const TUTORIAL: { text: string; done: string; unlocks: string[] }[] = [
+  { text: "Our people are cold, and without a fire they grow unhappy. Pick the Campfire from the bar below and place it on a green tile.", done: "campfire", unlocks: ["campfire"] },
+  { text: "Good! Now build a Hut so more people have shelter.", done: "hut", unlocks: ["hut"] },
+  { text: "We need food. Place a Gatherer's Camp. Berry bushes give a bonus.", done: "gatherer", unlocks: ["gatherer"] },
+  { text: "The world is hidden. Press Scout to explore new land.", done: "scout", unlocks: ["scout"] },
+  { text: "Raiders roam these lands. Build a War Camp, then train warriors to defend us.", done: "warcamp", unlocks: ["warcamp", "train"] },
+  { text: "Open Advancements and research Early Farming, then place Farmland.", done: "early-farming", unlocks: ["advancements", "farm"] },
 ];
