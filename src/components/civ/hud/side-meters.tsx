@@ -37,7 +37,7 @@ export function SideMeters({ side }: { side: "left" | "right" }) {
                 <div key={mark} className="absolute inset-x-0 h-px bg-black/50" style={{ bottom: `${mark}%` }} />
               ))}
             </div>
-            <span className="text-[10px] font-semibold tabular-nums">{value}</span>
+            <span className="font-num text-xs">{value}</span>
             <span
               className={cn(
                 "pixel-panel-dark pointer-events-none absolute top-1/2 hidden -translate-y-1/2 whitespace-nowrap px-2 py-1 text-xs group-hover:block",

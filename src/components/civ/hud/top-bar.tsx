@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ERAS, formatYear } from "@/game/content";
 import { useGame } from "@/components/civ/game-provider";
+import { warnings } from "@/game/engine";
 import type { GameState } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { PixelIcon } from "@/components/civ/pixel-icon";
@@ -15,11 +16,11 @@ const SPEEDS: { value: GameState["speed"]; label: string }[] = [
   { value: 4, label: "▶▶▶" },
 ];
 
-function Chip({ icon, value, title }: { icon: IconId; value: string; title: string }) {
+function Chip({ icon, value, title, low }: { icon: IconId; value: string; title: string; low?: boolean }) {
   return (
-    <span title={title} className="flex items-center gap-1 whitespace-nowrap tabular-nums">
+    <span title={title} className={cn("flex items-center gap-1 whitespace-nowrap", low && "animate-pulse text-red-400")}>
       <PixelIcon name={icon} size={16} />
-      {value}
+      <span className="font-num">{value}</span>
     </span>
   );
 }
@@ -28,6 +29,7 @@ export function TopBar() {
   const { state, dispatch } = useGame();
   const era = ERAS[state.era];
   const r = state.resources;
+  const low = new Set(warnings(state).map((w) => w.id));
 
   return (
     <div className="pointer-events-auto absolute inset-x-0 top-3 flex justify-center px-3">
@@ -37,15 +39,15 @@ export function TopBar() {
         </Link>
         <div className="flex flex-col leading-tight">
           <span className="text-[11px] uppercase tracking-wide text-amber-300">{era.name}</span>
-          <span className="font-semibold tabular-nums">{formatYear(state.year)}</span>
+          <span className="font-num text-base">{formatYear(state.year)}</span>
         </div>
         <span className="h-6 w-px bg-white/20" />
         <Chip icon="person" value={Math.floor(state.population).toLocaleString()} title="Population" />
         <Chip icon="coin" value={Math.floor(r.currency).toLocaleString()} title={era.currency} />
         <Chip icon="sword" value={state.soldiers.toString()} title="Warriors" />
         <span className="h-6 w-px bg-white/20" />
-        <Chip icon="meat" value={Math.floor(r.food).toString()} title="Food stored" />
-        <Chip icon="log" value={Math.floor(r.wood).toString()} title="Wood" />
+        <Chip icon="meat" value={Math.floor(r.food).toString()} title="Food stored" low={low.has("food") || low.has("famine")} />
+        <Chip icon="log" value={Math.floor(r.wood).toString()} title="Wood" low={low.has("wood")} />
         <Chip icon="rock" value={Math.floor(r.stone).toString()} title="Stone" />
         <Chip icon="bulb" value={Math.floor(r.knowledge).toString()} title="Knowledge" />
         <span className="h-6 w-px bg-white/20" />

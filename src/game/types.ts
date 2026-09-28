@@ -25,6 +25,8 @@ export interface Tile {
   building: string | null;
   // 0–1: how grown the trees on a forest tile are. New forest starts small.
   growth: number;
+  // 0–1: how charred the ground is after a fire. Fades back to normal.
+  scorch: number;
 }
 
 export interface Raid {
@@ -104,6 +106,10 @@ export interface EventChoice {
     population?: number;
     sustainability?: number;
     happiness?: number;
+    // Burn the forest near the village: radius in hexes (0 = one tile).
+    burn?: number;
+    // Ticks to bring the next raid forward by.
+    raidSooner?: number;
   };
 }
 

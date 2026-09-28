@@ -13,6 +13,7 @@ import {
 import { hexDistance, hexKey, NEIGHBOR_OFFSETS } from "./hex";
 import { generateMap, isLand, revealAround, terrainHeight } from "./map";
 import { mulberry32 } from "./noise";
+import type { IconId } from "./sprites";
 import type {
   BuildingDef,
   CultureId,
@@ -23,7 +24,7 @@ import type {
   Tile,
 } from "./types";
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 const BASE_HOUSING = 8;
 
 export type Action =
@@ -39,7 +40,8 @@ export type Action =
   | { type: "demolish"; tileId: number }
   | { type: "devGrant" }
   | { type: "devEra"; era: number }
-  | { type: "devReveal" };
+  | { type: "devReveal" }
+  | { type: "devEvent"; id: string };
 
 export interface NewGameOptions {
   dev?: boolean;
@@ -66,7 +68,7 @@ export function newGame(
     year: ERAS[0].startYear,
     tick: 0,
     speed: 1,
-    resources: { food: 60, wood: 40, stone: 0, knowledge: 0, currency: 0 },
+    resources: { food: 60, wood: 35, stone: 0, knowledge: 0, currency: 0 },
     population: 8,
     famineTicks: 0,
     soldiers: 0,
@@ -108,6 +110,44 @@ function devJumpToEra(state: GameState, era: number): GameState {
   return { ...state, era, year: ERAS[era].startYear };
 }
 
+// A wildfire burns the forest nearest the village: trees are lost, the ground
+// is charred (it heals over time) and buildings caught in it are destroyed.
+// The last woodcutter always survives so the player can't be locked out.
+function burnForest(state: GameState, radius: number): { tiles: Tile[]; message: string } {
+  const home = state.tiles[state.startTile];
+  const forests = state.tiles
+    .filter((t) => t.revealed && t.terrain === "forest" && hexDistance(t, home) >= 2)
+    .sort((a, b) => hexDistance(a, home) - hexDistance(b, home));
+  const center = forests[Math.floor(mulberry32(state.seed + state.tick * 17)() * Math.min(4, forests.length))];
+  if (!center) return { tiles: state.tiles, message: "The fire burned out on its own." };
+
+  let woodcuttersLeft = countBuildings(state).woodcutter ?? 0;
+  const lost: string[] = [];
+  let burntForest = 0;
+  const tiles = state.tiles.map((t) => {
+    if (hexDistance(t, center) > radius || !isLand(t.terrain) || t.terrain === "mountain") return t;
+    let building = t.building;
+    if (building && !(building === "woodcutter" && woodcuttersLeft <= 1)) {
+      if (building === "woodcutter") woodcuttersLeft--;
+      lost.push(BUILDINGS_BY_ID[building].name);
+      building = null;
+    }
+    if (t.terrain === "forest") burntForest++;
+    return {
+      ...t,
+      building,
+      scorch: 1,
+      growth: t.terrain === "forest" ? 0.02 : t.growth,
+    };
+  });
+  const message =
+    radius === 0
+      ? "The fire was stopped at the forest's edge."
+      : `The fire burned ${burntForest} forest tile${burntForest === 1 ? "" : "s"}` +
+        (lost.length ? ` and destroyed: ${lost.join(", ")}.` : ".");
+  return { tiles, message };
+}
+
 // Some events should be rarer than others (weights are relative).
 const EVENT_WEIGHTS: Record<string, number> = { wildfire: 0.35 };
 
@@ -121,9 +161,16 @@ function pickEvent(roll: number) {
   return EVENTS[EVENTS.length - 1];
 }
 
+// Scouting is meant to be hard-won: each trip costs a lot more than the last.
+// Every Transport advancement makes it 20% cheaper.
 export function scoutCost(state: GameState): Partial<Resources> {
   const n = state.scoutsSent;
-  return { food: 12 + n * 6, wood: 4 + n * 3 };
+  const transport = state.researched.filter((id) => TREE_BY_ID[id]?.branch === "transport").length;
+  const discount = Math.pow(0.8, transport);
+  return {
+    food: Math.round((25 + n * 20) * discount),
+    wood: Math.round((10 + n * 10) * discount),
+  };
 }
 
 export function countBuildings(state: GameState) {
@@ -151,6 +198,9 @@ export function isUnlocked(state: GameState, def: BuildingDef) {
 }
 
 export function placementError(state: GameState, tile: Tile, def: BuildingDef): string | null {
+  if (state.tutorialStep < TUTORIAL.length && (countBuildings(state)[def.id] ?? 0) >= 1) {
+    return "Only one of each during the tutorial";
+  }
   if (!tile.revealed) return "Unexplored land";
   if (tile.building) return "Already built here";
   if (!def.terrain.includes(tile.terrain)) return `Needs ${def.terrain.join(" / ")}`;
@@ -224,7 +274,7 @@ export function demolishRefund(def: BuildingDef): Partial<Resources> {
 }
 
 export function demolishError(state: GameState, tile: Tile): string | null {
-  if (!tile.building) return "Nothing to demolish";
+  if (!tile.building) return "Nothing to sell";
   if (tile.building === "woodcutter" && (countBuildings(state).woodcutter ?? 0) <= 1) {
     return "You need at least one woodcutter";
   }
@@ -240,6 +290,59 @@ export function tutorialLocked(state: GameState, id: string) {
 }
 
 export const NO_FIRE_PENALTY = 15;
+
+export interface Warning {
+  id: "fire" | "food" | "wood" | "famine";
+  icon: IconId;
+  text: string;
+  severe: boolean;
+}
+
+export function warnings(state: GameState): Warning[] {
+  const out: Warning[] = [];
+  const prod = production(state);
+  const netFood = prod.food - consumption(state);
+  const famineLimit = DIFFICULTIES[state.difficulty].famineLimit;
+
+  if (state.famineTicks > 0) {
+    out.push({
+      id: "famine",
+      icon: "skull",
+      text: `Your people are starving! Famine in ${Math.max(0, famineLimit - state.famineTicks)}s unless you find food.`,
+      severe: true,
+    });
+  } else if (netFood < 0 && state.resources.food / -netFood < 45) {
+    out.push({
+      id: "food",
+      icon: "meat",
+      text: `Food is running low: about ${Math.ceil(state.resources.food / -netFood)}s left. Build gatherers or farms.`,
+      severe: state.resources.food / -netFood < 20,
+    });
+  }
+
+  if (state.resources.wood < 8) {
+    out.push({
+      id: "wood",
+      icon: "log",
+      text:
+        prod.wood < 0
+          ? "Wood is running out and your fires are burning it faster than you cut it."
+          : "Wood is low. Wait for your woodcutters before building more.",
+      severe: state.resources.wood < 2,
+    });
+  }
+
+  if (!hasLitFire(state)) {
+    const noCampfire = (countBuildings(state).campfire ?? 0) === 0;
+    out.push({
+      id: "fire",
+      icon: "flame",
+      text: `${noCampfire ? "No campfire!" : "The fire is out: no wood!"} Your people are cold (−${NO_FIRE_PENALTY} happiness).`,
+      severe: true,
+    });
+  }
+  return out;
+}
 
 // A fire only counts if there's wood to keep it burning.
 export function hasLitFire(state: GameState) {
@@ -359,8 +462,8 @@ function tick(state: GameState): GameState {
   }
 
   const modifiers = {
-    sustainability: state.modifiers.sustainability * 0.98,
-    happiness: state.modifiers.happiness * 0.98,
+    sustainability: state.modifiers.sustainability * 0.995,
+    happiness: state.modifiers.happiness * 0.993,
   };
 
   let next: GameState = {
@@ -400,8 +503,11 @@ function growForests(state: GameState): GameState {
   const changes = new Map<number, Partial<Tile>>();
 
   for (const t of state.tiles) {
-    if (t.terrain === "forest" && t.growth < 1) {
-      changes.set(t.id, { growth: Math.min(1, t.growth + 0.06) });
+    if (t.scorch > 0) {
+      changes.set(t.id, { scorch: Math.max(0, t.scorch - 0.01) });
+    }
+    if (t.terrain === "forest" && t.growth < 1 && t.scorch < 0.4) {
+      changes.set(t.id, { ...changes.get(t.id), growth: Math.min(1, t.growth + 0.06) });
     }
     if (t.terrain !== "grass" || t.building) continue;
     let forestNeighbors = 0;
@@ -579,8 +685,11 @@ export function reducer(state: GameState, action: Action): GameState {
       const resources = { ...state.resources };
       for (const [k, v] of Object.entries(effect.resources ?? {}))
         resources[k as keyof Resources] = Math.max(0, resources[k as keyof Resources] + (v ?? 0));
+      const burned = effect.burn !== undefined ? burnForest(state, effect.burn) : null;
       return withMeters({
         ...state,
+        tiles: burned?.tiles ?? state.tiles,
+        nextRaidTick: state.nextRaidTick - (effect.raidSooner ?? 0),
         event: null,
         resources,
         population: state.population + (effect.population ?? 0),
@@ -588,7 +697,11 @@ export function reducer(state: GameState, action: Action): GameState {
           sustainability: state.modifiers.sustainability + (effect.sustainability ?? 0),
           happiness: state.modifiers.happiness + (effect.happiness ?? 0),
         },
-        log: [`${state.event?.title}: ${choice.label}`, ...state.log].slice(0, 30),
+        log: [
+          ...(burned ? [burned.message] : []),
+          `${state.event?.title}: ${choice.label}`,
+          ...state.log,
+        ].slice(0, 30),
       });
     }
 
@@ -607,7 +720,7 @@ export function reducer(state: GameState, action: Action): GameState {
 
     case "demolish": {
       const tile = state.tiles[action.tileId];
-      if (tutorialLocked(state, "demolish") || !tile || demolishError(state, tile)) return state;
+      if (!tile || demolishError(state, tile)) return state;
       const def = BUILDINGS_BY_ID[tile.building!];
       const refund = demolishRefund(def);
       const resources = { ...state.resources };
@@ -616,7 +729,7 @@ export function reducer(state: GameState, action: Action): GameState {
         ...state,
         tiles: state.tiles.map((t) => (t.id === tile.id ? { ...t, building: null } : t)),
         resources,
-        log: [`Demolished a ${def.name}.`, ...state.log].slice(0, 30),
+        log: [`Sold a ${def.name}.`, ...state.log].slice(0, 30),
       });
     }
 
@@ -635,6 +748,11 @@ export function reducer(state: GameState, action: Action): GameState {
         ...devJumpToEra(state, action.era),
         log: [`Dev mode: jumped to the ${ERAS[action.era].name}.`, ...state.log].slice(0, 30),
       });
+
+    case "devEvent": {
+      const event = EVENTS.find((e) => e.id === action.id);
+      return state.dev && event ? { ...state, event } : state;
+    }
 
     case "devReveal":
       if (!state.dev) return state;

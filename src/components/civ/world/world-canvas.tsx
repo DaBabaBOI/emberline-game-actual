@@ -10,7 +10,7 @@ import { Deposits, Forests, HexTerrain, Mountains, tileTop } from "./hex-terrain
 import { MODELS } from "./building-models";
 import { Raiders, Villagers, Warriors } from "./villagers";
 import { Wildlife } from "./wildlife";
-import { Haze, SmogPlumes } from "./atmosphere";
+import { Haze, SmogPlumes, Wildfire } from "./atmosphere";
 
 function HexOutline({ x, y, z, color }: { x: number; y: number; z: number; color: string }) {
   return (
@@ -41,7 +41,7 @@ export function WorldCanvas() {
       .filter(([, v]) => (v ?? 0) > 0)
       .map(([k, v]) => `+${v} ${k}`)
       .join(", ");
-    return { ok: true, text: `Demolish ${target.name}${refund ? ` (${refund})` : ""}` };
+    return { ok: true, text: `Sell ${target.name}${refund ? ` (${refund})` : ""}` };
   })();
   const Ghost = def ? MODELS[def.id] : null;
 
@@ -109,6 +109,7 @@ export function WorldCanvas() {
         onHunt={(animal) => dispatch({ type: "hunt", animal })}
       />
       <SmogPlumes tiles={state.tiles} sustainability={state.meters.sustainability} />
+      <Wildfire tiles={state.tiles} />
 
       {hoverTile && (
         <HexOutline

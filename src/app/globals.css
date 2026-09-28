@@ -72,3 +72,10 @@ body {
   font-family: var(--font-pixel), ui-monospace, monospace;
   letter-spacing: 0.02em;
 }
+
+.font-num {
+  font-family: var(--font-num), ui-monospace, monospace;
+  font-size: 1.2em;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}

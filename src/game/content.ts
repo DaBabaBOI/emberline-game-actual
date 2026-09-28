@@ -121,7 +121,7 @@ export const BUILDINGS: BuildingDef[] = [
     era: 0,
     cost: { wood: 4 },
     terrain: ["forest"],
-    produces: { wood: 0.45 },
+    produces: { wood: 0.3 },
     reveal: 2,
   },
   {
@@ -351,40 +351,52 @@ export const EVENTS: EventCard[] = [
     id: "wanderers",
     title: "Wanderers at the fire",
     icon: "person",
-    body: "A small band of wanderers asks to join your tribe. They're hungry, but strong.",
+    body: "A band of eight hungry wanderers asks to join your tribe. They're strong workers, but they'll eat a lot. Turned away, they may not forget it.",
     choices: [
-      { label: "Welcome them (+4 people, −8 food)", effect: { population: 4, resources: { food: -8 } } },
-      { label: "Send them on their way", effect: { happiness: -5 } },
+      { label: "Welcome them (+8 people, −25 food)", effect: { population: 8, resources: { food: -25 } } },
+      {
+        label: "Send them away (−12 happiness, raiders come sooner)",
+        effect: { happiness: -12, raidSooner: 40 },
+      },
     ],
   },
   {
     id: "wildfire",
     title: "Wildfire!",
     icon: "flame",
-    body: "Dry grass has caught fire near the forest.",
+    body: "Fire has caught in the dry forest near the village and the wind is picking up. Anything in its path will burn.",
     choices: [
-      { label: "Fight it (−10 wood)", effect: { resources: { wood: -10 } } },
-      { label: "Let it burn out", effect: { sustainability: -15 } },
+      {
+        label: "Fight it (−25 wood, −5 happiness, it's contained)",
+        effect: { resources: { wood: -25 }, happiness: -5, burn: 0 },
+      },
+      {
+        label: "Let it burn (the forest and buildings nearby are lost)",
+        effect: { burn: 2, sustainability: -25, happiness: -12 },
+      },
     ],
   },
   {
     id: "eastern-trader",
     title: "A trader from the east",
     icon: "coin",
-    body: "A stranger with a pack animal offers shiny shells for your wood.",
+    body: "A stranger with a pack animal has crossed the steppe. She wants wood, and brings shells and stories of distant lands.",
     choices: [
-      { label: "Trade 10 wood for 15 shells", effect: { resources: { wood: -10, currency: 15 } } },
-      { label: "No thanks", effect: {} },
+      {
+        label: "Trade 25 wood for 60 shells and 8 knowledge",
+        effect: { resources: { wood: -25, currency: 60, knowledge: 8 } },
+      },
+      { label: "Turn her away", effect: {} },
     ],
   },
   {
     id: "good-hunt",
     title: "A great hunt",
     icon: "mammoth",
-    body: "Your hunters brought down a mammoth. Feast or preserve?",
+    body: "Your hunters brought down a mammoth! There's enough meat for weeks, or for one unforgettable night.",
     choices: [
-      { label: "Feast! (+10 happiness)", effect: { happiness: 10 } },
-      { label: "Preserve it (+20 food)", effect: { resources: { food: 20 } } },
+      { label: "Feast! (+25 happiness)", effect: { happiness: 25 } },
+      { label: "Preserve it (+60 food)", effect: { resources: { food: 60 } } },
     ],
   },
 ];

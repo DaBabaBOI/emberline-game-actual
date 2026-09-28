@@ -9,7 +9,7 @@ interface ModelProps {
   opacity: number;
 }
 
-function Flame({ opacity, position = [0, 0, 0], scale = 1 }: ModelProps & {
+export function Flame({ opacity, position = [0, 0, 0], scale = 1 }: ModelProps & {
   position?: [number, number, number];
   scale?: number;
 }) {

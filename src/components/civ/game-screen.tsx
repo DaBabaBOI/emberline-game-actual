@@ -10,7 +10,7 @@ import { TopBar } from "./hud/top-bar";
 import { SideMeters } from "./hud/side-meters";
 import { BottomBar } from "./hud/bottom-bar";
 import { TreeOverlay } from "./hud/tree-overlay";
-import { DevPanel, EventModal, GameOver, NoFireWarning, RaidBanner, Toasts, TutorialPanel } from "./hud/overlays";
+import { DevPanel, EventModal, GameOver, RaidBanner, Toasts, TutorialPanel, Warnings } from "./hud/overlays";
 
 const WorldCanvas = dynamic(
   () => import("./world/world-canvas").then((m) => m.WorldCanvas),
@@ -36,7 +36,7 @@ function Hud({ onRestart }: { onRestart: () => void }) {
       <TutorialPanel />
       <Toasts />
       <RaidBanner />
-      <NoFireWarning />
+      <Warnings />
       <DevPanel />
       <BottomBar />
       {panel === "tree" && <TreeOverlay />}

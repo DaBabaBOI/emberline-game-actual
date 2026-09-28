@@ -67,7 +67,18 @@ These were decided with the project owner. Do not change them without being aske
   AI chatbot.
 - Every game starts with one free woodcutter, and the last woodcutter can't be
   demolished, so the player can never soft-lock with no wood.
-- Buildings can be demolished for a 50% refund.
+- Buildings can be **sold** (the "Sell" tool) for a 50% refund.
+- During the tutorial the player can only build **one of each** building.
+- **Wood is scarce** in the Stone Age by design; scouting is expensive and gets
+  pricier each trip (Transport advancements make it 20% cheaper each).
+- Events are rare but **hit hard** (a wildfire really burns the forest and nearby
+  buildings, leaving charred ground that heals). Keep events meaningful.
+- **Low-resource warnings** (food, wood, famine, no fire) show bottom-left and the
+  top-bar number flashes red. Add new ones in `warnings()` in `engine.ts`.
+- Numbers in the UI use the `font-num` class (VT323): Pixelify's digits 2/5/8
+  are too similar.
+- The Advancements screen has one tab per era; each tab lays out that era's
+  nodes by branch. Cross-era prerequisites show as "Needs: …".
 - **Tutorial locks:** while the tutorial runs, only what it has introduced so far
   can be used (`TUTORIAL[].unlocks`, `tutorialLocked()`); the rest shows a lock
   until the tutorial is finished or skipped. When adding a building or tool,

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ERAS, formatYear, TUTORIAL } from "@/game/content";
-import { clearSave, defenseStrength, hasLitFire, NO_FIRE_PENALTY } from "@/game/engine";
+import { clearSave, defenseStrength, warnings } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 
@@ -132,17 +132,24 @@ export function RaidBanner() {
   );
 }
 
-export function NoFireWarning() {
+export function Warnings() {
   const { state } = useGame();
-  if (hasLitFire(state)) return null;
-  const noCampfire = !state.tiles.some((t) => t.building === "campfire");
+  const list = warnings(state);
+  if (list.length === 0) return null;
   return (
-    <div className="pixel-panel-dark font-pixel pointer-events-none absolute bottom-28 left-3 flex max-w-60 items-center gap-2 px-2.5 py-1.5 text-xs">
-      <PixelIcon name="flame" size={20} />
-      <span>
-        {noCampfire ? "No campfire!" : "The fire is out: no wood!"} Your people are cold.{" "}
-        <span className="text-red-300">−{NO_FIRE_PENALTY} happiness</span>
-      </span>
+    <div className="pointer-events-none absolute bottom-32 left-3 flex max-w-72 flex-col gap-1.5">
+      {list.map((w) => (
+        <div
+          key={w.id}
+          className={
+            "pixel-panel-dark font-pixel flex items-center gap-2 px-2.5 py-1.5 text-xs " +
+            (w.severe ? "!border-red-700 animate-pulse" : "")
+          }
+        >
+          <PixelIcon name={w.icon} size={20} />
+          <span>{w.text}</span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -159,6 +166,9 @@ export function DevPanel() {
         </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devReveal" })}>
           Reveal map
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devEvent", id: "wildfire" })}>
+          Wildfire
         </button>
       </div>
       <div className="flex flex-wrap gap-1">

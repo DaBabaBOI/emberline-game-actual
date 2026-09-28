@@ -4,6 +4,7 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Color, Fog, type Mesh } from "three";
 import type { Tile } from "@/game/types";
+import { Flame } from "./building-models";
 
 const CLEAN_SKY = new Color("#a8dcf5");
 const SMOG = new Color("#8f8b80");
@@ -32,7 +33,7 @@ export function Haze({ sustainability }: { sustainability: number }) {
   return null;
 }
 
-function Plume({ x, y, z, strength, seed }: { x: number; y: number; z: number; strength: number; seed: number }) {
+export function Plume({ x, y, z, strength, seed }: { x: number; y: number; z: number; strength: number; seed: number }) {
   const puffs = useRef<(Mesh | null)[]>([]);
   useFrame(({ clock }) => {
     puffs.current.forEach((m, i) => {
@@ -69,6 +70,27 @@ export function SmogPlumes({ tiles, sustainability }: { tiles: Tile[]; sustainab
     <group>
       {sources.map((t) => (
         <Plume key={t.id} x={t.x} y={t.height} z={t.z} strength={strength} seed={t.id * 0.37} />
+      ))}
+    </group>
+  );
+}
+
+// Tiles that caught fire recently still burn for a while: flames and smoke.
+export function Wildfire({ tiles }: { tiles: Tile[] }) {
+  const burning = useMemo(() => tiles.filter((t) => t.scorch > 0.8).slice(0, 30), [tiles]);
+  return (
+    <group>
+      {burning.map((t) => (
+        <group key={t.id} position={[t.x, t.height, t.z]}>
+          {[
+            [0.25, 0.1],
+            [-0.3, 0.2],
+            [0.05, -0.3],
+          ].map(([x, z]) => (
+            <Flame key={`${x}${z}`} opacity={1} position={[x, 0, z]} scale={1.8 * (t.scorch - 0.6) * 2.5} />
+          ))}
+          <Plume x={0} y={0} z={0} strength={1} seed={t.id * 0.37} />
+        </group>
       ))}
     </group>
   );

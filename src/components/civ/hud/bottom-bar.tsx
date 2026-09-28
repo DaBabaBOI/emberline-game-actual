@@ -1,11 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { BUILDINGS, TRAIN_COST, TREE_BY_ID } from "@/game/content";
+import { BUILDINGS, TRAIN_COST, TREE_BY_ID, TUTORIAL } from "@/game/content";
 import {
   buildingCost,
   canAfford,
   consumption,
+  countBuildings,
   defenseStrength,
   DEMOLISH_TOOL,
   housingCapacity,
@@ -39,7 +40,7 @@ function Cost({ cost, bad }: { cost: Partial<Resources>; bad?: boolean }) {
       {Object.entries(cost).map(([k, v]) => (
         <span key={k} className="flex items-center gap-0.5">
           <PixelIcon name={COST_ICONS[k as keyof Resources]} size={11} />
-          {v}
+          <span className="font-num">{v}</span>
         </span>
       ))}
     </span>
@@ -50,7 +51,7 @@ function Stat({ icon, children, title, bad }: { icon: IconId; children: ReactNod
   return (
     <span title={title} className={cn("flex items-center gap-1", bad && "text-red-300")}>
       <PixelIcon name={icon} size={12} />
-      {children}
+      <span className="font-num">{children}</span>
     </span>
   );
 }
@@ -97,10 +98,12 @@ export function BottomBar() {
   const prod = production(state);
   const net = prod.food - consumption(state);
   const eraBuildings = BUILDINGS.filter((b) => b.era <= state.era);
+  const inTutorial = state.tutorialStep < TUTORIAL.length;
+  const counts = countBuildings(state);
 
   return (
     <div className="pointer-events-auto absolute inset-x-0 bottom-3 flex justify-center px-3">
-      <div className="pixel-panel-dark font-pixel flex max-w-full items-stretch gap-3 p-2">
+      <div className="pixel-panel-dark font-pixel flex min-w-0 max-w-full items-stretch gap-3 p-2">
         <div className="hidden flex-col justify-center gap-0.5 border-r-2 border-white/10 pr-3 text-[11px] text-white/85 md:flex">
           <Stat icon="hut" title="Housing">
             {Math.floor(state.population)}/{housingCapacity(state)}
@@ -116,20 +119,23 @@ export function BottomBar() {
           </Stat>
         </div>
 
-        <div className="flex gap-1.5 overflow-x-auto pb-1">
+        <div className="flex min-w-0 gap-1.5 overflow-x-auto pb-1">
           {eraBuildings.map((b) => {
             const unlocked = isUnlocked(state, b);
             const cost = buildingCost(state, b);
             const affordable = canAfford(state, cost);
             const active = selected === b.id;
+            const usedUp = inTutorial && unlocked && (counts[b.id] ?? 0) >= 1;
             return (
               <button
                 key={b.id}
                 type="button"
-                disabled={!unlocked}
+                disabled={!unlocked || usedUp}
                 onClick={() => setSelected(active ? null : b.id)}
                 title={
-                  unlocked
+                  usedUp
+                    ? "Only one of each during the tutorial"
+                    : unlocked
                     ? b.description
                     : tutorialLocked(state, b.id)
                       ? "Unlocks later in the tutorial"
@@ -138,24 +144,27 @@ export function BottomBar() {
                 className={cn(
                   "pixel-btn flex w-20 shrink-0 flex-col items-center gap-0.5 px-1 py-1.5 text-center",
                   active ? "bg-amber-400 text-[#2b2119]" : "bg-[#4a3b2e] hover:bg-[#5c4a3a]",
-                  !unlocked && "cursor-not-allowed opacity-40",
+                  (!unlocked || usedUp) && "cursor-not-allowed opacity-40",
                 )}
               >
                 <PixelIcon name={unlocked ? b.icon : "lock"} size={24} />
                 <span className="text-[11px] leading-tight">{b.name}</span>
-                <Cost cost={cost} bad={!affordable && !active} />
+                {usedUp ? (
+                  <span className="text-[10px] text-emerald-300">built</span>
+                ) : (
+                  <Cost cost={cost} bad={!affordable && !active} />
+                )}
               </button>
             );
           })}
         </div>
 
-        <div className="flex gap-1.5 border-l-2 border-white/10 pl-3">
+        <div className="flex shrink-0 gap-1.5 border-l-2 border-white/10 pl-3">
           <ToolButton
-            locked={tutorialLocked(state, "demolish")}
-            icon="hammer"
-            label="Demolish"
+            icon="coin"
+            label="Sell"
             onClick={() => setSelected(selected === DEMOLISH_TOOL ? null : DEMOLISH_TOOL)}
-            title="Knock down a building to make room. You get half its cost back."
+            title="Sell a building to make room. You get half its cost back."
             tone={selected === DEMOLISH_TOOL ? "bg-amber-400 text-[#2b2119]" : "bg-[#4a3b2e] hover:bg-[#5c4a3a]"}
           />
           <ArmyButton />
