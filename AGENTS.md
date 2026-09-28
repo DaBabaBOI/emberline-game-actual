@@ -84,6 +84,13 @@ These were decided with the project owner. Do not change them without being aske
   shows `sustainabilityBreakdown()` (every part pushing it down or up) and the
   trend over the last minute. A new building or mechanic that affects the land
   must add its own line to the breakdown and its own gain/cost text.
+- **Sustainable alternatives exist for the big choices.** Clicking a building
+  opens its info panel (`world/building-info.tsx`). Woodcutters can
+  **clear-cut** (full wood, strips the forest) or log **selectively** (half the
+  wood, only trees above `SELECTIVE_FLOOR`, the forest lasts). The **Plant**
+  tool (`PLANT_TOOL`, `PLANT_COST`) turns grass/steppe into young forest or
+  helps thinned forest regrow. Keep offering a slower-but-lasting option next
+  to every fast-but-damaging one.
 - **Sustainability = land health** (`computeMeters`): mostly the share of
   forest still standing within `LAND.radius` of the start (`forestCover`), minus
   a little for campfire smoke, quarries and fields. Woodcutters really fell the

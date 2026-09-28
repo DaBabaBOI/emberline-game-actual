@@ -495,6 +495,11 @@ export const GROWTH_PRESSURE = {
   raidersPerPeople: 10,
 };
 
+// Selective logging only takes trees above this growth and never cuts below it,
+// for half the wood. Planting costs food (people's work).
+export const SELECTIVE_FLOOR = 0.5;
+export const PLANT_COST = { food: 4 };
+
 // Buying something that leaves less wood than this shows a "save up" warning.
 export const LOW_WOOD_AFTER_BUY = 10;
 
