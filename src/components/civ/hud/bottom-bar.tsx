@@ -9,6 +9,7 @@ import {
   countBuildings,
   defenseStrength,
   DEMOLISH_TOOL,
+  foodSpoiling,
   housingCapacity,
   isUnlocked,
   production,
@@ -102,7 +103,7 @@ function ToolButton({
 export function BottomBar() {
   const { state, dispatch, selected, setSelected, setPanel } = useGame();
   const prod = production(state);
-  const net = prod.food - consumption(state);
+  const net = prod.food - consumption(state) - foodSpoiling(state);
   const eraBuildings = BUILDINGS.filter((b) => b.era <= state.era);
   const inTutorial = state.tutorialStep < TUTORIAL.length;
   const counts = countBuildings(state);
@@ -127,6 +128,11 @@ export function BottomBar() {
           <span className="font-num whitespace-nowrap text-[11px] text-white/60" title="More people eat more food">
             eat −{consumption(state).toFixed(1)}/s
           </span>
+          {foodSpoiling(state) > 0.05 && (
+            <span className="font-num whitespace-nowrap text-[11px] text-amber-300" title="Stored food above 60 rots away">
+              rot −{foodSpoiling(state).toFixed(1)}/s
+            </span>
+          )}
           <Stat icon="log" title="Wood per second" bad={prod.wood < 0}>
             {rate(prod.wood)}/s
           </Stat>
