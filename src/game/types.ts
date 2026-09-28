@@ -124,6 +124,8 @@ export interface EventCard {
 export interface GameState {
   version: number;
   phase: "playing" | "gameover";
+  // Why the game ended: everyone starved, or everyone got so sad they left.
+  lostTo: "famine" | "unrest" | null;
   seed: number;
   culture: CultureId;
   difficulty: DifficultyId;
@@ -136,6 +138,8 @@ export interface GameState {
   resources: Resources;
   population: number;
   famineTicks: number;
+  // Seconds in a row that happiness has been below UNREST_LEVEL.
+  unrestTicks: number;
   soldiers: number;
   raid: Raid | null;
   nextRaidTick: number;

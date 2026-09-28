@@ -65,8 +65,10 @@ function ToolButton({
   tone,
   children,
   locked,
+  guide,
 }: {
   locked?: boolean;
+  guide?: string;
   icon: IconId;
   label: string;
   onClick?: () => void;
@@ -78,6 +80,7 @@ function ToolButton({
   return (
     <button
       type="button"
+      data-guide={guide}
       onClick={onClick}
       disabled={disabled || locked}
       title={locked ? "Unlocks later in the tutorial" : title}
@@ -130,6 +133,7 @@ export function BottomBar() {
               <button
                 key={b.id}
                 type="button"
+                data-guide={`build-${b.id}`}
                 disabled={!unlocked || usedUp}
                 onClick={() => setSelected(active ? null : b.id)}
                 title={
@@ -169,6 +173,7 @@ export function BottomBar() {
           />
           <ArmyButton />
           <ToolButton
+            guide="tool-scout"
             locked={tutorialLocked(state, "scout")}
             icon="spyglass"
             label="Scout"
@@ -180,6 +185,7 @@ export function BottomBar() {
             <Cost cost={scoutCost(state)} bad={!canAfford(state, scoutCost(state))} />
           </ToolButton>
           <ToolButton
+            guide="tool-advancements"
             locked={tutorialLocked(state, "advancements")}
             icon="star"
             label="Advancements"
@@ -209,6 +215,7 @@ function ArmyButton() {
         : `Train a warrior. Defense: ${defenseStrength(state)}`;
   return (
     <ToolButton
+      guide="tool-train"
       locked={tutorialLocked(state, "train")}
       icon="sword"
       label={`Train ${state.soldiers}/${cap}`}

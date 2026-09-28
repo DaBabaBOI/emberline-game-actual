@@ -47,11 +47,11 @@ export const CULTURES: Record<
 
 export const DIFFICULTIES: Record<
   DifficultyId,
-  { name: string; blurb: string; consumption: number; famineLimit: number; raiders: number }
+  { name: string; blurb: string; consumption: number; famineLimit: number; unrestLimit: number; raiders: number }
 > = {
-  easy: { name: "Easy", blurb: "Forgiving. Famine takes a long time to hit.", consumption: 0.8, famineLimit: 45, raiders: 0.7 },
-  normal: { name: "Normal", blurb: "The intended experience.", consumption: 1, famineLimit: 30, raiders: 1 },
-  hard: { name: "Hard", blurb: "Hungry people, short patience, bold raiders.", consumption: 1.25, famineLimit: 18, raiders: 1.4 },
+  easy: { name: "Easy", blurb: "Forgiving. Famine takes a long time to hit.", consumption: 0.8, famineLimit: 45, unrestLimit: 60, raiders: 0.7 },
+  normal: { name: "Normal", blurb: "The intended experience.", consumption: 1, famineLimit: 30, unrestLimit: 40, raiders: 1 },
+  hard: { name: "Hard", blurb: "Hungry people, short patience, bold raiders.", consumption: 1.25, famineLimit: 18, unrestLimit: 25, raiders: 1.4 },
 };
 
 export const WARRIORS_PER_CAMP = 4;
@@ -408,6 +408,6 @@ export const TUTORIAL: { text: string; done: string; unlocks: string[] }[] = [
   { text: "Good! Now build a Hut so more people have shelter.", done: "hut", unlocks: ["hut"] },
   { text: "We need food. Place a Gatherer's Camp. Berry bushes give a bonus.", done: "gatherer", unlocks: ["gatherer"] },
   { text: "The world is hidden. Press Scout to explore new land.", done: "scout", unlocks: ["scout"] },
-  { text: "Raiders roam these lands. Build a War Camp, then train warriors to defend us.", done: "warcamp", unlocks: ["warcamp", "train"] },
+  { text: "Raiders roam these lands. Build a War Camp, then train a warrior to defend us.", done: "train", unlocks: ["warcamp", "train"] },
   { text: "Open Advancements and research Early Farming, then place Farmland.", done: "early-farming", unlocks: ["advancements", "farm"] },
 ];
