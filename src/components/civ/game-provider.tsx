@@ -47,12 +47,14 @@ export function GameProvider({
   // It only runs if the player is somehow short and has to wait.
   const inTutorial = state.tutorialStep < TUTORIAL.length;
   const held = inTutorial && !state.dev && guideFor(state, selected, panel).waiting === null;
+  // The world waits while the debrief is on screen.
+  const paused = !!state.debrief;
 
   useEffect(() => {
-    if (state.speed === 0 || state.phase !== "playing" || panel || held) return;
+    if (state.speed === 0 || state.phase !== "playing" || panel || held || paused) return;
     const id = setInterval(() => dispatch({ type: "tick" }), (TICK_SECONDS * 1000) / state.speed);
     return () => clearInterval(id);
-  }, [state.speed, state.phase, panel, held]);
+  }, [state.speed, state.phase, panel, held, paused]);
 
   useEffect(() => {
     // Save every few ticks, and always the moment the game ends, so a lost game

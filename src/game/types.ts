@@ -55,6 +55,32 @@ export interface Battle {
   won: boolean;
 }
 
+// Running totals for the end-of-era debrief.
+export interface Stats {
+  peakPopulation: number;
+  built: number;
+  raidsWon: number;
+  raidsLost: number;
+  // Seconds (ticks) the land spent below the best-ending Sustainability.
+  lowLandTicks: number;
+  deaths: { famine: number; disease: number; fire: number; battle: number };
+}
+
+// What the debrief shows: frozen when the era ends (or the game does).
+export interface Debrief {
+  kind: "era" | "loss" | "final";
+  era: number;
+  tick: number;
+  year: number;
+  meters: Meters;
+  forestLeft: number;
+  stats: Stats;
+  researched: number;
+  planted: number;
+  lessons: string[];
+  tier: "thriving" | "costly" | "stripped";
+}
+
 export type MeterKey =
   | "food"
   | "shelter"
@@ -169,6 +195,9 @@ export interface GameState {
   seed: number;
   culture: CultureId;
   difficulty: DifficultyId;
+  // Running totals for the debrief, and the debrief on screen (if any).
+  stats?: Stats;
+  debrief?: Debrief | null;
   // The name the player gave their people.
   nation?: string;
   tiles: Tile[];

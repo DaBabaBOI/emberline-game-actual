@@ -377,12 +377,11 @@ export const TREE: TreeNode[] = [
   {
     id: "agriculture",
     name: "Agriculture",
-    description: "Enter the Ancient era: farms, villages, bronze.",
+    description: "Settle down to farm for good. With 15 people, your tribe can enter the Ancient era.",
     branch: "knowledge",
     era: 0,
     cost: 40,
     requires: ["early-farming", "toolmaking"],
-    comingSoon: true,
   },
   {
     id: "silk-secret",
@@ -703,6 +702,23 @@ export const LESSONS: { id: string; title: string; text: string; sdg: string }[]
 
 // Ticks between two lessons, so they never pile up.
 export const LESSON_GAP = 40;
+
+// Leaving the Stone Age: research Agriculture and grow to this many people.
+export const NEXT_ERA_POPULATION = 15;
+
+// The best ending needs the land to still be healthy: growth can't just ignore
+// the damage it does. Used for every debrief's ending tier.
+export const MIN_SUSTAINABILITY_FOR_BEST_ENDING = 60;
+
+// Each meter's real-world target, shown on the debrief.
+export const METER_SDG: Record<MeterKey, string> = {
+  food: "SDG 2.1: enough safe, nutritious food for everyone",
+  shelter: "SDG 11.1: safe, decent housing for all",
+  happiness: "SDG 3.4: mental health and well-being",
+  literacy: "SDG 4.6: everyone learns to read and count",
+  energy: "SDG 7.1: modern energy for everyone",
+  sustainability: "SDG 15.2: halt deforestation and restore forests",
+};
 
 // Buying something that leaves less wood than this shows a "save up" warning.
 export const LOW_WOOD_AFTER_BUY = 10;

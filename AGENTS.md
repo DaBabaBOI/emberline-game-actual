@@ -180,6 +180,14 @@ These were decided with the project owner. Do not change them without being aske
   it's called sickness and Healer's Huts cut spread and deaths.
 - Letting a wildfire burn near the village kills people (at most a quarter of
   the tribe); a few visibly stagger and fall in the flames (`FireVictims`).
+- **Leaving the Stone Age:** research Agriculture and grow to
+  `NEXT_ERA_POPULATION` (15). A button appears; it opens the **debrief**
+  (`hud/debrief.tsx`): achievements vs. what they cost (forest lost, time with
+  low Sustainability, lives lost by cause), all six meters with their SDG
+  target (`METER_SDG`), and the lessons learned. The ending tier needs
+  Sustainability ≥ `MIN_SUSTAINABILITY_FOR_BEST_ENDING` (60) for the best
+  ending. Losing shows the same debrief. The Stone Age year stops just before
+  the next era's start until the player moves on.
 - Seven cultures (Balanced + six with bonuses), three difficulties. There are two
   ways to lose: **famine** (no food for too long) and **unrest** (happiness below
   15 for too long, after the tutorial). Both show a countdown warning first.
