@@ -12,6 +12,7 @@ import {
   foodSpoiling,
   housingCapacity,
   isUnlocked,
+  perSecond,
   production,
   scoutCost,
   tutorialLocked,
@@ -31,9 +32,13 @@ const COST_ICONS: Record<keyof Resources, IconId> = {
   knowledge: "bulb",
 };
 
+// Per-tick amount shown per real second.
 function rate(n: number) {
-  return `${n >= 0 ? "+" : ""}${n.toFixed(1)}`;
+  const s = perSecond(n);
+  return `${s >= 0 ? "+" : ""}${s.toFixed(1)}`;
 }
+
+const perSec = (n: number) => perSecond(n).toFixed(1);
 
 function Cost({ cost, bad, tight }: { cost: Partial<Resources>; bad?: boolean; tight?: boolean }) {
   return (
@@ -120,17 +125,17 @@ export function BottomBar() {
           </Stat>
           <Stat
             icon="meat"
-            title={`Food: +${prod.food.toFixed(1)}/s made, −${consumption(state).toFixed(1)}/s eaten by ${Math.floor(state.population)} people`}
+            title={`Food: +${perSec(prod.food)}/s made, −${perSec(consumption(state))}/s eaten by ${Math.floor(state.population)} people`}
             bad={net < 0}
           >
             {rate(net)}/s
           </Stat>
           <span className="font-num whitespace-nowrap text-[11px] text-white/60" title="More people eat more food">
-            eat −{consumption(state).toFixed(1)}/s
+            eat −{perSec(consumption(state))}/s
           </span>
           {foodSpoiling(state) > 0.05 && (
-            <span className="font-num whitespace-nowrap text-[11px] text-amber-300" title="Stored food above 60 rots away">
-              rot −{foodSpoiling(state).toFixed(1)}/s
+            <span className="font-num whitespace-nowrap text-[11px] text-amber-300" title="Stored food above 100 rots away">
+              rot −{perSec(foodSpoiling(state))}/s
             </span>
           )}
           <Stat icon="log" title="Wood per second" bad={prod.wood < 0}>

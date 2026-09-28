@@ -148,6 +148,8 @@ export interface GameState {
   strainTicks: number;
   // How many people are sick right now, and how many the current outbreak has killed.
   sick?: number;
+  // Until this tick, no disease strikes unless the player invites it (early calm).
+  calmUntil?: number;
   // Recently recovered people who can't catch it again for a while.
   immune?: number;
   outbreakDeaths?: number;

@@ -42,18 +42,25 @@ export function maybeOutbreak(state: GameState, chance: number, roll: number, so
   };
 }
 
-// One second of disease: new outbreaks, spread, recovery and deaths.
+// The first few minutes after the tutorial are calm: no disease out of nowhere.
+export function isCalm(state: GameState) {
+  return state.tick < (state.calmUntil ?? 0);
+}
+
+// One tick of disease: new outbreaks, spread, recovery and deaths.
 export function stepDisease(state: GameState, housing: number, rand: () => number): GameState {
   if (state.tutorialStep < TUTORIAL.length) return state;
   let next = state;
   const fishing = state.tiles.filter((t) => t.building === "fishing").length;
-  next = maybeOutbreak(
-    next,
-    DISEASE.perPerson * state.population * crowding(state, housing),
-    rand(),
-    "It spread through the crowded huts.",
-  );
-  if (fishing) next = maybeOutbreak(next, DISEASE.fishing * fishing, rand(), "It came with the fish.");
+  if (!isCalm(state)) {
+    next = maybeOutbreak(
+      next,
+      DISEASE.perPerson * state.population * crowding(state, housing),
+      rand(),
+      "It spread through the crowded huts.",
+    );
+    if (fishing) next = maybeOutbreak(next, DISEASE.fishing * fishing, rand(), "It came with the fish.");
+  }
 
   const sick = next.sick ?? 0;
   const immune = Math.max(0, (next.immune ?? 0) * (1 - DISEASE.immunityFades));

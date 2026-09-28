@@ -4,6 +4,7 @@ import {
   DISEASE,
   CAMPFIRE_BURN_TICKS,
   RELIGHT_WOOD,
+  TICK_SECONDS,
   FIRE_RISK,
   LAND,
   GRACE_AFTER_TUTORIAL,
@@ -18,7 +19,7 @@ import {
   TUTORIAL,
   WARRIORS_PER_CAMP,
 } from "./content";
-import { diseaseName, maybeOutbreak, sickShare, stepDisease } from "./disease";
+import { diseaseName, isCalm, maybeOutbreak, sickShare, stepDisease } from "./disease";
 import { hexDistance } from "./hex";
 import { generateMap, isLand, revealAround, terrainHeight } from "./map";
 import { mulberry32 } from "./noise";
@@ -339,7 +340,7 @@ export function production(state: GameState): Resources {
       const fishNearby = state.tiles.some(
         (t) => t.deposit === "fish" && hexDistance(t, tile) === 1,
       );
-      if (fishNearby) out.food += 0.6;
+      if (fishNearby) out.food += 0.8;
     }
   }
   // Worn-out land gives smaller harvests.
@@ -423,6 +424,16 @@ export const NO_FIRE_PENALTY = 15;
 // Below this happiness the tribe starts to fall apart (see unrestLimit).
 export const UNREST_LEVEL = 15;
 
+// Game ticks → real seconds at 1× speed, for text shown to the player.
+export function secs(ticks: number) {
+  return Math.ceil(ticks * TICK_SECONDS);
+}
+
+// A per-tick amount → per real second at 1× speed.
+export function perSecond(perTick: number) {
+  return perTick / TICK_SECONDS;
+}
+
 export interface Warning {
   id: "fire" | "food" | "wood" | "famine" | "unrest" | "land" | "sick";
   icon: IconId;
@@ -442,14 +453,14 @@ export function warnings(state: GameState): Warning[] {
     out.push({
       id: "famine",
       icon: "skull",
-      text: `Your people are starving! Famine in ${Math.max(0, famineLimit - state.famineTicks)}s unless you find food.`,
+      text: `Your people are starving! Famine in ${secs(Math.max(0, famineLimit - state.famineTicks))}s unless you find food.`,
       severe: true,
     });
   } else if (netFood < 0 && state.resources.food / -netFood < 45) {
     out.push({
       id: "food",
       icon: "meat",
-      text: `Food is running low: about ${Math.ceil(state.resources.food / -netFood)}s left. Build gatherers or farms.`,
+      text: `Food is running low: about ${secs(state.resources.food / -netFood)}s left. Build gatherers or farms.`,
       severe: state.resources.food / -netFood < 20,
     });
   }
@@ -459,7 +470,7 @@ export function warnings(state: GameState): Warning[] {
     out.push({
       id: "unrest",
       icon: "sad",
-      text: `Your people are miserable! They will leave in ${Math.max(0, unrestLimit - state.unrestTicks)}s unless you cheer them up.`,
+      text: `Your people are miserable! They will leave in ${secs(Math.max(0, unrestLimit - state.unrestTicks))}s unless you cheer them up.`,
       severe: true,
     });
   }
@@ -653,6 +664,7 @@ function startGrace(state: GameState): GameState {
     ...state,
     nextEventTick: Math.max(state.nextEventTick, state.tick + GRACE_AFTER_TUTORIAL.event),
     nextRaidTick: Math.max(state.nextRaidTick, state.tick + GRACE_AFTER_TUTORIAL.raid),
+    calmUntil: state.tick + GRACE_AFTER_TUTORIAL.disease,
   };
 }
 
@@ -673,7 +685,8 @@ function tick(state: GameState): GameState {
   let population = state.population;
   let famineTicks = state.famineTicks;
   const capacity = housingCapacity(state);
-  const growth = state.culture === "farmers" ? 0.03 : 0.02;
+  // Slow, steady growth: the tribe doesn't outgrow its food overnight.
+  const growth = state.culture === "farmers" ? 0.015 : 0.01;
 
   if (resources.food <= 0) {
     population = Math.max(1, population - Math.max(0.3, population * 0.02));
@@ -681,7 +694,7 @@ function tick(state: GameState): GameState {
   } else {
     famineTicks = Math.max(0, famineTicks - 1);
     if (state.meters.food > 45 && state.meters.shelter > 40 && population < capacity * 1.15) {
-      population += Math.max(0.15, population * growth);
+      population += Math.max(0.08, population * growth);
     }
   }
 
@@ -744,7 +757,7 @@ function tick(state: GameState): GameState {
   if (!inTutorial && next.tick >= next.nextEventTick) {
     const rand = mulberry32(next.seed + next.tick);
     const event = pickEvent(rand(), next);
-    next = { ...next, event, nextEventTick: next.tick + 110 + Math.floor(rand() * 90) };
+    next = { ...next, event, nextEventTick: next.tick + 180 + Math.floor(rand() * 120) };
   }
 
   next = stepDisease(next, housingCapacity(next), mulberry32(next.seed + next.tick * 31));
@@ -851,7 +864,7 @@ function updateRaids(state: GameState): GameState {
         startTick: state.tick,
         arriveTick: state.tick + 12,
       },
-      nextRaidTick: state.tick + 100 + Math.floor(rand() * 60),
+      nextRaidTick: state.tick + 180 + Math.floor(rand() * 100),
       log: [`${strength} raiders spotted landing on the shore!`, ...state.log].slice(0, 30),
     };
   }
@@ -1074,7 +1087,7 @@ function step(state: GameState, action: Action): GameState {
         ...state,
         resources: { ...state.resources, food: state.resources.food + HUNT_FOOD },
         log: [`Hunters brought down a ${action.animal} (+${HUNT_FOOD} food).`, ...state.log].slice(0, 30),
-      }, DISEASE.hunt, mulberry32(state.seed + state.tick * 37 + Math.round(state.resources.food))(), "It came with the meat from the hunt.");
+      }, isCalm(state) ? 0 : DISEASE.hunt, mulberry32(state.seed + state.tick * 37 + Math.round(state.resources.food))(), "It came with the meat from the hunt.");
   }
 }
 
