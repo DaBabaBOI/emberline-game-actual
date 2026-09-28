@@ -167,7 +167,7 @@ export function DevPanel() {
   return (
     <div className="pixel-panel-dark font-pixel pointer-events-auto absolute left-16 top-20 flex max-w-xs flex-col gap-1.5 p-2 text-xs">
       <span className="text-amber-300">Dev mode</span>
-      <div className="flex gap-1">
+      <div className="flex max-w-xs flex-wrap gap-1">
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devGrant" })}>
           +500 all
         </button>
@@ -179,6 +179,9 @@ export function DevPanel() {
         </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devPeople" })}>
           +10 people
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devFiresOut" })}>
+          Fires out
         </button>
       </div>
       <div className="flex flex-wrap gap-1">

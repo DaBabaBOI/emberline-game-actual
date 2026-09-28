@@ -130,13 +130,17 @@ export function Villagers({
   population,
   soldiers,
   homeTile,
+  litFires,
 }: {
   tiles: Tile[];
   population: number;
   soldiers: number;
   homeTile: Tile;
+  // Tile ids of campfires that are burning; people only gather at those.
+  litFires: number[];
 }) {
   const walkers = useRef<Walker[]>([]);
+  const litKey = litFires.join(",");
   const spots = useMemo(() => {
     const built = tiles.filter((t) => t.building && t.building !== "warcamp");
     const wander = tiles.filter(
@@ -147,9 +151,9 @@ export function Villagers({
       wander: wander.length ? wander : [homeTile],
       school: built.filter((t) => t.building === "elder"),
       fields: built.filter((t) => t.building === "farm"),
-      fires: built.filter((t) => t.building === "campfire"),
+      fires: built.filter((t) => t.building === "campfire" && litKey.split(",").includes(String(t.id))),
     };
-  }, [tiles, homeTile]);
+  }, [tiles, homeTile, litKey]);
 
   const ground = useMemo(() => makeGround(tiles), [tiles]);
   const count = figureCounts(population, soldiers).villagers;

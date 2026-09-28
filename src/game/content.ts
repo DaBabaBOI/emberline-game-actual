@@ -422,6 +422,11 @@ export const LAND = {
 // Wildfire odds: a little from lightning, more for every campfire near trees.
 export const FIRE_RISK = { base: 0.1, perForestTile: 0.06, max: 1.5 };
 
+// A campfire burns this many seconds on one load of wood, then goes out until
+// the player clicks it to relight it (costs RELIGHT_WOOD). Firekeeping: ×1.5.
+export const CAMPFIRE_BURN_TICKS = 40;
+export const RELIGHT_WOOD = 1;
+
 // Buying something that leaves less wood than this shows a "save up" warning.
 export const LOW_WOOD_AFTER_BUY = 10;
 

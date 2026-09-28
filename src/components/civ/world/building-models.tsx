@@ -7,6 +7,8 @@ import { Part } from "./part";
 
 interface ModelProps {
   opacity: number;
+  // Campfires only: false when it has burned out.
+  lit?: boolean;
 }
 
 export function Flame({ opacity, position = [0, 0, 0], scale = 1 }: ModelProps & {
@@ -89,14 +91,28 @@ function ThatchHut({ opacity, radius = 0.32, height = 0.3, roofColor = "#c9a24d"
   );
 }
 
-export function CampfireModel({ opacity }: ModelProps) {
+export function CampfireModel({ opacity, lit = true }: ModelProps) {
   return (
     <group>
       <StoneRing opacity={opacity} radius={0.2} count={9} />
       <Log opacity={opacity} position={[0, 0.06, 0]} rotation={[0, 0.4, Math.PI / 2.4]} length={0.34} />
       <Log opacity={opacity} position={[0, 0.06, 0]} rotation={[0, -0.9, Math.PI / 2.4]} length={0.34} />
       <Log opacity={opacity} position={[0, 0.06, 0]} rotation={[0, 1.8, Math.PI / 2.4]} length={0.34} />
-      <Flame opacity={opacity} position={[0, 0.06, 0]} scale={1.2} />
+      {lit ? (
+        <Flame opacity={opacity} position={[0, 0.06, 0]} scale={1.2} />
+      ) : (
+        // Burnt out: grey ash and a few dull embers.
+        <group>
+          <Part color="#6e6862" opacity={opacity} position={[0, 0.03, 0]}>
+            <cylinderGeometry args={[0.16, 0.18, 0.04, 8]} />
+          </Part>
+          {[0.5, 2.4, 4.1].map((a) => (
+            <Part key={a} color="#7a2e14" opacity={opacity} position={[Math.cos(a) * 0.07, 0.06, Math.sin(a) * 0.07]}>
+              <boxGeometry args={[0.04, 0.03, 0.04]} />
+            </Part>
+          ))}
+        </group>
+      )}
       {[0, 1.3, 2.6, 3.9, 5.2].map((a) => (
         <Log key={a} opacity={opacity} position={[Math.cos(a) * 0.5, 0.05, Math.sin(a) * 0.5]} rotation={[0, -a, Math.PI / 2]} length={0.3} radius={0.05} />
       ))}

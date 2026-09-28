@@ -57,8 +57,8 @@ export function Plume({ x, y, z, strength, seed }: { x: number; y: number; z: nu
 }
 
 // Only fires make smoke. The more campfires, the thicker it gets.
-export function CampfireSmoke({ tiles }: { tiles: Tile[] }) {
-  const sources = useMemo(() => tiles.filter((t) => t.building === "campfire").slice(0, 25), [tiles]);
+export function CampfireSmoke({ fires }: { fires: Tile[] }) {
+  const sources = fires.slice(0, 25);
   const strength = Math.min(1, 0.3 + sources.length * 0.12);
   if (!sources.length) return null;
   return (

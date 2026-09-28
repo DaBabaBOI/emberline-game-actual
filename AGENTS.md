@@ -111,8 +111,11 @@ These were decided with the project owner. Do not change them without being aske
   can be used (`TUTORIAL[].unlocks`, `tutorialLocked()`); the rest shows a lock
   until the tutorial is finished or skipped. When adding a building or tool,
   decide which tutorial step (if any) introduces it.
-- A lit campfire (and wood to burn) is needed; without one happiness drops and a
-  warning is shown. Villagers sit around campfires.
+- **Campfires burn out** after `CAMPFIRE_BURN_TICKS` (×1.5 with Firekeeping)
+  and must be relit by clicking them (`RELIGHT_WOOD` = 1 wood). Only lit fires
+  give warmth, energy, smoke, wildfire risk, and a place for villagers to sit.
+  With no lit fire, happiness drops and a warning says how to relight. The clock
+  is held during the tutorial, so the first fire can't go out mid-tutorial.
 - Scouting costs food and wood and gets more expensive with each trip.
 - **Dev mode** (`/play/?dev`): start in any era with plenty of resources; an
   in-game dev panel can grant resources, reveal the map and jump eras. Keep it

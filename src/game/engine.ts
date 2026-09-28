@@ -1,5 +1,7 @@
 import {
   AFTER_TUTORIAL_RESERVE,
+  CAMPFIRE_BURN_TICKS,
+  RELIGHT_WOOD,
   FIRE_RISK,
   LAND,
   GRACE_AFTER_TUTORIAL,
@@ -49,6 +51,8 @@ export type Action =
   | { type: "demolish"; tileId: number }
   | { type: "devGrant" }
   | { type: "devPeople" }
+  | { type: "devFiresOut" }
+  | { type: "relight"; tileId: number }
   | { type: "devEra"; era: number }
   | { type: "devReveal" }
   | { type: "devEvent"; id: string };
@@ -136,7 +140,7 @@ function burnForest(
   radius: number,
 ): { tiles: Tile[]; message: string; deaths: number; victims: number[] } {
   // Fires start in the trees next to a campfire when there is one, else near the village.
-  const campfires = state.tiles.filter((t) => t.building === "campfire");
+  const campfires = litFires(state);
   const from = campfires.length
     ? campfires[Math.floor(mulberry32(state.seed + state.tick * 19)() * campfires.length)]
     : state.tiles[state.startTile];
@@ -229,8 +233,7 @@ export function woodcutterYield(state: GameState, tile: Tile) {
 // How likely a wildfire is: every campfire close to trees adds risk.
 export function fireRisk(state: GameState) {
   let risk = 0;
-  for (const fire of state.tiles) {
-    if (fire.building !== "campfire") continue;
+  for (const fire of litFires(state)) {
     for (const t of state.tiles) {
       if (t.terrain !== "forest" || t.growth < 0.3) continue;
       const d = hexDistance(t, fire);
@@ -331,7 +334,6 @@ export function production(state: GameState): Resources {
   // Worn-out land gives smaller harvests.
   out.food *= 1 - 0.4 * landStrain(state);
   const counts = countBuildings(state);
-  out.wood -= (counts.campfire ?? 0) * 0.1;
   out.currency += state.population * 0.02;
   out.knowledge += state.meters.literacy * 0.005;
 
@@ -474,7 +476,9 @@ export function warnings(state: GameState): Warning[] {
     out.push({
       id: "fire",
       icon: "flame",
-      text: `${noCampfire ? "No campfire!" : "The fire is out: no wood!"} Your people are cold (−${NO_FIRE_PENALTY} happiness).`,
+      text: noCampfire
+        ? `No campfire! Your people are cold (−${NO_FIRE_PENALTY} happiness).`
+        : `Your campfire has gone out. Click it to relight it (${RELIGHT_WOOD} wood). Your people are cold (−${NO_FIRE_PENALTY} happiness).`,
       severe: true,
     });
   }
@@ -483,7 +487,19 @@ export function warnings(state: GameState): Warning[] {
 
 // A fire only counts if there's wood to keep it burning.
 export function hasLitFire(state: GameState) {
-  return (countBuildings(state).campfire ?? 0) > 0 && state.resources.wood > 0;
+  return litFires(state).length > 0;
+}
+
+export function isLit(state: GameState, tile: Tile) {
+  return tile.building === "campfire" && (state.fires?.[tile.id] ?? 0) > 0;
+}
+
+export function litFires(state: GameState) {
+  return state.tiles.filter((t) => isLit(state, t));
+}
+
+export function burnTicks(state: GameState) {
+  return Math.round(CAMPFIRE_BURN_TICKS * (state.researched.includes("firekeeping") ? 1.5 : 1));
 }
 
 export function warriorCap(state: GameState) {
@@ -513,15 +529,16 @@ export function computeMeters(state: GameState): Meters {
     (counts.healer ?? 0) * 12;
 
   const fireBoost = state.researched.includes("firekeeping") ? 1.5 : 1;
+  const lit = litFires(state).length;
   const energy =
-    (counts.campfire ?? 0) * 20 * fireBoost * (state.resources.wood > 0 ? 1 : 0.3);
+    lit * 20 * fireBoost;
 
   // How healthy the land is: mostly the forest still standing around the village,
   // plus wood smoke from fires and the pits and fields dug into the ground.
   const sustainability =
     100 -
     (1 - forestCover(state)) * 85 -
-    (counts.campfire ?? 0) * 2 -
+    lit * 2 -
     (counts.quarry ?? 0) * 3 -
     (counts.farm ?? 0) * 1 +
     state.modifiers.sustainability;
@@ -531,7 +548,7 @@ export function computeMeters(state: GameState): Meters {
   const happiness =
     clamp(food) * 0.35 +
     clamp(shelter) * 0.35 +
-    Math.min(3, counts.campfire ?? 0) * 6 +
+    Math.min(3, lit) * 6 +
     (counts.elder ? 5 : 0) -
     (hasLitFire(state) ? 0 : NO_FIRE_PENALTY) -
     (100 - clamp(sustainability)) * 0.15 +
@@ -632,8 +649,24 @@ function tick(state: GameState): GameState {
     happiness: state.modifiers.happiness * 0.993,
   };
 
+  // Campfires burn down; one going out is worth telling the player about.
+  let fires = state.fires;
+  let burnedOut = false;
+  if (fires && Object.values(fires).some((v) => v > 0)) {
+    fires = Object.fromEntries(
+      Object.entries(fires).map(([id, v]) => {
+        if (v === 1 && state.tiles[Number(id)]?.building === "campfire") burnedOut = true;
+        return [id, Math.max(0, v - 1)];
+      }),
+    );
+  }
+
   let next: GameState = {
     ...state,
+    fires,
+    log: burnedOut
+      ? [`A campfire burned out. Click it to relight it (${RELIGHT_WOOD} wood).`, ...state.log].slice(0, 30)
+      : state.log,
     tick: state.tick + 1,
     year: state.year + era.yearsPerTick,
     resources,
@@ -807,6 +840,7 @@ function step(state: GameState, action: Action): GameState {
       return withMeters({
         ...state,
         tiles: revealed,
+        fires: def.id === "campfire" ? { ...state.fires, [tile.id]: burnTicks(state) } : state.fires,
         resources: spend(state.resources, buildingCost(state, def)),
         log: [`Built a ${def.name}.`, ...state.log].slice(0, 30),
       });
@@ -918,6 +952,23 @@ function step(state: GameState, action: Action): GameState {
         log: [`Sold a ${def.name}.`, ...state.log].slice(0, 30),
       });
     }
+
+    case "relight": {
+      const tile = state.tiles[action.tileId];
+      if (!tile || tile.building !== "campfire" || isLit(state, tile) || state.resources.wood < RELIGHT_WOOD) {
+        return state;
+      }
+      return withMeters({
+        ...state,
+        fires: { ...state.fires, [tile.id]: burnTicks(state) },
+        resources: { ...state.resources, wood: state.resources.wood - RELIGHT_WOOD },
+        log: ["Relit the campfire.", ...state.log].slice(0, 30),
+      });
+    }
+
+    case "devFiresOut":
+      if (!state.dev) return state;
+      return withMeters({ ...state, fires: {}, log: ["Dev: all campfires put out.", ...state.log].slice(0, 30) });
 
     case "devPeople":
       if (!state.dev) return state;

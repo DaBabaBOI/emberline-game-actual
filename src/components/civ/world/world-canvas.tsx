@@ -4,8 +4,8 @@ import { useMemo, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Vector3 } from "three";
 import { Html, MapControls } from "@react-three/drei";
-import { BUILDINGS_BY_ID, LOW_WOOD_AFTER_BUY, TUTORIAL } from "@/game/content";
-import { buildingCost, DEMOLISH_TOOL, landStrain, demolishError, demolishRefund, placementError } from "@/game/engine";
+import { BUILDINGS_BY_ID, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL } from "@/game/content";
+import { buildingCost, DEMOLISH_TOOL, isLit, landStrain, litFires, demolishError, demolishRefund, placementError } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { tileAnchor } from "@/components/civ/guide";
@@ -85,8 +85,17 @@ export function WorldCanvas() {
       ? `Leaves only ${woodLeft} wood. Fires need wood, so you might save up first.`
       : null;
 
+  const burning = useMemo(() => litFires(state), [state]);
+  const burningIds = burning.map((t) => t.id);
+  const outFires = buildings.filter((t) => t.building === "campfire" && !isLit(state, t));
+
   function pick(id: number) {
     if (guideTile !== null && id !== guideTile) return;
+    const tile = state.tiles[id];
+    if (!selected && tile.building === "campfire" && !isLit(state, tile)) {
+      dispatch({ type: "relight", tileId: id });
+      return;
+    }
     if (demolishing) {
       dispatch({ type: "demolish", tileId: id });
       return;
@@ -105,7 +114,7 @@ export function WorldCanvas() {
       }}
     >
       <color attach="background" args={["#a8dcf5"]} />
-      <Haze fires={buildings.filter((t) => t.building === "campfire").length} />
+      <Haze fires={burning.length} />
       <hemisphereLight args={["#d6f1ff", "#6f8f4e", 0.75]} />
       <directionalLight
         position={[home.x + 25, 40, home.z + 15]}
@@ -137,12 +146,18 @@ export function WorldCanvas() {
         const Model = MODELS[t.building!];
         return (
           <group key={t.id} position={[t.x, t.height, t.z]} rotation={[0, (t.id % 6) * (Math.PI / 3), 0]} scale={1.55}>
-            <Model opacity={1} />
+            <Model opacity={1} lit={t.building !== "campfire" || burningIds.includes(t.id)} />
           </group>
         );
       })}
 
-      <Villagers tiles={state.tiles} population={state.population} soldiers={state.soldiers} homeTile={home} />
+      <Villagers
+        tiles={state.tiles}
+        population={state.population}
+        soldiers={state.soldiers}
+        homeTile={home}
+        litFires={burningIds}
+      />
       <Warriors tiles={state.tiles} population={state.population} soldiers={state.soldiers} homeTile={home} />
       <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} />
       <Wildlife
@@ -150,7 +165,21 @@ export function WorldCanvas() {
         homeTile={home}
         onHunt={(animal) => dispatch({ type: "hunt", animal })}
       />
-      <CampfireSmoke tiles={state.tiles} />
+      <CampfireSmoke fires={burning} />
+      {!guide.target &&
+        outFires.map((t) => (
+          <Html key={t.id} center position={[t.x, tileTop(t) + 1.3, t.z]}>
+            <button
+              type="button"
+              onClick={() => dispatch({ type: "relight", tileId: t.id })}
+              disabled={state.resources.wood < RELIGHT_WOOD}
+              className="pixel-btn font-pixel flex items-center gap-1 whitespace-nowrap bg-amber-400 px-2 py-0.5 text-xs text-[#2b2119] disabled:opacity-50"
+            >
+              <PixelIcon name="flame" size={12} />
+              Relight · <span className="font-num">{RELIGHT_WOOD}</span> wood
+            </button>
+          </Html>
+        ))}
       <Wildfire tiles={state.tiles} />
       <FireVictims tiles={state.tiles} victims={state.fireVictims ?? []} />
 
