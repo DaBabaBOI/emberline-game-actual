@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { BUILDINGS, TRAIN_COST, TREE_BY_ID, TUTORIAL } from "@/game/content";
+import { BUILDINGS, LOW_WOOD_AFTER_BUY, TRAIN_COST, TREE_BY_ID, TUTORIAL } from "@/game/content";
 import {
   buildingCost,
   canAfford,
@@ -34,9 +34,12 @@ function rate(n: number) {
   return `${n >= 0 ? "+" : ""}${n.toFixed(1)}`;
 }
 
-function Cost({ cost, bad }: { cost: Partial<Resources>; bad?: boolean }) {
+function Cost({ cost, bad, tight }: { cost: Partial<Resources>; bad?: boolean; tight?: boolean }) {
   return (
-    <span className={cn("flex items-center gap-1 text-[10px]", bad && "text-red-300")}>
+    <span
+      className={cn("flex items-center gap-1 text-[10px]", bad ? "text-red-300" : tight && "text-amber-300")}
+      title={tight && !bad ? `Buying this leaves less than ${LOW_WOOD_AFTER_BUY} wood` : undefined}
+    >
       {Object.entries(cost).map(([k, v]) => (
         <span key={k} className="flex items-center gap-0.5">
           <PixelIcon name={COST_ICONS[k as keyof Resources]} size={11} />
@@ -103,6 +106,9 @@ export function BottomBar() {
   const eraBuildings = BUILDINGS.filter((b) => b.era <= state.era);
   const inTutorial = state.tutorialStep < TUTORIAL.length;
   const counts = countBuildings(state);
+  // After the tutorial, flag purchases that would leave the fires short of wood.
+  const tight = (cost: Partial<Resources>) =>
+    !inTutorial && (cost.wood ?? 0) > 0 && state.resources.wood - (cost.wood ?? 0) < LOW_WOOD_AFTER_BUY;
 
   return (
     <div className="pointer-events-auto absolute inset-x-0 bottom-3 flex justify-center px-3">
@@ -111,9 +117,16 @@ export function BottomBar() {
           <Stat icon="hut" title="Housing">
             {Math.floor(state.population)}/{housingCapacity(state)}
           </Stat>
-          <Stat icon="meat" title="Food per second" bad={net < 0}>
+          <Stat
+            icon="meat"
+            title={`Food: +${prod.food.toFixed(1)}/s made, −${consumption(state).toFixed(1)}/s eaten by ${Math.floor(state.population)} people`}
+            bad={net < 0}
+          >
             {rate(net)}/s
           </Stat>
+          <span className="font-num whitespace-nowrap text-[11px] text-white/60" title="More people eat more food">
+            eat −{consumption(state).toFixed(1)}/s
+          </span>
           <Stat icon="log" title="Wood per second" bad={prod.wood < 0}>
             {rate(prod.wood)}/s
           </Stat>
@@ -156,7 +169,7 @@ export function BottomBar() {
                 {usedUp ? (
                   <span className="text-[10px] text-emerald-300">built</span>
                 ) : (
-                  <Cost cost={cost} bad={!affordable && !active} />
+                  <Cost cost={cost} bad={!affordable && !active} tight={!active && tight(cost)} />
                 )}
               </button>
             );
@@ -182,7 +195,7 @@ export function BottomBar() {
             title="Send scouts to reveal new land. Each trip costs more than the last."
             tone="bg-[#4a3b2e] hover:bg-[#5c4a3a]"
           >
-            <Cost cost={scoutCost(state)} bad={!canAfford(state, scoutCost(state))} />
+            <Cost cost={scoutCost(state)} bad={!canAfford(state, scoutCost(state))} tight={tight(scoutCost(state))} />
           </ToolButton>
           <ToolButton
             guide="tool-advancements"

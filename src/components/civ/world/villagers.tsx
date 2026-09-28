@@ -106,15 +106,33 @@ function stepWalker(w: Walker, dt: number, ground: Ground, pickTarget: () => Til
   w.y += (floor - w.y) * Math.min(1, dt * 12);
 }
 
+// People on the map stand for groups, not individuals: never more than
+// MAX_FIGURES at once, counting the one hunter who can be out in the woods.
+export const MAX_FIGURES = 20;
+
+export function figureCounts(population: number, soldiers: number) {
+  const budget = MAX_FIGURES - 1;
+  let villagers = Math.max(2, Math.ceil(population / 3));
+  let warriors = soldiers > 0 ? Math.ceil(soldiers / 2) : 0;
+  const total = villagers + warriors;
+  if (total > budget) {
+    warriors = soldiers > 0 ? Math.max(1, Math.round((budget * warriors) / total)) : 0;
+    villagers = budget - warriors;
+  }
+  return { villagers, warriors };
+}
+
 const pick = (list: Tile[]) => list[Math.floor(Math.random() * list.length)];
 
 export function Villagers({
   tiles,
   population,
+  soldiers,
   homeTile,
 }: {
   tiles: Tile[];
   population: number;
+  soldiers: number;
   homeTile: Tile;
 }) {
   const walkers = useRef<Walker[]>([]);
@@ -133,7 +151,7 @@ export function Villagers({
   }, [tiles, homeTile]);
 
   const ground = useMemo(() => makeGround(tiles), [tiles]);
-  const count = Math.min(60, Math.max(3, Math.ceil(population / 2)));
+  const count = figureCounts(population, soldiers).villagers;
 
   useFrame((_, delta) => {
     const list = walkers.current;
@@ -160,10 +178,20 @@ export function Villagers({
     }
   });
 
-  return <Figures agents={walkers} max={60} />;
+  return <Figures agents={walkers} max={MAX_FIGURES} />;
 }
 
-export function Warriors({ tiles, soldiers, homeTile }: { tiles: Tile[]; soldiers: number; homeTile: Tile }) {
+export function Warriors({
+  tiles,
+  population,
+  soldiers,
+  homeTile,
+}: {
+  tiles: Tile[];
+  population: number;
+  soldiers: number;
+  homeTile: Tile;
+}) {
   const walkers = useRef<Walker[]>([]);
   const ground = useMemo(() => makeGround(tiles), [tiles]);
   const camps = useMemo(() => {
@@ -173,7 +201,7 @@ export function Warriors({ tiles, soldiers, homeTile }: { tiles: Tile[]; soldier
 
   useFrame((_, delta) => {
     const list = walkers.current;
-    const count = Math.min(40, soldiers);
+    const count = figureCounts(population, soldiers).warriors;
     while (list.length < count) {
       const i = list.length;
       list.push(
@@ -185,7 +213,7 @@ export function Warriors({ tiles, soldiers, homeTile }: { tiles: Tile[]; soldier
     for (const w of list) stepWalker(w, dt, ground, () => pick(camps));
   });
 
-  return <Figures agents={walkers} max={40} weapon="spear" />;
+  return <Figures agents={walkers} max={MAX_FIGURES} weapon="spear" />;
 }
 
 export function Raiders({ tiles, raid, tick }: { tiles: Tile[]; raid: Raid | null; tick: number }) {

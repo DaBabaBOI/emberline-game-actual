@@ -9,7 +9,9 @@ import {
   type Dispatch,
   type ReactNode,
 } from "react";
+import { TUTORIAL } from "@/game/content";
 import { reducer, saveGame, type Action } from "@/game/engine";
+import { guideFor } from "./guide";
 import type { GameState } from "@/game/types";
 
 interface GameContextValue {
@@ -40,15 +42,21 @@ export function GameProvider({
   const [selected, setSelected] = useState<string | null>(null);
   const [panel, setPanel] = useState<"tree" | null>(null);
 
-  useEffect(() => {
-    if (state.speed === 0 || state.phase !== "playing" || panel) return;
-    const id = setInterval(() => dispatch({ type: "tick" }), 1000 / state.speed);
-    return () => clearInterval(id);
-  }, [state.speed, state.phase, panel]);
+  // Time stands still while the tutorial hand is guiding: the starting resources
+  // cover every step exactly, so nothing should be eaten or burned meanwhile.
+  // It only runs if the player is somehow short and has to wait.
+  const inTutorial = state.tutorialStep < TUTORIAL.length;
+  const held = inTutorial && !state.dev && guideFor(state, selected, panel).waiting === null;
 
   useEffect(() => {
-    if (state.tick % 5 === 0) saveGame(state);
-  }, [state]);
+    if (state.speed === 0 || state.phase !== "playing" || panel || held) return;
+    const id = setInterval(() => dispatch({ type: "tick" }), 1000 / state.speed);
+    return () => clearInterval(id);
+  }, [state.speed, state.phase, panel, held]);
+
+  useEffect(() => {
+    if (state.tick % 5 === 0 || inTutorial) saveGame(state);
+  }, [state, inTutorial]);
 
   return (
     <GameContext.Provider value={{ state, dispatch, selected, setSelected, panel, setPanel }}>

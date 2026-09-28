@@ -37,9 +37,11 @@ export function suggestTile(state: GameState, buildingId: string) {
   return best?.id ?? null;
 }
 
-function buildStep(state: GameState, id: string, selected: string | null): Guide {
+function buildStep(state: GameState, id: string, selected: string | null, panel: string | null): Guide {
   const wait = missing(state, buildingCost(state, BUILDINGS_BY_ID[id]));
   if (wait) return { target: null, waiting: wait };
+  // The bottom bar is hidden behind Advancements, so close it first.
+  if (panel === "tree") return { target: { kind: "ui", ids: ["tree-close"] }, waiting: null };
   if (selected !== id) return { target: { kind: "ui", ids: [`build-${id}`] }, waiting: null };
   const tileId = suggestTile(state, id);
   return tileId === null ? NONE : { target: { kind: "tile", tileId }, waiting: null };
@@ -55,7 +57,7 @@ export function guideFor(state: GameState, selected: string | null, panel: strin
       return wait ? { target: null, waiting: wait } : { target: { kind: "ui", ids: ["tool-scout"] }, waiting: null };
     }
     case "train": {
-      if (!countBuildings(state).warcamp) return buildStep(state, "warcamp", selected);
+      if (!countBuildings(state).warcamp) return buildStep(state, "warcamp", selected, panel);
       const wait = missing(state, TRAIN_COST);
       return wait ? { target: null, waiting: wait } : { target: { kind: "ui", ids: ["tool-train"] }, waiting: null };
     }
@@ -70,7 +72,7 @@ export function guideFor(state: GameState, selected: string | null, panel: strin
       return { target: { kind: "ui", ids: ["tree-research", "tree-node-early-farming"] }, waiting: null };
     }
     default:
-      return BUILDINGS_BY_ID[step.done] ? buildStep(state, step.done, selected) : NONE;
+      return BUILDINGS_BY_ID[step.done] ? buildStep(state, step.done, selected, panel) : NONE;
   }
 }
 

@@ -1,4 +1,8 @@
 import {
+  AFTER_TUTORIAL_RESERVE,
+  FIRE_RISK,
+  LAND,
+  GRACE_AFTER_TUTORIAL,
   BUILDINGS,
   BUILDINGS_BY_ID,
   DIFFICULTIES,
@@ -10,8 +14,8 @@ import {
   TUTORIAL,
   WARRIORS_PER_CAMP,
 } from "./content";
-import { hexDistance, hexKey, NEIGHBOR_OFFSETS } from "./hex";
-import { generateMap, isLand, revealAround, terrainHeight } from "./map";
+import { hexDistance } from "./hex";
+import { generateMap, isLand, revealAround } from "./map";
 import { mulberry32 } from "./noise";
 import type { IconId } from "./sprites";
 import type {
@@ -24,8 +28,11 @@ import type {
   Tile,
 } from "./types";
 
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 const BASE_HOUSING = 8;
+// Food eaten per second by each person and each warrior.
+export const FOOD_PER_PERSON = 0.15;
+export const FOOD_PER_WARRIOR = 0.1;
 
 export type Action =
   | { type: "tick" }
@@ -55,7 +62,6 @@ export function newGame(
 ): GameState {
   const seed = Math.floor(Math.random() * 1e9);
   const { tiles, startTile } = generateMap(seed);
-  giveStartingWoodcutter(tiles, tiles[startTile]);
   const state: GameState = {
     version: SAVE_VERSION,
     phase: "playing",
@@ -73,6 +79,8 @@ export function newGame(
     population: 8,
     famineTicks: 0,
     unrestTicks: 0,
+    strainTicks: 0,
+    forestBaseline: 0,
     soldiers: 0,
     raid: null,
     nextRaidTick: 110,
@@ -88,6 +96,10 @@ export function newGame(
     nextEventTick: 90,
     log: ["Your tribe gathers on the shores of Westmarch."],
   };
+  state.forestBaseline = forestGrowthNearHome(state);
+  const budget = tutorialBudget(state);
+  for (const [k, v] of Object.entries(AFTER_TUTORIAL_RESERVE)) budget[k as keyof Resources] += v ?? 0;
+  state.resources = budget;
   const started = options.dev ? applyDevStart(state, options.startEra ?? 0) : state;
   return { ...started, meters: computeMeters(started) };
 }
@@ -98,6 +110,7 @@ function applyDevStart(state: GameState, era: number): GameState {
   const researched = TREE.filter((n) => !n.comingSoon && !n.secret && n.era < Math.max(1, era)).map(
     (n) => n.id,
   );
+  giveStartingWoodcutter(state.tiles, state.tiles[state.startTile]);
   return {
     ...devJumpToEra(state, era),
     tutorialStep: TUTORIAL.length,
@@ -116,11 +129,15 @@ function devJumpToEra(state: GameState, era: number): GameState {
 // is charred (it heals over time) and buildings caught in it are destroyed.
 // The last woodcutter always survives so the player can't be locked out.
 function burnForest(state: GameState, radius: number): { tiles: Tile[]; message: string } {
-  const home = state.tiles[state.startTile];
+  // Fires start in the trees next to a campfire when there is one, else near the village.
+  const campfires = state.tiles.filter((t) => t.building === "campfire");
+  const from = campfires.length
+    ? campfires[Math.floor(mulberry32(state.seed + state.tick * 19)() * campfires.length)]
+    : state.tiles[state.startTile];
   const forests = state.tiles
-    .filter((t) => t.revealed && t.terrain === "forest" && hexDistance(t, home) >= 2)
-    .sort((a, b) => hexDistance(a, home) - hexDistance(b, home));
-  const center = forests[Math.floor(mulberry32(state.seed + state.tick * 17)() * Math.min(4, forests.length))];
+    .filter((t) => t.revealed && t.terrain === "forest" && t.growth > 0.2 && !t.building)
+    .sort((a, b) => hexDistance(a, from) - hexDistance(b, from));
+  const center = forests[Math.floor(mulberry32(state.seed + state.tick * 17)() * Math.min(3, forests.length))];
   if (!center) return { tiles: state.tiles, message: "The fire burned out on its own." };
 
   let woodcuttersLeft = countBuildings(state).woodcutter ?? 0;
@@ -151,10 +168,57 @@ function burnForest(state: GameState, radius: number): { tiles: Tile[]; message:
 }
 
 // Some events should be rarer than others (weights are relative).
-const EVENT_WEIGHTS: Record<string, number> = { wildfire: 0.35 };
+// ---- The land -------------------------------------------------------------
 
-function pickEvent(roll: number) {
-  const weights = EVENTS.map((e) => EVENT_WEIGHTS[e.id] ?? 1);
+function forestGrowthNearHome(state: GameState) {
+  const home = state.tiles[state.startTile];
+  let total = 0;
+  for (const t of state.tiles) {
+    if (t.terrain === "forest" && !t.building && hexDistance(t, home) <= LAND.radius) total += t.growth;
+  }
+  return total;
+}
+
+// 0–1: how much of the forest around the village is still standing.
+export function forestCover(state: GameState) {
+  if (state.forestBaseline <= 0) return 1;
+  return Math.min(1, forestGrowthNearHome(state) / state.forestBaseline);
+}
+
+// 0–1: how worn out the land is after staying unsustainable for a while.
+export function landStrain(state: GameState) {
+  return Math.min(1, state.strainTicks / LAND.strainTicks);
+}
+
+const treesNear = (state: GameState, tile: Tile) =>
+  state.tiles.filter(
+    (t) => t.terrain === "forest" && !t.building && t.growth > 0.05 && hexDistance(t, tile) <= LAND.woodcutterReach,
+  );
+
+// 0–1: a woodcutter with no trees left nearby makes no wood.
+export function woodcutterYield(state: GameState, tile: Tile) {
+  const standing = treesNear(state, tile).reduce((sum, t) => sum + t.growth, 0);
+  return Math.min(1, standing / 2);
+}
+
+// How likely a wildfire is: every campfire close to trees adds risk.
+export function fireRisk(state: GameState) {
+  let risk = 0;
+  for (const fire of state.tiles) {
+    if (fire.building !== "campfire") continue;
+    for (const t of state.tiles) {
+      if (t.terrain !== "forest" || t.growth < 0.3) continue;
+      const d = hexDistance(t, fire);
+      if (d === 1) risk += 1;
+      else if (d === 2) risk += 0.5;
+    }
+  }
+  return risk;
+}
+
+function pickEvent(roll: number, state: GameState) {
+  const wildfire = Math.min(FIRE_RISK.max, FIRE_RISK.base + FIRE_RISK.perForestTile * fireRisk(state));
+  const weights = EVENTS.map((e) => (e.id === "wildfire" ? wildfire : 1));
   let r = roll * weights.reduce((a, b) => a + b, 0);
   for (let i = 0; i < EVENTS.length; i++) {
     r -= weights[i];
@@ -226,7 +290,8 @@ export function production(state: GameState): Resources {
   for (const tile of state.tiles) {
     if (!tile.building) continue;
     const def = BUILDINGS_BY_ID[tile.building];
-    for (const [k, v] of Object.entries(def.produces ?? {})) out[k as keyof Resources] += v ?? 0;
+    const factor = tile.building === "woodcutter" ? woodcutterYield(state, tile) : 1;
+    for (const [k, v] of Object.entries(def.produces ?? {})) out[k as keyof Resources] += (v ?? 0) * factor;
     if (def.depositBonus && tile.deposit === def.depositBonus.deposit) {
       for (const [k, v] of Object.entries(def.depositBonus.amount))
         out[k as keyof Resources] += v ?? 0;
@@ -238,6 +303,8 @@ export function production(state: GameState): Resources {
       if (fishNearby) out.food += 1.2;
     }
   }
+  // Worn-out land gives smaller harvests.
+  out.food *= 1 - 0.4 * landStrain(state);
   const counts = countBuildings(state);
   out.wood -= (counts.campfire ?? 0) * 0.1;
   out.currency += state.population * 0.02;
@@ -253,13 +320,29 @@ export function production(state: GameState): Resources {
 
 export function consumption(state: GameState) {
   return (
-    (state.population * 0.06 + state.soldiers * 0.05) *
+    (state.population * FOOD_PER_PERSON + state.soldiers * FOOD_PER_WARRIOR) *
     DIFFICULTIES[state.difficulty].consumption
   );
 }
 
 // Every game starts with one woodcutter already working, so the player can
 // never end up with no wood and no way to get more.
+// Exactly what the tutorial makes the player buy, so they never have to wait.
+export function tutorialBudget(state: GameState): Resources {
+  const total: Resources = { food: 0, wood: 0, stone: 0, knowledge: 0, currency: 0 };
+  const add = (cost: Partial<Resources>) => {
+    for (const [k, v] of Object.entries(cost)) total[k as keyof Resources] += v ?? 0;
+  };
+  for (const id of TUTORIAL.flatMap((step) => step.buys)) {
+    if (id === "scout") add(scoutCost(state));
+    else if (id === "train") add(TRAIN_COST);
+    else if (BUILDINGS_BY_ID[id]) add(buildingCost(state, BUILDINGS_BY_ID[id]));
+    else if (TREE_BY_ID[id]) add({ knowledge: TREE_BY_ID[id].cost });
+  }
+  return total;
+}
+
+// Games that skip the tutorial get their woodcutter for free, so wood can never run dry for good.
 function giveStartingWoodcutter(tiles: Tile[], home: Tile) {
   const forest = tiles
     .filter((t) => t.terrain === "forest" && t.island === home.island)
@@ -296,7 +379,7 @@ export const NO_FIRE_PENALTY = 15;
 export const UNREST_LEVEL = 15;
 
 export interface Warning {
-  id: "fire" | "food" | "wood" | "famine" | "unrest";
+  id: "fire" | "food" | "wood" | "famine" | "unrest" | "land";
   icon: IconId;
   text: string;
   severe: boolean;
@@ -331,6 +414,18 @@ export function warnings(state: GameState): Warning[] {
       icon: "sad",
       text: `Your people are miserable! They will leave in ${Math.max(0, unrestLimit - state.unrestTicks)}s unless you cheer them up.`,
       severe: true,
+    });
+  }
+
+  if (state.strainTicks > 0) {
+    out.push({
+      id: "land",
+      icon: "leaf",
+      text:
+        landStrain(state) >= 1
+          ? "The land is exhausted: forests have stopped growing back and harvests are shrinking. Cut fewer trees."
+          : "The land is wearing out. Forests grow back slower and harvests shrink. Cut fewer trees.",
+      severe: landStrain(state) > 0.5,
     });
   }
 
@@ -380,7 +475,8 @@ export function computeMeters(state: GameState): Meters {
   const cons = consumption(state);
   const stockDays = state.resources.food / Math.max(cons, 0.1);
 
-  let food = (prod.food / Math.max(cons, 0.1)) * 50 + Math.min(30, stockDays);
+  // Mostly "do we make enough for everyone?", so it drops as the tribe grows.
+  let food = (prod.food / Math.max(cons, 0.1)) * 55 + Math.min(20, stockDays / 3);
   if (state.resources.food <= 0) food = Math.min(food, 5);
 
   const shelter =
@@ -391,12 +487,14 @@ export function computeMeters(state: GameState): Meters {
   const energy =
     (counts.campfire ?? 0) * 20 * fireBoost * (state.resources.wood > 0 ? 1 : 0.3);
 
+  // How healthy the land is: mostly the forest still standing around the village,
+  // plus wood smoke from fires and the pits and fields dug into the ground.
   const sustainability =
     100 -
-    (counts.woodcutter ?? 0) * 6 -
-    (counts.quarry ?? 0) * 4 -
-    (counts.campfire ?? 0) * 1.5 -
-    (counts.farm ?? 0) * 2 +
+    (1 - forestCover(state)) * 85 -
+    (counts.campfire ?? 0) * 2 -
+    (counts.quarry ?? 0) * 3 -
+    (counts.farm ?? 0) * 1 +
     state.modifiers.sustainability;
 
   const literacy = (counts.elder ?? 0) * 12 + (state.researched.length - 1) * 2;
@@ -445,7 +543,18 @@ function advanceTutorial(state: GameState): GameState {
       : step.done === "train"
         ? state.soldiers > 0
         : state.researched.includes(step.done) || (counts[step.done] ?? 0) > 0;
-  return done ? { ...state, tutorialStep: state.tutorialStep + 1 } : state;
+  if (!done) return state;
+  const next = { ...state, tutorialStep: state.tutorialStep + 1 };
+  return next.tutorialStep >= TUTORIAL.length ? startGrace(next) : next;
+}
+
+// The world's troubles start a little after the tutorial ends, not during it.
+function startGrace(state: GameState): GameState {
+  return {
+    ...state,
+    nextEventTick: Math.max(state.nextEventTick, state.tick + GRACE_AFTER_TUTORIAL.event),
+    nextRaidTick: Math.max(state.nextRaidTick, state.tick + GRACE_AFTER_TUTORIAL.raid),
+  };
 }
 
 function tick(state: GameState): GameState {
@@ -484,6 +593,11 @@ function tick(state: GameState): GameState {
       ? state.unrestTicks + 1
       : Math.max(0, state.unrestTicks - 2);
 
+  const strainTicks =
+    state.meters.sustainability < LAND.strainLevel
+      ? state.strainTicks + 1
+      : Math.max(0, state.strainTicks - 2);
+
   const modifiers = {
     sustainability: state.modifiers.sustainability * 0.995,
     happiness: state.modifiers.happiness * 0.993,
@@ -497,11 +611,13 @@ function tick(state: GameState): GameState {
     population,
     famineTicks,
     unrestTicks,
+    strainTicks,
     modifiers,
   };
 
   if (next.tick % 3 === 0) next = growForests(next);
-  next = updateRaids(next);
+  // No raids or events while a new player is still learning.
+  if (!inTutorial) next = updateRaids(next);
 
   if (famineTicks >= DIFFICULTIES[state.difficulty].famineLimit) {
     return { ...next, phase: "gameover", lostTo: "famine", log: ["Famine has wiped out the tribe.", ...next.log] };
@@ -510,9 +626,9 @@ function tick(state: GameState): GameState {
     return { ...next, phase: "gameover", lostTo: "unrest", log: ["Your people lost hope and left.", ...next.log] };
   }
 
-  if (next.tick >= next.nextEventTick) {
+  if (!inTutorial && next.tick >= next.nextEventTick) {
     const rand = mulberry32(next.seed + next.tick);
-    const event = pickEvent(rand());
+    const event = pickEvent(rand(), next);
     next = { ...next, event, nextEventTick: next.tick + 110 + Math.floor(rand() * 90) };
   }
 
@@ -521,37 +637,37 @@ function tick(state: GameState): GameState {
   return { ...next, meters: computeMeters(next) };
 }
 
-// Forests spread onto grass next to them, young trees grow up over time, and
-// woodcutters thin out the forest around them (it grows back).
+// Young and cut-over trees grow back, burnt ground heals, and woodcutters fell
+// the trees around them.
 function growForests(state: GameState): GameState {
-  const rand = mulberry32(state.seed + state.tick * 13);
-  const byKey = new Map(state.tiles.map((t) => [hexKey(t.q, t.r), t]));
   const woodcutters = state.tiles.filter((t) => t.building === "woodcutter");
   const changes = new Map<number, Partial<Tile>>();
+  // Exhausted land stops growing back.
+  const strain = landStrain(state);
 
   for (const t of state.tiles) {
     if (t.scorch > 0) {
       changes.set(t.id, { scorch: Math.max(0, t.scorch - 0.01) });
     }
     if (t.terrain === "forest" && t.growth < 1 && t.scorch < 0.4) {
-      changes.set(t.id, { ...changes.get(t.id), growth: Math.min(1, t.growth + 0.06) });
+      if (strain < 1) changes.set(t.id, { ...changes.get(t.id), growth: Math.min(1, t.growth + 0.06 * (1 - strain)) });
     }
-    if (t.terrain !== "grass" || t.building) continue;
-    let forestNeighbors = 0;
-    for (const [dq, dr] of NEIGHBOR_OFFSETS) {
-      if (byKey.get(hexKey(t.q + dq, t.r + dr))?.terrain === "forest") forestNeighbors++;
-    }
-    if (forestNeighbors >= 2 && rand() < 0.008 * forestNeighbors) {
-      changes.set(t.id, { terrain: "forest", height: terrainHeight("forest"), growth: 0.1 });
-    }
+    // Forests only grow back where they already stood; they don't take over new land.
   }
 
-  if (state.tick % 12 === 0) {
-    for (const w of woodcutters) {
-      const grove = state.tiles.find(
-        (t) => t.terrain === "forest" && !t.building && t.growth >= 1 && hexDistance(t, w) === 1,
-      );
-      if (grove) changes.set(grove.id, { growth: 0.25 });
+  // Woodcutters fell the trees they turn into wood (this runs every 3 ticks),
+  // biggest trees first. Too many woodcutters on one patch strip it bare.
+  for (const w of woodcutters) {
+    let need = (0.3 * 3 * woodcutterYield(state, w)) / LAND.woodPerGrowth;
+    const trees = treesNear(state, w)
+      .map((t) => ({ t, growth: changes.get(t.id)?.growth ?? t.growth }))
+      .sort((a, b) => b.growth - a.growth);
+    for (const { t, growth } of trees) {
+      if (need <= 0) break;
+      const take = Math.min(need, growth - 0.02);
+      if (take <= 0) continue;
+      need -= take;
+      changes.set(t.id, { ...changes.get(t.id), growth: growth - take });
     }
   }
 
@@ -635,6 +751,12 @@ function withMeters(state: GameState): GameState {
 }
 
 export function reducer(state: GameState, action: Action): GameState {
+  const next = step(state, action);
+  // The clock is held during the tutorial, so check progress after every action too.
+  return action.type !== "tick" && next !== state ? advanceTutorial(next) : next;
+}
+
+function step(state: GameState, action: Action): GameState {
   switch (action.type) {
     case "tick":
       return tick(state);
@@ -732,8 +854,13 @@ export function reducer(state: GameState, action: Action): GameState {
       });
     }
 
-    case "skipTutorial":
-      return { ...state, tutorialStep: TUTORIAL.length };
+    case "skipTutorial": {
+      const skipped = startGrace({ ...state, tutorialStep: TUTORIAL.length });
+      if (countBuildings(state).woodcutter) return skipped;
+      const tiles = state.tiles.map((t) => ({ ...t }));
+      giveStartingWoodcutter(tiles, tiles[state.startTile]);
+      return withMeters({ ...skipped, tiles });
+    }
 
     case "train": {
       if (tutorialLocked(state, "train") || state.soldiers >= warriorCap(state) || !canAfford(state, TRAIN_COST))
