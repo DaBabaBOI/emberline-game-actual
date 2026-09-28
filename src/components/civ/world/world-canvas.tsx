@@ -220,24 +220,29 @@ export function WorldCanvas() {
       {hoverTile && Ghost && (
         <group position={[hoverTile.x, tileTop(hoverTile), hoverTile.z]} scale={1.55}>
           <Ghost opacity={0.45} />
-          {(error || lowWood) && (
-            <Html center position={[0, 0.8, 0]} style={{ pointerEvents: "none" }}>
-              <div
-                className={
-                  error
-                    ? "pixel-panel-dark font-pixel whitespace-nowrap px-2 py-1 text-xs"
-                    : "pixel-panel-dark font-pixel flex w-56 items-center gap-1.5 border-amber-400 px-2 py-1 text-xs text-amber-200"
-                }
-              >
-                {error ?? (
-                  <>
-                    <PixelIcon name="warning" size={14} />
+          <Html center position={[0, 1.1, 0]} style={{ pointerEvents: "none" }}>
+            {error ? (
+              <div className="pixel-panel-dark font-pixel whitespace-nowrap px-2 py-1 text-xs">{error}</div>
+            ) : (
+              // The trade-off of this building, right where you're about to place it.
+              <div className="pixel-panel-dark font-pixel flex w-60 flex-col gap-1 px-2 py-1.5 text-xs">
+                <span className="flex items-start gap-1.5 text-emerald-300">
+                  <span className="font-num">+</span>
+                  {def!.gain}
+                </span>
+                <span className="flex items-start gap-1.5 text-red-300">
+                  <PixelIcon name={def!.landImpact ? "stump" : "leaf"} size={12} />
+                  {def!.landCost}
+                </span>
+                {lowWood && (
+                  <span className="flex items-start gap-1.5 text-amber-200">
+                    <PixelIcon name="warning" size={12} />
                     {lowWood}
-                  </>
+                  </span>
                 )}
               </div>
-            </Html>
-          )}
+            )}
+          </Html>
         </group>
       )}
 

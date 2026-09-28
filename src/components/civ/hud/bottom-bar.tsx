@@ -56,6 +56,22 @@ function Cost({ cost, bad, tight }: { cost: Partial<Resources>; bad?: boolean; t
   );
 }
 
+// How hard a building is on the land: tree stumps, or a leaf if it's gentle.
+function LandImpact({ level }: { level: number }) {
+  return (
+    <span
+      className="absolute right-0.5 top-0.5 flex"
+      title={level ? `Hard on the land (${level}/3)` : "Gentle on the land"}
+    >
+      {level === 0 ? (
+        <PixelIcon name="leaf" size={10} />
+      ) : (
+        Array.from({ length: level }, (_, i) => <PixelIcon key={i} name="stump" size={10} />)
+      )}
+    </span>
+  );
+}
+
 function Stat({ icon, children, title, bad }: { icon: IconId; children: ReactNode; title: string; bad?: boolean }) {
   return (
     <span title={title} className={cn("flex items-center gap-1", bad && "text-red-300")}>
@@ -164,17 +180,18 @@ export function BottomBar() {
                   usedUp
                     ? "Only one of each during the tutorial"
                     : unlocked
-                    ? b.description
+                    ? `${b.description}\n\nYou get: ${b.gain}\nThe land pays: ${b.landCost}`
                     : tutorialLocked(state, b.id)
                       ? "Unlocks later in the tutorial"
                       : `Research ${TREE_BY_ID[b.requires ?? ""]?.name ?? "more"} to unlock`
                 }
                 className={cn(
-                  "pixel-btn flex w-20 shrink-0 flex-col items-center gap-0.5 px-1 py-1.5 text-center",
+                  "pixel-btn relative flex w-20 shrink-0 flex-col items-center gap-0.5 px-1 py-1.5 text-center",
                   active ? "bg-amber-400 text-[#2b2119]" : "bg-[#4a3b2e] hover:bg-[#5c4a3a]",
                   (!unlocked || usedUp) && "cursor-not-allowed opacity-40",
                 )}
               >
+                {unlocked && <LandImpact level={b.landImpact} />}
                 <PixelIcon name={unlocked ? b.icon : "lock"} size={24} />
                 <span className="text-[11px] leading-tight">{b.name}</span>
                 {usedUp ? (

@@ -93,6 +93,11 @@ export interface BuildingDef {
   name: string;
   icon: IconId;
   description: string;
+  // The trade-off, shown on the card and when placing: what you get, what the land pays.
+  gain: string;
+  landCost: string;
+  // 0–3: how hard it is on the land (shown as red leaves).
+  landImpact: 0 | 1 | 2 | 3;
   era: number;
   cost: Partial<Resources>;
   terrain: Terrain[];
@@ -169,6 +174,8 @@ export interface GameState {
   outbreakDeaths?: number;
   // Seconds of fuel left in each campfire, by tile id. 0 or missing = out.
   fires?: Record<number, number>;
+  // Sustainability sampled every 5 ticks, oldest first (for the trend arrow).
+  sustainTrail?: number[];
   // The last fight with raiders, so the 3D scene can play it out.
   battle?: Battle | null;
   // People caught in the last wildfire: where they fell and when (for the 3D scene).
