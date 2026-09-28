@@ -122,6 +122,13 @@ These were decided with the project owner. Do not change them without being aske
   working when adding eras. It must never show without `?dev`. **Every new
   feature gets a dev-panel button (or dev option) to trigger or test it**, e.g.
   Wildfire, +10 people.
+- **Disease** (`src/game/disease.ts`, `DISEASE`): outbreaks start from crowding
+  (more people, more crowded = likelier), hunts, fishing spots and especially
+  welcomed wanderers. It spreads, people recover and are immune for a while
+  (so outbreaks burn out), and some die. The sick can't work but still eat, and
+  show as pale, slow figures. **Before Herbalism it is "a curse from the gods"**
+  (messages still describe symptoms: fever, coughing, weakness); after it,
+  it's called sickness and Healer's Huts cut spread and deaths.
 - Letting a wildfire burn near the village kills people (at most a quarter of
   the tribe); a few visibly stagger and fall in the flames (`FireVictims`).
 - Seven cultures (Balanced + six with bonuses), three difficulties. There are two

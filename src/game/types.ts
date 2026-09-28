@@ -146,6 +146,11 @@ export interface GameState {
   unrestTicks: number;
   // How worn out the land is: counts up while Sustainability is below LAND.strainLevel.
   strainTicks: number;
+  // How many people are sick right now, and how many the current outbreak has killed.
+  sick?: number;
+  // Recently recovered people who can't catch it again for a while.
+  immune?: number;
+  outbreakDeaths?: number;
   // Seconds of fuel left in each campfire, by tile id. 0 or missing = out.
   fires?: Record<number, number>;
   // People caught in the last wildfire: where they fell and when (for the 3D scene).
