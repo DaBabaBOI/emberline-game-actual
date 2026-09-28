@@ -5,6 +5,10 @@ export type Terrain =
   | "shallow"
   | "beach"
   | "grass"
+  // Dry grassland: fine to build on, too dry to farm.
+  | "steppe"
+  // Wet lowland with reeds: only gatherers can work it.
+  | "marsh"
   | "forest"
   | "hills"
   | "mountain";
@@ -140,6 +144,10 @@ export interface GameState {
   famineTicks: number;
   // Seconds in a row that happiness has been below UNREST_LEVEL.
   unrestTicks: number;
+  // How worn out the land is: counts up while Sustainability is below LAND.strainLevel.
+  strainTicks: number;
+  // Total forest growth near the village when the game began (100% Sustainability).
+  forestBaseline: number;
   soldiers: number;
   raid: Raid | null;
   nextRaidTick: number;

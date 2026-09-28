@@ -66,7 +66,7 @@ export const BUILDINGS: BuildingDef[] = [
     description: "Warmth, light and cooked food. People gather to sit around it. Without a lit fire, happiness drops. Burns a little wood.",
     era: 0,
     cost: { wood: 5 },
-    terrain: ["grass", "forest", "beach", "hills"],
+    terrain: ["grass", "steppe", "forest", "beach", "hills"],
     reveal: 3,
   },
   {
@@ -76,7 +76,7 @@ export const BUILDINGS: BuildingDef[] = [
     description: "Shelter for 6 people.",
     era: 0,
     cost: { wood: 10 },
-    terrain: ["grass", "beach", "hills"],
+    terrain: ["grass", "steppe", "beach", "hills"],
     housing: 6,
     reveal: 2,
   },
@@ -87,7 +87,7 @@ export const BUILDINGS: BuildingDef[] = [
     description: "Collects food. Bonus on berry bushes.",
     era: 0,
     cost: { wood: 8 },
-    terrain: ["grass", "forest"],
+    terrain: ["grass", "steppe", "forest", "marsh"],
     produces: { food: 1.2 },
     depositBonus: { deposit: "berries", amount: { food: 1.2 } },
     reveal: 2,
@@ -111,7 +111,7 @@ export const BUILDINGS: BuildingDef[] = [
     description: "Trains warriors to fight off raiders. Each camp holds 4 warriors.",
     era: 0,
     cost: { wood: 15, food: 10 },
-    terrain: ["grass", "hills", "beach"],
+    terrain: ["grass", "steppe", "hills", "beach"],
     reveal: 3,
   },
   {
@@ -158,7 +158,7 @@ export const BUILDINGS: BuildingDef[] = [
     description: "Stories and cave paintings pass knowledge on to children.",
     era: 0,
     cost: { wood: 10, stone: 10 },
-    terrain: ["grass"],
+    terrain: ["grass", "steppe"],
     requires: "storytelling",
     produces: { knowledge: 0.3 },
     reveal: 2,
@@ -170,7 +170,7 @@ export const BUILDINGS: BuildingDef[] = [
     description: "Herbs and care keep people healthy.",
     era: 0,
     cost: { wood: 10, stone: 5 },
-    terrain: ["grass", "forest"],
+    terrain: ["grass", "steppe", "forest"],
     requires: "herbalism",
     reveal: 2,
   },
@@ -406,6 +406,22 @@ export const EVENTS: EventCard[] = [
 // (or is skipped), anything not yet introduced stays locked.
 // What's left over once the tutorial is done. On top of this, a new game starts
 // with exactly what the tutorial buys (see tutorialBudget), so nobody waits.
+// How the land reacts. Sustainability measures how much forest is left around
+// the village (plus fire smoke and quarry pits); woodcutters really fell trees.
+export const LAND = {
+  // Forest within this many hexes of the start counts toward Sustainability.
+  radius: 7,
+  // How far a woodcutter walks for trees, and how much wood a fully grown tile holds.
+  woodcutterReach: 2,
+  woodPerGrowth: 3,
+  // Below this Sustainability the land starts to wear out; fully exhausted after `strainTicks`.
+  strainLevel: 40,
+  strainTicks: 60,
+};
+
+// Wildfire odds: a little from lightning, more for every campfire near trees.
+export const FIRE_RISK = { base: 0.1, perForestTile: 0.06, max: 1.5 };
+
 // Buying something that leaves less wood than this shows a "save up" warning.
 export const LOW_WOOD_AFTER_BUY = 10;
 

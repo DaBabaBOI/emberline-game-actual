@@ -5,17 +5,17 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { Vector3 } from "three";
 import { Html, MapControls } from "@react-three/drei";
 import { BUILDINGS_BY_ID, LOW_WOOD_AFTER_BUY, TUTORIAL } from "@/game/content";
-import { buildingCost, DEMOLISH_TOOL, demolishError, demolishRefund, placementError } from "@/game/engine";
+import { buildingCost, DEMOLISH_TOOL, landStrain, demolishError, demolishRefund, placementError } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { tileAnchor } from "@/components/civ/guide";
 import { useGuide } from "@/components/civ/hud/guide-overlay";
 import type { Tile } from "@/game/types";
-import { Deposits, Forests, HexTerrain, Mountains, tileTop } from "./hex-terrain";
+import { BiomeDetails, Deposits, Forests, HexTerrain, Mountains, tileTop } from "./hex-terrain";
 import { MODELS } from "./building-models";
 import { Raiders, Villagers, Warriors } from "./villagers";
 import { Wildlife } from "./wildlife";
-import { Haze, SmogPlumes, Wildfire } from "./atmosphere";
+import { CampfireSmoke, Haze, Wildfire } from "./atmosphere";
 
 function HexOutline({ x, y, z, color }: { x: number; y: number; z: number; color: string }) {
   return (
@@ -105,7 +105,7 @@ export function WorldCanvas() {
       }}
     >
       <color attach="background" args={["#a8dcf5"]} />
-      <Haze sustainability={state.meters.sustainability} />
+      <Haze fires={buildings.filter((t) => t.building === "campfire").length} />
       <hemisphereLight args={["#d6f1ff", "#6f8f4e", 0.75]} />
       <directionalLight
         position={[home.x + 25, 40, home.z + 15]}
@@ -127,10 +127,11 @@ export function WorldCanvas() {
         <meshStandardMaterial color="#1a5f93" roughness={0.3} />
       </mesh>
 
-      <HexTerrain tiles={state.tiles} onHover={setHovered} onPick={pick} />
+      <HexTerrain tiles={state.tiles} home={home} wear={landStrain(state)} onHover={setHovered} onPick={pick} />
       <Forests tiles={state.tiles} />
       <Mountains tiles={state.tiles} />
       <Deposits tiles={state.tiles} />
+      <BiomeDetails tiles={state.tiles} />
 
       {buildings.map((t) => {
         const Model = MODELS[t.building!];
@@ -149,7 +150,7 @@ export function WorldCanvas() {
         homeTile={home}
         onHunt={(animal) => dispatch({ type: "hunt", animal })}
       />
-      <SmogPlumes tiles={state.tiles} sustainability={state.meters.sustainability} />
+      <CampfireSmoke tiles={state.tiles} />
       <Wildfire tiles={state.tiles} />
 
       {hoverTile && (

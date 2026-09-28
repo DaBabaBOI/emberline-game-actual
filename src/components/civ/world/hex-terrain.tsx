@@ -3,10 +3,14 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 import { Color, CylinderGeometry, InstancedMesh, Object3D } from "three";
+import { LAND } from "@/game/content";
+import { hexDistance } from "@/game/hex";
 import { isLand } from "@/game/map";
 import type { Terrain, Tile } from "@/game/types";
 
 const TERRAIN_COLORS: Record<Terrain, string> = {
+  steppe: "#d4c47a",
+  marsh: "#6f8f78",
   deep: "#1f6fa8",
   shallow: "#43a9d6",
   beach: "#ead79c",
@@ -18,6 +22,9 @@ const TERRAIN_COLORS: Record<Terrain, string> = {
 
 const FOG_HEIGHT = 0.62;
 const CHARRED = new Color("#2e2620");
+// Cut-over forest shows bare earth and stumps; worn-out grass dries up.
+const BARE = new Color("#7a6443");
+const DRY = new Color("#b8a060");
 
 function jitter(id: number, salt: number) {
   const x = Math.sin(id * 127.1 + salt * 311.7) * 43758.5453;
@@ -33,10 +40,15 @@ export function tileTop(tile: Tile) {
 
 export function HexTerrain({
   tiles,
+  home,
+  wear = 0,
   onHover,
   onPick,
 }: {
   tiles: Tile[];
+  home?: Tile;
+  // 0–1: how worn out the land around home is (dries the grass).
+  wear?: number;
   onHover: (id: number | null) => void;
   onPick: (id: number) => void;
 }) {
@@ -57,6 +69,10 @@ export function HexTerrain({
       if (tile.revealed) {
         color.set(TERRAIN_COLORS[tile.terrain]);
         color.offsetHSL(0, 0, (jitter(tile.id, 1) - 0.5) * 0.06);
+        if (tile.terrain === "forest" && tile.growth < 0.6) color.lerp(BARE, (0.6 - tile.growth) * 1.1);
+        if (wear > 0 && tile.terrain === "grass" && home && hexDistance(tile, home) <= LAND.radius) {
+          color.lerp(DRY, wear * 0.55);
+        }
         if (tile.scorch > 0) color.lerp(CHARRED, Math.min(1, tile.scorch * 1.2));
       } else {
         if (isLand(tile.terrain)) {
@@ -72,7 +88,7 @@ export function HexTerrain({
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     mesh.computeBoundingSphere();
-  }, [tiles]);
+  }, [tiles, wear, home]);
 
   return (
     <instancedMesh
@@ -238,3 +254,75 @@ export function Deposits({ tiles }: { tiles: Tile[] }) {
   );
 }
 
+
+// Small details that make the biomes readable: water and reeds in the marsh,
+// dry tufts on the steppe. Instanced so a big steppe stays cheap.
+export function BiomeDetails({ tiles }: { tiles: Tile[] }) {
+  const puddles = useRef<InstancedMesh>(null);
+  const reeds = useRef<InstancedMesh>(null);
+  const tufts = useRef<InstancedMesh>(null);
+  const { marsh, steppe } = useMemo(
+    () => ({
+      marsh: tiles.filter((t) => t.revealed && t.terrain === "marsh" && !t.building),
+      steppe: tiles.filter((t) => t.revealed && t.terrain === "steppe" && !t.building),
+    }),
+    [tiles],
+  );
+
+  useLayoutEffect(() => {
+    const dummy = new Object3D();
+    const place = (mesh: InstancedMesh | null, list: Tile[], per: number, set: (t: Tile, i: number) => void) => {
+      if (!mesh) return;
+      let n = 0;
+      for (const t of list) {
+        for (let i = 0; i < per; i++) {
+          set(t, i);
+          dummy.updateMatrix();
+          mesh.setMatrixAt(n++, dummy.matrix);
+        }
+      }
+      mesh.count = n;
+      mesh.instanceMatrix.needsUpdate = true;
+    };
+    const spot = (t: Tile, i: number, spread: number) => {
+      const a = jitter(t.id, i * 5 + 11) * Math.PI * 2;
+      const r = 0.15 + jitter(t.id, i * 5 + 12) * spread;
+      return [t.x + Math.cos(a) * r, t.z + Math.sin(a) * r] as const;
+    };
+    place(puddles.current, marsh, 2, (t, i) => {
+      const [x, z] = spot(t, i, 0.35);
+      dummy.position.set(x, tileTop(t) + 0.015, z);
+      dummy.rotation.set(-Math.PI / 2, 0, 0);
+      dummy.scale.setScalar(0.8 + jitter(t.id, i + 30) * 0.6);
+    });
+    place(reeds.current, marsh, 6, (t, i) => {
+      const [x, z] = spot(t, i + 3, 0.55);
+      dummy.position.set(x, tileTop(t) + 0.15, z);
+      dummy.rotation.set((jitter(t.id, i + 40) - 0.5) * 0.3, 0, (jitter(t.id, i + 41) - 0.5) * 0.3);
+      dummy.scale.set(1, 0.8 + jitter(t.id, i + 42) * 0.6, 1);
+    });
+    place(tufts.current, steppe, 4, (t, i) => {
+      const [x, z] = spot(t, i, 0.6);
+      dummy.position.set(x, tileTop(t) + 0.06, z);
+      dummy.rotation.set(0, jitter(t.id, i + 50) * 3, 0);
+      dummy.scale.setScalar(0.7 + jitter(t.id, i + 51) * 0.6);
+    });
+  }, [marsh, steppe]);
+
+  return (
+    <group>
+      <instancedMesh ref={puddles} args={[undefined, undefined, Math.max(1, marsh.length * 2)]} raycast={() => null} frustumCulled={false}>
+        <circleGeometry args={[0.22, 7]} />
+        <meshStandardMaterial color="#5d9fc4" roughness={0.2} />
+      </instancedMesh>
+      <instancedMesh ref={reeds} args={[undefined, undefined, Math.max(1, marsh.length * 6)]} raycast={() => null} frustumCulled={false}>
+        <cylinderGeometry args={[0.018, 0.025, 0.3, 4]} />
+        <meshStandardMaterial color="#8a9a4a" flatShading />
+      </instancedMesh>
+      <instancedMesh ref={tufts} args={[undefined, undefined, Math.max(1, steppe.length * 4)]} raycast={() => null} frustumCulled={false}>
+        <coneGeometry args={[0.1, 0.14, 5]} />
+        <meshStandardMaterial color="#a8904a" flatShading />
+      </instancedMesh>
+    </group>
+  );
+}
