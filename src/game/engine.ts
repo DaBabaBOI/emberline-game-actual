@@ -1,5 +1,7 @@
 import {
   AFTER_TUTORIAL_RESERVE,
+  MIN_SUSTAINABILITY_FOR_BEST_ENDING,
+  NEXT_ERA_POPULATION,
   GROWTH_PRESSURE,
   DISEASE,
   CAMPFIRE_BURN_TICKS,
@@ -29,6 +31,8 @@ import { generateMap, isLand, revealAround, terrainHeight } from "./map";
 import { mulberry32 } from "./noise";
 import type { IconId } from "./sprites";
 import type {
+  Debrief,
+  Stats,
   BuildingDef,
   CultureId,
   DifficultyId,
@@ -62,6 +66,9 @@ export type Action =
   | { type: "devFiresOut" }
   | { type: "devOutbreak" }
   | { type: "devRaid" }
+  | { type: "advanceEra" }
+  | { type: "enterEra" }
+  | { type: "devFinishEra" }
   | { type: "dismissLesson" }
   | { type: "devLesson" }
   | { type: "setLogging"; tileId: number; mode: "clear" | "selective" }
@@ -811,6 +818,66 @@ export function lessonDue(state: GameState): GameState {
   return { ...state, lesson: next.id, lessonsSeen: [...seen, next.id], lessonTick: state.tick };
 }
 
+// ---- Debrief ---------------------------------------------------------------
+
+export function emptyStats(): Stats {
+  return {
+    peakPopulation: 0,
+    built: 0,
+    raidsWon: 0,
+    raidsLost: 0,
+    lowLandTicks: 0,
+    deaths: { famine: 0, disease: 0, fire: 0, battle: 0 },
+  };
+}
+
+// Copy the running totals, let `change` edit the copy, and store it.
+function bumpStats(state: GameState, change: (st: Stats) => void): GameState {
+  const base = state.stats ?? emptyStats();
+  const st: Stats = { ...base, deaths: { ...base.deaths } };
+  change(st);
+  return { ...state, stats: st };
+}
+
+// Ready to leave this era: Agriculture researched and enough people (Stone Age).
+export function readyForNextEra(state: GameState) {
+  return (
+    state.era === 0 &&
+    state.phase === "playing" &&
+    !state.debrief &&
+    state.researched.includes("agriculture") &&
+    state.population >= NEXT_ERA_POPULATION
+  );
+}
+
+// How the land came through: the best ending needs it to still be healthy.
+export function endingTier(sustainability: number): Debrief["tier"] {
+  if (sustainability >= MIN_SUSTAINABILITY_FOR_BEST_ENDING) return "thriving";
+  if (sustainability >= 35) return "costly";
+  return "stripped";
+}
+
+export function makeDebrief(state: GameState, kind: Debrief["kind"]): Debrief {
+  // Recompute so the verdict matches the land as it is right now.
+  const meters = computeMeters(state);
+  return {
+    kind,
+    era: state.era,
+    tick: state.tick,
+    year: state.year,
+    meters,
+    forestLeft: forestCover(state),
+    stats: {
+      ...(state.stats ?? emptyStats()),
+      peakPopulation: Math.max(state.stats?.peakPopulation ?? 0, state.population),
+    },
+    researched: state.researched.filter((id) => !TREE_BY_ID[id]?.secret).length - 1,
+    planted: state.planted ?? 0,
+    lessons: state.lessonsSeen ?? [],
+    tier: endingTier(meters.sustainability),
+  };
+}
+
 function advanceTutorial(state: GameState): GameState {
   const step = TUTORIAL[state.tutorialStep];
   if (!step) return state;
@@ -856,8 +923,11 @@ function tick(state: GameState): GameState {
   // Slow, steady growth: the tribe doesn't outgrow its food overnight.
   const growth = state.culture === "farmers" ? 0.015 : 0.01;
 
+  let starved = 0;
   if (resources.food <= 0) {
+    const before = population;
     population = Math.max(1, population - Math.max(0.3, population * 0.02));
+    starved = before - population;
     famineTicks += 1;
   } else {
     famineTicks = Math.max(0, famineTicks - 1);
@@ -902,7 +972,10 @@ function tick(state: GameState): GameState {
       ? [`A campfire burned out. Click it to relight it (${RELIGHT_WOOD} wood).`, ...state.log].slice(0, 30)
       : state.log,
     tick: state.tick + 1,
-    year: state.year + era.yearsPerTick,
+    // Time can't run past the start of the next era until the player gets there.
+    year: ERAS[state.era + 1]
+      ? Math.min(state.year + era.yearsPerTick, ERAS[state.era + 1].startYear - 100)
+      : state.year + era.yearsPerTick,
     resources,
     population,
     famineTicks,
@@ -916,10 +989,12 @@ function tick(state: GameState): GameState {
   if (!inTutorial) next = updateRaids(next);
 
   if (famineTicks >= DIFFICULTIES[state.difficulty].famineLimit) {
-    return { ...next, phase: "gameover", lostTo: "famine", log: ["Famine has wiped out the tribe.", ...next.log] };
+    const lost: GameState = { ...next, phase: "gameover", lostTo: "famine", log: ["Famine has wiped out the tribe.", ...next.log] };
+    return { ...lost, debrief: makeDebrief(lost, "loss") };
   }
   if (unrestTicks >= DIFFICULTIES[state.difficulty].unrestLimit) {
-    return { ...next, phase: "gameover", lostTo: "unrest", log: ["Your people lost hope and left.", ...next.log] };
+    const lost: GameState = { ...next, phase: "gameover", lostTo: "unrest", log: ["Your people lost hope and left.", ...next.log] };
+    return { ...lost, debrief: makeDebrief(lost, "loss") };
   }
 
   if (!inTutorial && next.tick >= next.nextEventTick) {
@@ -928,7 +1003,14 @@ function tick(state: GameState): GameState {
     next = { ...next, event, lastEvent: event.id, nextEventTick: next.tick + 180 + Math.floor(rand() * 120) };
   }
 
+  const beforeDisease = next.population;
   next = stepDisease(next, housingCapacity(next), mulberry32(next.seed + next.tick * 31));
+  next = bumpStats(next, (st) => {
+    st.peakPopulation = Math.max(st.peakPopulation, next.population);
+    st.deaths.famine += starved;
+    st.deaths.disease += Math.max(0, beforeDisease - next.population);
+    if (state.meters.sustainability < MIN_SUSTAINABILITY_FOR_BEST_ENDING) st.lowLandTicks += 1;
+  });
   // Remember Sustainability every 5 ticks for the trend (about the last minute).
   if (next.tick % 5 === 0) {
     next = { ...next, sustainTrail: [...(next.sustainTrail ?? []), next.meters.sustainability].slice(-8) };
@@ -987,8 +1069,12 @@ function updateRaids(state: GameState): GameState {
     const battleAt = raid.meetTile ?? raid.targetTile;
     if (defense >= raid.strength) {
       const losses = Math.min(state.soldiers, Math.floor(raid.strength / 3));
+      const won = bumpStats(state, (st) => {
+        st.raidsWon += 1;
+        st.deaths.battle += losses;
+      });
       return {
-        ...state,
+        ...won,
         raid: null,
         battle: {
           tick: state.tick,
@@ -1008,8 +1094,12 @@ function updateRaids(state: GameState): GameState {
         ].slice(0, 30),
       };
     }
+    const lost = bumpStats(state, (st) => {
+      st.raidsLost += 1;
+      st.deaths.battle += Math.min(state.soldiers, raid.strength);
+    });
     return {
-      ...state,
+      ...lost,
       raid: null,
       battle: {
         tick: state.tick,
@@ -1116,6 +1206,7 @@ function step(state: GameState, action: Action): GameState {
         fires: def.id === "campfire" ? { ...state.fires, [tile.id]: burnTicks(state) } : state.fires,
         resources: spend(state.resources, buildingCost(state, def)),
         log: [`Built a ${def.name}.`, ...state.log].slice(0, 30),
+        stats: { ...(state.stats ?? emptyStats()), built: (state.stats?.built ?? 0) + 1 },
       });
     }
 
@@ -1182,8 +1273,13 @@ function step(state: GameState, action: Action): GameState {
       const cleared = effect.clearForest ? oldestForest(state, effect.clearForest).map((t) => t.id) : [];
       const guarded = effect.protectForest ? oldestForest(state, effect.protectForest).map((t) => t.id) : [];
       const baseTiles = burned?.tiles ?? state.tiles;
+      const counted = burned?.deaths
+        ? bumpStats(state, (st) => {
+            st.deaths.fire += burned.deaths;
+          })
+        : state;
       const resolved = withMeters({
-        ...state,
+        ...counted,
         tiles: cleared.length
           ? baseTiles.map((t) => (cleared.includes(t.id) ? { ...t, growth: 0.02 } : t))
           : baseTiles,
@@ -1316,6 +1412,32 @@ function step(state: GameState, action: Action): GameState {
       const seen = state.lessonsSeen ?? [];
       const nextLesson = LESSONS.find((l) => !seen.includes(l.id)) ?? LESSONS[0];
       return { ...state, lesson: nextLesson.id, lessonsSeen: [...seen, nextLesson.id], lessonTick: state.tick };
+    }
+
+    case "advanceEra":
+      if (!readyForNextEra(state)) return state;
+      return { ...state, debrief: makeDebrief(state, "era") };
+
+    case "enterEra": {
+      if (state.debrief?.kind !== "era" || !ERAS[state.era + 1]) return state;
+      const era = state.era + 1;
+      return withMeters({
+        ...state,
+        era,
+        year: ERAS[era].startYear,
+        debrief: null,
+        log: [`${state.nation ?? "Your people"} enter the ${ERAS[era].name} era.`, ...state.log].slice(0, 30),
+      });
+    }
+
+    case "devFinishEra": {
+      if (!state.dev) return state;
+      const ready: GameState = {
+        ...state,
+        researched: Array.from(new Set([...state.researched, "agriculture"])),
+        population: Math.max(state.population, NEXT_ERA_POPULATION),
+      };
+      return { ...ready, debrief: makeDebrief(ready, "era") };
     }
 
     case "devRaid":

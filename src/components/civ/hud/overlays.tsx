@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ERAS, EVENTS, formatYear, LESSONS, TUTORIAL } from "@/game/content";
-import { clearSave, defenseStrength, secs, warnings } from "@/game/engine";
+import { ERAS, EVENTS, LESSONS, TUTORIAL } from "@/game/content";
+import { defenseStrength, secs, warnings } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { useGuide } from "./guide-overlay";
@@ -107,42 +106,6 @@ export function EventModal() {
   );
 }
 
-export function GameOver({ onRestart }: { onRestart: () => void }) {
-  const { state } = useGame();
-  if (state.phase !== "gameover") return null;
-  const unrest = state.lostTo === "unrest";
-  return (
-    <div className="pointer-events-auto absolute inset-0 z-40 flex items-center justify-center bg-black/60">
-      <div className="pixel-panel w-[min(92vw,400px)] p-6 text-center">
-        <PixelIcon name={unrest ? "sad" : "skull"} size={64} className="mx-auto mb-2" />
-        <h2 className="font-pixel text-3xl font-bold">{unrest ? "The tribe has left" : "Famine"}</h2>
-        <p className="mt-2 text-sm text-stone-600">
-          {unrest
-            ? `${state.nation ?? "Your people"} were too unhappy for too long and wandered away in ${formatYear(state.year)}.`
-            : `${state.nation ?? "Your people"} ran out of food in ${formatYear(state.year)}.`}{" "}
-          They built{" "}
-          {state.tiles.filter((t) => t.building).length} structures and made{" "}
-          {state.researched.length - 1} discoveries.
-        </p>
-        <div className="mt-5 flex justify-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              clearSave();
-              onRestart();
-            }}
-            className="pixel-btn bg-amber-400 px-4 py-2 font-semibold text-[#2b2119]"
-          >
-            New game
-          </button>
-          <Link href="/" className="pixel-btn bg-white px-4 py-2">
-            Home
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 const TOAST_MS = 5000;
 const MAX_TOASTS = 2;
@@ -295,6 +258,9 @@ export function DevPanel() {
           }}
         >
           Event
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devFinishEra" })}>
+          Finish era
         </button>
       </div>
       <div className="flex flex-wrap gap-1">

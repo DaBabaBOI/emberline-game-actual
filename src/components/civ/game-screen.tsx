@@ -11,11 +11,11 @@ import { SideMeters } from "./hud/side-meters";
 import { BottomBar } from "./hud/bottom-bar";
 import { TreeOverlay } from "./hud/tree-overlay";
 import { GuideOverlay } from "./hud/guide-overlay";
+import { Debrief, NextEraPrompt } from "./hud/debrief";
 import {
   DevPanel,
   ElderLesson,
   EventModal,
-  GameOver,
   RaidBanner,
   Toasts,
   TutorialPanel,
@@ -53,7 +53,8 @@ function Hud({ onRestart }: { onRestart: () => void }) {
       {panel === "tree" && <TreeOverlay />}
       <GuideOverlay />
       <EventModal />
-      <GameOver onRestart={onRestart} />
+      <NextEraPrompt />
+      <Debrief onRestart={onRestart} />
     </div>
   );
 }
