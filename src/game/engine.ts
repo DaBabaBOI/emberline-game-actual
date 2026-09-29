@@ -33,6 +33,8 @@ import {
   TREE,
   TREE_BY_ID,
   KNOWLEDGE_MILESTONES,
+  CAVE_PAINTINGS_KNOWLEDGE,
+  TEACHING,
   SCOUT_KNOWLEDGE,
   TUTORIAL,
   TUTORIAL_FAREWELL,
@@ -446,6 +448,14 @@ export function gathererShare(state: GameState, camps = countBuildings(state).ga
   return (1 + GATHERING.extraCamp * (camps - 1)) / camps;
 }
 
+// Extra Elder's Huts and schools teach only half as much each (every one of
+// that kind makes the same average share).
+export function teachingShare(state: GameState, building: string): number {
+  if (!TEACHING.buildings.includes(building)) return 1;
+  const n = countBuildings(state)[building] ?? 0;
+  return n <= 1 ? 1 : (1 + TEACHING.extra * (n - 1)) / n;
+}
+
 // What placing another gatherer would do, for the placement card.
 export function gatherNote(state: GameState): string | null {
   const camps = countBuildings(state).gatherer ?? 0;
@@ -514,7 +524,7 @@ export function production(state: GameState): Resources {
           : 1;
     const dust = (dusty(state, tile) ? 1 - QUARRY_DUST.foodLoss : 1) * (scaredByFire(state, tile) ? 1 - FIRE_SCARE.foodLoss : 1);
     // Gatherer camps share what the wild can give.
-    const share = tile.building === "gatherer" ? gathererShare(state) : 1;
+    const share = tile.building === "gatherer" ? gathererShare(state) : teachingShare(state, tile.building);
     for (const [k, v] of Object.entries(def.produces ?? {}))
       out[k as keyof Resources] += (v ?? 0) * factor * share * (k === "food" ? dust : 1);
     if (def.depositBonus && tile.deposit === def.depositBonus.deposit) {
@@ -543,7 +553,7 @@ export function production(state: GameState): Resources {
   out.wood *= workforce;
   const counts = countBuildings(state);
   out.currency += state.population * 0.02;
-  out.knowledge += state.meters.literacy * 0.005;
+  out.knowledge += state.meters.literacy * 0.001;
 
   if (state.researched.includes("spears")) out.food *= 1.15;
   if (state.culture === "farmers") out.food *= 1.25;
@@ -943,7 +953,7 @@ function checkSecrets(state: GameState): GameState {
       ...state,
       secretsFound: [...state.secretsFound, "cave-paintings"],
       researched: [...state.researched, "cave-paintings"],
-      resources: { ...state.resources, knowledge: state.resources.knowledge + 25 },
+      resources: { ...state.resources, knowledge: state.resources.knowledge + CAVE_PAINTINGS_KNOWLEDGE },
       modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + 10 },
       log: ["Secret discovered: Cave Paintings!", ...state.log].slice(0, 30),
     };
@@ -1614,7 +1624,8 @@ function step(state: GameState, action: Action): GameState {
       revealAround(tiles, tiles[target.id], state.culture === "mariners" ? 5 : 4);
       // A trip that maps a lot of new land teaches more than a short one.
       const newLand = tiles.filter((t, i) => t.revealed && !state.tiles[i].revealed && isLand(t.terrain)).length;
-      const learned = newLand >= SCOUT_KNOWLEDGE.bigTrip ? 2 : 1;
+      // Only the first few trips teach much: after that the land nearby is known.
+      const learned = state.scoutsSent >= SCOUT_KNOWLEDGE.trips ? 0 : newLand >= SCOUT_KNOWLEDGE.bigTrip ? 2 : 1;
       const spent = spend(state.resources, cost);
       return withMeters({
         ...state,
@@ -1622,7 +1633,7 @@ function step(state: GameState, action: Action): GameState {
         flags: { ...state.flags, scouted: true },
         scoutsSent: state.scoutsSent + 1,
         resources: { ...spent, knowledge: spent.knowledge + learned },
-        log: [`Scouts mapped ${newLand} tiles of new land (+${learned} Knowledge).`, ...state.log].slice(0, 30),
+        log: [`Scouts mapped ${newLand} tiles of new land${learned ? ` (+${learned} Knowledge)` : ""}.`, ...state.log].slice(0, 30),
       });
     }
 

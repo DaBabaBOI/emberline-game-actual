@@ -232,10 +232,16 @@ These were decided with the project owner. Do not change them without being aske
   resources the hand lets go. New tutorial steps need a case in `guideFor()`.
 - **Endings:** a loss (famine, unrest, conquest) always gets the "lost" tier.
   Land-based tiers (thriving, costly, stripped) are only for eras that end.
-- **Knowledge milestones** (`KNOWLEDGE_MILESTONES`): there is no base Knowledge
-  trickle. Firsts pay out once each (first of each building +4, population
-  10/15/20/30/50 +8, each scouting trip +1, or +2 if it maps 20+ new land tiles (`SCOUT_KNOWLEDGE`), first raid won +6, first planting +4),
-  with a toast. Elder's Huts, schools and literacy add a steady amount.
+- **Knowledge is slow on purpose:** reaching the Ancient era should take a
+  focused player 10+ minutes (a greedy bot takes 9-14). There is no base trickle.
+  Milestones pay once each (`KNOWLEDGE_MILESTONES`: first of each building +2,
+  population 10/15/20/30/50 +5, first raid won +6, first planting +4). Only the
+  first 5 scouting trips teach (+1, or +2 for 20+ new tiles). Elder's Huts
+  (0.08/tick) and Scribe Schools (0.12) teach steadily, but each extra one of a
+  kind adds only half (`TEACHING`). Literacy adds 0.001 × literacy. Cave
+  Paintings give +8. Agriculture costs 100. The Ancient era runs 5 years per
+  tick so the Roman legion (year −1600) arrives ~9 minutes in, leaving time to
+  research bronze arms. Re-check with a bot sim when tuning.
 - **Knowledge ready:** when Knowledge first covers an advancement, Elder Ama says
   so in a toast (once per advancement, `knowledgeReady()`), and the Advancements
   button shows how many are affordable (`affordableResearch()`).

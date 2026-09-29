@@ -12,7 +12,7 @@ import type {
 
 export const ERAS = [
   { name: "Stone Age", startYear: -50000, yearsPerTick: 100, currency: "Shells" },
-  { name: "Ancient", startYear: -3000, yearsPerTick: 10, currency: "Bronze coins" },
+  { name: "Ancient", startYear: -3000, yearsPerTick: 5, currency: "Bronze coins" },
   { name: "Classical", startYear: -500, yearsPerTick: 10, currency: "Silver coins" },
   { name: "Medieval & Renaissance", startYear: 1000, yearsPerTick: 4, currency: "Florins" },
   { name: "Industrial & Modern", startYear: 1750, yearsPerTick: 1, currency: "Banknotes" },
@@ -187,7 +187,7 @@ export const BUILDINGS: BuildingDef[] = [
     cost: { wood: 10, stone: 10 },
     terrain: ["grass", "steppe"],
     requires: "storytelling",
-    produces: { knowledge: 0.3 },
+    produces: { knowledge: 0.08 },
     reveal: 2,
   },
   {
@@ -247,7 +247,7 @@ export const BUILDINGS: BuildingDef[] = [
     cost: { wood: 20, stone: 15 },
     terrain: ["grass", "steppe"],
     requires: "writing",
-    produces: { knowledge: 0.4 },
+    produces: { knowledge: 0.12 },
     reveal: 1,
   },
   {
@@ -465,7 +465,7 @@ export const TREE: TreeNode[] = [
   {
     id: "cave-paintings",
     name: "Cave Paintings",
-    description: "Secret: build 2 Elder's Huts. +25 knowledge and +10 happiness.",
+    description: "Secret: build 2 Elder's Huts. +8 knowledge and +10 happiness.",
     branch: "culture",
     era: 0,
     cost: 0,
@@ -478,7 +478,7 @@ export const TREE: TreeNode[] = [
     description: "Settle down to farm for good. With 15 people, your tribe can enter the Ancient era.",
     branch: "knowledge",
     era: 0,
-    cost: 40,
+    cost: 100,
     requires: ["early-farming", "toolmaking"],
   },
   // ---- Ancient era ---------------------------------------------------------
@@ -948,16 +948,21 @@ export const SMITHY_CHARCOAL = 0.35;
 // Knowledge comes from milestones: every "first" teaches the tribe something.
 // (Elder's Huts, schools and literacy add a steady amount on top.)
 export const KNOWLEDGE_MILESTONES = {
-  firstBuilding: 4,
+  firstBuilding: 2,
   population: [10, 15, 20, 30, 50],
-  populationReward: 8,
+  populationReward: 5,
   firstRaidWon: 6,
   firstPlanted: 4,
 };
 
-// Each scouting trip teaches the tribe: +2 Knowledge if it maps at least
-// `bigTrip` new land tiles, +1 otherwise.
-export const SCOUT_KNOWLEDGE = { bigTrip: 20 };
+// The first `trips` scouting trips teach the tribe: +2 Knowledge if a trip maps
+// at least `bigTrip` new land tiles, +1 otherwise. Later trips teach nothing new.
+// Teaching buildings: the first of each kind teaches fully; every extra one
+// adds only `extra` of its Knowledge (there are only so many elders to teach).
+export const TEACHING = { extra: 0.5, buildings: ["elder", "school"] };
+// The secret found by building 2 Elder's Huts.
+export const CAVE_PAINTINGS_KNOWLEDGE = 8;
+export const SCOUT_KNOWLEDGE = { bigTrip: 20, trips: 5 };
 
 // Gatherers live off the wild, and the wild only has so much. The first camp
 // makes full food; each extra camp adds only `extraCamp` of a camp's food. Every
