@@ -957,7 +957,8 @@ function milestonesReached(state: GameState): [string, string, number][] {
     if (n > 0 && BUILDINGS_BY_ID[id]) out.push([`build-${id}`, `our first ${BUILDINGS_BY_ID[id].name}`, M.firstBuilding]);
   for (const p of M.population)
     if (state.population >= p) out.push([`pop-${p}`, `our tribe has grown to ${p} people`, M.populationReward]);
-  if (state.flags.scouted) out.push(["scout", "our scouts saw new land", M.firstScout]);
+  // Every scouting trip brings back something new to learn.
+  for (let i = 1; i <= state.scoutsSent; i++) out.push([`scout-${i}`, "our scouts mapped new land", M.perScout]);
   if ((state.stats?.raidsWon ?? 0) > 0) out.push(["raid", "we held off raiders", M.firstRaidWon]);
   if ((state.planted ?? 0) > 0) out.push(["plant", "we planted our first saplings", M.firstPlanted]);
   return out;

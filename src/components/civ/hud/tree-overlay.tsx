@@ -122,7 +122,7 @@ export function TreeOverlay() {
         </div>
       </div>
       <p className="px-3 pt-1 text-xs text-[#fdf6e3]/70 md:px-5">
-        Knowledge comes from milestones: your first of each building, your tribe growing, your first scouting trip,
+        Knowledge comes from milestones: your first of each building, your tribe growing, every scouting trip,
         beating raiders, planting saplings. An Elder&apos;s Hut (after Storytelling) or a Scribe School also teaches
         a little all the time.
       </p>

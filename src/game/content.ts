@@ -951,7 +951,7 @@ export const KNOWLEDGE_MILESTONES = {
   firstBuilding: 4,
   population: [10, 15, 20, 30, 50],
   populationReward: 8,
-  firstScout: 3,
+  perScout: 3,
   firstRaidWon: 6,
   firstPlanted: 4,
 };
