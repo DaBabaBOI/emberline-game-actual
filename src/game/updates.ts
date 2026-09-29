@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "Knowledge is harder to come by: milestones and Elder's Huts teach less, extra huts teach only half, only your first 5 scouting trips teach anything, and Agriculture costs 100. Reaching the Ancient era now takes real time, and the Ancient era runs slower so there is time to prepare for the Romans.",
       "Quarries really cut the hill away now: the tile sinks and turns to bare rock, a mountain loses its peak, and the scar (and its Sustainability cost) stays after the quarry is gone.",
       "The raid banner shows where your defense comes from (warriors, spears, war camp, walls).",
       "Mountains now rise in the outer highlands of each island instead of right next to your village.",
