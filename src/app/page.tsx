@@ -103,8 +103,15 @@ export default function Home() {
       <section className="mx-auto max-w-5xl px-4 pb-12">
         <h2 className="font-pixel text-2xl font-semibold sm:text-3xl">How it connects to the UN SDGs</h2>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          {SDGS.map((g) => (
-            <div key={g.n} className={"pixel-panel flex gap-4 p-4" + (g.core ? " sm:col-span-2" : "")}>
+          {SDGS.map((g, i) => (
+            // The core goal spans the row; so does a leftover last card, so the grid stays symmetrical.
+            <div
+              key={g.n}
+              className={
+                "pixel-panel flex gap-4 p-4" +
+                (g.core || (i === SDGS.length - 1 && (SDGS.length - 1) % 2 === 1) ? " sm:col-span-2" : "")
+              }
+            >
               <div
                 className="font-pixel flex h-14 w-14 shrink-0 items-center justify-center border-[3px] border-[#2b2119] text-2xl font-bold text-white"
                 style={{ background: g.color }}
