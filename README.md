@@ -1,4 +1,4 @@
-# 🔥 Emberline
+#  Emberline
 
 **From the first fire to the stars.** A civilization builder on hand-crafted hex
 islands, made for the SHISTECH Hacktrack hackathon (UN Sustainable Development
@@ -25,12 +25,12 @@ fuel and smog rolls in, the sky turns grey and your people suffer.
 
 | Era | Currency | Status |
 | --- | --- | --- |
-| 🔥 Stone Age | Shells | Playable |
-| 🏺 Ancient | Bronze coins | In development |
-| 🏛️ Classical | Silver coins | Planned |
-| 🏰 Medieval & Renaissance | Florins | Planned |
-| 🏭 Industrial & Modern | Banknotes | Planned |
-| 🚀 Future & Space | Credits | Planned |
+|  Stone Age | Shells | Playable |
+|  Ancient | Bronze coins | In development |
+|  Classical | Silver coins | Planned |
+|  Medieval & Renaissance | Florins | Planned |
+|  Industrial & Modern | Banknotes | Planned |
+|  Future & Space | Credits | Planned |
 
 ### What's in the game right now
 
