@@ -291,6 +291,9 @@ export function DevPanel() {
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devRomans" })}>
           Romans
         </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devCutHills" })}>
+          Cut hills
+        </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devFinishEra" })}>
           Finish era
         </button>

@@ -25,6 +25,8 @@ const CHARRED = new Color("#2e2620");
 // Cut-over forest shows bare earth and stumps; worn-out grass dries up.
 const BARE = new Color("#7a6443");
 const DRY = new Color("#b8a060");
+// Bare rock where a quarry has cut the hill away.
+const CUT = new Color("#8d8780");
 
 function jitter(id: number, salt: number) {
   const x = Math.sin(id * 127.1 + salt * 311.7) * 43758.5453;
@@ -76,6 +78,7 @@ export function HexTerrain({
           color.lerp(DRY, wear * 0.55);
         }
         if (tile.scorch > 0) color.lerp(CHARRED, Math.min(1, tile.scorch * 1.2));
+        if (tile.dug) color.lerp(CUT, Math.min(1, tile.dug * 0.9));
       } else {
         if (isLand(tile.terrain)) {
           color.set("#eef2f6");
@@ -196,7 +199,8 @@ export function Mountains({
   return (
     <group>
       {peaks.map((t) => {
-        const h = 1.7 + jitter(t.id, 4) * 0.9;
+        // A quarried mountain loses its peak for good.
+        const h = (1.7 + jitter(t.id, 4) * 0.9) * (1 - 0.75 * (t.dug ?? 0));
         const cap = h * 0.28;
         const shoulder = jitter(t.id, 5) > 0.45;
         return (
