@@ -79,9 +79,17 @@ function retarget(w: Walker, ground: Ground, pickTarget: () => Tile) {
     w.sitAt = target;
     return;
   }
-  const spot = ground.spotOn(target);
-  w.tx = spot.x;
-  w.tz = spot.z;
+  if (target.building) {
+    // Go to the side of the building that faces them, so the path doesn't run
+    // into the building and make them turn back and forth.
+    const a = Math.atan2(w.z - target.z, w.x - target.x) + (Math.random() - 0.5) * 1.6;
+    w.tx = target.x + Math.cos(a) * 0.72;
+    w.tz = target.z + Math.sin(a) * 0.72;
+  } else {
+    const spot = ground.spotOn(target);
+    w.tx = spot.x;
+    w.tz = spot.z;
+  }
   w.sitAt = null;
 }
 
@@ -115,8 +123,11 @@ function stepWalker(w: Walker, dt: number, ground: Ground, pickTarget: () => Til
       w.x = nx;
       w.z = nz;
     } else {
+      // Blocked: stop and look around for a moment before heading somewhere else.
       w.moving = false;
-      retarget(w, ground, pickTarget);
+      w.tx = w.x;
+      w.tz = w.z;
+      w.wait = 0.8 + Math.random() * 1.5;
     }
   }
   const floor = ground.heightAt(w.x, w.z);
