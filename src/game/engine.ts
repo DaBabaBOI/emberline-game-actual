@@ -690,7 +690,7 @@ export function warnings(state: GameState): Warning[] {
     out.push({
       id: "fire",
       icon: "flame",
-      text: `Not enough campfires: ${cold} people have no fire to warm them. Each fire warms ${GROWTH_PRESSURE.peoplePerFire}.`,
+      text: `Not enough campfires: ${cold} people are cold and becoming unhappy. Each fire warms ${GROWTH_PRESSURE.peoplePerFire}.`,
       severe: false,
     });
   }
