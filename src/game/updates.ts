@@ -9,6 +9,11 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "Raids are yours to answer: when raiders land, choose to fight (watch the battle and train warriors to tip it), hide in the houses (nobody dies, they take less) or pay tribute (they leave, but come back sooner).",
+      "Three kinds of raiders: small bands after your wood, war parties after food and wood, and fire raids that burn a building.",
+      "War Camps now hold 6 warriors each, and the Train button tells you when to build another camp.",
+      "New: the Watch Fire (after Hunting Spears). Built on the shore, it spots raiders sooner and adds a little defense, but burns wood.",
+      "Warriors patrol around their camps and watch fires, and new recruits march out of the War Camp.",
       "Dev mode: new Sparks and Clear forest buttons to test house fires, rain and Sustainability.",
       "The tutorial teaches it too: Elder Ama tells you to leave a patch of ground between your house and the fire.",
       "Huts are now Wooden Houses (log walls, bark roof): thatch needs straw, and there's no straw before farming.",

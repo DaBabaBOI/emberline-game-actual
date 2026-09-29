@@ -204,6 +204,20 @@ These were decided with the project owner. Do not change them without being aske
   rots (no preservation yet), each lit campfire warms only 10 people (the
   rest are cold, scaled happiness penalty), and raids grow with the tribe's
   size as well as time. Disease also gets likelier as the tribe grows.
+- **Raids** (`RAID_KINDS`, `RAID_RESPONSE`, `updateRaids`): three kinds, named
+  in the card: a small band (x0.7 strength, takes wood), a war party (x1.35,
+  takes food and wood), a fire raid (x1.1, burns the building nearest where they
+  landed, even if you hide). The first raid is always a band. When raiders land
+  the player picks a response before they arrive: **Fight** (default if no
+  choice; the fight lasts `fightTicks`, shown as a tug-of-war bar, and training a
+  warrior can still tip it), **Hide** (nobody dies, they take a smaller share)
+  or **Pay tribute** (4 food per raider, they leave but the next raid comes 60
+  ticks sooner). Each War Camp holds `WARRIORS_PER_CAMP` (6); the Train button
+  says "+1 camp = +6" when full. **Watch Fire** (after Hunting Spears, on the
+  shore): raiders seen 8 ticks sooner, +1 defense (max 2), burns wood, -1
+  Sustainability. Warriors patrol around camps and watch fires, recruits walk
+  out of a camp, and warriors take at most 40% of the figures. The legion's base
+  is 8 (was 6) to match the bigger armies. Dev: "Raid: band / party / fire".
 - **Disease** (`src/game/disease.ts`, `DISEASE`): outbreaks start from crowding
   (more people, more crowded = likelier), hunts, fishing spots and especially
   welcomed wanderers. It spreads, people recover and are immune for a while

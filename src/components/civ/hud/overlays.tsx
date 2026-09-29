@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AFTER_STEPS, ERAS, EVENTS, LESSONS, TREE_BY_ID, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
-import { defenseBreakdown, defenseStrength, warnings } from "@/game/engine";
+import { AFTER_STEPS, ERAS, EVENTS, LESSONS, RAID_KINDS, RAID_RESPONSE, TREE_BY_ID, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
+import { canAfford, defenseBreakdown, defenseStrength, tributeCost, warnings } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
 import { Countdown } from "./countdown";
 import { PixelIcon } from "@/components/civ/pixel-icon";
@@ -225,25 +225,118 @@ function LegionWarning() {
 }
 
 export function RaidBanner() {
-  const { state } = useGame();
+  const { state, dispatch } = useGame();
   if (state.legion && !state.raid) return <LegionWarning />;
   if (!state.raid) return null;
-  if (state.raid.roman) return <LegionWarning />;
+  const raid = state.raid;
+  if (raid.roman) return <LegionWarning />;
+  const kind = RAID_KINDS[raid.kind ?? "party"];
   const defense = defenseStrength(state);
-  const safe = defense >= state.raid.strength;
-  const eta = Math.max(0, state.raid.arriveTick - state.tick);
+  const safe = defense >= raid.strength;
+  const eta = Math.max(0, raid.arriveTick - state.tick);
+
+  // The fight is on: a tug of war you can still tip by training warriors.
+  if (raid.fightStart !== undefined) {
+    const left = Math.max(0, raid.fightStart + RAID_RESPONSE.fightTicks - state.tick);
+    const share = Math.round((100 * defense) / Math.max(1, defense + raid.strength));
+    return (
+      <div className="pointer-events-none flex justify-center">
+        <div className="pixel-panel-dark font-pixel w-[min(92vw,520px)] px-4 py-2 text-sm text-white" data-testid="raid-fight">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold">The fight is on!</span>
+            <span className="font-num text-base">
+              <Countdown ticks={left} />s
+            </span>
+          </div>
+          <div className="mt-1.5 flex h-4 w-full border-2 border-[#140e0a]">
+            <div className="bg-sky-600" style={{ width: `${share}%` }} />
+            <div className="flex-1 bg-red-700" />
+          </div>
+          <div className="mt-1 flex justify-between text-xs">
+            <span>Our defense {defense}</span>
+            <span>{safe ? "We are holding!" : "We are losing! Train a warrior to tip it."}</span>
+            <span>Raiders {raid.strength}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // They have landed: pick a response before they arrive (no choice means we fight).
+  if (!raid.response) {
+    const price = tributeCost(raid);
+    const options: { id: "fight" | "hide" | "tribute"; label: string; note: string; ok: boolean }[] = [
+      {
+        id: "fight",
+        label: "Fight",
+        note: safe ? `Defense ${defense} vs ${raid.strength}: we can hold them` : `Defense ${defense} vs ${raid.strength}: train warriors first`,
+        ok: true,
+      },
+      {
+        id: "hide",
+        label: "Hide in the houses",
+        note: kind.burns ? "Nobody dies, but they still burn a building" : "Nobody dies, but they take a share",
+        ok: true,
+      },
+      {
+        id: "tribute",
+        label: `Pay ${price} food`,
+        note: "They leave, but come back sooner",
+        ok: canAfford(state, { food: price }),
+      },
+    ];
+    return (
+      <div className="pointer-events-none flex justify-center">
+        <div className="pixel-panel-dark font-pixel w-[min(92vw,560px)] px-4 py-2 text-sm text-white" data-testid="raid-card">
+          <div className="flex items-center gap-2 font-semibold">
+            <PixelIcon name="warning" size={18} />
+            <span>
+              {kind.name} of {raid.strength} raiders! {kind.wants} They arrive in <Countdown ticks={eta} />s.
+            </span>
+          </div>
+          <div className="mt-2 grid grid-cols-3 gap-1.5">
+            {options.map((o) => (
+              <button
+                key={o.id}
+                type="button"
+                disabled={!o.ok}
+                onClick={() => dispatch({ type: "raidResponse", choice: o.id })}
+                className={
+                  "pixel-btn pointer-events-auto px-2 py-1 text-left text-xs disabled:opacity-40 " +
+                  (o.id === "fight" ? "bg-red-800 hover:bg-red-700" : "bg-[#4a3b2e] hover:bg-[#5a4a3a]")
+                }
+              >
+                {o.label}
+                <span className="block text-[11px] text-white/70">{o.note}</span>
+              </button>
+            ))}
+          </div>
+          <p className="mt-1 text-[11px] text-white/60">No choice means we fight.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="pointer-events-none flex justify-center">
       <div
         className={
           "font-pixel flex items-center gap-2 border-[3px] border-[#140e0a] px-4 py-2 text-sm font-semibold text-white " +
-          (safe ? "bg-emerald-700/85" : "animate-pulse bg-red-700/90")
+          (raid.response === "hide" ? "bg-[#4a3b2e]/90" : safe ? "bg-emerald-700/85" : "animate-pulse bg-red-700/90")
         }
       >
         <PixelIcon name="warning" size={18} />
         <span>
-          {state.raid.strength} raiders arriving in <Countdown ticks={eta} />s · Defense {defense} ={" "}
-          {defenseBreakdown(state)} · {safe ? "You can hold them" : "Train more warriors!"}
+          {raid.response === "hide" ? (
+            <>
+              Everyone is hiding in the houses. The raiders arrive in <Countdown ticks={eta} />s.
+            </>
+          ) : (
+            <>
+              {raid.strength} raiders arriving in <Countdown ticks={eta} />s · Defense {defense} = {defenseBreakdown(state)} ·{" "}
+              {safe ? "You can hold them" : "Train more warriors!"}
+            </>
+          )}
         </span>
       </div>
     </div>
@@ -321,8 +414,14 @@ export function DevPanel() {
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devOutbreak" })}>
           Outbreak
         </button>
-        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devRaid" })}>
-          Raid now
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devRaidKind", kind: "band" })}>
+          Raid: band
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devRaidKind", kind: "party" })}>
+          Raid: party
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devRaidKind", kind: "fire" })}>
+          Raid: fire
         </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devRomans" })}>
           Romans

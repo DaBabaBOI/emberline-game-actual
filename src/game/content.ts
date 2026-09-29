@@ -8,6 +8,7 @@ import type {
   DifficultyId,
   EventCard,
   MeterKey,
+  RaidKind,
   Resources,
   TreeNode,
 } from "./types";
@@ -57,7 +58,7 @@ export const DIFFICULTIES: Record<
   hard: { name: "Hard", blurb: "Hungry people, short patience, bold raiders.", consumption: 1.25, famineLimit: 18, unrestLimit: 25, raiders: 1.4 },
 };
 
-export const WARRIORS_PER_CAMP = 4;
+export const WARRIORS_PER_CAMP = 6;
 export const TRAIN_COST = { food: 8, wood: 4 };
 // After Hunting Spears: give a warrior a spear. Spearmen fight 1.5x as hard.
 export const SPEAR_COST = { wood: 4 };
@@ -125,7 +126,7 @@ export const BUILDINGS: BuildingDef[] = [
     id: "warcamp",
     name: "War Camp",
     icon: "shield",
-    description: "Trains warriors to fight off raiders. Each camp holds 4 warriors.",
+    description: "Trains warriors to fight off raiders. Each camp holds 6 warriors; build more camps for a bigger army.",
     gain: "Warriors to hold off raiders",
     landCost: "Warriors eat food and don't gather any",
     landImpact: 0,
@@ -133,6 +134,22 @@ export const BUILDINGS: BuildingDef[] = [
     cost: { wood: 15, food: 10 },
     terrain: ["grass", "steppe", "hills", "beach"],
     reveal: 3,
+  },
+  {
+    id: "watchfire",
+    name: "Watch Fire",
+    icon: "beacon",
+    description: "A fire kept burning on the shore. Raiders are seen sooner, and the lookouts add a little defense.",
+    gain: "Raiders seen 12 s sooner, +1 defense (up to 2 watch fires)",
+    landCost: "Burns wood day and night, and adds smoke",
+    landImpact: 1,
+    era: 0,
+    cost: { wood: 12 },
+    terrain: ["beach", "grass", "steppe"],
+    needsWaterNeighbor: true,
+    requires: "spears",
+    produces: { wood: -0.03 },
+    reveal: 4,
   },
   {
     id: "woodcutter",
@@ -432,11 +449,12 @@ export const TREE: TreeNode[] = [
   {
     id: "spears",
     name: "Hunting Spears",
-    description: "+15% food. Warriors can carry spears: train new spearmen, or give your warriors spears, to fight 50% harder.",
+    description: "+15% food. Warriors can carry spears: train new spearmen, or give your warriors spears, to fight 50% harder. Unlocks the Watch Fire.",
     branch: "military",
     era: 0,
     cost: 6,
     requires: ["toolmaking"],
+    unlocks: ["watchfire"],
   },
   {
     id: "herbalism",
@@ -992,6 +1010,27 @@ export const LESSON_GAP = 40;
 // nowhere) never start within this many ticks of each other: one at a time.
 export const QUIET_GAP = 40;
 
+// Raiders come in three kinds (the banner says which). `size` scales the usual
+// raid strength. If they win (or you hide), `steal` is the share of food and wood
+// they take; a fire raid also burns one building, even if you hide.
+export const RAID_KINDS: Record<
+  RaidKind,
+  { name: string; size: number; wants: string; steal: { food: number; wood: number }; hide: { food: number; wood: number }; burns: boolean }
+> = {
+  band: { name: "A small band", size: 0.7, wants: "They are after wood.", steal: { food: 0, wood: 0.4 }, hide: { food: 0, wood: 0.25 }, burns: false },
+  party: { name: "A war party", size: 1.35, wants: "They want food and wood.", steal: { food: 0.35, wood: 0.35 }, hide: { food: 0.2, wood: 0.2 }, burns: false },
+  fire: { name: "A fire raid", size: 1.1, wants: "They carry torches: they will burn a building.", steal: { food: 0.15, wood: 0 }, hide: { food: 0, wood: 0 }, burns: true },
+};
+
+// When raiders land the player picks a response before they arrive: fight (the
+// battle plays out over `fightTicks`, and training more warriors can still tip
+// it), hide in the houses (nobody dies, they take a share) or pay tribute (food,
+// `tributePerRaider` each; they leave but come back `tributeSooner` ticks sooner).
+export const RAID_RESPONSE = { fightTicks: 7, tributePerRaider: 4, tributeSooner: 60, hideMood: 4 };
+
+// A watch fire on the shore sees raiders earlier and adds a little defense.
+export const WATCH_FIRE = { warnTicks: 8, defense: 1, maxDefense: 2, smoke: 1 };
+
 // Leaving the Stone Age: research Agriculture and grow to this many people.
 export const NEXT_ERA_POPULATION = 15;
 
@@ -1059,7 +1098,7 @@ export const WALL_DEFENSE = 4;
 // The Ancient era ends with a Roman legion. Scouts see it coming when the year
 // reaches warningYear; it lands warningTicks later. Each legionary fights like
 // two of your warriors. Size: (base + population / perPeople) × difficulty.
-export const ROMAN_LEGION = { warningYear: -1600, warningTicks: 90, strengthEach: 2, base: 6, perPeople: 5 };
+export const ROMAN_LEGION = { warningYear: -1600, warningTicks: 90, strengthEach: 2, base: 8, perPeople: 5 };
 
 // Buying something that leaves less wood than this shows a "save up" warning.
 export const LOW_WOOD_AFTER_BUY = 10;

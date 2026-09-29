@@ -1,5 +1,8 @@
 import {
   AFTER_TUTORIAL_RESERVE,
+  RAID_KINDS,
+  RAID_RESPONSE,
+  WATCH_FIRE,
   TUTORIAL_START_FOOD,
   ROMAN_LEGION,
   FORESTER_GROWTH,
@@ -64,6 +67,9 @@ import type {
   DifficultyId,
   GameState,
   Meters,
+  Raid,
+  RaidKind,
+  RaidResponse,
   Resources,
   Tile,
 } from "./types";
@@ -92,6 +98,8 @@ export type Action =
   | { type: "devGrant" }
   | { type: "devPeople" }
   | { type: "devFiresOut" }
+  | { type: "raidResponse"; choice: RaidResponse }
+  | { type: "devRaidKind"; kind: RaidKind }
   | { type: "devOutbreak" }
   | { type: "devRaid" }
   | { type: "devRomans" }
@@ -925,6 +933,11 @@ export function sustainabilityBreakdown(state: GameState): SustainPart[] {
       hint: `The wild can feed ${GATHERING.freeCamps} camps. Past that, animals are hunted faster than they can have young, and there are fewer each year.`,
     },
     {
+      label: `${counts.watchfire ?? 0} watch fire${counts.watchfire === 1 ? "" : "s"} burning`,
+      value: -(counts.watchfire ?? 0) * WATCH_FIRE.smoke,
+      hint: "Watch fires burn wood day and night and add smoke.",
+    },
+    {
       label: `${counts.farm ?? 0} field${counts.farm === 1 ? "" : "s"} cleared`,
       value: -(counts.farm ?? 0) * 1,
       hint: "Farmland replaces wild land.",
@@ -1011,8 +1024,14 @@ export function defenseStrength(state: GameState) {
   return (
     ((state.soldiers - spears) + spears * SPEARMAN_STRENGTH) * bronze +
     ((counts.warcamp ?? 0) > 0 ? 1 : 0) +
-    (counts.walls ?? 0) * WALL_DEFENSE
+    (counts.walls ?? 0) * WALL_DEFENSE +
+    watchDefense(state)
   );
+}
+
+// Lookouts at the watch fires add a little defense (up to WATCH_FIRE.maxDefense).
+export function watchDefense(state: GameState) {
+  return Math.min(WATCH_FIRE.maxDefense, (countBuildings(state).watchfire ?? 0) * WATCH_FIRE.defense);
 }
 
 // Where the defense number comes from, in words: "4 warriors × 1.5 (spears) + 1 war camp".
@@ -1028,6 +1047,7 @@ export function defenseBreakdown(state: GameState): string {
   if (bronze) text = `(${text}) × 2 bronze`;
   if ((counts.warcamp ?? 0) > 0) text += " + 1 war camp";
   if (counts.walls) text += ` + ${counts.walls * WALL_DEFENSE} walls`;
+  if (watchDefense(state)) text += ` + ${watchDefense(state)} watch fire${watchDefense(state) === 1 ? "" : "s"}`;
   return text;
 }
 
@@ -1705,10 +1725,77 @@ function resolveLegion(state: GameState) {
   return { ...lost, debrief: makeDebrief(lost, "loss") };
 }
 
+// Buildings a fire raid could set alight (not fires, pens of stone or the camp).
+function burnable(state: GameState): Tile[] {
+  return state.tiles.filter((t) => t.building && !["campfire", "warcamp", "quarry", "walls", "watchfire"].includes(t.building));
+}
+
+// What raiders take: a share of food and wood, and for a fire raid one building
+// (the one nearest where they landed).
+function plunder(state: GameState, raid: Raid, share: { food: number; wood: number }): Partial<GameState> {
+  const resources = {
+    ...state.resources,
+    food: state.resources.food * (1 - share.food),
+    wood: state.resources.wood * (1 - share.wood),
+  };
+  if (!RAID_KINDS[raid.kind ?? "party"].burns) return { resources };
+  const from = state.tiles[raid.fromTile];
+  const target = burnable(state).sort((a, b) => hexDistance(a, from) - hexDistance(b, from))[0];
+  if (!target) return { resources };
+  return { resources, tiles: state.tiles.map((t) => (t.id === target.id ? { ...t, building: null, scorch: 1 } : t)) };
+}
+
+function plunderText(state: GameState, raid: Raid): string {
+  const kind = raid.kind ?? "party";
+  const from = state.tiles[raid.fromTile];
+  const burnt = RAID_KINDS[kind].burns ? burnable(state).sort((a, b) => hexDistance(a, from) - hexDistance(b, from))[0] : null;
+  const what = burnt ? ` They set fire to a ${BUILDINGS_BY_ID[burnt.building!].name}.` : "";
+  if (kind === "band") return `The raiders made off with our wood.${what}`;
+  if (kind === "fire") return `Raiders ran through the village with torches!${what}`;
+  return `Raiders plundered the village! Food and wood stolen.${what}`;
+}
+
+// Everyone hid in the houses: nobody dies, but the raiders take what they find.
+function raidHide(state: GameState, raid: Raid): GameState {
+  return {
+    ...state,
+    ...plunder(state, raid, RAID_KINDS[raid.kind ?? "party"].hide),
+    raid: null,
+    modifiers: { ...state.modifiers, happiness: state.modifiers.happiness - RAID_RESPONSE.hideMood },
+    log: [hideText(state, raid), ...state.log].slice(0, 30),
+  };
+}
+
+function hideText(state: GameState, raid: Raid): string {
+  const kind = raid.kind ?? "party";
+  if (RAID_KINDS[kind].burns) {
+    const from = state.tiles[raid.fromTile];
+    const burnt = burnable(state).sort((a, b) => hexDistance(a, from) - hexDistance(b, from))[0];
+    return burnt
+      ? `We hid in the houses. Nobody was hurt, but the raiders burned a ${BUILDINGS_BY_ID[burnt.building!].name}.`
+      : "We hid in the houses. The raiders found nothing to burn and left.";
+  }
+  return kind === "band"
+    ? "We hid in the houses. Nobody was hurt, but they took some of our wood."
+    : "We hid in the houses. Nobody was hurt, but they took some food and wood.";
+}
+
+// The price of buying the raiders off.
+export function tributeCost(raid: Raid) {
+  return raid.strength * RAID_RESPONSE.tributePerRaider;
+}
+
 function updateRaids(state: GameState): GameState {
   const { raid } = state;
   if (raid?.roman) return state.tick >= raid.arriveTick ? resolveLegion(state) : state;
   if (raid && state.tick >= raid.arriveTick) {
+    // They are here. Hiding or tribute was settled when chosen; otherwise we fight,
+    // and the fight takes a few seconds (training a warrior can still tip it).
+    if (raid.response === "hide") return raidHide(state, raid);
+    if (raid.fightStart === undefined) {
+      return { ...state, raid: { ...raid, response: "fight", fightStart: state.tick } };
+    }
+    if (state.tick < raid.fightStart + RAID_RESPONSE.fightTicks) return state;
     const defense = defenseStrength(state);
     const battleAt = raid.meetTile ?? raid.targetTile;
     if (defense >= raid.strength) {
@@ -1756,13 +1843,10 @@ function updateRaids(state: GameState): GameState {
         won: false,
       },
       soldiers: Math.max(0, state.soldiers - raid.strength),
-      resources: {
-        ...state.resources,
-        food: state.resources.food * 0.65,
-        wood: state.resources.wood * 0.65,
-      },
+      spearmen: Math.min(spearmenOf(state), Math.max(0, state.soldiers - raid.strength)),
+      ...plunder(state, raid, RAID_KINDS[raid.kind ?? "party"].steal),
       modifiers: { ...state.modifiers, happiness: state.modifiers.happiness - 12 },
-      log: ["Raiders plundered the village! Food and wood stolen.", ...state.log].slice(0, 30),
+      log: [plunderText(state, raid), ...state.log].slice(0, 30),
     };
   }
 
@@ -1784,26 +1868,43 @@ function updateRaids(state: GameState): GameState {
       .reduce((best, t) =>
         Math.hypot(t.x - mx, t.z - mz) < Math.hypot(best.x - mx, best.z - mz) ? t : best,
       );
+    // The first raid is always a small band; later ones vary. Fire raids need
+    // something to burn.
+    const roll = rand();
+    const kind: RaidKind = state.devNextRaid
+      ? state.devNextRaid
+      : !state.raidsSeen
+        ? "band"
+        : roll < 0.3
+          ? "band"
+          : roll < 0.7 || burnable(state).length === 0
+            ? "party"
+            : "fire";
     const strength = Math.max(
       2,
       Math.round(
         (2 + state.tick / RAID_GROWTH_TICKS + state.population / GROWTH_PRESSURE.raidersPerPeople) *
-          DIFFICULTIES[state.difficulty].raiders,
+          DIFFICULTIES[state.difficulty].raiders *
+          RAID_KINDS[kind].size,
       ),
     );
+    const early = (countBuildings(state).watchfire ?? 0) > 0 ? WATCH_FIRE.warnTicks : 0;
     return {
       ...state,
       raid: {
         strength,
+        kind,
         fromTile: from.id,
         targetTile: home.id,
         meetTile: meet.id,
         startTick: state.tick,
-        arriveTick: state.tick + 12,
+        arriveTick: state.tick + 12 + early,
       },
+      raidsSeen: (state.raidsSeen ?? 0) + 1,
+      devNextRaid: undefined,
       nextRaidTick: state.tick + 180 + Math.floor(rand() * 100),
       lastBigTick: state.tick,
-      log: [`${strength} raiders spotted landing on the shore!`, ...state.log].slice(0, 30),
+      log: [`${RAID_KINDS[kind].name} of ${strength} raiders is landing on the shore!${early ? " The watch fire saw them early." : ""}`, ...state.log].slice(0, 30),
     };
   }
   return state;
@@ -2169,6 +2270,27 @@ function step(state: GameState, action: Action): GameState {
 
     case "dismissDebrief":
       return state.debrief?.kind === "final" ? { ...state, debrief: null } : state;
+
+    case "raidResponse": {
+      const raid = state.raid;
+      if (!raid || raid.roman || raid.fightStart !== undefined || raid.response) return state;
+      if (action.choice === "tribute") {
+        const price = tributeCost(raid);
+        if (state.resources.food < price) return state;
+        return withMeters({
+          ...state,
+          raid: null,
+          resources: { ...state.resources, food: state.resources.food - price },
+          nextRaidTick: state.nextRaidTick - RAID_RESPONSE.tributeSooner,
+          log: [`We paid ${price} food. The raiders sailed away, but they will be back sooner.`, ...state.log].slice(0, 30),
+        });
+      }
+      return { ...state, raid: { ...raid, response: action.choice } };
+    }
+
+    case "devRaidKind":
+      if (!state.dev || state.raid) return state;
+      return { ...state, nextRaidTick: state.tick, devNextRaid: action.kind };
 
     case "devRaid":
       if (!state.dev || state.raid) return state;
