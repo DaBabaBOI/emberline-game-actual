@@ -258,8 +258,14 @@ src/
 git clone https://github.com/DaBabaBOI/shistech-hackathon.git
 cd shistech-hackathon
 npm install
-npm run dev        # http://localhost:3000
+npm run dev        # http://localhost:3000, then open /play
 ```
+
+**Downloaded the ZIP instead?** (Code → Download ZIP on GitHub.) It works the
+same way: unzip it, open a terminal in the folder and run `npm install` then
+`npm run dev`. You need [Node.js](https://nodejs.org/) 22 (see `.nvmrc`).
+Double-clicking a file won't start the game; it has to be served. To just play,
+use the live link at the top.
 
 | Script | What it does |
 | --- | --- |
