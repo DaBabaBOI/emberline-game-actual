@@ -1,5 +1,6 @@
 import {
   AFTER_TUTORIAL_RESERVE,
+  COLLAPSE,
   TUTORIAL_START_FOOD,
   ROMAN_LEGION,
   FORESTER_GROWTH,
@@ -92,6 +93,7 @@ export type Action =
   | { type: "devGrant" }
   | { type: "devPeople" }
   | { type: "devFiresOut" }
+  | { type: "devCollapse" }
   | { type: "devOutbreak" }
   | { type: "devRaid" }
   | { type: "devRomans" }
@@ -154,6 +156,7 @@ export function newGame(
     population: 8,
     famineTicks: 0,
     unrestTicks: 0,
+    collapseTicks: 0,
     strainTicks: 0,
     forestBaseline: 0,
     soldiers: 0,
@@ -759,7 +762,7 @@ export function perSecond(perTick: number) {
 }
 
 export interface Warning {
-  id: "fire" | "food" | "wood" | "famine" | "unrest" | "land" | "sick" | "rain";
+  id: "fire" | "food" | "wood" | "famine" | "unrest" | "collapse" | "land" | "sick" | "rain";
   icon: IconId;
   text: string;
   // Ticks left on the countdown in the text; "{secs}" in the text is where it goes.
@@ -800,6 +803,16 @@ export function warnings(state: GameState): Warning[] {
       icon: "sad",
       text: "Your people are miserable! They will leave in {secs}s unless you cheer them up.",
       countdown: Math.max(0, unrestLimit - state.unrestTicks),
+      severe: true,
+    });
+  }
+
+  if ((state.collapseTicks ?? 0) > 0) {
+    out.push({
+      id: "collapse",
+      icon: "leaf",
+      text: `The land is collapsing! Sustainability is below ${COLLAPSE.level}. Plant trees, log selectively and stop clearing forest, or your people must leave in {secs}s.`,
+      countdown: Math.max(0, COLLAPSE.ticks - (state.collapseTicks ?? 0)),
       severe: true,
     });
   }
@@ -1439,6 +1452,12 @@ function tick(state: GameState): GameState {
       ? state.unrestTicks + 1
       : Math.max(0, state.unrestTicks - 2);
 
+  // The land can give out too, but never while a new player is still learning.
+  const collapseTicks =
+    state.meters.sustainability < COLLAPSE.level && !inTutorial && !isCalm(state)
+      ? (state.collapseTicks ?? 0) + 1
+      : Math.max(0, (state.collapseTicks ?? 0) - 2);
+
   const strainTicks =
     state.meters.sustainability < LAND.strainLevel
       ? state.strainTicks + 1
@@ -1476,6 +1495,7 @@ function tick(state: GameState): GameState {
     population,
     famineTicks,
     unrestTicks,
+    collapseTicks,
     strainTicks,
     modifiers,
   };
@@ -1494,6 +1514,10 @@ function tick(state: GameState): GameState {
   }
   if (unrestTicks >= DIFFICULTIES[state.difficulty].unrestLimit) {
     const lost: GameState = { ...next, phase: "gameover", lostTo: "unrest", log: ["Your people lost hope and left.", ...next.log] };
+    return { ...lost, debrief: makeDebrief(lost, "loss") };
+  }
+  if (collapseTicks >= COLLAPSE.ticks) {
+    const lost: GameState = { ...next, phase: "gameover", lostTo: "collapse", log: ["The land gave out, and your people had to leave.", ...next.log] };
     return { ...lost, debrief: makeDebrief(lost, "loss") };
   }
 
@@ -2181,6 +2205,16 @@ function step(state: GameState, action: Action): GameState {
     case "devFiresOut":
       if (!state.dev) return state;
       return withMeters({ ...state, fires: {}, log: ["Dev: all campfires put out.", ...state.log].slice(0, 30) });
+
+    case "devCollapse":
+      // Wreck the land for a while and start the countdown 30 s from the end.
+      if (!state.dev) return state;
+      return withMeters({
+        ...state,
+        modifiers: { ...state.modifiers, sustainability: state.modifiers.sustainability - 100 },
+        collapseTicks: Math.max(state.collapseTicks ?? 0, COLLAPSE.ticks - 20),
+        log: ["Dev: the land is collapsing.", ...state.log].slice(0, 30),
+      });
 
     case "devPeople":
       if (!state.dev) return state;

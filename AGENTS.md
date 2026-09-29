@@ -236,16 +236,21 @@ These were decided with the project owner. Do not change them without being aske
   crested bronze helmets and big red shields (`Figures gear="roman"`).
   (Historically Rome only becomes a power right at the end of this period; the
   legion is the Ancient era's climax on purpose.)
-- Seven cultures (Balanced + six with bonuses), three difficulties. There are two
-  ways to lose: **famine** (no food for too long) and **unrest** (happiness below
-  15 for too long, after the tutorial). Both show a countdown warning first.
-  Everything else is a setback.
+- Seven cultures (Balanced + six with bonuses), three difficulties. There are three
+  ways to lose in everyday play: **famine** (no food for too long), **unrest**
+  (happiness below 15 for too long, after the tutorial) and **land collapse**
+  (`COLLAPSE`: Sustainability below 20 for 80 ticks, about 2 minutes, after the
+  tutorial and the calm period; `collapseTicks`, winds down twice as fast once
+  the land recovers). All three show a countdown warning first. The Roman
+  legion is the fourth (conquest). Everything else is a setback. Balance: the
+  sensible bot never gets near 20; a reckless bot (clear-cutting, never
+  replanting) collapses around 10 minutes. Dev: "Collapse".
 - **Tutorial hand:** during the tutorial a pixel hand points at the next click
   and the rest of the screen is blocked (`guideFor()` in
   `src/components/civ/guide.ts`, drawn by `hud/guide-overlay.tsx`). Targets are
   elements with `data-guide="…"` or a map tile. While the player is saving up
   resources the hand lets go. New tutorial steps need a case in `guideFor()`.
-- **Endings:** a loss (famine, unrest, conquest) always gets the "lost" tier.
+- **Endings:** a loss (famine, unrest, collapse, conquest) always gets the "lost" tier.
   Land-based tiers (thriving, costly, stripped) are only for eras that end.
 - **Balance is checked with a full-game bot** (skip tutorial, sensible build order,
   selective logging, replanting, saving up for key buildings). Last check: 4 of 5

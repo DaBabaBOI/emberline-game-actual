@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "You can now lose by ruining the land: if Sustainability stays below 20 for about two minutes, the land collapses and your people must leave. A countdown warns you first, and planting, selective logging or clearing less forest brings it back.",
       "Dev mode: new Sparks and Clear forest buttons to test house fires, rain and Sustainability.",
       "The tutorial teaches it too: Elder Ama tells you to leave a patch of ground between your house and the fire.",
       "Huts are now Wooden Houses (log walls, bark roof): thatch needs straw, and there's no straw before farming.",
