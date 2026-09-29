@@ -241,7 +241,8 @@ export function WorldCanvas() {
       <Wildfire tiles={state.tiles} />
       <FireVictims tiles={state.tiles} victims={state.fireVictims ?? []} />
 
-      {hoverTile && (
+      {hoverTile && (selected || (hoverTile.terrain !== "deep" && hoverTile.terrain !== "shallow")) && (
+        // With no tool picked, open water isn't worth outlining.
         <HexOutline
           x={hoverTile.x}
           y={tileTop(hoverTile)}
@@ -274,9 +275,9 @@ export function WorldCanvas() {
           <Html
             // In the tutorial the card sits above the dimming so it can be read.
             zIndexRange={state.tutorialStep < TUTORIAL.length ? [40, 30] : [15, 0]}
-            center
-            position={[0, 1.1, 0]}
-            style={{ pointerEvents: "none" }}
+            // Beside the tile, not on it, so you can see where you're placing.
+            position={[0, 0.3, 0]}
+            style={{ pointerEvents: "none", transform: "translate(56px, -50%)" }}
           >
             {error ? (
               <div className="pixel-panel-dark font-pixel whitespace-nowrap px-2 py-1 text-xs">{error}</div>
