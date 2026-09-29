@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { BRANCHES, BUILDINGS_BY_ID, ERAS, TREE, TREE_BY_ID } from "@/game/content";
-import { perSecond, production, tutorialLocked } from "@/game/engine";
+import { goalProgress, goalsMet, perSecond, production, tutorialLocked } from "@/game/engine";
 import type { GameState, TreeNode } from "@/game/types";
 import type { IconId } from "@/game/sprites";
 import { useGame } from "@/components/civ/game-provider";
@@ -10,7 +10,7 @@ import { PixelIcon } from "@/components/civ/pixel-icon";
 import { cn } from "@/lib/utils";
 
 const NODE_W = 150;
-const NODE_H = 58;
+const NODE_H = 72;
 const COL_GAP = 56;
 const ROW_GAP = 14;
 const LABEL_W = 120;
@@ -26,6 +26,23 @@ function statusOf(state: GameState, n: TreeNode): Status {
   if (n.comingSoon) return "soon";
   if (n.requires.every((r) => state.researched.includes(r))) return "available";
   return "locked";
+}
+
+// The first unfinished goal on a card, with its progress (or "Goal met").
+function GoalLine({ state, nodeId, reachable }: { state: GameState; nodeId: string; reachable: boolean }) {
+  const goals = goalProgress(state, nodeId);
+  if (!goals.length) return null;
+  const next = goals.find((g) => !g.done);
+  const left = goals.filter((g) => !g.done).length;
+  return (
+    <span className={cn("truncate text-[10px]", next ? "text-amber-200/90" : "text-emerald-300")}>
+      {!next
+        ? "Goal met"
+        : reachable
+          ? `${next.label} ${next.have}/${next.need}${left > 1 ? ` (+${left - 1} more)` : ""}`
+          : `Goal: ${next.label} ${next.need}`}
+    </span>
+  );
 }
 
 interface Placed {
@@ -122,7 +139,7 @@ export function TreeOverlay() {
         </div>
       </div>
       <p className="px-3 pt-1 text-xs text-[#fdf6e3]/70 md:px-5">
-        Knowledge comes from milestones: your first of each building, your tribe growing, each scouting trip (more for a big one),
+        Knowledge comes from milestones: your first of each building, your tribe growing, your first scouting trips,
         beating raiders, planting saplings. An Elder&apos;s Hut (after Storytelling) or a Scribe School also teaches
         a little all the time.
       </p>
@@ -223,11 +240,12 @@ export function TreeOverlay() {
                 title={fromEarlier.length ? `Needs: ${fromEarlier.join(", ")}` : undefined}
               >
                 <span className="truncate text-sm font-semibold">{s === "secret" ? "???" : node.name}</span>
+                {(s === "available" || s === "locked") && <GoalLine state={state} nodeId={node.id} reachable={s === "available"} />}
                 <span className="flex items-center gap-1 text-[11px] opacity-80">
                   {s === "done" && "Discovered"}
                   {s === "available" && (
                     <>
-                      <PixelIcon name="bulb" size={11} />
+                      <PixelIcon name={goalsMet(state, node.id) ? "bulb" : "lock"} size={11} />
                       <span className="font-num">{node.cost}</span>
                     </>
                   )}
@@ -269,12 +287,23 @@ export function TreeOverlay() {
                   </span>
                 )}
               </p>
+              {(focusStatus === "available" || focusStatus === "locked") && goalProgress(state, focused.id).length > 0 && (
+                <ul className="font-pixel mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs" data-testid="goal-list">
+                  <li className="text-white/60">{focusStatus === "locked" ? "Then:" : "To research:"}</li>
+                  {goalProgress(state, focused.id).map((g) => (
+                    <li key={g.label} className={g.done ? "text-emerald-300" : "text-amber-200"}>
+                      {g.done ? "Done: " : ""}
+                      {g.label} <span className="font-num">{focusStatus === "locked" ? g.need : `${g.have}/${g.need}`}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             {focusStatus === "available" && (
               <button
                 type="button"
                 data-guide="tree-research"
-                disabled={locked || state.resources.knowledge < focused.cost}
+                disabled={locked || state.resources.knowledge < focused.cost || !goalsMet(state, focused.id)}
                 onClick={() => dispatch({ type: "research", nodeId: focused.id })}
                 className="pixel-btn font-pixel flex shrink-0 items-center gap-1.5 bg-emerald-500 px-4 py-2 text-base font-semibold text-[#2b2119] hover:bg-emerald-400 disabled:opacity-40"
               >

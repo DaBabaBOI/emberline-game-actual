@@ -1,11 +1,14 @@
 import {
   AFTER_TUTORIAL_RESERVE,
+  TUTORIAL_START_FOOD,
   ROMAN_LEGION,
   FORESTER_GROWTH,
   FORESTER_REACH,
   GRANARY_KEEPS,
   SMITHY_CHARCOAL,
   QUARRY_DUST,
+  QUARRY_CUT,
+  FARM_RAIN,
   FIRE_SCARE,
   GATHERING,
   WALL_DEFENSE,
@@ -31,7 +34,13 @@ import {
   TRAIN_COST,
   TREE,
   TREE_BY_ID,
+  SPEAR_COST,
+  SPEARMAN_STRENGTH,
+  ADVANCEMENT_GOALS,
+  AFTER_STEPS,
   KNOWLEDGE_MILESTONES,
+  CAVE_PAINTINGS_KNOWLEDGE,
+  TEACHING,
   SCOUT_KNOWLEDGE,
   TUTORIAL,
   TUTORIAL_FAREWELL,
@@ -43,6 +52,9 @@ import { generateMap, isLand, revealAround, terrainHeight } from "./map";
 import { mulberry32 } from "./noise";
 import type { IconId } from "./sprites";
 import type {
+  Goal,
+  TallyKey,
+  TreeNode,
   Debrief,
   Stats,
   BuildingDef,
@@ -57,10 +69,12 @@ import type {
 export const SAVE_VERSION = 6;
 const BASE_HOUSING = 8;
 // Food eaten per second by each person and each warrior.
-export const FOOD_PER_PERSON = 0.2; // 1 food every 5 seconds
-export const FOOD_PER_WARRIOR = 0.15;
+export const FOOD_PER_PERSON = 0.15; // 1 food every 10 ticks
+export const FOOD_PER_WARRIOR = 0.12;
 // Food from each animal the hunters bring back.
 export const HUNT_FOOD = 4;
+// Raids grow by one raider every this many ticks (on top of the tribe's size).
+export const RAID_GROWTH_TICKS = 300;
 
 export type Action =
   | { type: "tick" }
@@ -91,7 +105,11 @@ export type Action =
   | { type: "relight"; tileId: number }
   | { type: "devEra"; era: number }
   | { type: "devReveal" }
-  | { type: "devEvent"; id: string };
+  | { type: "devEvent"; id: string }
+  | { type: "devCutHills" }
+  | { type: "devGoals" }
+  | { type: "endCoach" }
+  | { type: "upgradeWarrior" };
 
 export interface NewGameOptions {
   dev?: boolean;
@@ -135,6 +153,7 @@ export function newGame(
     strainTicks: 0,
     forestBaseline: 0,
     soldiers: 0,
+    spearmen: 0,
     raid: null,
     nextRaidTick: 110,
     meters: { food: 60, shelter: 70, happiness: 60, literacy: 0, energy: 0, sustainability: 100 },
@@ -150,9 +169,10 @@ export function newGame(
     log: [`${cleanNation(options.nation)} gather on the shores of Westmarch.`],
   };
   state.forestBaseline = forestGrowthNearHome(state);
-  const budget = tutorialBudget(state);
-  for (const [k, v] of Object.entries(AFTER_TUTORIAL_RESERVE)) budget[k as keyof Resources] += v ?? 0;
-  state.resources = budget;
+  // Elder Ama hands over what each tutorial step needs when it starts (see
+  // advanceTutorial), so there's never a big pile; the reserve comes at the end.
+  state.resources = tutorialBudget(state, [0]);
+  state.resources.food += TUTORIAL_START_FOOD;
   const started = options.dev ? applyDevStart(state, options.startEra ?? 0) : state;
   return { ...started, meters: computeMeters(started) };
 }
@@ -444,6 +464,14 @@ export function gathererShare(state: GameState, camps = countBuildings(state).ga
   return (1 + GATHERING.extraCamp * (camps - 1)) / camps;
 }
 
+// Extra Elder's Huts and schools teach only half as much each (every one of
+// that kind makes the same average share).
+export function teachingShare(state: GameState, building: string): number {
+  if (!TEACHING.buildings.includes(building)) return 1;
+  const n = countBuildings(state)[building] ?? 0;
+  return n <= 1 ? 1 : (1 + TEACHING.extra * (n - 1)) / n;
+}
+
 // What placing another gatherer would do, for the placement card.
 export function gatherNote(state: GameState): string | null {
   const camps = countBuildings(state).gatherer ?? 0;
@@ -478,6 +506,21 @@ export function fireScareNote(state: GameState, tile: Tile, building: string): s
     : null;
 }
 
+// How much rain falls, from forest cover: forests bring rain. Fields grow this share.
+export function rainfall(state: GameState): number {
+  return FARM_RAIN.minRain + (1 - FARM_RAIN.minRain) * forestCover(state);
+}
+
+// The forest a new field would clear: the nearest unbuilt, unprotected forest tile in reach.
+export function forestToClear(state: GameState, tile: Tile): Tile | null {
+  const kept = state.protectedTiles ?? [];
+  return (
+    state.tiles
+      .filter((t) => t.terrain === "forest" && !t.building && !kept.includes(t.id) && hexDistance(t, tile) <= FARM_RAIN.clearRange)
+      .sort((a, b) => hexDistance(a, tile) - hexDistance(b, tile) || b.growth - a.growth)[0] ?? null
+  );
+}
+
 // A food building with a quarry close by: its crops or berries are under dust.
 export function dusty(state: GameState, tile: Tile, building = tile.building): boolean {
   if (!building || !QUARRY_DUST.hits.includes(building)) return false;
@@ -507,12 +550,12 @@ export function production(state: GameState): Resources {
     const factor =
       tile.building === "woodcutter"
         ? woodcutterYield(state, tile)
-        : tile.building === "farm" && state.tiles.some((t) => t.building === "canal" && hexDistance(t, tile) === 1)
-          ? 1.5
+        : tile.building === "farm"
+          ? (state.tiles.some((t) => t.building === "canal" && hexDistance(t, tile) === 1) ? 1.5 : 1) * rainfall(state)
           : 1;
     const dust = (dusty(state, tile) ? 1 - QUARRY_DUST.foodLoss : 1) * (scaredByFire(state, tile) ? 1 - FIRE_SCARE.foodLoss : 1);
     // Gatherer camps share what the wild can give.
-    const share = tile.building === "gatherer" ? gathererShare(state) : 1;
+    const share = tile.building === "gatherer" ? gathererShare(state) : teachingShare(state, tile.building);
     for (const [k, v] of Object.entries(def.produces ?? {}))
       out[k as keyof Resources] += (v ?? 0) * factor * share * (k === "food" ? dust : 1);
     if (def.depositBonus && tile.deposit === def.depositBonus.deposit) {
@@ -523,7 +566,7 @@ export function production(state: GameState): Resources {
       const fishNearby = state.tiles.some(
         (t) => t.deposit === "fish" && hexDistance(t, tile) === 1,
       );
-      if (fishNearby) out.food += 0.8;
+      if (fishNearby) out.food += 0.4;
     }
   }
   // Bronze tools: each smithy (up to three) makes every worker 20% better.
@@ -541,7 +584,7 @@ export function production(state: GameState): Resources {
   out.wood *= workforce;
   const counts = countBuildings(state);
   out.currency += state.population * 0.02;
-  out.knowledge += state.meters.literacy * 0.005;
+  out.knowledge += state.meters.literacy * 0.001;
 
   if (state.researched.includes("spears")) out.food *= 1.15;
   if (state.culture === "farmers") out.food *= 1.25;
@@ -564,12 +607,12 @@ export function consumption(state: GameState) {
 const FIRE_DEATH_SHARE = 0.25;
 
 // Exactly what the tutorial makes the player buy, so they never have to wait.
-export function tutorialBudget(state: GameState): Resources {
+export function tutorialBudget(state: GameState, steps = TUTORIAL.map((_, i) => i)): Resources {
   const total: Resources = { food: 0, wood: 0, stone: 0, knowledge: 0, currency: 0 };
   const add = (cost: Partial<Resources>) => {
     for (const [k, v] of Object.entries(cost)) total[k as keyof Resources] += v ?? 0;
   };
-  for (const id of TUTORIAL.flatMap((step) => step.buys)) {
+  for (const id of steps.flatMap((i) => TUTORIAL[i]?.buys ?? [])) {
     if (id === "scout") add(scoutCost(state));
     else if (id === "train") add(TRAIN_COST);
     else if (BUILDINGS_BY_ID[id]) add(buildingCost(state, BUILDINGS_BY_ID[id]));
@@ -635,7 +678,7 @@ export function perSecond(perTick: number) {
 }
 
 export interface Warning {
-  id: "fire" | "food" | "wood" | "famine" | "unrest" | "land" | "sick";
+  id: "fire" | "food" | "wood" | "famine" | "unrest" | "land" | "sick" | "rain";
   icon: IconId;
   text: string;
   // Ticks left on the countdown in the text; "{secs}" in the text is where it goes.
@@ -727,6 +770,15 @@ export function warnings(state: GameState): Warning[] {
     });
   }
 
+  if ((countBuildings(state).farm ?? 0) > 0 && rainfall(state) < FARM_RAIN.warnBelow) {
+    out.push({
+      id: "rain",
+      icon: "wheat",
+      text: `The rains are failing: fields grow only ${Math.round(rainfall(state) * 100)}%. Forests bring rain, so plant saplings.`,
+      severe: rainfall(state) < 0.65,
+    });
+  }
+
   if (hasLitFire(state) && coldShare(state) > 0.05) {
     const cold = Math.round(coldShare(state) * state.population);
     out.push({
@@ -768,6 +820,8 @@ export function sustainabilityBreakdown(state: GameState): SustainPart[] {
   const counts = countBuildings(state);
   const lit = litFires(state).length;
   const cover = forestCover(state);
+  const dugTotal = state.tiles.reduce((sum, t) => sum + (t.dug ?? 0), 0);
+  const cutHills = state.tiles.filter((t) => (t.dug ?? 0) > 0).length;
   const parts: SustainPart[] = [
     {
       label: `Forest standing: ${Math.round(cover * 100)}%`,
@@ -780,9 +834,9 @@ export function sustainabilityBreakdown(state: GameState): SustainPart[] {
       hint: "Every fire burns wood and fills the air with smoke.",
     },
     {
-      label: `${counts.quarry ?? 0} quarr${counts.quarry === 1 ? "y" : "ies"} scarring the hills`,
-      value: -(counts.quarry ?? 0) * 3,
-      hint: "Quarries cut away the hillside for good, and their dust smothers nearby crops.",
+      label: `${cutHills} hillside${cutHills === 1 ? "" : "s"} cut away by quarries`,
+      value: -((counts.quarry ?? 0) * QUARRY_CUT.perQuarry + dugTotal * QUARRY_CUT.perHill),
+      hint: "Quarries cut the hill down for good: the scar stays even after the quarry is gone. Their dust also smothers nearby crops.",
     },
     {
       label: `${counts.gatherer ?? 0} gatherer camp${counts.gatherer === 1 ? "" : "s"} hunting the wild`,
@@ -862,26 +916,37 @@ export function warriorCap(state: GameState) {
   return (countBuildings(state).warcamp ?? 0) * WARRIORS_PER_CAMP;
 }
 
+// Warriors carrying spears (older saves are converted when loaded).
+export function spearmenOf(state: GameState): number {
+  const n = state.spearmen ?? 0;
+  return Math.max(0, Math.min(state.soldiers, n));
+}
+
 export function defenseStrength(state: GameState) {
-  const perWarrior =
-    (state.researched.includes("spears") ? 1.5 : 1) * (state.researched.includes("bronze-arms") ? 2 : 1);
+  const bronze = state.researched.includes("bronze-arms") ? 2 : 1;
+  const spears = spearmenOf(state);
   const counts = countBuildings(state);
-  return state.soldiers * perWarrior + ((counts.warcamp ?? 0) > 0 ? 1 : 0) + (counts.walls ?? 0) * WALL_DEFENSE;
+  return (
+    ((state.soldiers - spears) + spears * SPEARMAN_STRENGTH) * bronze +
+    ((counts.warcamp ?? 0) > 0 ? 1 : 0) +
+    (counts.walls ?? 0) * WALL_DEFENSE
+  );
 }
 
 // Where the defense number comes from, in words: "4 warriors × 1.5 (spears) + 1 war camp".
 export function defenseBreakdown(state: GameState): string {
-  const spears = state.researched.includes("spears");
   const bronze = state.researched.includes("bronze-arms");
-  const perWarrior = (spears ? 1.5 : 1) * (bronze ? 2 : 1);
+  const spears = spearmenOf(state);
+  const plain = state.soldiers - spears;
   const counts = countBuildings(state);
-  const why = [spears && "spears", bronze && "bronze"].filter(Boolean).join(", ");
-  const parts = [
-    `${state.soldiers} warrior${state.soldiers === 1 ? "" : "s"}${perWarrior !== 1 ? ` × ${perWarrior} (${why})` : ""}`,
-  ];
-  if ((counts.warcamp ?? 0) > 0) parts.push("1 war camp");
-  if (counts.walls) parts.push(`${counts.walls * WALL_DEFENSE} walls`);
-  return parts.join(" + ");
+  const parts: string[] = [];
+  if (plain || !spears) parts.push(`${plain} warrior${plain === 1 ? "" : "s"}`);
+  if (spears) parts.push(`${spears} spear${spears === 1 ? "man" : "men"} × ${SPEARMAN_STRENGTH}`);
+  let text = parts.join(" + ");
+  if (bronze) text = `(${text}) × 2 bronze`;
+  if ((counts.warcamp ?? 0) > 0) text += " + 1 war camp";
+  if (counts.walls) text += ` + ${counts.walls * WALL_DEFENSE} walls`;
+  return text;
 }
 
 const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
@@ -939,7 +1004,7 @@ function checkSecrets(state: GameState): GameState {
       ...state,
       secretsFound: [...state.secretsFound, "cave-paintings"],
       researched: [...state.researched, "cave-paintings"],
-      resources: { ...state.resources, knowledge: state.resources.knowledge + 25 },
+      resources: { ...state.resources, knowledge: state.resources.knowledge + CAVE_PAINTINGS_KNOWLEDGE },
       modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + 10 },
       log: ["Secret discovered: Cave Paintings!", ...state.log].slice(0, 30),
     };
@@ -955,6 +1020,8 @@ function lessonReady(id: string, state: GameState) {
       return forestCover(state) < 0.9;
     case "overhunting":
       return (countBuildings(state).gatherer ?? 0) > GATHERING.freeCamps;
+    case "rain":
+      return rainfall(state) < FARM_RAIN.warnBelow && (countBuildings(state).farm ?? 0) > 0;
     case "wildlife":
       return forestCover(state) < 0.7;
     case "smoke":
@@ -1016,6 +1083,95 @@ function knowledgeMilestones(state: GameState): GameState {
   };
 }
 
+// ---- Advancement goals ------------------------------------------------------
+
+// How many times something has happened this game (some come from other counters).
+export function tallyOf(state: GameState, key: TallyKey): number {
+  if (key === "scouts") return state.scoutsSent;
+  if (key === "planted") return state.planted ?? 0;
+  if (key === "raidsWon") return state.stats?.raidsWon ?? 0;
+  return state.tally?.[key] ?? 0;
+}
+
+function addTally(state: GameState, key: TallyKey, n: number): GameState {
+  if (n <= 0) return state;
+  return { ...state, tally: { ...state.tally, [key]: (state.tally?.[key] ?? 0) + n } };
+}
+
+// An advancement you could work toward now: everything it needs is researched.
+export function reachable(state: GameState, node: TreeNode): boolean {
+  return (
+    !node.secret &&
+    !node.comingSoon &&
+    !state.researched.includes(node.id) &&
+    node.requires.every((r) => state.researched.includes(r))
+  );
+}
+
+// Remember each goal's starting count the moment its advancement becomes reachable.
+function snapshotGoals(state: GameState): GameState {
+  const start = state.goalStart ?? {};
+  const fresh = TREE.filter((n) => ADVANCEMENT_GOALS[n.id] && !start[n.id] && reachable(state, n));
+  if (!fresh.length) return state;
+  const next = { ...start };
+  for (const n of fresh) {
+    const snap: Partial<Record<TallyKey, number>> = {};
+    for (const g of ADVANCEMENT_GOALS[n.id]) if (g.key) snap[g.key] = tallyOf(state, g.key);
+    next[n.id] = snap;
+  }
+  return { ...state, goalStart: next };
+}
+
+function goalHave(state: GameState, nodeId: string, g: Goal): number {
+  switch (g.kind) {
+    case "tally": {
+      // Victories count whenever they happened: raids stop once the legion is on its way.
+      if (g.key === "raidsWon") return tallyOf(state, "raidsWon");
+      const start = state.goalStart?.[nodeId]?.[g.key!];
+      // Not reachable yet: nothing counts.
+      return start === undefined ? 0 : tallyOf(state, g.key!) - start;
+    }
+    case "have":
+      return countBuildings(state)[g.building!] ?? 0;
+    case "population":
+      return Math.floor(state.population);
+    case "stored":
+      return Math.floor(state.resources[g.resource!]);
+    case "berryCamp":
+      return state.tiles.some((t) => t.building === "gatherer" && t.deposit === "berries") ? 1 : 0;
+  }
+}
+
+// Each goal of an advancement with how far along it is.
+export function goalProgress(state: GameState, nodeId: string) {
+  return (ADVANCEMENT_GOALS[nodeId] ?? []).map((g) => {
+    const have = Math.min(g.amount, Math.max(0, Math.floor(goalHave(state, nodeId, g))));
+    return { label: g.label, have, need: g.amount, done: have >= g.amount };
+  });
+}
+
+export function goalsMet(state: GameState, nodeId: string): boolean {
+  if (state.devGoals) return true;
+  return goalProgress(state, nodeId).every((g) => g.done);
+}
+
+// ---- The guided step after an advancement ---------------------------------
+
+function coachCount(state: GameState, node: string): number {
+  const step = AFTER_STEPS[node];
+  if (step?.upgrade) return spearmenOf(state);
+  return step?.build ? countBuildings(state)[step.build] ?? 0 : 0;
+}
+
+// A build step is done once one more of that building stands.
+function advanceCoach(state: GameState): GameState {
+  const c = state.coach;
+  if (!c) return state;
+  const step = AFTER_STEPS[c.node];
+  if ((step?.build || step?.upgrade) && coachCount(state, c.node) > c.from) return { ...state, coach: null };
+  return state;
+}
+
 // Advancements the tribe could research right now with the Knowledge it has.
 export function affordableResearch(state: GameState) {
   if (state.tutorialStep < TUTORIAL.length) return [];
@@ -1025,7 +1181,8 @@ export function affordableResearch(state: GameState) {
       !n.comingSoon &&
       !state.researched.includes(n.id) &&
       n.requires.every((r) => state.researched.includes(r)) &&
-      state.resources.knowledge >= n.cost,
+      state.resources.knowledge >= n.cost &&
+      goalsMet(state, n.id),
   );
 }
 
@@ -1127,9 +1284,16 @@ function advanceTutorial(state: GameState): GameState {
         : state.researched.includes(step.done) || (counts[step.done] ?? 0) > 0;
   if (!done) return state;
   const next = { ...state, tutorialStep: state.tutorialStep + 1 };
-  if (next.tutorialStep < TUTORIAL.length) return next;
+  // The next step's supplies (or, at the end, the small reserve to start with).
+  const gift =
+    next.tutorialStep < TUTORIAL.length
+      ? tutorialBudget(next, [next.tutorialStep])
+      : { ...AFTER_TUTORIAL_RESERVE, food: (AFTER_TUTORIAL_RESERVE.food ?? 0) - TUTORIAL_START_FOOD };
+  const resources = { ...next.resources };
+  for (const [k, v] of Object.entries(gift)) resources[k as keyof Resources] += v ?? 0;
+  if (next.tutorialStep < TUTORIAL.length) return { ...next, resources };
   // Elder Ama says goodbye; the next real lesson waits its usual gap after this.
-  return startGrace({ ...next, lesson: TUTORIAL_FAREWELL.id, lessonTick: state.tick });
+  return startGrace({ ...next, resources, lesson: TUTORIAL_FAREWELL.id, lessonTick: state.tick });
 }
 
 // The world's troubles start a little after the tutorial ends, not during it.
@@ -1148,6 +1312,11 @@ function tick(state: GameState): GameState {
   const cons = consumption(state);
   const era = ERAS[state.era];
 
+  const rot = Math.min(foodSpoiling(state), Math.max(0, state.resources.food + prod.food - cons));
+  state = addTally(state, "rotted", rot);
+  state = addTally(state, "wood", Math.max(0, prod.wood));
+  state = addTally(state, "stone", Math.max(0, prod.stone));
+  if (hasLitFire(state)) state = addTally(state, "fireLit", TICK_SECONDS);
   const resources: Resources = {
     food: Math.max(0, state.resources.food + prod.food - cons - foodSpoiling(state)),
     wood: Math.max(0, state.resources.wood + prod.wood),
@@ -1224,6 +1393,7 @@ function tick(state: GameState): GameState {
   };
 
   if (next.tick % 3 === 0) next = growForests(next);
+  next = cutHills(next);
   // No raids or events while a new player is still learning.
   if (!inTutorial) next = updateLegion(updateRaids(next));
   // The final battle ends the story (won or lost): nothing else happens today.
@@ -1259,9 +1429,26 @@ function tick(state: GameState): GameState {
   next = checkSecrets(next);
   next = lessonDue(next);
   next = knowledgeMilestones(next);
+  next = snapshotGoals(next);
   next = knowledgeReady(next);
   next = advanceTutorial(next);
   return { ...next, meters: computeMeters(next) };
+}
+
+// The height of a tile once a quarry has cut part of it away.
+export function cutHeight(tile: Tile): number {
+  return terrainHeight(tile.terrain) * (1 - QUARRY_CUT.depth * (tile.dug ?? 0));
+}
+
+// Every working quarry cuts a little more of its hill away, for good.
+function cutHills(state: GameState): GameState {
+  if (!state.tiles.some((t) => t.building === "quarry" && (t.dug ?? 0) < 1)) return state;
+  const tiles = state.tiles.map((t) => {
+    if (t.building !== "quarry" || (t.dug ?? 0) >= 1) return t;
+    const cut = { ...t, dug: Math.min(1, (t.dug ?? 0) + QUARRY_CUT.perTick) };
+    return { ...cut, height: cutHeight(cut) };
+  });
+  return { ...state, tiles };
 }
 
 // Young and cut-over trees grow back, burnt ground heals, and woodcutters fell
@@ -1302,7 +1489,7 @@ function growForests(state: GameState): GameState {
   // Woodcutters fell the trees they turn into wood (this runs every 3 ticks),
   // biggest trees first. Too many woodcutters on one patch strip it bare.
   for (const w of woodcutters) {
-    let need = (0.3 * 3 * woodcutterYield(state, w)) / LAND.woodPerGrowth;
+    let need = ((BUILDINGS_BY_ID.woodcutter.produces?.wood ?? 0) * 3 * woodcutterYield(state, w)) / LAND.woodPerGrowth;
     const trees = treesNear(state, w)
       .map((t) => ({ t, growth: changes.get(t.id)?.growth ?? t.growth }))
       .sort((a, b) => b.growth - a.growth);
@@ -1511,7 +1698,7 @@ function updateRaids(state: GameState): GameState {
     const strength = Math.max(
       2,
       Math.round(
-        (2 + state.tick / 150 + state.population / GROWTH_PRESSURE.raidersPerPeople) *
+        (2 + state.tick / RAID_GROWTH_TICKS + state.population / GROWTH_PRESSURE.raidersPerPeople) *
           DIFFICULTIES[state.difficulty].raiders,
       ),
     );
@@ -1543,7 +1730,13 @@ function withMeters(state: GameState): GameState {
   return { ...next, meters: computeMeters(next) };
 }
 
+// Every action, then check whether the guided after-step has been done.
 export function reducer(state: GameState, action: Action): GameState {
+  const next = reduce(state, action);
+  return next.coach ? advanceCoach(next) : next;
+}
+
+function reduce(state: GameState, action: Action): GameState {
   const next = step(state, action);
   // The clock is held during the tutorial, so check progress after every action too.
   return action.type !== "tick" && next !== state ? advanceTutorial(next) : next;
@@ -1561,8 +1754,14 @@ function step(state: GameState, action: Action): GameState {
       const def = BUILDINGS_BY_ID[action.buildingId];
       const tile = state.tiles[action.tileId];
       if (!def || !tile || !isUnlocked(state, def) || placementError(state, tile, def)) return state;
+      // A new field clears the nearest patch of forest for good.
+      const cleared = def.id === "farm" ? forestToClear(state, tile) : null;
       const tiles = state.tiles.map((t) =>
-        t.id === tile.id ? { ...t, building: def.id } : t,
+        t.id === tile.id
+          ? { ...t, building: def.id }
+          : t.id === cleared?.id
+            ? { ...t, terrain: "grass" as const, height: terrainHeight("grass"), growth: 0 }
+            : t,
       );
       const radius = def.reveal + (state.culture === "mariners" ? 1 : 0);
       const revealed = tiles.map((t) =>
@@ -1573,7 +1772,10 @@ function step(state: GameState, action: Action): GameState {
         tiles: revealed,
         fires: def.id === "campfire" ? { ...state.fires, [tile.id]: burnTicks(state) } : state.fires,
         resources: spend(state.resources, buildingCost(state, def)),
-        log: [`Built a ${def.name}.`, ...state.log].slice(0, 30),
+        log: [
+          cleared ? `Built ${def.name}, clearing the forest beside it.` : `Built a ${def.name}.`,
+          ...state.log,
+        ].slice(0, 30),
         stats: { ...(state.stats ?? emptyStats()), built: (state.stats?.built ?? 0) + 1 },
       });
     }
@@ -1593,7 +1795,8 @@ function step(state: GameState, action: Action): GameState {
       revealAround(tiles, tiles[target.id], state.culture === "mariners" ? 5 : 4);
       // A trip that maps a lot of new land teaches more than a short one.
       const newLand = tiles.filter((t, i) => t.revealed && !state.tiles[i].revealed && isLand(t.terrain)).length;
-      const learned = newLand >= SCOUT_KNOWLEDGE.bigTrip ? 2 : 1;
+      // Only the first few trips teach much: after that the land nearby is known.
+      const learned = state.scoutsSent >= SCOUT_KNOWLEDGE.trips ? 0 : newLand >= SCOUT_KNOWLEDGE.bigTrip ? 2 : 1;
       const spent = spend(state.resources, cost);
       return withMeters({
         ...state,
@@ -1601,7 +1804,7 @@ function step(state: GameState, action: Action): GameState {
         flags: { ...state.flags, scouted: true },
         scoutsSent: state.scoutsSent + 1,
         resources: { ...spent, knowledge: spent.knowledge + learned },
-        log: [`Scouts mapped ${newLand} tiles of new land (+${learned} Knowledge).`, ...state.log].slice(0, 30),
+        log: [`Scouts mapped ${newLand} tiles of new land${learned ? ` (+${learned} Knowledge)` : ""}.`, ...state.log].slice(0, 30),
       });
     }
 
@@ -1614,11 +1817,16 @@ function step(state: GameState, action: Action): GameState {
         node.secret ||
         state.researched.includes(node.id) ||
         !node.requires.every((r) => state.researched.includes(r)) ||
-        state.resources.knowledge < node.cost
+        state.resources.knowledge < node.cost ||
+        !goalsMet(state, node.id)
       )
         return state;
+      // Elder Ama walks you through what it unlocks (the opening tutorial covers its own).
+      const inTut = state.tutorialStep < TUTORIAL.length;
+      const coach = AFTER_STEPS[node.id] && !inTut ? { node: node.id, from: coachCount(state, node.id) } : state.coach ?? null;
       return withMeters({
-        ...state,
+        ...snapshotGoals({ ...state, researched: [...state.researched, node.id] }),
+        coach,
         researched: [...state.researched, node.id],
         flags: { ...state.flags, rocket: state.flags.rocket || node.id === "rocketry" },
         resources: { ...state.resources, knowledge: state.resources.knowledge - node.cost },
@@ -1688,7 +1896,18 @@ function step(state: GameState, action: Action): GameState {
     case "skipTutorial": {
       // Skipping players still get the basics the tutorial would have built:
       // a woodcutter, a lit campfire, a gatherer and a war camp with a warrior.
-      const skipped = startGrace({ ...state, tutorialStep: TUTORIAL.length });
+      // The tutorial's buildings are handed over, so its budget isn't: only the
+      // after-tutorial reserve is left (plus the Knowledge for Early Farming).
+      const skipped = startGrace({
+        ...state,
+        tutorialStep: TUTORIAL.length,
+        resources: {
+          ...state.resources,
+          food: AFTER_TUTORIAL_RESERVE.food ?? 0,
+          wood: AFTER_TUTORIAL_RESERVE.wood ?? 0,
+          knowledge: Math.max(state.resources.knowledge, TREE_BY_ID["early-farming"].cost),
+        },
+      });
       const counts = countBuildings(state);
       const tiles = state.tiles.map((t) => ({ ...t }));
       if (!counts.woodcutter) giveStartingWoodcutter(tiles, tiles[state.startTile]);
@@ -1724,8 +1943,10 @@ function step(state: GameState, action: Action): GameState {
       if (tutorialLocked(state, "train") || state.soldiers >= warriorCap(state) || !canAfford(state, TRAIN_COST))
         return state;
       return withMeters({
-        ...state,
+        ...addTally(state, "trained", 1),
         soldiers: state.soldiers + 1,
+        // After Hunting Spears, new warriors carry spears.
+        spearmen: spearmenOf(state) + (state.researched.includes("spears") ? 1 : 0),
         resources: spend(state.resources, TRAIN_COST),
       });
     }
@@ -1751,7 +1972,7 @@ function step(state: GameState, action: Action): GameState {
         return state;
       }
       return withMeters({
-        ...state,
+        ...addTally(state, "relights", 1),
         fires: { ...state.fires, [tile.id]: burnTicks(state) },
         resources: { ...state.resources, wood: state.resources.wood - RELIGHT_WOOD },
         log: ["Relit the campfire.", ...state.log].slice(0, 30),
@@ -1896,13 +2117,39 @@ function step(state: GameState, action: Action): GameState {
       return state.dev && event ? { ...state, event } : state;
     }
 
+    case "devGoals":
+      // Dev: treat every advancement goal as met (toggle).
+      return state.dev ? { ...state, devGoals: !state.devGoals } : state;
+
+    case "upgradeWarrior": {
+      if (!state.researched.includes("spears") || spearmenOf(state) >= state.soldiers || !canAfford(state, SPEAR_COST))
+        return state;
+      return withMeters({
+        ...state,
+        spearmen: spearmenOf(state) + 1,
+        resources: spend(state.resources, SPEAR_COST),
+        log: ["A warrior took up a spear.", ...state.log].slice(0, 30),
+      });
+    }
+
+    case "endCoach":
+      return { ...state, coach: null };
+
+    case "devCutHills":
+      // Finish every quarry's cut at once, to see the scar.
+      if (!state.dev) return state;
+      return withMeters({
+        ...state,
+        tiles: state.tiles.map((t) => (t.building === "quarry" ? { ...t, dug: 1, height: cutHeight({ ...t, dug: 1 }) } : t)),
+      });
+
     case "devReveal":
       if (!state.dev) return state;
       return { ...state, tiles: state.tiles.map((t) => (t.revealed ? t : { ...t, revealed: true })) };
 
     case "hunt":
       return maybeOutbreak({
-        ...state,
+        ...addTally(state, "hunts", 1),
         resources: { ...state.resources, food: state.resources.food + HUNT_FOOD },
         log: [`Hunters brought down a ${action.animal} (+${HUNT_FOOD} food).`, ...state.log].slice(0, 30),
       }, isCalm(state) ? 0 : DISEASE.hunt, mulberry32(state.seed + state.tick * 37 + Math.round(state.resources.food))(), "It came with the meat from the hunt.");
@@ -1926,7 +2173,9 @@ export function loadGame(): GameState | null {
     const parsed = JSON.parse(raw) as GameState;
     if (parsed.version !== SAVE_VERSION) return null;
     // Mountains used to be tall pillars; older saves keep the new, lower base.
-    for (const t of parsed.tiles) if (t.terrain === "mountain") t.height = terrainHeight("mountain");
+    for (const t of parsed.tiles) if (t.terrain === "mountain") t.height = cutHeight(t);
+    // Saves from before spearmen: Hunting Spears used to arm every warrior.
+    if (parsed.spearmen === undefined) parsed.spearmen = parsed.researched.includes("spears") ? parsed.soldiers : 0;
     return parsed;
   } catch {
     return null;

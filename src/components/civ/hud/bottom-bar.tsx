@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { BUILDINGS, LOW_WOOD_AFTER_BUY, PLANT_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL } from "@/game/content";
+import { BUILDINGS, LOW_WOOD_AFTER_BUY, PLANT_COST, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL } from "@/game/content";
 import {
   affordableResearch,
   buildingCost,
@@ -18,7 +18,9 @@ import {
   isUnlocked,
   perSecond,
   production,
+  rainfall,
   scoutCost,
+  spearmenOf,
   tutorialLocked,
   warriorCap,
 } from "@/game/engine";
@@ -181,6 +183,14 @@ export function BottomBar() {
               rot −{perSec(foodSpoiling(state))}/s
             </span>
           )}
+          {(counts.farm ?? 0) > 0 && (
+            <span
+              className={cn("font-num whitespace-nowrap text-[11px]", rainfall(state) < 0.8 ? "text-amber-300" : "text-white/60")}
+              title="Forests bring rain. Fields grow this share of their food."
+            >
+              rain {Math.round(rainfall(state) * 100)}%
+            </span>
+          )}
           <Stat icon="log" title="Wood per second" bad={prod.wood < 0}>
             {rate(prod.wood)}/s
           </Stat>
@@ -252,6 +262,19 @@ export function BottomBar() {
             <Cost cost={PLANT_COST} />
           </ToolButton>
           <ArmyButton />
+          {state.researched.includes("spears") && spearmenOf(state) < state.soldiers && (
+            <ToolButton
+              guide="tool-upgrade"
+              icon="sword"
+              label={`Spear ${spearmenOf(state)}/${state.soldiers}`}
+              onClick={() => dispatch({ type: "upgradeWarrior" })}
+              disabled={!canAfford(state, SPEAR_COST)}
+              title="Give a warrior a spear: spearmen fight 1.5x as hard."
+              tone="bg-red-900 hover:bg-red-800"
+            >
+              <Cost cost={SPEAR_COST} />
+            </ToolButton>
+          )}
           <ToolButton
             guide="tool-scout"
             locked={tutorialLocked(state, "scout")}

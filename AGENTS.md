@@ -76,10 +76,11 @@ These were decided with the project owner. Do not change them without being aske
   gatherer); dev starts get a woodcutter and a campfire. Unrest can't start
   during the calm period after the tutorial. The last woodcutter can't be
   sold, so the player can never soft-lock with no wood.
-- **Tutorial budget:** a new game starts with exactly what the tutorial buys
-  (`tutorialBudget()`, from `TUTORIAL[].buys`) plus `AFTER_TUTORIAL_RESERVE`,
-  and the clock is held while the hand is guiding, so nobody waits. If you add
-  or change a tutorial step, fill in its `buys`.
+- **Tutorial budget:** Elder Ama hands over each step's exact cost when the step
+  starts (`tutorialBudget(state, [step])` in `advanceTutorial`), plus
+  `TUTORIAL_START_FOOD` (20) at the start and the rest of `AFTER_TUTORIAL_RESERVE`
+  (40 food, 10 wood in all) at the goodbye. There is never a big pile. When you
+  add or change a tutorial step, fill in its `buys`.
 - **People on the map are representative:** at most 20 figures at once
   (`MAX_FIGURES` / `figureCounts()` in `world/villagers.tsx`), roughly one per
   three people and one per two warriors. Food use still scales with the real
@@ -172,6 +173,20 @@ These were decided with the project owner. Do not change them without being aske
   campfire makes 30% less food. The placement card warns for both buildings
   (`fireScareNote()`); the tutorial and skip-tutorial never put the gatherer next
   to the fire.
+- **Quarries cut the hill** (`QUARRY_CUT`): a working quarry cuts its tile down a
+  little every tick (fully in ~600 ticks). The tile sinks by up to 45%, turns to
+  bare rock, and a mountain loses its peak. The cut (`Tile.dug`) never grows back
+  and keeps costing Sustainability after the quarry is sold (−1 per working
+  quarry, up to −3 per cut hillside). Dev: "Cut hills".
+- **Each era looks a little different** (subtle, no big UI): Ancient era =
+  dyed-linen villager clothes, leather warriors, warmer sunlight, worn dirt paths
+  on open ground between buildings, and a bronze trim on the top bar. New eras
+  should add their own touches.
+- **Farms and rain** (`FARM_RAIN`): placing Farmland clears the nearest
+  unprotected forest tile within 2 hexes for good (`forestToClear()`). Rainfall
+  = 0.5 + 0.5 x forest cover (`rainfall()`); every field grows that share. The
+  placement card, the Farmland card, the food stats ("rain %"), a warning below
+  80% and the "rain" lesson explain it.
 - **Quarry dust** (`QUARRY_DUST`): gatherers, farms and pens within 2 hexes of a
   quarry make 40% less food. The placement card says how many buildings a new
   quarry would hit (`dustNote()`), and dusty buildings say so in their info card.
@@ -227,10 +242,38 @@ These were decided with the project owner. Do not change them without being aske
   resources the hand lets go. New tutorial steps need a case in `guideFor()`.
 - **Endings:** a loss (famine, unrest, conquest) always gets the "lost" tier.
   Land-based tiers (thriving, costly, stripped) are only for eras that end.
-- **Knowledge milestones** (`KNOWLEDGE_MILESTONES`): there is no base Knowledge
-  trickle. Firsts pay out once each (first of each building +4, population
-  10/15/20/30/50 +8, each scouting trip +1, or +2 if it maps 20+ new land tiles (`SCOUT_KNOWLEDGE`), first raid won +6, first planting +4),
-  with a toast. Elder's Huts, schools and literacy add a steady amount.
+- **Balance is checked with a full-game bot** (skip tutorial, sensible build order,
+  selective logging, replanting, saving up for key buildings). Last check: 4 of 5
+  reached the Ancient era at 17-20 min, 2 of those beat the Roman legion (the
+  ones that grew huge lost: the legion scales with population). Re-run it after
+  changing any rate below.
+- **Knowledge:** no base trickle. Milestones pay once each (`KNOWLEDGE_MILESTONES`:
+  first of each building +2, population 10/15/20/30/50 +5, first raid won +6,
+  first planting +4). Only the first 5 scouting trips teach (+1, or +2 for 20+
+  new tiles). Elder's Huts (0.08/tick) and Scribe Schools (0.12) teach steadily,
+  each extra one of a kind adds half (`TEACHING`). Literacy adds 0.001 x literacy.
+  Cave Paintings +8. Agriculture costs 80.
+- **Rates:** gatherer 0.6 food (+0.4 berries), farm 1.0, fishing 0.7 (+0.4 fish),
+  pen 0.35, woodcutter 0.25 wood (half when selective), quarry 0.3 stone (+0.3 on
+  stone). People eat 0.15 food per tick (`FOOD_PER_PERSON`), warriors 0.12.
+  Skipping the tutorial leaves only `AFTER_TUTORIAL_RESERVE` (40 food, 10 wood).
+- **Raids** grow with the tribe and by one raider every `RAID_GROWTH_TICKS` (300).
+  The Ancient era runs 3 years per tick, so the legion's warning (year -1600)
+  comes about 12 minutes after entering it.
+- **Advancement goals** (`ADVANCEMENT_GOALS`): every advancement has one goal
+  (more for big ones like Agriculture and Bronze Weapons) that must be met before
+  it can be researched; Knowledge is still the price. Counting goals (`tally`)
+  count from the moment the advancement is reachable (`goalStart` snapshot).
+  Cards show the goal and progress (`goalProgress()`). Dev: "Goals on".
+- **After-steps** (`AFTER_STEPS`, `state.coach`): after researching, Elder Ama
+  explains what it unlocked and the hand walks the player through using it once
+  (place the building, or give a warrior a spear), with the clock held like the
+  tutorial. Explanation-only steps have a "Got it" button; all can be skipped.
+  Buildings from a later era wait until that era. New advancements need a goal
+  and an after-step.
+- **Spearmen:** after Hunting Spears, new warriors carry spears and existing ones
+  can be upgraded (`SPEAR_COST`); spearmen fight 1.5x (`spearmenOf()`), plain
+  warriors 1x. Figures show spears or clubs.
 - **Knowledge ready:** when Knowledge first covers an advancement, Elder Ama says
   so in a toast (once per advancement, `knowledgeReady()`), and the Advancements
   button shows how many are affordable (`affordableResearch()`).
@@ -307,3 +350,7 @@ These were decided with the project owner. Do not change them without being aske
 3. Medieval & Renaissance, then Industrial & Modern (pollution gets serious),
    then Future & Space (the space view, fusion, AI tech, interstellar).
 4. Later: multiplayer, where human players replace AI nations.
+5. **Idea saved by the owner for later: the Kardashev scale.** It ranks a
+   civilization by how much energy it can use (Type I: its planet's; Type II:
+   its star's; Type III: its galaxy's). A possible frame for the late eras and
+   the space age, and a way to tie energy back to sustainability. Not designed yet.

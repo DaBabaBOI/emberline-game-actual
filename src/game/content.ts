@@ -1,5 +1,7 @@
 import type { IconId } from "./sprites";
 import type {
+  AfterStep,
+  Goal,
   Branch,
   BuildingDef,
   CultureId,
@@ -12,7 +14,7 @@ import type {
 
 export const ERAS = [
   { name: "Stone Age", startYear: -50000, yearsPerTick: 100, currency: "Shells" },
-  { name: "Ancient", startYear: -3000, yearsPerTick: 10, currency: "Bronze coins" },
+  { name: "Ancient", startYear: -3000, yearsPerTick: 3, currency: "Bronze coins" },
   { name: "Classical", startYear: -500, yearsPerTick: 10, currency: "Silver coins" },
   { name: "Medieval & Renaissance", startYear: 1000, yearsPerTick: 4, currency: "Florins" },
   { name: "Industrial & Modern", startYear: 1750, yearsPerTick: 1, currency: "Banknotes" },
@@ -57,6 +59,9 @@ export const DIFFICULTIES: Record<
 
 export const WARRIORS_PER_CAMP = 4;
 export const TRAIN_COST = { food: 8, wood: 4 };
+// After Hunting Spears: give a warrior a spear. Spearmen fight 1.5x as hard.
+export const SPEAR_COST = { wood: 4 };
+export const SPEARMAN_STRENGTH = 1.5;
 
 export const BUILDINGS: BuildingDef[] = [
   {
@@ -97,8 +102,8 @@ export const BUILDINGS: BuildingDef[] = [
     era: 0,
     cost: { wood: 8 },
     terrain: ["grass", "steppe", "forest", "marsh"],
-    produces: { food: 0.9 },
-    depositBonus: { deposit: "berries", amount: { food: 0.6 } },
+    produces: { food: 0.6 },
+    depositBonus: { deposit: "berries", amount: { food: 0.4 } },
     reveal: 2,
   },
   {
@@ -107,13 +112,13 @@ export const BUILDINGS: BuildingDef[] = [
     icon: "wheat",
     description: "Tilled fields of wild grain. Lots of food, but clears the land.",
     gain: "Lots of steady food",
-    landCost: "Clears wild land for good",
-    landImpact: 1,
+    landCost: "Clears the nearest patch of forest for good, and fewer trees means less rain for every field",
+    landImpact: 2,
     era: 0,
     cost: { wood: 12 },
     terrain: ["grass"],
     requires: "early-farming",
-    produces: { food: 1.5 },
+    produces: { food: 1.0 },
     reveal: 1,
   },
   {
@@ -140,7 +145,7 @@ export const BUILDINGS: BuildingDef[] = [
     era: 0,
     cost: { wood: 4 },
     terrain: ["forest"],
-    produces: { wood: 0.3 },
+    produces: { wood: 0.25 },
     reveal: 2,
   },
   {
@@ -156,7 +161,7 @@ export const BUILDINGS: BuildingDef[] = [
     terrain: ["beach"],
     needsWaterNeighbor: true,
     requires: "fishing",
-    produces: { food: 1.2 },
+    produces: { food: 0.7 },
     reveal: 3,
   },
   {
@@ -165,14 +170,14 @@ export const BUILDINGS: BuildingDef[] = [
     icon: "pickaxe",
     description: "Cuts stone from hills. Bonus on stone deposits.",
     gain: "Stone for better buildings",
-    landCost: "Rock dust covers crops and berries within 2 tiles: they make 40% less food",
+    landCost: "Cuts the hill down for good, and its dust covers crops and berries within 2 tiles (40% less food)",
     landImpact: 2,
     era: 0,
     cost: { wood: 15 },
     terrain: ["hills", "mountain"],
     requires: "toolmaking",
-    produces: { stone: 0.6 },
-    depositBonus: { deposit: "stone", amount: { stone: 0.8 } },
+    produces: { stone: 0.3 },
+    depositBonus: { deposit: "stone", amount: { stone: 0.3 } },
     reveal: 2,
   },
   {
@@ -187,7 +192,7 @@ export const BUILDINGS: BuildingDef[] = [
     cost: { wood: 10, stone: 10 },
     terrain: ["grass", "steppe"],
     requires: "storytelling",
-    produces: { knowledge: 0.3 },
+    produces: { knowledge: 0.08 },
     reveal: 2,
   },
   {
@@ -216,7 +221,7 @@ export const BUILDINGS: BuildingDef[] = [
     cost: { wood: 12, food: 10 },
     terrain: ["grass", "steppe"],
     requires: "herding",
-    produces: { food: 0.5 },
+    produces: { food: 0.35 },
     reveal: 1,
   },
   // ---- Ancient era ---------------------------------------------------------
@@ -247,7 +252,7 @@ export const BUILDINGS: BuildingDef[] = [
     cost: { wood: 20, stone: 15 },
     terrain: ["grass", "steppe"],
     requires: "writing",
-    produces: { knowledge: 0.4 },
+    produces: { knowledge: 0.12 },
     reveal: 1,
   },
   {
@@ -382,7 +387,7 @@ export const TREE: TreeNode[] = [
     branch: "knowledge",
     era: 0,
     cost: 6,
-    requires: ["fire"],
+    requires: ["toolmaking"],
     unlocks: ["elder"],
   },
   {
@@ -427,7 +432,7 @@ export const TREE: TreeNode[] = [
   {
     id: "spears",
     name: "Hunting Spears",
-    description: "+15% food, and warriors fight 50% harder.",
+    description: "+15% food. Warriors can carry spears: train new spearmen, or give your warriors spears, to fight 50% harder.",
     branch: "military",
     era: 0,
     cost: 6,
@@ -440,7 +445,7 @@ export const TREE: TreeNode[] = [
     branch: "culture",
     era: 0,
     cost: 10,
-    requires: ["fire"],
+    requires: ["toolmaking"],
     unlocks: ["healer"],
   },
   {
@@ -465,7 +470,7 @@ export const TREE: TreeNode[] = [
   {
     id: "cave-paintings",
     name: "Cave Paintings",
-    description: "Secret: build 2 Elder's Huts. +25 knowledge and +10 happiness.",
+    description: "Secret: build 2 Elder's Huts. +8 knowledge and +10 happiness.",
     branch: "culture",
     era: 0,
     cost: 0,
@@ -478,7 +483,7 @@ export const TREE: TreeNode[] = [
     description: "Settle down to farm for good. With 15 people, your tribe can enter the Ancient era.",
     branch: "knowledge",
     era: 0,
-    cost: 40,
+    cost: 80,
     requires: ["early-farming", "toolmaking"],
   },
   // ---- Ancient era ---------------------------------------------------------
@@ -568,6 +573,55 @@ export const TREE: TreeNode[] = [
 ];
 
 export const TREE_BY_ID = Object.fromEntries(TREE.map((n) => [n.id, n]));
+
+// What each advancement asks of you before it can be researched. Progress counts
+// from the moment all its prerequisites are done. Knowledge is still the price.
+export const ADVANCEMENT_GOALS: Record<string, Goal[]> = {
+  storytelling: [{ label: "Fire burning (s)", kind: "tally", key: "fireLit", amount: 120 }],
+  toolmaking: [{ label: "Gather wood", kind: "tally", key: "wood", amount: 30 }],
+  firekeeping: [{ label: "Relight a campfire", kind: "tally", key: "relights", amount: 2 }],
+  fishing: [{ label: "Send a scouting trip", kind: "tally", key: "scouts", amount: 1 }],
+  "early-farming": [{ label: "Have a Gatherer's Camp", kind: "have", building: "gatherer", amount: 1 }],
+  spears: [{ label: "Train warriors", kind: "tally", key: "trained", amount: 2 }],
+  herbalism: [{ label: "Gather from berry bushes", kind: "berryCamp", amount: 1 }],
+  herding: [{ label: "Hunt animals", kind: "tally", key: "hunts", amount: 3 }],
+  "hide-clothing": [{ label: "Have Livestock Pens", kind: "have", building: "pen", amount: 2 }],
+  agriculture: [
+    { label: "Have Farmland", kind: "have", building: "farm", amount: 3 },
+    { label: "Grow your tribe", kind: "population", amount: 12 },
+    { label: "Store food at once", kind: "stored", resource: "food", amount: 50 },
+  ],
+  writing: [{ label: "Save up coins", kind: "stored", resource: "currency", amount: 60 }],
+  pottery: [{ label: "Lose food to rot", kind: "tally", key: "rotted", amount: 20 }],
+  bronze: [{ label: "Quarry stone", kind: "tally", key: "stone", amount: 60 }],
+  irrigation: [{ label: "Have Farmland", kind: "have", building: "farm", amount: 5 }],
+  forestry: [{ label: "Plant saplings", kind: "tally", key: "planted", amount: 3 }],
+  "bronze-arms": [
+    { label: "Have a Bronze Smithy", kind: "have", building: "smithy", amount: 1 },
+    { label: "Beat a raid", kind: "tally", key: "raidsWon", amount: 1 },
+  ],
+};
+
+// Elder Ama's guided step right after each advancement. With `build`, the hand
+// points you to place one; without, it's an explanation to read.
+export const AFTER_STEPS: Record<string, AfterStep> = {
+  storytelling: { build: "elder", text: "Now our elders can teach. Build an Elder's Hut: the children will learn from it, and we will gain Knowledge every day." },
+  toolmaking: { build: "quarry", text: "Sharp stone tools! Place a Stone Quarry on the hills. Remember: it cuts the hill away for good, and its dust spoils crops nearby." },
+  firekeeping: { text: "We know how to bank a fire now: every campfire burns 1.5 times as long (50% longer) before it needs more wood. Less wood cut, less smoke." },
+  fishing: { build: "fishing", text: "Rafts! Place a Fishing Spot on the shore, next to the water. Fish near the coast give even more." },
+  "early-farming": { build: "farm", text: "We can plant grain. Place Farmland on open grass: it feeds many, but it takes the land from the wild." },
+  spears: { upgrade: true, text: "Stone-tipped spears! Our hunters bring back more food. Give a warrior a spear with the Spear button: in a fight, a spearman counts as 1.5 warriors (a warrior without one counts as 1). Every warrior you train from now on gets a spear." },
+  herbalism: { build: "healer", text: "We know which plants heal. Build a Healer's Hut: the sick get better faster, and sickness spreads less." },
+  herding: { build: "pen", text: "We can keep goats and sheep. Place a Livestock Pen: steady food, but grazing wears down the grass." },
+  "hide-clothing": { text: "Warm clothes from hides and wool: each Livestock Pen now keeps 6 people warm without a fire. Fewer fires, less wood, less smoke." },
+  agriculture: { text: "We are farmers now. Grow the tribe to 15 people and we can enter the Ancient era. Watch the goal at the top of the screen." },
+  writing: { build: "school", text: "Marks on clay that everyone can read! Build a Scribe School: more literacy, and Knowledge every day." },
+  pottery: { build: "granary", text: "Jars that keep grain dry. Build a Granary so less of our food rots away." },
+  bronze: { build: "smithy", text: "Bronze! Build a Bronze Smithy: better tools for everyone, but it burns wood for charcoal all the time." },
+  irrigation: { build: "canal", text: "Place an Irrigation Canal next to your fields: they grow 50% more food, but watered soil slowly turns salty." },
+  forestry: { build: "forester", text: "Build a Forester's Lodge near the woods: it tends young trees so the forest grows back faster." },
+  "bronze-arms": { build: "walls", text: "Bronze spears and shields: every warrior fights twice as hard. Build Stone Walls to guard the village too." },
+};
 
 // Event cards are trade-offs: every choice gains something and costs something.
 // `realWorld` links the card to today. Keep those lines modest, with no statistics.
@@ -750,7 +804,8 @@ export const EVENTS: EventCard[] = [
 // Each step unlocks the buildings/tools it introduces. Until the tutorial ends
 // (or is skipped), anything not yet introduced stays locked.
 // What's left over once the tutorial is done. On top of this, a new game starts
-// with exactly what the tutorial buys (see tutorialBudget), so nobody waits.
+// with exactly what each tutorial step buys, handed over step by step (see
+// tutorialBudget and advanceTutorial), so nobody waits and nothing piles up.
 // How the land reacts. Sustainability measures how much forest is left around
 // the village (plus fire smoke and quarry pits); woodcutters really fell trees.
 export const LAND = {
@@ -834,6 +889,12 @@ export const LESSONS: { id: string; title: string; text: string; sdg: string }[]
     title: "The forest is shrinking",
     text: "Our woodcutters take trees faster than the forest can grow back. A tree takes years to grow and a moment to cut. Selective logging and planting saplings let us have wood without losing the forest.",
     sdg: "SDG 15.2: stop deforestation and restore forests",
+  },
+  {
+    id: "rain",
+    title: "The rains are failing",
+    text: "Our fields are thirsty. Forests hold water in the ground and give it back to the air, and the rain comes back down on our land. With so much forest cut for wood and fields, the rains are weaker and our harvests smaller. Planting trees brings the rain back.",
+    sdg: "SDG 15.3: restore degraded land, including land hit by drought",
   },
   {
     id: "overhunting",
@@ -948,16 +1009,21 @@ export const SMITHY_CHARCOAL = 0.35;
 // Knowledge comes from milestones: every "first" teaches the tribe something.
 // (Elder's Huts, schools and literacy add a steady amount on top.)
 export const KNOWLEDGE_MILESTONES = {
-  firstBuilding: 4,
+  firstBuilding: 2,
   population: [10, 15, 20, 30, 50],
-  populationReward: 8,
+  populationReward: 5,
   firstRaidWon: 6,
   firstPlanted: 4,
 };
 
-// Each scouting trip teaches the tribe: +2 Knowledge if it maps at least
-// `bigTrip` new land tiles, +1 otherwise.
-export const SCOUT_KNOWLEDGE = { bigTrip: 20 };
+// The first `trips` scouting trips teach the tribe: +2 Knowledge if a trip maps
+// at least `bigTrip` new land tiles, +1 otherwise. Later trips teach nothing new.
+// Teaching buildings: the first of each kind teaches fully; every extra one
+// adds only `extra` of its Knowledge (there are only so many elders to teach).
+export const TEACHING = { extra: 0.5, buildings: ["elder", "school"] };
+// The secret found by building 2 Elder's Huts.
+export const CAVE_PAINTINGS_KNOWLEDGE = 8;
+export const SCOUT_KNOWLEDGE = { bigTrip: 20, trips: 5 };
 
 // Gatherers live off the wild, and the wild only has so much. The first camp
 // makes full food; each extra camp adds only `extraCamp` of a camp's food. Every
@@ -966,6 +1032,15 @@ export const GATHERING = { extraCamp: 0.25, freeCamps: 2, sustainPerExtra: 2 };
 // Smoke, noise and people around a lit campfire scare off the animals: a
 // gatherer camp within `range` hexes of one makes `foodLoss` less food.
 export const FIRE_SCARE = { range: 1, foodLoss: 0.3 };
+// A quarry cuts its hill down, a little every tick (fully cut after about
+// 1 / perTick ticks). A cut hill sinks by up to `depth` of its height and never
+// grows back. Sustainability: −perQuarry for each working quarry, and up to
+// −perHill for each hillside cut away (this stays after the quarry is sold).
+export const QUARRY_CUT = { perTick: 1 / 600, depth: 0.45, perQuarry: 1, perHill: 3 };
+// Fields need open land: placing Farmland clears the nearest forest tile within
+// `clearRange`. And forests bring rain: rainfall runs from `minRain` (no forest
+// left) to 1 (all of it standing), and every field grows that share.
+export const FARM_RAIN = { clearRange: 2, minRain: 0.5, warnBelow: 0.8 };
 // Quarry dust settles on the land around it: food buildings within `range`
 // hexes make `foodLoss` less food.
 export const QUARRY_DUST = { range: 2, foodLoss: 0.4, hits: ["gatherer", "farm", "pen"] };
@@ -986,7 +1061,10 @@ export const LOW_WOOD_AFTER_BUY = 10;
 // and the first disease that isn't the player's own choice. The early game is calm.
 export const GRACE_AFTER_TUTORIAL = { event: 150, raid: 300, disease: 300 };
 
-export const AFTER_TUTORIAL_RESERVE: Partial<Resources> = { food: 60, wood: 15 };
+export const AFTER_TUTORIAL_RESERVE: Partial<Resources> = { food: 40, wood: 10 };
+// Of that reserve, this much food is in the stores from the very start (so the
+// food count isn't an alarming 0 during the tutorial); the rest comes at the end.
+export const TUTORIAL_START_FOOD = 20;
 
 // `buys` lists what the step pays for: building ids, "scout", "train" or an
 // advancement id. The starting resources are worked out from it.
@@ -998,5 +1076,5 @@ export const TUTORIAL: { text: string; done: string; unlocks: string[]; buys: st
   { text: "Food is coming. But we don't know what lies beyond these hills. Press Scout and send our young ones to look.", done: "scout", unlocks: ["scout"], buys: ["scout"] },
   { text: "The scouts saw smoke from other camps, and not everyone out there is friendly. Build a War Camp, then train our first warrior.", done: "train", unlocks: ["warcamp", "train"], buys: ["warcamp", "train"] },
   { text: "With a guard at the camp, we can think about tomorrow. Every first thing we do teaches us something: the first fire, the first hut, the first time our tribe grows. That learning is Knowledge, the bulb at the top, and one day an Elder's Hut will help the children learn faster. Now, I have noticed wild grain sprouting wherever seeds fall. What if we planted them ourselves? Open Advancements and spend our Knowledge on Early Farming.", done: "early-farming", unlocks: ["advancements"], buys: ["early-farming"] },
-  { text: "Now we know how to plant. Place Farmland on open grass. Fields feed many, but they take the land from the wild. Everything has a price, chief. Choosing which to pay is up to you.", done: "farm", unlocks: ["farm"], buys: ["farm"] },
+  { text: "Now we know how to plant. Place Farmland on open grass. Fields feed many, but they take the land from the wild, and the forest beside them. Fewer trees, less rain. Everything has a price, chief. Choosing which to pay is up to you.", done: "farm", unlocks: ["farm"], buys: ["farm"] },
 ];

@@ -3,6 +3,7 @@
 import { BUILDINGS_BY_ID, FIRE_SCARE, QUARRY_DUST } from "@/game/content";
 import {
   dusty,
+  rainfall,
   residents,
   scaredByFire,
   gathererShare,
@@ -79,9 +80,21 @@ export function BuildingInfo({
         </p>
       )}
 
+      {def.id === "quarry" && (
+        <p className="mt-2 border-t-2 border-stone-300 pt-1.5 text-amber-800">
+          Hillside cut away: {Math.round((tile.dug ?? 0) * 100)}%. It will never grow back.
+        </p>
+      )}
+
       {scaredByFire(state, tile) && (
         <p className="mt-2 border-t-2 border-stone-300 pt-1.5 text-amber-800">
           A campfire next door scares off the animals: making {Math.round(FIRE_SCARE.foodLoss * 100)}% less food.
+        </p>
+      )}
+
+      {def.id === "farm" && (
+        <p className="mt-2 border-t-2 border-stone-300 pt-1.5">
+          Rain: this field grows {Math.round(rainfall(state) * 100)}%. The more forest stands, the more rain falls.
         </p>
       )}
 
@@ -94,7 +107,7 @@ export function BuildingInfo({
       {def.id === "woodcutter" && (
         <div className="mt-2 border-t-2 border-stone-300 pt-1.5">
           <p className="mb-1">
-            Making <span className="font-num">{perSecond(0.3 * woodcutterYield(state, tile)).toFixed(2)}</span>{" "}
+            Making <span className="font-num">{perSecond((def.produces?.wood ?? 0) * woodcutterYield(state, tile)).toFixed(2)}</span>{" "}
             wood/s. How should they cut?
           </p>
           <div className="flex flex-col gap-1">
