@@ -1,5 +1,5 @@
 import { AFTER_STEPS, BUILDINGS_BY_ID, ERAS, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL } from "@/game/content";
-import { buildingCost, countBuildings, placementError, scaredByFire, scoutCost, spearmenOf, warriorCap } from "@/game/engine";
+import { buildingCost, countBuildings, placementError, placementHarm, scoutCost, spearmenOf, warriorCap } from "@/game/engine";
 import { hexDistance } from "@/game/hex";
 import type { GameState, Resources } from "@/game/types";
 
@@ -23,20 +23,23 @@ function missing(state: GameState, cost: Partial<Resources>) {
   return short.length ? `Saving up ${short.join(" and ")}...` : null;
 }
 
-// Closest free tile the building fits on, preferring its bonus deposit.
+// The spot the hand points at: close by, on its bonus deposit if possible, and
+// never where it would do harm the card warns about (quarry dust on fields, a
+// fire scaring a gatherer's game...). A quarry goes as far from the village as
+// it can: its dust and scar belong away from where people live and farm.
 export function suggestTile(state: GameState, buildingId: string) {
   const def = BUILDINGS_BY_ID[buildingId];
   const home = state.tiles[state.startTile];
+  const far = buildingId === "quarry";
   let best: { id: number; score: number } | null = null;
   for (const t of state.tiles) {
     const d = hexDistance(t, home);
-    if (d > 5 || !t.revealed || placementError(state, t, def)) continue;
-    // Don't teach a gatherer next to the fire: the smoke scares the game away.
+    if (d > (far ? 8 : 5) || !t.revealed || placementError(state, t, def)) continue;
     const score =
-      d -
+      (far ? -d : d) -
       (def.depositBonus && t.deposit === def.depositBonus.deposit ? 2.5 : 0) +
       (d === 0 ? 1 : 0) +
-      (scaredByFire(state, t, buildingId) ? 3 : 0);
+      placementHarm(state, t, buildingId) * 2;
     if (!best || score < best.score) best = { id: t.id, score };
   }
   return best?.id ?? null;

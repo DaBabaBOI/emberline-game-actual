@@ -26,7 +26,10 @@ interface Motion {
   downAt: number | null;
 }
 
-function Deer() {
+// Legs hang from a pivot at the hip so they can swing while walking.
+type Legs = React.RefObject<(Group | null)[]>;
+
+function Deer({ legs }: { legs: Legs }) {
   return (
     <group>
       <mesh castShadow position={[0, 0.2, 0]}>
@@ -54,10 +57,12 @@ function Deer() {
         </group>
       ))}
       {[[-0.04, 0.1], [0.04, 0.1], [-0.04, -0.1], [0.04, -0.1]].map(([x, z], i) => (
-        <mesh key={i} castShadow position={[x, 0.08, z]}>
-          <cylinderGeometry args={[0.012, 0.01, 0.16, 5]} />
-          <meshStandardMaterial color="#6b4a2b" />
-        </mesh>
+        <group key={i} position={[x, 0.16, z]} ref={(el) => void (legs.current[i] = el)}>
+          <mesh castShadow position={[0, -0.08, 0]}>
+            <cylinderGeometry args={[0.012, 0.01, 0.16, 5]} />
+            <meshStandardMaterial color="#6b4a2b" />
+          </mesh>
+        </group>
       ))}
       <mesh position={[0, 0.24, -0.15]}>
         <sphereGeometry args={[0.025, 6, 5]} />
@@ -67,7 +72,7 @@ function Deer() {
   );
 }
 
-function Boar() {
+function Boar({ legs }: { legs: Legs }) {
   return (
     <group>
       <mesh castShadow position={[0, 0.13, 0]} scale={[1, 0.85, 1.5]}>
@@ -85,10 +90,12 @@ function Boar() {
         </mesh>
       ))}
       {[[-0.05, 0.08], [0.05, 0.08], [-0.05, -0.08], [0.05, -0.08]].map(([x, z], i) => (
-        <mesh key={i} position={[x, 0.04, z]}>
-          <cylinderGeometry args={[0.014, 0.012, 0.08, 5]} />
-          <meshStandardMaterial color="#2b211a" />
-        </mesh>
+        <group key={i} position={[x, 0.08, z]} ref={(el) => void (legs.current[i] = el)}>
+          <mesh position={[0, -0.04, 0]}>
+            <cylinderGeometry args={[0.014, 0.012, 0.08, 5]} />
+            <meshStandardMaterial color="#2b211a" />
+          </mesh>
+        </group>
       ))}
     </group>
   );
@@ -96,11 +103,23 @@ function Boar() {
 
 function AnimalView({ animal, motion }: { animal: Animal; motion: React.RefObject<Map<number, Motion>> }) {
   const ref = useRef<Group>(null);
-  useFrame(({ clock }) => {
+  const legs = useRef<(Group | null)[]>([]);
+  const last = useRef({ x: 0, z: 0, step: 0 });
+  useFrame(({ clock }, delta) => {
     const g = ref.current;
     const m = motion.current?.get(animal.id);
     if (!g || !m) return;
-    g.position.set(m.x, animal.home.height, m.z);
+    // Walking: legs swing in diagonal pairs and the body bobs, only while moving.
+    const moved = Math.hypot(m.x - last.current.x, m.z - last.current.z);
+    last.current.x = m.x;
+    last.current.z = m.z;
+    const walking = m.downAt === null && moved > 0.0005 && moved < 0.5;
+    if (walking) last.current.step += Math.min(delta, 0.1) * (animal.kind === "deer" ? 11 : 14);
+    const swing = walking ? Math.sin(last.current.step) * 0.55 : 0;
+    legs.current.forEach((leg, i) => {
+      if (leg) leg.rotation.x = i === 0 || i === 3 ? swing : -swing;
+    });
+    g.position.set(m.x, animal.home.height + (walking ? Math.abs(Math.sin(last.current.step)) * 0.012 : 0), m.z);
     g.rotation.y = m.heading;
     if (m.downAt !== null) {
       const t = Math.min(1, (clock.elapsedTime - m.downAt) / 0.6);
@@ -109,7 +128,7 @@ function AnimalView({ animal, motion }: { animal: Animal; motion: React.RefObjec
       g.rotation.z = 0;
     }
   });
-  return <group ref={ref}>{animal.kind === "deer" ? <Deer /> : <Boar />}</group>;
+  return <group ref={ref}>{animal.kind === "deer" ? <Deer legs={legs} /> : <Boar legs={legs} />}</group>;
 }
 
 // Deer and boar roam the forests. Every so often a hunter walks out from the

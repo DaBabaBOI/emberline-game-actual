@@ -182,6 +182,11 @@ These were decided with the project owner. Do not change them without being aske
   dyed-linen villager clothes, leather warriors, warmer sunlight, worn dirt paths
   on open ground between buildings, and a bronze trim on the top bar. New eras
   should add their own touches.
+- **Sparks** (`SPARKS`, `sparks()`): each lit campfire may spark onto a
+  neighbouring tile: grass scorches; a Wooden House (the Stone Age home, id
+  `hut`, log walls and bark roof since there's no thatch before farming) burns
+  down. Firekeeping halves it; mud-brick houses don't burn. The placement card
+  warns (`sparkNote()`) and the hand avoids it. House fires count as a big moment.
 - **Farms and rain** (`FARM_RAIN`): placing Farmland clears the nearest
   unprotected forest tile within 2 hexes for good (`forestToClear()`). Rainfall
   = 0.5 + 0.5 x forest cover (`rainfall()`); every field grows that share. The
@@ -277,11 +282,18 @@ These were decided with the project owner. Do not change them without being aske
 - **Knowledge ready:** when Knowledge first covers an advancement, Elder Ama says
   so in a toast (once per advancement, `knowledgeReady()`), and the Advancements
   button shows how many are affordable (`affordableResearch()`).
+- **One big moment at a time** (`QUIET_GAP`, `quietEnough()`, `lastBigTick`):
+  event cards, raid landings, elder lessons and outbreaks out of nowhere never
+  start within a minute of each other; whatever is due waits. The Roman legion
+  and outbreaks the player causes are exempt.
 - **Updates log:** every change a player would notice gets a plain-language line
   in `UPDATES` (`src/game/updates.ts`), under today's date, newest first. It shows
   in the Updates bar at the top of the landing page and the title screen.
 - **Placement card:** the trade-off card sits beside the hovered tile, never on it,
   so the player can see where they are placing.
+- **The hand never teaches a harmful spot:** `suggestTile()` avoids anything
+  the placement card would warn about (`placementHarm()`), and puts quarries as
+  far from the village as it can (up to 8 tiles).
 - **Tutorial voice:** Elder Ama's lines read as one conversation: each step
   reacts to what the player just did before asking for the next thing. When the
   last step is done she says goodbye (`TUTORIAL_FAREWELL`, shown in the lesson

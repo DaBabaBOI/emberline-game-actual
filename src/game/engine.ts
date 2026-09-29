@@ -8,6 +8,7 @@ import {
   SMITHY_CHARCOAL,
   QUARRY_DUST,
   QUARRY_CUT,
+  SPARKS,
   FARM_RAIN,
   FIRE_SCARE,
   GATHERING,
@@ -20,6 +21,7 @@ import {
   RELIGHT_WOOD,
   LESSONS,
   LESSON_GAP,
+  QUIET_GAP,
   PLANT_COST,
   SELECTIVE_FLOOR,
   TICK_SECONDS,
@@ -366,8 +368,14 @@ export function fireRisk(state: GameState) {
 function pickEvent(roll: number, state: GameState) {
   const wildfire = Math.min(FIRE_RISK.max, FIRE_RISK.base + FIRE_RISK.perForestTile * fireRisk(state));
   // Never the same card twice in a row.
+  // The old grove only comes up once, and only while there is old forest to protect.
+  const grovePossible = !(state.protectedTiles ?? []).length && oldestForest(state, 4).length >= 2;
   const weights = EVENTS.map((e) =>
-    e.id === state.lastEvent || (e.era ?? 0) > state.era ? 0 : e.id === "wildfire" ? wildfire : 1,
+    e.id === state.lastEvent || (e.era ?? 0) > state.era || (e.id === "sacred-grove" && !grovePossible)
+      ? 0
+      : e.id === "wildfire"
+        ? wildfire
+        : 1,
   );
   let r = roll * weights.reduce((a, b) => a + b, 0);
   for (let i = 0; i < EVENTS.length; i++) {
@@ -419,6 +427,7 @@ export function placementError(state: GameState, tile: Tile, def: BuildingDef): 
   }
   if (!tile.revealed) return "Unexplored land";
   if (tile.building) return "Already built here";
+  if (state.protectedTiles?.includes(tile.id)) return "The old grove is protected";
   if (!def.terrain.includes(tile.terrain)) return `Needs ${def.terrain.join(" / ")}`;
   if (def.needsWaterNeighbor) {
     const touchesWater = state.tiles.some(
@@ -491,6 +500,60 @@ export function scaredByFire(state: GameState, tile: Tile, building = tile.build
 }
 
 // What a campfire or gatherer placed here would do to the game nearby, for the placement card.
+// Tiles next to a lit campfire that its sparks could catch: grass, and wooden houses.
+function sparkTargets(state: GameState, fire: Tile) {
+  return state.tiles.filter(
+    (t) =>
+      hexDistance(t, fire) === 1 &&
+      !state.protectedTiles?.includes(t.id) &&
+      (t.building === "hut" || (!t.building && (t.terrain === "grass" || t.terrain === "steppe"))),
+  );
+}
+
+// Now and then a campfire throws sparks: dry grass next to it scorches, and a
+// wooden house next to it can catch fire and burn down.
+function sparks(state: GameState): GameState {
+  if (state.tutorialStep < TUTORIAL.length) return state;
+  const rand = mulberry32(state.seed + state.tick * 61);
+  const damp = state.researched.includes("firekeeping") ? SPARKS.firekeeping : 1;
+  for (const fire of litFires(state)) {
+    const near = sparkTargets(state, fire);
+    const houses = near.filter((t) => t.building === "hut");
+    const chance = damp * (SPARKS.perHouse * houses.length + SPARKS.perGrass * (near.length - houses.length));
+    if (!near.length || rand() >= chance) continue;
+    // Houses catch more easily than grass; one big moment at a time.
+    const pool = houses.length && quietEnough(state) && rand() < (SPARKS.perHouse * houses.length) / (chance / damp) ? houses : near.filter((t) => !t.building);
+    const hit = pool[Math.floor(rand() * pool.length)];
+    if (!hit) continue;
+    const burnsHouse = hit.building === "hut";
+    return {
+      ...state,
+      tiles: state.tiles.map((t) => (t.id === hit.id ? { ...t, building: burnsHouse ? null : t.building, scorch: 1 } : t)),
+      lastBigTick: burnsHouse ? state.tick : state.lastBigTick,
+      log: [
+        burnsHouse
+          ? "Sparks from the campfire set a wooden house alight. It burned down."
+          : "Sparks from the campfire scorched the grass beside it.",
+        ...state.log,
+      ].slice(0, 30),
+    };
+  }
+  return state;
+}
+
+// What placing a wooden house or a campfire here risks from sparks, for the placement card.
+export function sparkNote(state: GameState, tile: Tile, building: string): string | null {
+  if (building === "hut") {
+    const fire = state.tiles.some((t) => t.building === "campfire" && hexDistance(t, tile) === 1);
+    return fire ? "Right next to a campfire: sparks could set this wooden house alight." : null;
+  }
+  if (building === "campfire") {
+    const n = state.tiles.filter((t) => t.building === "hut" && hexDistance(t, tile) === 1).length;
+    return n ? `Sparks could set ${n} wooden house${n === 1 ? "" : "s"} next to it alight.` : null;
+  }
+  return null;
+}
+
 export function fireScareNote(state: GameState, tile: Tile, building: string): string | null {
   const loss = Math.round(FIRE_SCARE.foodLoss * 100);
   if (building === "campfire") {
@@ -539,6 +602,22 @@ export function dustNote(state: GameState, tile: Tile, building: string): string
     return hit ? `Dust would cut the food of ${hit} building${hit === 1 ? "" : "s"} nearby by ${loss}%.` : null;
   }
   return dusty(state, tile, building) ? `A quarry nearby: this would make ${loss}% less food.` : null;
+}
+
+// How much harm placing `building` here would do (what the placement card warns
+// about): quarry dust on food buildings, a fire scaring a gatherer's game, a
+// field clearing forest. The tutorial hand and guided steps avoid it.
+export function placementHarm(state: GameState, tile: Tile, building: string): number {
+  let harm = 0;
+  if (building === "quarry")
+    harm += 5 * state.tiles.filter((t) => t.building && QUARRY_DUST.hits.includes(t.building) && hexDistance(t, tile) <= QUARRY_DUST.range).length;
+  if (dusty(state, tile, building)) harm += 5;
+  if (scaredByFire(state, tile, building)) harm += 4;
+  if (building === "campfire")
+    harm += 4 * state.tiles.filter((t) => t.building === "gatherer" && hexDistance(t, tile) <= FIRE_SCARE.range).length;
+  if (building === "farm" && forestToClear(state, tile)) harm += 2;
+  if (sparkNote(state, tile, building)) harm += 3;
+  return harm;
 }
 
 export function production(state: GameState): Resources {
@@ -874,7 +953,8 @@ export function sustainabilityBreakdown(state: GameState): SustainPart[] {
       hint: "Fires and choices you made in events. This fades over time.",
     },
   ];
-  return parts.filter((p, i) => i === 0 || Math.abs(p.value) >= 0.5);
+  // Only what is actually costing (or helping) the land right now.
+  return parts.filter((p) => Math.abs(p.value) >= 0.5);
 }
 
 // How much Sustainability changed over roughly the last minute of play.
@@ -1201,15 +1281,21 @@ function knowledgeReady(state: GameState): GameState {
   };
 }
 
+// One big moment at a time: nothing new starts within QUIET_GAP of the last.
+export function quietEnough(state: GameState): boolean {
+  return state.tick - (state.lastBigTick ?? -Infinity) >= QUIET_GAP;
+}
+
 // Show the next elder lesson whose moment has come: one at a time, spaced out,
 // never during the tutorial or an event.
 export function lessonDue(state: GameState): GameState {
   if (state.tutorialStep < TUTORIAL.length || state.lesson || state.event || state.phase !== "playing") return state;
   if (state.tick - (state.lessonTick ?? -LESSON_GAP) < LESSON_GAP) return state;
+  if (!quietEnough(state)) return state;
   const seen = state.lessonsSeen ?? [];
   const next = LESSONS.find((l) => !seen.includes(l.id) && lessonReady(l.id, state));
   if (!next) return state;
-  return { ...state, lesson: next.id, lessonsSeen: [...seen, next.id], lessonTick: state.tick };
+  return { ...state, lesson: next.id, lessonsSeen: [...seen, next.id], lessonTick: state.tick, lastBigTick: state.tick };
 }
 
 // ---- Debrief ---------------------------------------------------------------
@@ -1394,6 +1480,7 @@ function tick(state: GameState): GameState {
 
   if (next.tick % 3 === 0) next = growForests(next);
   next = cutHills(next);
+  next = sparks(next);
   // No raids or events while a new player is still learning.
   if (!inTutorial) next = updateLegion(updateRaids(next));
   // The final battle ends the story (won or lost): nothing else happens today.
@@ -1408,10 +1495,10 @@ function tick(state: GameState): GameState {
     return { ...lost, debrief: makeDebrief(lost, "loss") };
   }
 
-  if (!inTutorial && next.tick >= next.nextEventTick) {
+  if (!inTutorial && next.tick >= next.nextEventTick && quietEnough(next)) {
     const rand = mulberry32(next.seed + next.tick);
     const event = pickEvent(rand(), next);
-    next = { ...next, event, lastEvent: event.id, nextEventTick: next.tick + 180 + Math.floor(rand() * 120) };
+    next = { ...next, event, lastEvent: event.id, lastBigTick: next.tick, nextEventTick: next.tick + 180 + Math.floor(rand() * 120) };
   }
 
   const beforeDisease = next.population;
@@ -1677,7 +1764,7 @@ function updateRaids(state: GameState): GameState {
     };
   }
 
-  if (!raid && state.tick >= state.nextRaidTick) {
+  if (!raid && state.tick >= state.nextRaidTick && quietEnough(state)) {
     const rand = mulberry32(state.seed + state.tick * 31);
     const home = state.tiles[state.startTile];
     const shores = state.tiles.filter((t) => {
@@ -1713,6 +1800,7 @@ function updateRaids(state: GameState): GameState {
         arriveTick: state.tick + 12,
       },
       nextRaidTick: state.tick + 180 + Math.floor(rand() * 100),
+      lastBigTick: state.tick,
       log: [`${strength} raiders spotted landing on the shore!`, ...state.log].slice(0, 30),
     };
   }

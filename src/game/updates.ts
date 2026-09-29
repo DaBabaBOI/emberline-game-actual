@@ -9,6 +9,15 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "The tutorial teaches it too: Elder Ama tells you to leave a patch of ground between your house and the fire.",
+      "Huts are now Wooden Houses (log walls, bark roof): thatch needs straw, and there's no straw before farming.",
+      "Campfires throw sparks: grass next to them can scorch, and a wooden house right next to a fire can catch and burn down. Keep a tile between them; Firekeeping halves the risk. Mud-brick houses don't burn.",
+      "One thing at a time: event cards, raids, Elder Ama's lessons and outbreaks out of nowhere now wait at least a minute after each other.",
+      "Buildings you can't afford yet are dimmed in the build bar, like Plant, Train and Scout.",
+      "The Sustainability panel only lists what is actually affecting the land (no more \"Forest standing: 100% +0\").",
+      "The pointing hand now picks spots that avoid harm: quarries go well away from the village and its fields, gatherers away from fires, fields away from forest when it can.",
+      "Deer and boar now walk: their legs swing and their bodies bob as they move.",
+      "The old grove is marked on the map once you protect it (standing stones and a label), and nothing can be built on it.",
       "You can see the Ancient era now: villagers wear dyed linen, warriors wear leather, the light is warmer, paths wear into the ground between buildings, and the top bar gets a bronze trim.",
       "The tutorial no longer starts you on a big pile: Elder Ama hands over what each step needs as you reach it, and a small reserve (40 food, 10 wood) at the end.",
       "Storytelling and Herbalism now come after Toolmaking, because the Elder's Hut and Healer's Hut need stone from a quarry.",
