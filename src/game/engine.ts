@@ -6,6 +6,7 @@ import {
   GRANARY_KEEPS,
   SMITHY_CHARCOAL,
   QUARRY_DUST,
+  GATHERING,
   WALL_DEFENSE,
   MIN_SUSTAINABILITY_FOR_BEST_ENDING,
   NEXT_ERA_POPULATION,
@@ -411,6 +412,31 @@ export function housingCapacity(state: GameState) {
   return BUILDINGS.reduce((sum, b) => sum + (b.housing ?? 0) * (counts[b.id] ?? 0), BASE_HOUSING);
 }
 
+// Other gatherer camps close enough to share this camp's wild food.
+export function nearbyGatherers(state: GameState, tile: Tile): number {
+  return state.tiles.filter(
+    (t) => t.building === "gatherer" && t.id !== tile.id && hexDistance(t, tile) <= GATHERING.shareRange,
+  ).length;
+}
+
+// The share of the wild food a gatherer camp gets when others are nearby.
+export function gathererShare(state: GameState, tile: Tile): number {
+  return 1 / (1 + GATHERING.share * nearbyGatherers(state, tile));
+}
+
+// What placing another gatherer here would cost, for the placement card.
+export function gatherNote(state: GameState, tile: Tile): string | null {
+  const notes: string[] = [];
+  const near = nearbyGatherers(state, tile);
+  if (near) {
+    const loss = Math.round((1 - 1 / (1 + GATHERING.share * near)) * 100);
+    notes.push(`${near} camp${near === 1 ? " nearby shares" : "s nearby share"} the same wild food: this one makes ${loss}% less, and so do they.`);
+  }
+  if ((countBuildings(state).gatherer ?? 0) >= GATHERING.freeCamps)
+    notes.push(`One camp too many for the wild: −${GATHERING.sustainPerExtra} Sustainability.`);
+  return notes.length ? notes.join(" ") : null;
+}
+
 // A food building with a quarry close by: its crops or berries are under dust.
 export function dusty(state: GameState, tile: Tile, building = tile.building): boolean {
   if (!building || !QUARRY_DUST.hits.includes(building)) return false;
@@ -443,11 +469,13 @@ export function production(state: GameState): Resources {
           ? 1.5
           : 1;
     const dust = dusty(state, tile) ? 1 - QUARRY_DUST.foodLoss : 1;
+    // Neighbouring gatherer camps share the same wild food.
+    const share = tile.building === "gatherer" ? gathererShare(state, tile) : 1;
     for (const [k, v] of Object.entries(def.produces ?? {}))
-      out[k as keyof Resources] += (v ?? 0) * factor * (k === "food" ? dust : 1);
+      out[k as keyof Resources] += (v ?? 0) * factor * share * (k === "food" ? dust : 1);
     if (def.depositBonus && tile.deposit === def.depositBonus.deposit) {
       for (const [k, v] of Object.entries(def.depositBonus.amount))
-        out[k as keyof Resources] += v ?? 0;
+        out[k as keyof Resources] += (v ?? 0) * share;
     }
     if (tile.building === "fishing") {
       const fishNearby = state.tiles.some(
@@ -715,6 +743,11 @@ export function sustainabilityBreakdown(state: GameState): SustainPart[] {
       hint: "Quarries cut away the hillside for good, and their dust smothers nearby crops.",
     },
     {
+      label: `${counts.gatherer ?? 0} gatherer camp${counts.gatherer === 1 ? "" : "s"} hunting the wild`,
+      value: -Math.max(0, (counts.gatherer ?? 0) - GATHERING.freeCamps) * GATHERING.sustainPerExtra,
+      hint: `The wild can feed ${GATHERING.freeCamps} camps. Past that, animals are hunted faster than they can have young, and there are fewer each year.`,
+    },
+    {
       label: `${counts.farm ?? 0} field${counts.farm === 1 ? "" : "s"} cleared`,
       value: -(counts.farm ?? 0) * 1,
       hint: "Farmland replaces wild land.",
@@ -863,6 +896,8 @@ function lessonReady(id: string, state: GameState) {
   switch (id) {
     case "forest":
       return forestCover(state) < 0.9;
+    case "overhunting":
+      return (countBuildings(state).gatherer ?? 0) > GATHERING.freeCamps;
     case "wildlife":
       return forestCover(state) < 0.7;
     case "smoke":
