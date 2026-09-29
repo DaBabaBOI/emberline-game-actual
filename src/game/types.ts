@@ -259,6 +259,9 @@ export interface GameState {
   famineTicks: number;
   // Seconds in a row that happiness has been below UNREST_LEVEL.
   unrestTicks: number;
+  // When the next small moment happens (missing in older saves).
+  nextMomentTick?: number;
+  lastMoment?: string;
   // How worn out the land is: counts up while Sustainability is below LAND.strainLevel.
   strainTicks: number;
   // How many people are sick right now, and how many the current outbreak has killed.
