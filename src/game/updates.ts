@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "New: First-time mode, picked for you on your first game. The clock starts at half speed, raids and events come less often, raiders are weaker, and famine takes longer. After a while it runs at normal pace.",
       "Dev mode: new Sparks and Clear forest buttons to test house fires, rain and Sustainability.",
       "The tutorial teaches it too: Elder Ama tells you to leave a patch of ground between your house and the fire.",
       "Huts are now Wooden Houses (log walls, bark roof): thatch needs straw, and there's no straw before farming.",

@@ -25,6 +25,7 @@ import {
   PLANT_COST,
   SELECTIVE_FLOOR,
   TICK_SECONDS,
+  GENTLE,
   FIRE_RISK,
   LAND,
   GRACE_AFTER_TUTORIAL,
@@ -758,6 +759,16 @@ export function perSecond(perTick: number) {
   return perTick / TICK_SECONDS;
 }
 
+// Real seconds per tick right now: First-time mode starts with a slower clock.
+export function tickSeconds(state: GameState) {
+  return state.difficulty === "first" && state.tick < GENTLE.slowTicks ? TICK_SECONDS * GENTLE.slowFactor : TICK_SECONDS;
+}
+
+// First-time mode spaces events and raids further apart for its first stretch.
+function gapFactor(state: GameState) {
+  return state.difficulty === "first" && state.tick < GENTLE.calmUntil ? GENTLE.gapFactor : 1;
+}
+
 export interface Warning {
   id: "fire" | "food" | "wood" | "famine" | "unrest" | "land" | "sick" | "rain";
   icon: IconId;
@@ -1388,9 +1399,9 @@ function advanceTutorial(state: GameState): GameState {
 function startGrace(state: GameState): GameState {
   return {
     ...state,
-    nextEventTick: Math.max(state.nextEventTick, state.tick + GRACE_AFTER_TUTORIAL.event),
-    nextRaidTick: Math.max(state.nextRaidTick, state.tick + GRACE_AFTER_TUTORIAL.raid),
-    calmUntil: state.tick + GRACE_AFTER_TUTORIAL.disease,
+    nextEventTick: Math.max(state.nextEventTick, state.tick + GRACE_AFTER_TUTORIAL.event * gapFactor(state)),
+    nextRaidTick: Math.max(state.nextRaidTick, state.tick + GRACE_AFTER_TUTORIAL.raid * gapFactor(state)),
+    calmUntil: state.tick + GRACE_AFTER_TUTORIAL.disease * gapFactor(state),
   };
 }
 
@@ -1500,7 +1511,7 @@ function tick(state: GameState): GameState {
   if (!inTutorial && next.tick >= next.nextEventTick && quietEnough(next)) {
     const rand = mulberry32(next.seed + next.tick);
     const event = pickEvent(rand(), next);
-    next = { ...next, event, lastEvent: event.id, lastBigTick: next.tick, nextEventTick: next.tick + 180 + Math.floor(rand() * 120) };
+    next = { ...next, event, lastEvent: event.id, lastBigTick: next.tick, nextEventTick: next.tick + Math.round((180 + Math.floor(rand() * 120)) * gapFactor(next)) };
   }
 
   const beforeDisease = next.population;
@@ -1801,7 +1812,7 @@ function updateRaids(state: GameState): GameState {
         startTick: state.tick,
         arriveTick: state.tick + 12,
       },
-      nextRaidTick: state.tick + 180 + Math.floor(rand() * 100),
+      nextRaidTick: state.tick + Math.round((180 + Math.floor(rand() * 100)) * gapFactor(state)),
       lastBigTick: state.tick,
       log: [`${strength} raiders spotted landing on the shore!`, ...state.log].slice(0, 30),
     };
