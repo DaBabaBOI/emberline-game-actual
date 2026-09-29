@@ -228,6 +228,7 @@ export function Warriors({
   tiles,
   population,
   soldiers,
+  spearmen = 0,
   homeTile,
   rally,
   hidden,
@@ -235,6 +236,8 @@ export function Warriors({
   tiles: Tile[];
   population: number;
   soldiers: number;
+  // How many of them carry spears (the rest carry clubs).
+  spearmen?: number;
   homeTile: Tile;
   // While raiders approach, warriors march to this tile to meet them.
   rally?: Tile | null;
@@ -242,6 +245,8 @@ export function Warriors({
   hidden?: boolean;
 }) {
   const walkers = useRef<Walker[]>([]);
+  const spearFigs = useRef<Walker[]>([]);
+  const clubFigs = useRef<Walker[]>([]);
   const ground = useMemo(() => makeGround(tiles), [tiles]);
   const camps = useMemo(() => {
     const list = tiles.filter((t) => t.building === "warcamp");
@@ -258,6 +263,10 @@ export function Warriors({
       );
     }
     list.length = count;
+    // Split the figures between spears and clubs in proportion.
+    const withSpears = soldiers ? Math.round((count * Math.min(spearmen, soldiers)) / soldiers) : 0;
+    spearFigs.current = list.slice(0, withSpears);
+    clubFigs.current = list.slice(withSpears);
     const dt = Math.min(delta, 0.1);
     for (const w of list) {
       if (rally) {
@@ -269,7 +278,12 @@ export function Warriors({
   });
 
   if (hidden) return null;
-  return <Figures agents={walkers} max={MAX_FIGURES} weapon="spear" />;
+  return (
+    <>
+      <Figures agents={spearFigs} max={MAX_FIGURES} weapon="spear" />
+      <Figures agents={clubFigs} max={MAX_FIGURES} weapon="club" />
+    </>
+  );
 }
 
 export function Raiders({ tiles, raid, tick }: { tiles: Tile[]; raid: Raid | null; tick: number }) {

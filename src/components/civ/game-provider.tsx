@@ -46,7 +46,9 @@ export function GameProvider({
   // cover every step exactly, so nothing should be eaten or burned meanwhile.
   // It only runs if the player is somehow short and has to wait.
   const inTutorial = state.tutorialStep < TUTORIAL.length;
-  const held = inTutorial && !state.dev && guideFor(state, selected, panel).waiting === null;
+  // The same goes for Elder Ama's guided step after an advancement.
+  const held =
+    ((inTutorial && !state.dev) || (!inTutorial && !!state.coach)) && guideFor(state, selected, panel).waiting === null;
   // The world waits while the debrief is on screen.
   const paused = !!state.debrief;
 

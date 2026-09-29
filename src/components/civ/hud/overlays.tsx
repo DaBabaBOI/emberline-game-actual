@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ERAS, EVENTS, LESSONS, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
+import { AFTER_STEPS, ERAS, EVENTS, LESSONS, TREE_BY_ID, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
 import { defenseBreakdown, defenseStrength, warnings } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
 import { Countdown } from "./countdown";
@@ -33,6 +33,42 @@ export function TutorialPanel() {
       >
         Skip tutorial
       </button>
+    </div>
+  );
+}
+
+// Right after an advancement, Elder Ama explains what it unlocked and (with
+// the hand) walks you through using it once. The clock waits meanwhile.
+export function CoachPanel() {
+  const { state, dispatch } = useGame();
+  const { waiting } = useGuide();
+  const step = state.coach ? AFTER_STEPS[state.coach.node] : null;
+  if (!step || state.tutorialStep < TUTORIAL.length) return null;
+  const guided = !!(step.build || step.upgrade);
+  return (
+    <div className="pixel-panel pointer-events-auto relative z-[26] w-full p-2.5 text-xs md:p-3 md:text-sm" data-testid="coach">
+      <div className="mb-1 flex items-center gap-2">
+        <PixelIcon name="elder" size={28} />
+        <span className="font-pixel flex flex-col leading-tight">
+          <span className="text-[11px] text-amber-800/80">New: {TREE_BY_ID[state.coach!.node]?.name}</span>
+          <span className="text-base font-semibold">Elder Ama</span>
+        </span>
+      </div>
+      <p>{step.text}</p>
+      {waiting && <p className="mt-1 text-xs italic text-amber-800">{waiting}</p>}
+      {guided ? (
+        <button type="button" onClick={() => dispatch({ type: "endCoach" })} className="mt-2 text-xs text-stone-500 underline">
+          Skip
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => dispatch({ type: "endCoach" })}
+          className="pixel-btn font-pixel mt-2 bg-amber-400 px-3 py-1 text-xs font-semibold text-[#2b2119]"
+        >
+          Got it
+        </button>
+      )}
     </div>
   );
 }
@@ -290,6 +326,14 @@ export function DevPanel() {
         </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devRomans" })}>
           Romans
+        </button>
+        <button
+          type="button"
+          className={"pixel-btn px-2 py-1 " + (state.devGoals ? "bg-amber-400 text-[#2b2119]" : "bg-[#4a3b2e]")}
+          onClick={() => dispatch({ type: "devGoals" })}
+          title="Treat every advancement goal as met"
+        >
+          Goals {state.devGoals ? "on" : "off"}
         </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devCutHills" })}>
           Cut hills

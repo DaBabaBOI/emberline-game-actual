@@ -9,6 +9,7 @@ import {
   buildingCost,
   DEMOLISH_TOOL,
   dustNote,
+  spearmenOf,
   residents,
   fireScareNote,
   gatherNote,
@@ -215,6 +216,7 @@ export function WorldCanvas() {
         tiles={state.tiles}
         population={state.population}
         soldiers={state.soldiers}
+        spearmen={spearmenOf(state)}
         homeTile={home}
         rally={state.raid ? state.tiles[state.raid.meetTile ?? state.raid.targetTile] : null}
         hidden={battleShowing}

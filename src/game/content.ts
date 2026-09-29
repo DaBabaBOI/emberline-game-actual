@@ -1,5 +1,7 @@
 import type { IconId } from "./sprites";
 import type {
+  AfterStep,
+  Goal,
   Branch,
   BuildingDef,
   CultureId,
@@ -57,6 +59,9 @@ export const DIFFICULTIES: Record<
 
 export const WARRIORS_PER_CAMP = 4;
 export const TRAIN_COST = { food: 8, wood: 4 };
+// After Hunting Spears: give a warrior a spear. Spearmen fight 1.5x as hard.
+export const SPEAR_COST = { wood: 4 };
+export const SPEARMAN_STRENGTH = 1.5;
 
 export const BUILDINGS: BuildingDef[] = [
   {
@@ -427,7 +432,7 @@ export const TREE: TreeNode[] = [
   {
     id: "spears",
     name: "Hunting Spears",
-    description: "+15% food, and warriors fight 50% harder.",
+    description: "+15% food. Warriors can carry spears: train new spearmen, or give your warriors spears, to fight 50% harder.",
     branch: "military",
     era: 0,
     cost: 6,
@@ -568,6 +573,55 @@ export const TREE: TreeNode[] = [
 ];
 
 export const TREE_BY_ID = Object.fromEntries(TREE.map((n) => [n.id, n]));
+
+// What each advancement asks of you before it can be researched. Progress counts
+// from the moment all its prerequisites are done. Knowledge is still the price.
+export const ADVANCEMENT_GOALS: Record<string, Goal[]> = {
+  storytelling: [{ label: "Fire burning (s)", kind: "tally", key: "fireLit", amount: 120 }],
+  toolmaking: [{ label: "Gather wood", kind: "tally", key: "wood", amount: 30 }],
+  firekeeping: [{ label: "Relight a campfire", kind: "tally", key: "relights", amount: 2 }],
+  fishing: [{ label: "Send a scouting trip", kind: "tally", key: "scouts", amount: 1 }],
+  "early-farming": [{ label: "Have a Gatherer's Camp", kind: "have", building: "gatherer", amount: 1 }],
+  spears: [{ label: "Train warriors", kind: "tally", key: "trained", amount: 2 }],
+  herbalism: [{ label: "Gather from berry bushes", kind: "berryCamp", amount: 1 }],
+  herding: [{ label: "Hunt animals", kind: "tally", key: "hunts", amount: 3 }],
+  "hide-clothing": [{ label: "Have Livestock Pens", kind: "have", building: "pen", amount: 2 }],
+  agriculture: [
+    { label: "Have Farmland", kind: "have", building: "farm", amount: 3 },
+    { label: "Grow your tribe", kind: "population", amount: 12 },
+    { label: "Store food at once", kind: "stored", resource: "food", amount: 50 },
+  ],
+  writing: [{ label: "Save up coins", kind: "stored", resource: "currency", amount: 60 }],
+  pottery: [{ label: "Lose food to rot", kind: "tally", key: "rotted", amount: 20 }],
+  bronze: [{ label: "Quarry stone", kind: "tally", key: "stone", amount: 60 }],
+  irrigation: [{ label: "Have Farmland", kind: "have", building: "farm", amount: 5 }],
+  forestry: [{ label: "Plant saplings", kind: "tally", key: "planted", amount: 3 }],
+  "bronze-arms": [
+    { label: "Have a Bronze Smithy", kind: "have", building: "smithy", amount: 1 },
+    { label: "Beat a raid", kind: "tally", key: "raidsWon", amount: 1 },
+  ],
+};
+
+// Elder Ama's guided step right after each advancement. With `build`, the hand
+// points you to place one; without, it's an explanation to read.
+export const AFTER_STEPS: Record<string, AfterStep> = {
+  storytelling: { build: "elder", text: "Now our elders can teach. Build an Elder's Hut: the children will learn from it, and we will gain Knowledge every day." },
+  toolmaking: { build: "quarry", text: "Sharp stone tools! Place a Stone Quarry on the hills. Remember: it cuts the hill away for good, and its dust spoils crops nearby." },
+  firekeeping: { text: "We know how to bank a fire now: every campfire burns half again as long before it needs more wood. Less wood cut, less smoke." },
+  fishing: { build: "fishing", text: "Rafts! Place a Fishing Spot on the shore, next to the water. Fish near the coast give even more." },
+  "early-farming": { build: "farm", text: "We can plant grain. Place Farmland on open grass: it feeds many, but it takes the land from the wild." },
+  spears: { upgrade: true, text: "Stone-tipped spears! Our hunters bring back more food. Give one of our warriors a spear: a spearman fights half again as hard. Warriors you train from now on carry spears too." },
+  herbalism: { build: "healer", text: "We know which plants heal. Build a Healer's Hut: the sick get better faster, and sickness spreads less." },
+  herding: { build: "pen", text: "We can keep goats and sheep. Place a Livestock Pen: steady food, but grazing wears down the grass." },
+  "hide-clothing": { text: "Warm clothes from hides and wool: each Livestock Pen now keeps 6 people warm without a fire. Fewer fires, less wood, less smoke." },
+  agriculture: { text: "We are farmers now. Grow the tribe to 15 people and we can enter the Ancient era. Watch the goal at the top of the screen." },
+  writing: { build: "school", text: "Marks on clay that everyone can read! Build a Scribe School: more literacy, and Knowledge every day." },
+  pottery: { build: "granary", text: "Jars that keep grain dry. Build a Granary so less of our food rots away." },
+  bronze: { build: "smithy", text: "Bronze! Build a Bronze Smithy: better tools for everyone, but it burns wood for charcoal all the time." },
+  irrigation: { build: "canal", text: "Place an Irrigation Canal next to your fields: they grow half again as much, but watered soil slowly turns salty." },
+  forestry: { build: "forester", text: "Build a Forester's Lodge near the woods: it tends young trees so the forest grows back faster." },
+  "bronze-arms": { build: "walls", text: "Bronze spears and shields: every warrior fights twice as hard. Build Stone Walls to guard the village too." },
+};
 
 // Event cards are trade-offs: every choice gains something and costs something.
 // `realWorld` links the card to today. Keep those lines modest, with no statistics.
