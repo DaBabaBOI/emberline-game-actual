@@ -548,6 +548,21 @@ export function dustNote(state: GameState, tile: Tile, building: string): string
   return dusty(state, tile, building) ? `A quarry nearby: this would make ${loss}% less food.` : null;
 }
 
+// How much harm placing `building` here would do (what the placement card warns
+// about): quarry dust on food buildings, a fire scaring a gatherer's game, a
+// field clearing forest. The tutorial hand and guided steps avoid it.
+export function placementHarm(state: GameState, tile: Tile, building: string): number {
+  let harm = 0;
+  if (building === "quarry")
+    harm += 5 * state.tiles.filter((t) => t.building && QUARRY_DUST.hits.includes(t.building) && hexDistance(t, tile) <= QUARRY_DUST.range).length;
+  if (dusty(state, tile, building)) harm += 5;
+  if (scaredByFire(state, tile, building)) harm += 4;
+  if (building === "campfire")
+    harm += 4 * state.tiles.filter((t) => t.building === "gatherer" && hexDistance(t, tile) <= FIRE_SCARE.range).length;
+  if (building === "farm" && forestToClear(state, tile)) harm += 2;
+  return harm;
+}
+
 export function production(state: GameState): Resources {
   // No base Knowledge: it comes from milestones, teaching buildings and literacy.
   const out: Resources = { food: 0, wood: 0, stone: 0, knowledge: 0, currency: 0 };

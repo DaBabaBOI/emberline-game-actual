@@ -282,6 +282,9 @@ These were decided with the project owner. Do not change them without being aske
   in the Updates bar at the top of the landing page and the title screen.
 - **Placement card:** the trade-off card sits beside the hovered tile, never on it,
   so the player can see where they are placing.
+- **The hand never teaches a harmful spot:** `suggestTile()` avoids anything
+  the placement card would warn about (`placementHarm()`), and puts quarries as
+  far from the village as it can (up to 8 tiles).
 - **Tutorial voice:** Elder Ama's lines read as one conversation: each step
   reacts to what the player just did before asking for the next thing. When the
   last step is done she says goodbye (`TUTORIAL_FAREWELL`, shown in the lesson
