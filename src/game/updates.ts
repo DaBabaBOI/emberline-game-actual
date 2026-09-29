@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "The campfire warning now says cold people become unhappy.",
       "Gatherer camps are no longer free to spam: camps within 2 tiles share the same wild food, and every camp past the second hunts animals faster than they breed (−2 Sustainability each). Elder Ama explains why.",
       "Losing (famine, unrest or conquest) is never called the best ending any more, however healthy the land is.",
       "Elder Ama's tutorial now reads like one conversation, explains how Knowledge is earned, and says goodbye when you're ready.",
