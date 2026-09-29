@@ -227,6 +227,9 @@ These were decided with the project owner. Do not change them without being aske
   resources the hand lets go. New tutorial steps need a case in `guideFor()`.
 - **Endings:** a loss (famine, unrest, conquest) always gets the "lost" tier.
   Land-based tiers (thriving, costly, stripped) are only for eras that end.
+- **Knowledge ready:** when Knowledge first covers an advancement, Elder Ama says
+  so in a toast (once per advancement, `knowledgeReady()`), and the Advancements
+  button shows how many are affordable (`affordableResearch()`).
 - **Updates log:** every change a player would notice gets a plain-language line
   in `UPDATES` (`src/game/updates.ts`), under today's date, newest first. It shows
   in the Updates bar at the top of the landing page and the title screen.
