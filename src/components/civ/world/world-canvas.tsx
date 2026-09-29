@@ -108,7 +108,7 @@ export function WorldCanvas() {
 
   const inTutorialNow = state.tutorialStep < TUTORIAL.length;
   const dust = def && !error && hoverTile ? dustNote(state, hoverTile, def.id) : null;
-  const gather = def?.id === "gatherer" && !error && hoverTile && !inTutorialNow ? gatherNote(state, hoverTile) : null;
+  const gather = def?.id === "gatherer" && !error && hoverTile && !inTutorialNow ? gatherNote(state) : null;
 
   const burning = useMemo(() => litFires(state), [state]);
   // A battle is played out for a few ticks after it happens.
