@@ -649,7 +649,7 @@ export const EVENTS: EventCard[] = [
     body: "The hunters are bringing back fewer deer each season. Some want one last big hunt before winter; others say to let the herds recover.",
     choices: [
       { label: "One big hunt (+50 food now, the land suffers)", effect: { resources: { food: 50 }, sustainability: -15 } },
-      { label: "Hunt only the old animals (+12 food, the herds recover)", effect: { resources: { food: 12 }, sustainability: 5 } },
+      { label: "Let the herds recover (−15 food: we eat from our stores for now)", effect: { resources: { food: -15 }, sustainability: 8 } },
     ],
     realWorld: "Overhunting has wiped out animals before. Many scientists think people helped drive mammoths and other big Ice Age animals to extinction.",
   },
@@ -837,7 +837,7 @@ export const LESSONS: { id: string; title: string; text: string; sdg: string }[]
   },
   {
     id: "overhunting",
-    title: "The herds are thinning",
+    title: "Too many hunters",
     text: "Our camps take berries, roots and animals from the wild. With so many camps, we hunt the deer and boar faster than they can have young, so each year there are fewer left. Fewer animals means less food for us too. Fewer camps let the wild keep up.",
     sdg: "SDG 12.2: use natural resources sustainably and efficiently",
   },

@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "\"The herds are thinning\": letting the herds recover now costs food today, as holding back really would.",
       "Warriors and villagers no longer pace back and forth beside buildings: they walk to the near side and pause when their path is blocked.",
       "The campfire warning now says cold people become unhappy.",
       "Gatherer camps are no longer free to spam: the wild only has so much, so each extra camp adds just 25% of a camp's food, and every camp past the second hunts animals faster than they breed (−2 Sustainability each). Elder Ama explains why.",
