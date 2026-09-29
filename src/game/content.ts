@@ -209,7 +209,7 @@ export const BUILDINGS: BuildingDef[] = [
     name: "Livestock Pen",
     icon: "sheep",
     description: "Goats and sheep behind a fence. A little milk and meat, and later their hides and wool make warm clothes.",
-    gain: "A little food; with Hide Clothing, warm clothes for 6 people so fewer fires are needed",
+    gain: "A little food; with Warm Clothes researched, clothing for 6 people so fewer fires are needed",
     landCost: "Grazing animals wear down the grass around them",
     landImpact: 1,
     era: 0,
@@ -455,7 +455,7 @@ export const TREE: TreeNode[] = [
   },
   {
     id: "hide-clothing",
-    name: "Hide Clothing",
+    name: "Warm Clothes",
     description: "Sew hides and wool into warm clothes. Each Livestock Pen keeps 6 people warm without a fire.",
     branch: "energy",
     era: 0,
@@ -806,7 +806,7 @@ export const GROWTH_PRESSURE = {
   foodRots: 0.015,
   // Each lit campfire warms this many people; the rest are cold.
   peoplePerFire: 10,
-  // With Hide Clothing, each Livestock Pen clothes this many people warmly.
+  // With Warm Clothes, each Livestock Pen clothes this many people warmly.
   peoplePerPen: 6,
   // Raiders come in bigger groups the bigger (richer) the tribe: +1 per this many people.
   raidersPerPeople: 10,
@@ -820,6 +820,14 @@ export const PLANT_COST = { food: 4 };
 // Elder Ama's lessons: each appears once, when its moment comes in play (see
 // lessonDue in engine.ts), and links what just happened to a real UN target.
 // Keep claims modest and general; no statistics.
+// Elder Ama's goodbye when the tutorial is finished (shown like a lesson, not counted as one).
+export const TUTORIAL_FAREWELL = {
+  id: "farewell",
+  title: "You are ready, chief",
+  text: "You have warmth, wood, homes, food, guards and fields. From here the choices are yours. Raiders, sickness and hard years will come, so keep food stored and fires lit. And watch the forest: once it is gone, it takes a lifetime to return. I will speak up when I see something you should know.",
+  sdg: "SDG 11: make cities and communities inclusive, safe, resilient and sustainable",
+};
+
 export const LESSONS: { id: string; title: string; text: string; sdg: string }[] = [
   {
     id: "forest",
@@ -953,12 +961,12 @@ export const AFTER_TUTORIAL_RESERVE: Partial<Resources> = { food: 60, wood: 15 }
 // `buys` lists what the step pays for: building ids, "scout", "train" or an
 // advancement id. The starting resources are worked out from it.
 export const TUTORIAL: { text: string; done: string; unlocks: string[]; buys: string[] }[] = [
-  { text: "Our people are cold, and without a fire they grow unhappy. Pick the Campfire from the bar below and place it on a green tile.", done: "campfire", unlocks: ["campfire"], buys: ["campfire"] },
-  { text: "Fires burn wood, and wood is scarce. Build a Woodcutter in the forest to keep them going.", done: "woodcutter", unlocks: ["woodcutter"], buys: ["woodcutter"] },
-  { text: "Good! Now build a Hut so more people have shelter.", done: "hut", unlocks: ["hut"], buys: ["hut"] },
-  { text: "We need food. Place a Gatherer's Camp. Berry bushes give a bonus.", done: "gatherer", unlocks: ["gatherer"], buys: ["gatherer"] },
-  { text: "The world is hidden. Press Scout to explore new land.", done: "scout", unlocks: ["scout"], buys: ["scout"] },
-  { text: "Raiders roam these lands. Build a War Camp, then train a warrior to defend us.", done: "train", unlocks: ["warcamp", "train"], buys: ["warcamp", "train"] },
-  { text: "Our elders have learned a lot. Open Advancements and research Early Farming.", done: "early-farming", unlocks: ["advancements"], buys: ["early-farming"] },
-  { text: "Now we can plant grain. Place Farmland on a green tile for a steady supply of food.", done: "farm", unlocks: ["farm"], buys: ["farm"] },
+  { text: "Welcome, chief. Our people are cold and tired after the long walk. First, warmth: pick the Campfire below and place it on open grass. Look at what it gives us, and what it costs.", done: "campfire", unlocks: ["campfire"], buys: ["campfire"] },
+  { text: "Feel that warmth! But a fire eats wood, and so will everything we build. Put a Woodcutter in the forest. Remember: every tree it cuts takes many years to grow back.", done: "woodcutter", unlocks: ["woodcutter"], buys: ["woodcutter"] },
+  { text: "Wood is coming in. Now our people need a roof. Build a Hut, and more families can join us.", done: "hut", unlocks: ["hut"], buys: ["hut"] },
+  { text: "A roof over our heads, but empty bellies. Place a Gatherer's Camp to collect wild food. Berry bushes give more.", done: "gatherer", unlocks: ["gatherer"], buys: ["gatherer"] },
+  { text: "Food is coming. But we don't know what lies beyond these hills. Press Scout and send our young ones to look.", done: "scout", unlocks: ["scout"], buys: ["scout"] },
+  { text: "The scouts saw smoke from other camps, and not everyone out there is friendly. Build a War Camp, then train our first warrior.", done: "train", unlocks: ["warcamp", "train"], buys: ["warcamp", "train"] },
+  { text: "With a guard at the camp, we can think about tomorrow. Every day our people learn a little just by living: that is Knowledge, the bulb at the top. Later, an Elder's Hut teaches the children and we learn faster. Spend Knowledge in Advancements. I have watched wild grain grow where seeds fall, so research Early Farming.", done: "early-farming", unlocks: ["advancements"], buys: ["early-farming"] },
+  { text: "Now we know how to plant. Place Farmland on open grass. Fields feed many, but they take the land from the wild. Everything has a price, chief. Choosing which to pay is up to you.", done: "farm", unlocks: ["farm"], buys: ["farm"] },
 ];

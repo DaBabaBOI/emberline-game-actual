@@ -8,12 +8,12 @@ import {
   isLit,
   loggingMode,
   perSecond,
-  secs,
   upgradeFor,
   woodcutterYield,
 } from "@/game/engine";
 import type { GameState } from "@/game/types";
 import { PixelIcon } from "@/components/civ/pixel-icon";
+import { CountdownFor } from "@/components/civ/hud/countdown";
 import { cn } from "@/lib/utils";
 
 // The panel that opens when you click one of your buildings: its trade-off,
@@ -119,9 +119,13 @@ export function BuildingInfo({
 
       {def.id === "campfire" && (
         <p className="mt-2 border-t-2 border-stone-300 pt-1.5">
-          {isLit(state, tile)
-            ? `Burning: about ${secs(state.fires?.[tile.id] ?? 0)}s of wood left.`
-            : "Burnt out. Click it to relight (1 wood)."}
+          {isLit(state, tile) ? (
+            <>
+              Burning: about <CountdownFor ticks={state.fires?.[tile.id] ?? 0} state={state} />s of wood left.
+            </>
+          ) : (
+            "Burnt out. Click it to relight (1 wood)."
+          )}
         </p>
       )}
     </div>

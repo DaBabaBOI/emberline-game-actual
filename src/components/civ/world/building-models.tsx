@@ -388,7 +388,6 @@ export function WarCampModel({ opacity }: ModelProps) {
           <boxGeometry args={[0.15, 0.1, 0.01]} />
         </Part>
       </group>
-      <Flame opacity={opacity} position={[0.2, 0.02, -0.25]} scale={0.7} />
     </group>
   );
 }

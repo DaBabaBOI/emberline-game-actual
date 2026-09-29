@@ -29,6 +29,7 @@ import {
   TREE,
   TREE_BY_ID,
   TUTORIAL,
+  TUTORIAL_FAREWELL,
   WARRIORS_PER_CAMP,
 } from "./content";
 import { diseaseName, isCalm, maybeOutbreak, sickShare, stepDisease } from "./disease";
@@ -544,6 +545,8 @@ export interface Warning {
   id: "fire" | "food" | "wood" | "famine" | "unrest" | "land" | "sick";
   icon: IconId;
   text: string;
+  // Ticks left on the countdown in the text; "{secs}" in the text is where it goes.
+  countdown?: number;
   severe: boolean;
 }
 
@@ -559,14 +562,16 @@ export function warnings(state: GameState): Warning[] {
     out.push({
       id: "famine",
       icon: "skull",
-      text: `Your people are starving! Famine in ${secs(Math.max(0, famineLimit - state.famineTicks))}s unless you find food.`,
+      text: "Your people are starving! Famine in {secs}s unless you find food.",
+      countdown: Math.max(0, famineLimit - state.famineTicks),
       severe: true,
     });
   } else if (netFood < 0 && state.resources.food / -netFood < 45) {
     out.push({
       id: "food",
       icon: "meat",
-      text: `Food is running low: about ${secs(state.resources.food / -netFood)}s left. Build gatherers or farms.`,
+      text: "Food is running low: about {secs}s left. Build gatherers or farms.",
+      countdown: state.resources.food / -netFood,
       severe: state.resources.food / -netFood < 20,
     });
   }
@@ -576,7 +581,8 @@ export function warnings(state: GameState): Warning[] {
     out.push({
       id: "unrest",
       icon: "sad",
-      text: `Your people are miserable! They will leave in ${secs(Math.max(0, unrestLimit - state.unrestTicks))}s unless you cheer them up.`,
+      text: "Your people are miserable! They will leave in {secs}s unless you cheer them up.",
+      countdown: Math.max(0, unrestLimit - state.unrestTicks),
       severe: true,
     });
   }
@@ -948,7 +954,9 @@ function advanceTutorial(state: GameState): GameState {
         : state.researched.includes(step.done) || (counts[step.done] ?? 0) > 0;
   if (!done) return state;
   const next = { ...state, tutorialStep: state.tutorialStep + 1 };
-  return next.tutorialStep >= TUTORIAL.length ? startGrace(next) : next;
+  if (next.tutorialStep < TUTORIAL.length) return next;
+  // Elder Ama says goodbye; the next real lesson waits its usual gap after this.
+  return startGrace({ ...next, lesson: TUTORIAL_FAREWELL.id, lessonTick: state.tick });
 }
 
 // The world's troubles start a little after the tutorial ends, not during it.
@@ -1152,7 +1160,7 @@ function pickLanding(state: GameState, rand: () => number) {
   const mx = from.x + (home.x - from.x) * 0.7;
   const mz = from.z + (home.z - from.z) * 0.7;
   const meet = state.tiles
-    .filter((t) => isLand(t.terrain) && t.terrain !== "mountain" && t.revealed)
+    .filter((t) => isLand(t.terrain) && t.terrain !== "mountain" && t.revealed && !t.building)
     .reduce((best, t) => (Math.hypot(t.x - mx, t.z - mz) < Math.hypot(best.x - mx, best.z - mz) ? t : best));
   return { from, meet, home };
 }
@@ -1321,7 +1329,7 @@ function updateRaids(state: GameState): GameState {
     const mx = from.x + (home.x - from.x) * 0.7;
     const mz = from.z + (home.z - from.z) * 0.7;
     const meet = state.tiles
-      .filter((t) => isLand(t.terrain) && t.terrain !== "mountain" && t.revealed)
+      .filter((t) => isLand(t.terrain) && t.terrain !== "mountain" && t.revealed && !t.building)
       .reduce((best, t) =>
         Math.hypot(t.x - mx, t.z - mz) < Math.hypot(best.x - mx, best.z - mz) ? t : best,
       );

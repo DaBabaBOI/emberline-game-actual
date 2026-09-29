@@ -164,7 +164,7 @@ These were decided with the project owner. Do not change them without being aske
   feature gets a dev-panel button (or dev option) to trigger or test it**, e.g.
   Wildfire, +10 people.
 - **Livestock and clothing:** Herding unlocks the Livestock Pen (a little food,
-  grazing wears the land: −2 Sustainability each). Hide Clothing makes each pen
+  grazing wears the land: −2 Sustainability each). Warm Clothes (research) makes each pen
   keep `peoplePerPen` (6) people warm without a fire, so fewer fires are needed
   (less wood cut, less smoke). A trade-off, not a free upgrade.
 - **Growing is as hard as surviving** (`GROWTH_PRESSURE`): stored food above 60
@@ -212,6 +212,16 @@ These were decided with the project owner. Do not change them without being aske
   `src/components/civ/guide.ts`, drawn by `hud/guide-overlay.tsx`). Targets are
   elements with `data-guide="…"` or a map tile. While the player is saving up
   resources the hand lets go. New tutorial steps need a case in `guideFor()`.
+- **Tutorial voice:** Elder Ama's lines read as one conversation: each step
+  reacts to what the player just did before asking for the next thing. When the
+  last step is done she says goodbye (`TUTORIAL_FAREWELL`, shown in the lesson
+  panel, not counted as a lesson). Skipping the tutorial skips the goodbye.
+- **HUD stacks:** HUD panels never overlap. Top-centre stack: era prompt, raid
+  banner. Left stack: dev panel, tutorial, elder lesson. Right stack: toasts.
+  On small screens the stacks become one scrolling column with a capped height.
+  Add new panels to a stack instead of positioning them absolutely.
+- During the tutorial, the placement preview card is drawn above the guide's
+  dimming so the player can read the trade-off.
 - Multiplayer is **later**; design state so AI nations could be replaced by humans,
   but do not add a backend now.
 
