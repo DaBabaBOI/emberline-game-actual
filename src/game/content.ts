@@ -984,6 +984,9 @@ export const LESSONS: { id: string; title: string; text: string; sdg: string }[]
 
 // Ticks between two lessons, so they never pile up.
 export const LESSON_GAP = 40;
+// Big moments (an event card, a raid, an elder lesson, an outbreak out of
+// nowhere) never start within this many ticks of each other: one at a time.
+export const QUIET_GAP = 40;
 
 // Leaving the Stone Age: research Agriculture and grow to this many people.
 export const NEXT_ERA_POPULATION = 15;
