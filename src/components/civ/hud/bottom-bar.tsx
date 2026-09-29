@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { BUILDINGS, LOW_WOOD_AFTER_BUY, PLANT_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL } from "@/game/content";
 import {
+  affordableResearch,
   buildingCost,
   canAfford,
   consumption,
@@ -93,7 +94,10 @@ function ToolButton({
   children,
   locked,
   guide,
+  badge,
 }: {
+  // A small marker in the corner: something here is ready.
+  badge?: string;
   locked?: boolean;
   guide?: string;
   icon: IconId;
@@ -112,10 +116,18 @@ function ToolButton({
       disabled={disabled || locked}
       title={locked ? "Unlocks later in the tutorial" : title}
       className={cn(
-        "pixel-btn flex min-w-16 flex-col items-center justify-center gap-0.5 px-2 py-1 text-[11px] disabled:opacity-40",
+        "pixel-btn relative flex min-w-16 flex-col items-center justify-center gap-0.5 px-2 py-1 text-[11px] disabled:opacity-40",
         locked ? "bg-[#4a3b2e]" : tone,
       )}
     >
+      {badge && !locked && (
+        <span
+          className="font-num absolute -right-1 -top-1 border-2 border-[#2b2119] bg-amber-300 px-1 text-[10px] leading-tight text-[#2b2119]"
+          data-testid="tool-badge"
+        >
+          {badge}
+        </span>
+      )}
       <PixelIcon name={locked ? "lock" : icon} size={24} />
       {label}
       {!locked && children}
@@ -130,6 +142,7 @@ export function BottomBar() {
   const eraBuildings = BUILDINGS.filter((b) => b.era <= state.era);
   const inTutorial = state.tutorialStep < TUTORIAL.length;
   const counts = countBuildings(state);
+  const affordable = affordableResearch(state);
   // After the tutorial, flag purchases that would leave the fires short of wood.
   const tight = (cost: Partial<Resources>) =>
     !inTutorial && (cost.wood ?? 0) > 0 && state.resources.wood - (cost.wood ?? 0) < LOW_WOOD_AFTER_BUY;
@@ -256,7 +269,12 @@ export function BottomBar() {
             icon="star"
             label="Advancements"
             onClick={() => setPanel("tree")}
-            title="Research new technology and see your goals"
+            badge={affordable.length ? String(affordable.length) : undefined}
+            title={
+              affordable.length
+                ? `Enough Knowledge for: ${affordable.map((n) => n.name).join(", ")}`
+                : "Research new technology and see your goals"
+            }
             tone="bg-emerald-700 hover:bg-emerald-600"
           />
           {state.flags.rocket && (

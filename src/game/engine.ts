@@ -947,6 +947,34 @@ function lessonReady(id: string, state: GameState) {
   }
 }
 
+// Advancements the tribe could research right now with the Knowledge it has.
+export function affordableResearch(state: GameState) {
+  if (state.tutorialStep < TUTORIAL.length) return [];
+  return TREE.filter(
+    (n) =>
+      !n.secret &&
+      !n.comingSoon &&
+      !state.researched.includes(n.id) &&
+      n.requires.every((r) => state.researched.includes(r)) &&
+      state.resources.knowledge >= n.cost,
+  );
+}
+
+// When Knowledge first covers an advancement, Elder Ama says so (once each).
+function knowledgeReady(state: GameState): GameState {
+  const told = state.knowledgeNotified ?? [];
+  const fresh = affordableResearch(state)
+    .filter((n) => !told.includes(n.id))
+    .sort((a, b) => a.cost - b.cost);
+  if (!fresh.length) return state;
+  const node = fresh[0];
+  return {
+    ...state,
+    knowledgeNotified: [...told, ...fresh.map((n) => n.id)],
+    log: [`Elder Ama: "We have learned enough for ${node.name}. Open Advancements to spend our Knowledge."`, ...state.log].slice(0, 30),
+  };
+}
+
 // Show the next elder lesson whose moment has come: one at a time, spaced out,
 // never during the tutorial or an event.
 export function lessonDue(state: GameState): GameState {
@@ -1161,6 +1189,7 @@ function tick(state: GameState): GameState {
   }
   next = checkSecrets(next);
   next = lessonDue(next);
+  next = knowledgeReady(next);
   next = advanceTutorial(next);
   return { ...next, meters: computeMeters(next) };
 }
