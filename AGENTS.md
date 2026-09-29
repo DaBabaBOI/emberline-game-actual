@@ -76,10 +76,11 @@ These were decided with the project owner. Do not change them without being aske
   gatherer); dev starts get a woodcutter and a campfire. Unrest can't start
   during the calm period after the tutorial. The last woodcutter can't be
   sold, so the player can never soft-lock with no wood.
-- **Tutorial budget:** a new game starts with exactly what the tutorial buys
-  (`tutorialBudget()`, from `TUTORIAL[].buys`) plus `AFTER_TUTORIAL_RESERVE`,
-  and the clock is held while the hand is guiding, so nobody waits. If you add
-  or change a tutorial step, fill in its `buys`.
+- **Tutorial budget:** Elder Ama hands over each step's exact cost when the step
+  starts (`tutorialBudget(state, [step])` in `advanceTutorial`), plus
+  `TUTORIAL_START_FOOD` (20) at the start and the rest of `AFTER_TUTORIAL_RESERVE`
+  (40 food, 10 wood in all) at the goodbye. There is never a big pile. When you
+  add or change a tutorial step, fill in its `buys`.
 - **People on the map are representative:** at most 20 figures at once
   (`MAX_FIGURES` / `figureCounts()` in `world/villagers.tsx`), roughly one per
   three people and one per two warriors. Food use still scales with the real

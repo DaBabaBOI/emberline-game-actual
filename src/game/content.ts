@@ -387,7 +387,7 @@ export const TREE: TreeNode[] = [
     branch: "knowledge",
     era: 0,
     cost: 6,
-    requires: ["fire"],
+    requires: ["toolmaking"],
     unlocks: ["elder"],
   },
   {
@@ -445,7 +445,7 @@ export const TREE: TreeNode[] = [
     branch: "culture",
     era: 0,
     cost: 10,
-    requires: ["fire"],
+    requires: ["toolmaking"],
     unlocks: ["healer"],
   },
   {
@@ -804,7 +804,8 @@ export const EVENTS: EventCard[] = [
 // Each step unlocks the buildings/tools it introduces. Until the tutorial ends
 // (or is skipped), anything not yet introduced stays locked.
 // What's left over once the tutorial is done. On top of this, a new game starts
-// with exactly what the tutorial buys (see tutorialBudget), so nobody waits.
+// with exactly what each tutorial step buys, handed over step by step (see
+// tutorialBudget and advanceTutorial), so nobody waits and nothing piles up.
 // How the land reacts. Sustainability measures how much forest is left around
 // the village (plus fire smoke and quarry pits); woodcutters really fell trees.
 export const LAND = {
@@ -1061,6 +1062,9 @@ export const LOW_WOOD_AFTER_BUY = 10;
 export const GRACE_AFTER_TUTORIAL = { event: 150, raid: 300, disease: 300 };
 
 export const AFTER_TUTORIAL_RESERVE: Partial<Resources> = { food: 40, wood: 10 };
+// Of that reserve, this much food is in the stores from the very start (so the
+// food count isn't an alarming 0 during the tutorial); the rest comes at the end.
+export const TUTORIAL_START_FOOD = 20;
 
 // `buys` lists what the step pays for: building ids, "scout", "train" or an
 // advancement id. The starting resources are worked out from it.
