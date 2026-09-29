@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ERAS, formatYear, LESSONS, METERS, METER_SDG, MIN_SUSTAINABILITY_FOR_BEST_ENDING, NEXT_ERA_POPULATION } from "@/game/content";
-import { clearSave, makeDebrief, readyForNextEra, secs } from "@/game/engine";
+import { ERAS, formatYear, LESSONS, METERS, METER_SDG, MIN_SUSTAINABILITY_FOR_BEST_ENDING } from "@/game/content";
+import { clearSave, currentGoal, makeDebrief, readyForNextEra, secs } from "@/game/engine";
 import type { Debrief as DebriefData } from "@/game/types";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
@@ -208,6 +208,21 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
 
 // The call to move on: shown once the Stone Age goals are met, with a hint
 // on what's missing once Agriculture is known.
+// Always one line saying what to aim for next (hidden while the tutorial or a
+// guided step is already telling the player).
+export function GoalLine() {
+  const { state } = useGame();
+  const goal = currentGoal(state);
+  if (!goal) return null;
+  return (
+    <div className="pointer-events-none flex justify-center">
+      <span className="pixel-panel-dark font-pixel max-w-[min(92vw,640px)] px-3 py-1 text-center text-xs" data-testid="goal-line">
+        {goal}
+      </span>
+    </div>
+  );
+}
+
 export function NextEraPrompt() {
   const { state, dispatch } = useGame();
   if (state.era !== 0 || state.debrief || state.phase !== "playing") return null;
@@ -224,11 +239,7 @@ export function NextEraPrompt() {
         >
           Your people are ready: enter the Ancient era
         </button>
-      ) : (
-        <span className="pixel-panel-dark font-pixel px-3 py-1 text-xs">
-          Grow to {NEXT_ERA_POPULATION} people to enter the Ancient era (now {Math.floor(state.population)})
-        </span>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -1,5 +1,9 @@
 import {
   AFTER_TUTORIAL_RESERVE,
+  formatYear,
+  XP,
+  chiefTitle,
+  xpToReach,
   TUTORIAL_START_FOOD,
   ROMAN_LEGION,
   FORESTER_GROWTH,
@@ -92,6 +96,7 @@ export type Action =
   | { type: "devGrant" }
   | { type: "devPeople" }
   | { type: "devFiresOut" }
+  | { type: "devXp" }
   | { type: "devOutbreak" }
   | { type: "devRaid" }
   | { type: "devRomans" }
@@ -1823,7 +1828,69 @@ function withMeters(state: GameState): GameState {
 // Every action, then check whether the guided after-step has been done.
 export function reducer(state: GameState, action: Action): GameState {
   const next = reduce(state, action);
-  return next.coach ? advanceCoach(next) : next;
+  return awardXp(state, next.coach ? advanceCoach(next) : next);
+}
+
+// Chief XP for what just happened: compare the state before and after an action.
+function awardXp(prev: GameState, next: GameState): GameState {
+  if (next === prev || next.phase !== "playing") return next;
+  let gain = 0;
+  const a = prev.stats ?? { built: 0, peakPopulation: 0, raidsWon: 0 };
+  const b = next.stats ?? a;
+  const built = b.built - a.built;
+  if (built > 0) {
+    gain += built * XP.build;
+    const before = countBuildings(prev);
+    const after = countBuildings(next);
+    gain += Object.keys(after).filter((id) => !before[id]).length * XP.firstBuild;
+  }
+  gain += Math.max(0, Math.floor(b.peakPopulation) - Math.floor(a.peakPopulation)) * XP.person;
+  gain += Math.max(0, next.researched.length - prev.researched.length) * XP.research;
+  gain += Math.max(0, b.raidsWon - a.raidsWon) * XP.raidWon;
+  gain += Math.max(0, (next.planted ?? 0) - (prev.planted ?? 0)) * XP.plant;
+  gain += Math.max(0, next.era - prev.era) * XP.era;
+  if (next.tick !== prev.tick && next.tick % XP.minuteTicks === 0 && next.tutorialStep >= TUTORIAL.length) {
+    if (next.meters.food >= 45) gain += XP.fedMinute;
+    if (next.meters.sustainability >= MIN_SUSTAINABILITY_FOR_BEST_ENDING) gain += XP.healthyMinute;
+  }
+  if (gain <= 0) return next;
+  const xp = (next.xp ?? 0) + gain;
+  let level = next.chiefLevel ?? 1;
+  let knowledge = next.resources.knowledge;
+  const log = [...next.log];
+  while (xp >= xpToReach(level + 1)) {
+    level += 1;
+    knowledge += XP.levelKnowledge;
+    log.unshift(`Chief level ${level}: ${chiefTitle(level)}! (+${XP.levelKnowledge} Knowledge)`);
+  }
+  return { ...next, xp, chiefLevel: level, resources: { ...next.resources, knowledge }, log: log.slice(0, 30) };
+}
+
+// The one thing to aim for right now, in a line (null while the tutorial or a
+// guided step is already telling the player what to do).
+export function currentGoal(state: GameState): string | null {
+  if (state.tutorialStep < TUTORIAL.length || state.coach || state.phase !== "playing" || state.debrief) return null;
+  const pop = Math.floor(state.population);
+  if (state.era === 0) {
+    if (!state.researched.includes("agriculture")) {
+      const cost = TREE_BY_ID.agriculture.cost;
+      const open = goalProgress(state, "agriculture").find((g) => g.have < g.need);
+      const k = Math.floor(state.resources.knowledge);
+      const parts = [open ? `${open.label} (${Math.floor(open.have)}/${open.need})` : null, k < cost ? `${k}/${cost} Knowledge` : null]
+        .filter(Boolean)
+        .join(", ");
+      return parts
+        ? `Goal: learn Agriculture to reach the Ancient era. Still needed: ${parts}.`
+        : "Goal: Agriculture is ready. Open Advancements and research it.";
+    }
+    if (pop < NEXT_ERA_POPULATION) return `Goal: grow to ${NEXT_ERA_POPULATION} people to enter the Ancient era (${pop}/${NEXT_ERA_POPULATION}).`;
+    return null;
+  }
+  if (state.era === 1 && !state.legionDone) {
+    if (state.legion || state.raid?.roman) return "Goal: hold off the Roman legion!";
+    return `Goal: get ready for Rome. Their legion lands around ${formatYear(ROMAN_LEGION.warningYear)}. Our defense: ${defenseStrength(state)}.`;
+  }
+  return `Goal: keep the village thriving. Land health: ${state.meters.sustainability}.`;
 }
 
 function reduce(state: GameState, action: Action): GameState {
@@ -2181,6 +2248,13 @@ function step(state: GameState, action: Action): GameState {
     case "devFiresOut":
       if (!state.dev) return state;
       return withMeters({ ...state, fires: {}, log: ["Dev: all campfires put out.", ...state.log].slice(0, 30) });
+
+    case "devXp": {
+      // Award XP the normal way (a planted-sapling-sized nudge would be too slow).
+      if (!state.dev) return state;
+      const bumped = { ...state, xp: (state.xp ?? 0) + 100 - XP.plant, planted: (state.planted ?? 0) + 1 };
+      return { ...bumped, log: ["Dev: +100 XP.", ...bumped.log].slice(0, 30) };
+    }
 
     case "devPeople":
       if (!state.dev) return state;

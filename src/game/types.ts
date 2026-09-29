@@ -259,6 +259,9 @@ export interface GameState {
   famineTicks: number;
   // Seconds in a row that happiness has been below UNREST_LEVEL.
   unrestTicks: number;
+  // Chief XP (only goes up) and level (missing in older saves: 0 and 1).
+  xp?: number;
+  chiefLevel?: number;
   // How worn out the land is: counts up while Sustainability is below LAND.strainLevel.
   strainTicks: number;
   // How many people are sick right now, and how many the current outbreak has killed.

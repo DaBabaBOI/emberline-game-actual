@@ -9,6 +9,9 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "Chief level: an XP bar in the top bar that fills as you build, grow, research, win raids, plant trees and keep everyone fed. Each level gives a title and a little Knowledge.",
+      "A goal line under the top bar always says what to aim for next, with your progress.",
+      "New games open with a short story: who your people are, your goal, and how you can lose.",
       "Dev mode: new Sparks and Clear forest buttons to test house fires, rain and Sustainability.",
       "The tutorial teaches it too: Elder Ama tells you to leave a patch of ground between your house and the fire.",
       "Huts are now Wooden Houses (log walls, bark roof): thatch needs straw, and there's no straw before farming.",
