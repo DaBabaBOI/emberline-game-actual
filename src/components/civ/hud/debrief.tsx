@@ -208,7 +208,7 @@ export function NextEraPrompt() {
   if (!state.researched.includes("agriculture")) return null;
   const ready = readyForNextEra(state);
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-28 flex justify-center md:top-20">
+    <div className="pointer-events-none flex justify-center">
       {ready ? (
         <button
           type="button"

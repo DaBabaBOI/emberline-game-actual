@@ -268,7 +268,13 @@ export function WorldCanvas() {
       {hoverTile && Ghost && (
         <group position={[hoverTile.x, tileTop(hoverTile), hoverTile.z]} scale={1.55}>
           <Ghost opacity={0.45} />
-          <Html zIndexRange={[15, 0]} center position={[0, 1.1, 0]} style={{ pointerEvents: "none" }}>
+          <Html
+            // In the tutorial the card sits above the dimming so it can be read.
+            zIndexRange={state.tutorialStep < TUTORIAL.length ? [40, 30] : [15, 0]}
+            center
+            position={[0, 1.1, 0]}
+            style={{ pointerEvents: "none" }}
+          >
             {error ? (
               <div className="pixel-panel-dark font-pixel whitespace-nowrap px-2 py-1 text-xs">{error}</div>
             ) : (

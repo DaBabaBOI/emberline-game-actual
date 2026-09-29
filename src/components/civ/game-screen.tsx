@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { clearSave, loadGame, newGame, type NewGameOptions } from "@/game/engine";
 import type { CultureId, DifficultyId, GameState } from "@/game/types";
+import { cn } from "@/lib/utils";
 import { GameProvider, useGame } from "./game-provider";
 import { TitleScreen } from "./title-screen";
 import { TopBar } from "./hud/top-bar";
@@ -29,6 +30,8 @@ const WorldCanvas = dynamic(
 
 function Hud({ onRestart }: { onRestart: () => void }) {
   const { panel, setSelected } = useGame();
+  // The Advancements tree fills the screen: Elder Ama steps down to the corner.
+  const treeOpen = panel === "tree";
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -43,17 +46,39 @@ function Hud({ onRestart }: { onRestart: () => void }) {
       <TopBar />
       <SideMeters side="left" />
       <SideMeters side="right" />
-      <TutorialPanel />
-      <ElderLesson />
-      <Toasts />
-      <RaidBanner />
+      {/* Everything that pops up under the top bar lives in stacks, so panels
+          queue up instead of drawing over each other. Wide screens get three
+          columns (panels left, notices centre, messages right); smaller
+          screens get one column. */}
+      <div
+        className={cn(
+          "absolute left-11 right-11 top-24 flex max-h-[calc(100dvh-22rem)] flex-col gap-2 overflow-y-auto md:left-16 md:right-auto md:top-20 md:max-h-[calc(100dvh-17rem)] md:w-80 lg:contents",
+          treeOpen && "bottom-10 top-auto md:left-auto md:right-6 md:top-auto",
+        )}
+      >
+        <div className="flex flex-col items-center gap-2 lg:absolute lg:left-[25rem] lg:right-[21rem] lg:top-20">
+          <NextEraPrompt />
+          <RaidBanner />
+        </div>
+        <div
+          className={cn(
+            "flex flex-col gap-2 lg:absolute lg:left-16 lg:top-20 lg:max-h-[calc(100dvh-16rem)] lg:w-80 lg:overflow-y-auto",
+            treeOpen && "lg:bottom-12 lg:left-auto lg:right-8 lg:top-auto",
+          )}
+        >
+          <DevPanel />
+          <TutorialPanel />
+          <ElderLesson />
+        </div>
+        <div className="flex flex-col items-end lg:absolute lg:right-16 lg:top-20 lg:w-64">
+          <Toasts />
+        </div>
+      </div>
       <Warnings />
-      <DevPanel />
       <BottomBar />
       {panel === "tree" && <TreeOverlay />}
       <GuideOverlay />
       <EventModal />
-      <NextEraPrompt />
       <Debrief onRestart={onRestart} />
     </div>
   );
