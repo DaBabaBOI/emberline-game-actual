@@ -100,6 +100,7 @@ function SustainabilityPanel({ onClose }: { onClose: () => void }) {
       <p className="mb-2 text-stone-600">
         How healthy your land is. It starts at 100, and each choice below takes some of it away.
       </p>
+      {parts.length === 0 && <p className="text-emerald-700">Nothing is harming the land right now.</p>}
       <ul className="flex flex-col gap-1.5">
         {parts.map((p) => (
           <li key={p.label} className="flex flex-col">

@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "The Sustainability panel only lists what is actually affecting the land (no more \"Forest standing: 100% +0\").",
       "The pointing hand now picks spots that avoid harm: quarries go well away from the village and its fields, gatherers away from fires, fields away from forest when it can.",
       "Deer and boar now walk: their legs swing and their bodies bob as they move.",
       "The old grove is marked on the map once you protect it (standing stones and a label), and nothing can be built on it.",
