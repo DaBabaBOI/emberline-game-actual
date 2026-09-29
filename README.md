@@ -12,12 +12,16 @@ No install needed. It runs in the browser, on a laptop or a phone.
 
 ---
 
-> **Media placeholders. Replace before judging.** Files go in [`assets/`](assets/).
->
-> - **[SCREENSHOT 1: PLACEHOLDER]** `assets/screenshot-village.png`: a healthy village, Sustainability high
-> - **[SCREENSHOT 2: PLACEHOLDER]** `assets/screenshot-cutover.png`: the same area after clear-cutting: stumps, bare ground, smoke
-> - **[GIF: PLACEHOLDER]** `assets/gameplay.gif`: placing a woodcutter, its trade-off card, and the Sustainability breakdown
-> - **[DEMO VIDEO: PLACEHOLDER]** link: _to be added_
+![A Stone Age village](docs/images/04-village-stone.png)
+
+**Judges:** the full documentation, mapped to each judging criterion, is in
+[`docs/`](docs/README.md): [game design](docs/design.md),
+[architecture diagrams](docs/architecture.md),
+[process and testing](docs/process.md) and the
+[finals presentation plan](docs/presentation.md), with real screenshots.
+
+> **Still to add before judging:** a gameplay GIF (`assets/gameplay.gif`) and a
+> demo video link.
 
 ---
 
