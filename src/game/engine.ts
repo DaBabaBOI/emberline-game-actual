@@ -366,8 +366,14 @@ export function fireRisk(state: GameState) {
 function pickEvent(roll: number, state: GameState) {
   const wildfire = Math.min(FIRE_RISK.max, FIRE_RISK.base + FIRE_RISK.perForestTile * fireRisk(state));
   // Never the same card twice in a row.
+  // The old grove only comes up once, and only while there is old forest to protect.
+  const grovePossible = !(state.protectedTiles ?? []).length && oldestForest(state, 4).length >= 2;
   const weights = EVENTS.map((e) =>
-    e.id === state.lastEvent || (e.era ?? 0) > state.era ? 0 : e.id === "wildfire" ? wildfire : 1,
+    e.id === state.lastEvent || (e.era ?? 0) > state.era || (e.id === "sacred-grove" && !grovePossible)
+      ? 0
+      : e.id === "wildfire"
+        ? wildfire
+        : 1,
   );
   let r = roll * weights.reduce((a, b) => a + b, 0);
   for (let i = 0; i < EVENTS.length; i++) {
@@ -419,6 +425,7 @@ export function placementError(state: GameState, tile: Tile, def: BuildingDef): 
   }
   if (!tile.revealed) return "Unexplored land";
   if (tile.building) return "Already built here";
+  if (state.protectedTiles?.includes(tile.id)) return "The old grove is protected";
   if (!def.terrain.includes(tile.terrain)) return `Needs ${def.terrain.join(" / ")}`;
   if (def.needsWaterNeighbor) {
     const touchesWater = state.tiles.some(

@@ -45,6 +45,38 @@ function HexOutline({ x, y, z, color }: { x: number; y: number; z: number; color
   );
 }
 
+// The old grove the tribe swore to protect: small standing stones on each of its
+// tiles and a label over the middle, so it's clear which trees are safe.
+function OldGrove({ tiles, ids }: { tiles: Tile[]; ids: number[] }) {
+  const grove = ids.map((id) => tiles[id]).filter((t): t is Tile => !!t && t.revealed);
+  if (!grove.length) return null;
+  const cx = grove.reduce((sum, t) => sum + t.x, 0) / grove.length;
+  const cz = grove.reduce((sum, t) => sum + t.z, 0) / grove.length;
+  const centre = grove.reduce((best, t) => (Math.hypot(t.x - cx, t.z - cz) < Math.hypot(best.x - cx, best.z - cz) ? t : best));
+  return (
+    <group>
+      {grove.map((t) =>
+        [0.3, 2.4, 4.5].map((a) => (
+          <mesh
+            key={`${t.id}-${a}`}
+            position={[t.x + Math.cos(a) * 0.78, t.height + 0.12, t.z + Math.sin(a) * 0.78]}
+            castShadow
+            raycast={() => null}
+          >
+            <boxGeometry args={[0.1, 0.26, 0.08]} />
+            <meshStandardMaterial color="#cfc8bb" flatShading />
+          </mesh>
+        )),
+      )}
+      <Html zIndexRange={[15, 0]} center position={[centre.x, centre.height + 1.9, centre.z]} style={{ pointerEvents: "none" }}>
+        <div className="pixel-panel font-pixel whitespace-nowrap px-1.5 py-0.5 text-[11px]" data-testid="grove-label">
+          Old grove (protected)
+        </div>
+      </Html>
+    </group>
+  );
+}
+
 const probe = new Vector3();
 
 // Tells the tutorial overlay where the tile it points at is on screen.
@@ -200,6 +232,7 @@ export function WorldCanvas() {
 
       <HexTerrain tiles={state.tiles} home={home} wear={landStrain(state)} era={state.era} onHover={setHovered} onPick={pick} />
       <Forests tiles={state.tiles} />
+      <OldGrove tiles={state.tiles} ids={state.protectedTiles ?? []} />
       <Mountains tiles={state.tiles} onHover={setHovered} onPick={pick} />
       <Deposits tiles={state.tiles} />
       <BiomeDetails tiles={state.tiles} />
