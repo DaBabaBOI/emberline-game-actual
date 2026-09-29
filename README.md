@@ -33,9 +33,11 @@ it:
 | You build… | You get… | The land pays… |
 | --- | --- | --- |
 | Woodcutter | Wood for fires and building | It fells the trees around it; once they're gone it makes no wood |
-| Campfire | Warmth for 10 people | Burns wood, adds smoke, raises the risk of a wildfire in nearby trees |
+| Campfire | Warmth for 10 people | Burns wood, adds smoke, raises the risk of a wildfire in nearby trees, and scares the animals away from a gatherer's camp next to it |
+| Gatherer's Camp | Wild food, more on berry bushes | Each extra camp adds only a quarter of a camp's food, and past two camps the animals are hunted faster than they can breed |
 | Hut | Room for 6 more people | More people eat more food and need more fires |
 | Farmland | Lots of steady food | Clears wild land for good |
+| Stone Quarry | Stone for better buildings | Cuts away the hillside, and its dust covers crops and berries nearby (less food within 2 tiles) |
 | Livestock Pen | Food, and later warm clothes so fewer fires are needed | Grazing wears down the grass |
 | Bronze Smithy *(Ancient)* | Better tools: +20% food and wood | Burns wood for charcoal all the time, heavy smoke |
 | Irrigation Canal *(Ancient)* | Neighbouring farms grow 50% more | Watered soil slowly turns salty |
@@ -50,7 +52,7 @@ And for the big choices there is a slower option that lasts:
 - Build a **Granary** instead of letting surplus food rot.
 
 **Sustainability measures how much forest is still standing** around the
-village (minus smoke, quarry pits, fields and more). Click it to see exactly
+village (minus smoke, quarries, fields, too many gatherer camps and more). Click it to see exactly
 what is pulling it down. It recovers only as fast as the forest grows back.
 Push it too low for too long and the land wears out: forests stop regrowing and
 harvests shrink. You can see the damage on the map: stumps and bare ground,
@@ -58,18 +60,26 @@ smoke over the fires, fewer deer to hunt.
 
 ## How the game teaches
 
-- **See the cost before you build.** Trade-off cards on every placement, stumps
+- **See the cost before you build.** Trade-off cards beside every placement
+  (with warnings like "dust would cut the food of 2 buildings nearby"), stumps
   on every building card, and a Sustainability breakdown with a trend arrow.
+- **A tutorial that talks to you.** Elder Ama walks you through your first fire,
+  woodcutter, hut, camp, scouts, warrior and farm as one conversation. She
+  explains the stumps on each building and how Knowledge is earned, then says
+  goodbye when you're ready.
 - **Elder Ama's lessons.** When something happens in play (the forest shrinks,
-  food rots, smoke builds up, sickness spreads in crowded huts, the soil turns
-  salty), she explains the lesson and links it to a real UN target.
+  too many camps hunt the herds, food rots, smoke builds up, sickness spreads in
+  crowded huts, the soil turns salty), she explains the lesson and links it to a
+  real UN target.
 - **Real-world event cards.** Dilemmas like a sacred grove, overhunting, a rich
   but flood-prone riverbank, or fires inside the huts. Each card says how it
   connects to the world today.
 - **A debrief at the end of each era.** Achievements next to what they cost
   (forest lost, time the land was unhealthy, lives lost), every meter with its
   SDG target, and the lessons your people learned. The **best ending needs
-  Sustainability of 60 or more**, so growth can't just ignore the damage.
+  Sustainability of 60 or more**, so growth can't just ignore the damage. And a
+  village that starves or breaks up never gets a good ending, however healthy
+  the land is.
 
 ### How it maps to the SDGs
 
@@ -92,8 +102,14 @@ and events also link to these goals:
   a trade-off card first. Sell any of them back for half.
 - **Balance six meters**: Food, Shelter, Happiness, Literacy, Energy and
   Sustainability.
-- **Watch your people** walk to work, sit around the fire, fall sick, and hunt.
-- **Defend against raiders.** Your warriors march out and fight on the map.
+- **Watch your people** walk to work, sit on the logs around the fire, fall
+  sick, and hunt. Hover a hut to see how many live there.
+- **Earn Knowledge from milestones**: your first of each building, your tribe
+  growing, scouting new land, beating raiders, planting saplings. Elder's Huts
+  and schools teach a little all the time. Elder Ama tells you when you have
+  enough to research something new.
+- **Defend against raiders.** Your warriors march out and fight on the map. The
+  raid banner shows how your defense adds up.
 - **Survive sickness.** Before Herbalism your people call it a curse from the
   gods; after it, healers can help.
 - **Reach the Ancient era** (research Agriculture, grow to 15 people): bronze,
@@ -104,7 +120,8 @@ and events also link to these goals:
 - **Three ways to lose**: famine, unrest (people too unhappy for too long), or
   conquest. Every warning gives you a countdown first.
 
-The game autosaves in your browser.
+The game autosaves in your browser. An **Updates** bar at the top of the project
+page and the title screen lists what's new.
 
 ## Roadmap
 
@@ -145,12 +162,21 @@ carry the same trade-offs further:
   alternatives (selective logging, replanting, clothes), elder lessons and
   real-world event cards.
 - **The tutorial had rough edges.** Players could skip ahead, then had to wait
-  for resources, and skipping it left the tribe with no fire. We added a
+  for resources, and skipping it left the tribe with no fire or defense. The
+  lines also read like separate orders, not a person talking. We added a
   pointing hand that blocks other clicks, started players with exactly the
-  resources the tutorial needs, and gave skippers the basic buildings.
+  resources the tutorial needs, gave skippers the basic buildings and a warrior,
+  and rewrote Elder Ama's lines as one conversation.
+- **Some choices had no downside.** Gatherer camps were safe to spam, the quarry's
+  cost ("digs pits") was something nobody cared about, and a trickle of
+  Knowledge felt both too fast and too slow. Extra camps now add much less food
+  and hurt the wildlife, quarry dust cuts nearby harvests, and Knowledge comes
+  from milestones.
 - **Small bugs added up.** A lost game could be "continued" for a few seconds
-  from an old save, digits 2, 5 and 8 looked alike, and the tutorial pointed at
-  buttons off the edge of a phone screen. Each got fixed as players found it.
+  from an old save, a loss could be called "the best ending", digits 2, 5 and 8
+  looked alike, countdowns skipped seconds, panels drew over each other, and
+  the tutorial pointed at buttons off the edge of a phone screen. Each got fixed
+  as players found it.
 
 ## Controls
 
@@ -177,6 +203,7 @@ src/
   game/                 Pure game logic, no React
     types.ts            Game state and data shapes
     content.ts          Eras, buildings, advancements, events, lessons, tutorial (data)
+    updates.ts          The "what's new" list shown in the Updates bar
     engine.ts           The simulation: reducer, ticks, meters, raids, the legion, saving
     disease.ts          Sickness: outbreaks, spread, recovery
     map.ts, hex.ts      Hex grid maths and the island map generator
@@ -189,6 +216,8 @@ src/
     title-screen.tsx    Name, culture and difficulty picker
     hud/                Top bar, meters, bottom bar, advancements, lessons, debrief
     world/              Everything 3D: terrain, buildings, people, battles, smoke
+  components/
+    updates-bar.tsx     The Updates bar at the top of the pages
   app/
     page.tsx            Project page (for judges and visitors)
     play/page.tsx       The game
@@ -221,8 +250,11 @@ have someone else review it. Commit messages are imperative ("add farmland", not
 **Dev mode:** open `/play/?dev`
 (https://dabababoi.github.io/shistech-hackathon/play/?dev). You can start in any
 era with plenty of resources, and a dev panel lets you trigger every feature:
-wildfire, raid, the Roman legion, an outbreak, an event card, an elder lesson,
-fires out, +10 people, finish the era.
+wildfire, raid, the Roman legion, an outbreak, any event card or elder lesson
+(picked from a list), fires out, +10 people, finish the era.
+
+**Updates log:** every change a player would notice gets a line in
+`src/game/updates.ts`, which feeds the Updates bar.
 
 **Using an AI assistant?** Point it at [`AGENTS.md`](AGENTS.md) first. It holds
 the design decisions the game must stay true to.
