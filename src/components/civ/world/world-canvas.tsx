@@ -268,7 +268,7 @@ export function WorldCanvas() {
         hidden={battleShowing}
       />
       <BattleScene tiles={state.tiles} battle={battleShowing ? state.battle ?? null : null} homeTile={home} />
-      <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} />
+      <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} speed={state.speed} />
       <Wildlife
         tiles={state.tiles}
         homeTile={home}
