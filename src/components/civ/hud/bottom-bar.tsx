@@ -18,6 +18,7 @@ import {
   isUnlocked,
   perSecond,
   production,
+  rainfall,
   scoutCost,
   spearmenOf,
   tutorialLocked,
@@ -180,6 +181,14 @@ export function BottomBar() {
           {foodSpoiling(state) > 0.05 && (
             <span className="font-num whitespace-nowrap text-[11px] text-amber-300" title={`Stored food above ${foodKeeps(state)} rots away. Granaries keep more.`}>
               rot −{perSec(foodSpoiling(state))}/s
+            </span>
+          )}
+          {(counts.farm ?? 0) > 0 && (
+            <span
+              className={cn("font-num whitespace-nowrap text-[11px]", rainfall(state) < 0.8 ? "text-amber-300" : "text-white/60")}
+              title="Forests bring rain. Fields grow this share of their food."
+            >
+              rain {Math.round(rainfall(state) * 100)}%
             </span>
           )}
           <Stat icon="log" title="Wood per second" bad={prod.wood < 0}>

@@ -9,6 +9,8 @@ import {
   buildingCost,
   DEMOLISH_TOOL,
   dustNote,
+  forestToClear,
+  rainfall,
   spearmenOf,
   residents,
   fireScareNote,
@@ -113,6 +115,11 @@ export function WorldCanvas() {
   // With no tool picked, hovering a home shows who lives there.
   const dwellers = !selected && hoverTile ? residents(state, hoverTile) : null;
   const scare = def && !error && hoverTile ? fireScareNote(state, hoverTile, def.id) : null;
+  const clears = def?.id === "farm" && !error && hoverTile ? forestToClear(state, hoverTile) : null;
+  const farmNote =
+    def?.id === "farm" && !error && hoverTile
+      ? `${clears ? "Clears the forest next to it for good. " : ""}Rain now: fields grow ${Math.round(rainfall(state) * 100)}%.`
+      : null;
   const dust = def && !error && hoverTile ? dustNote(state, hoverTile, def.id) : null;
   const gather = def?.id === "gatherer" && !error && hoverTile && !inTutorialNow ? gatherNote(state) : null;
 
@@ -309,6 +316,12 @@ export function WorldCanvas() {
                   <PixelIcon name={def!.landImpact ? "stump" : "leaf"} size={12} />
                   {def!.landCost}
                 </span>
+                {farmNote && (
+                  <span className="flex items-start gap-1.5 text-amber-200">
+                    <PixelIcon name="warning" size={12} />
+                    {farmNote}
+                  </span>
+                )}
                 {scare && (
                   <span className="flex items-start gap-1.5 text-amber-200">
                     <PixelIcon name="warning" size={12} />

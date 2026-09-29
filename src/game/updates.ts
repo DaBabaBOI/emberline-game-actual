@@ -9,6 +9,9 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "Clearer wording: a spearman counts as 1.5 warriors in a fight; Firekeeping makes fires last 50% longer; canals make fields grow 50% more.",
+      "Bronze Weapons' \"beat a raid\" goal counts any raid you have ever beaten.",
+      "Farmland clears the nearest patch of forest for good, and forests bring rain: the less forest stands, the less rain falls and the less every field grows (down to half). Watch \"rain\" by your food.",
       "Skipping the tutorial no longer leaves you its whole budget: you start with 40 food and 10 wood.",
       "Rebalanced after full test games: people eat a quarter less, woodcutters and quarries were tuned, Agriculture costs 80, raids grow more slowly over time, and the Roman legion comes about 12 minutes into the Ancient era.",
       "Food and wood come in about a third slower (gatherers, farms, fishing, pens and woodcutters), so big stockpiles take real work.",
