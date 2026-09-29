@@ -177,6 +177,11 @@ These were decided with the project owner. Do not change them without being aske
   bare rock, and a mountain loses its peak. The cut (`Tile.dug`) never grows back
   and keeps costing Sustainability after the quarry is sold (−1 per working
   quarry, up to −3 per cut hillside). Dev: "Cut hills".
+- **Farms and rain** (`FARM_RAIN`): placing Farmland clears the nearest
+  unprotected forest tile within 2 hexes for good (`forestToClear()`). Rainfall
+  = 0.5 + 0.5 x forest cover (`rainfall()`); every field grows that share. The
+  placement card, the Farmland card, the food stats ("rain %"), a warning below
+  80% and the "rain" lesson explain it.
 - **Quarry dust** (`QUARRY_DUST`): gatherers, farms and pens within 2 hexes of a
   quarry make 40% less food. The placement card says how many buildings a new
   quarry would hit (`dustNote()`), and dusty buildings say so in their info card.

@@ -3,6 +3,7 @@
 import { BUILDINGS_BY_ID, FIRE_SCARE, QUARRY_DUST } from "@/game/content";
 import {
   dusty,
+  rainfall,
   residents,
   scaredByFire,
   gathererShare,
@@ -88,6 +89,12 @@ export function BuildingInfo({
       {scaredByFire(state, tile) && (
         <p className="mt-2 border-t-2 border-stone-300 pt-1.5 text-amber-800">
           A campfire next door scares off the animals: making {Math.round(FIRE_SCARE.foodLoss * 100)}% less food.
+        </p>
+      )}
+
+      {def.id === "farm" && (
+        <p className="mt-2 border-t-2 border-stone-300 pt-1.5">
+          Rain: this field grows {Math.round(rainfall(state) * 100)}%. The more forest stands, the more rain falls.
         </p>
       )}
 

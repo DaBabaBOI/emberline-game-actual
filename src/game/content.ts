@@ -112,8 +112,8 @@ export const BUILDINGS: BuildingDef[] = [
     icon: "wheat",
     description: "Tilled fields of wild grain. Lots of food, but clears the land.",
     gain: "Lots of steady food",
-    landCost: "Clears wild land for good",
-    landImpact: 1,
+    landCost: "Clears the nearest patch of forest for good, and fewer trees means less rain for every field",
+    landImpact: 2,
     era: 0,
     cost: { wood: 12 },
     terrain: ["grass"],
@@ -607,10 +607,10 @@ export const ADVANCEMENT_GOALS: Record<string, Goal[]> = {
 export const AFTER_STEPS: Record<string, AfterStep> = {
   storytelling: { build: "elder", text: "Now our elders can teach. Build an Elder's Hut: the children will learn from it, and we will gain Knowledge every day." },
   toolmaking: { build: "quarry", text: "Sharp stone tools! Place a Stone Quarry on the hills. Remember: it cuts the hill away for good, and its dust spoils crops nearby." },
-  firekeeping: { text: "We know how to bank a fire now: every campfire burns half again as long before it needs more wood. Less wood cut, less smoke." },
+  firekeeping: { text: "We know how to bank a fire now: every campfire burns 1.5 times as long (50% longer) before it needs more wood. Less wood cut, less smoke." },
   fishing: { build: "fishing", text: "Rafts! Place a Fishing Spot on the shore, next to the water. Fish near the coast give even more." },
   "early-farming": { build: "farm", text: "We can plant grain. Place Farmland on open grass: it feeds many, but it takes the land from the wild." },
-  spears: { upgrade: true, text: "Stone-tipped spears! Our hunters bring back more food. Give one of our warriors a spear: a spearman fights half again as hard. Warriors you train from now on carry spears too." },
+  spears: { upgrade: true, text: "Stone-tipped spears! Our hunters bring back more food. Give a warrior a spear with the Spear button: in a fight, a spearman counts as 1.5 warriors (a warrior without one counts as 1). Every warrior you train from now on gets a spear." },
   herbalism: { build: "healer", text: "We know which plants heal. Build a Healer's Hut: the sick get better faster, and sickness spreads less." },
   herding: { build: "pen", text: "We can keep goats and sheep. Place a Livestock Pen: steady food, but grazing wears down the grass." },
   "hide-clothing": { text: "Warm clothes from hides and wool: each Livestock Pen now keeps 6 people warm without a fire. Fewer fires, less wood, less smoke." },
@@ -618,7 +618,7 @@ export const AFTER_STEPS: Record<string, AfterStep> = {
   writing: { build: "school", text: "Marks on clay that everyone can read! Build a Scribe School: more literacy, and Knowledge every day." },
   pottery: { build: "granary", text: "Jars that keep grain dry. Build a Granary so less of our food rots away." },
   bronze: { build: "smithy", text: "Bronze! Build a Bronze Smithy: better tools for everyone, but it burns wood for charcoal all the time." },
-  irrigation: { build: "canal", text: "Place an Irrigation Canal next to your fields: they grow half again as much, but watered soil slowly turns salty." },
+  irrigation: { build: "canal", text: "Place an Irrigation Canal next to your fields: they grow 50% more food, but watered soil slowly turns salty." },
   forestry: { build: "forester", text: "Build a Forester's Lodge near the woods: it tends young trees so the forest grows back faster." },
   "bronze-arms": { build: "walls", text: "Bronze spears and shields: every warrior fights twice as hard. Build Stone Walls to guard the village too." },
 };
@@ -890,6 +890,12 @@ export const LESSONS: { id: string; title: string; text: string; sdg: string }[]
     sdg: "SDG 15.2: stop deforestation and restore forests",
   },
   {
+    id: "rain",
+    title: "The rains are failing",
+    text: "Our fields are thirsty. Forests hold water in the ground and give it back to the air, and the rain comes back down on our land. With so much forest cut for wood and fields, the rains are weaker and our harvests smaller. Planting trees brings the rain back.",
+    sdg: "SDG 15.3: restore degraded land, including land hit by drought",
+  },
+  {
     id: "overhunting",
     title: "Too many hunters",
     text: "Our camps take berries, roots and animals from the wild. With so many camps, we hunt the deer and boar faster than they can have young, so each year there are fewer left. Fewer animals means less food for us too. Fewer camps let the wild keep up.",
@@ -1030,6 +1036,10 @@ export const FIRE_SCARE = { range: 1, foodLoss: 0.3 };
 // grows back. Sustainability: −perQuarry for each working quarry, and up to
 // −perHill for each hillside cut away (this stays after the quarry is sold).
 export const QUARRY_CUT = { perTick: 1 / 600, depth: 0.45, perQuarry: 1, perHill: 3 };
+// Fields need open land: placing Farmland clears the nearest forest tile within
+// `clearRange`. And forests bring rain: rainfall runs from `minRain` (no forest
+// left) to 1 (all of it standing), and every field grows that share.
+export const FARM_RAIN = { clearRange: 2, minRain: 0.5, warnBelow: 0.8 };
 // Quarry dust settles on the land around it: food buildings within `range`
 // hexes make `foodLoss` less food.
 export const QUARRY_DUST = { range: 2, foodLoss: 0.4, hits: ["gatherer", "farm", "pen"] };
@@ -1062,5 +1072,5 @@ export const TUTORIAL: { text: string; done: string; unlocks: string[]; buys: st
   { text: "Food is coming. But we don't know what lies beyond these hills. Press Scout and send our young ones to look.", done: "scout", unlocks: ["scout"], buys: ["scout"] },
   { text: "The scouts saw smoke from other camps, and not everyone out there is friendly. Build a War Camp, then train our first warrior.", done: "train", unlocks: ["warcamp", "train"], buys: ["warcamp", "train"] },
   { text: "With a guard at the camp, we can think about tomorrow. Every first thing we do teaches us something: the first fire, the first hut, the first time our tribe grows. That learning is Knowledge, the bulb at the top, and one day an Elder's Hut will help the children learn faster. Now, I have noticed wild grain sprouting wherever seeds fall. What if we planted them ourselves? Open Advancements and spend our Knowledge on Early Farming.", done: "early-farming", unlocks: ["advancements"], buys: ["early-farming"] },
-  { text: "Now we know how to plant. Place Farmland on open grass. Fields feed many, but they take the land from the wild. Everything has a price, chief. Choosing which to pay is up to you.", done: "farm", unlocks: ["farm"], buys: ["farm"] },
+  { text: "Now we know how to plant. Place Farmland on open grass. Fields feed many, but they take the land from the wild, and the forest beside them. Fewer trees, less rain. Everything has a price, chief. Choosing which to pay is up to you.", done: "farm", unlocks: ["farm"], buys: ["farm"] },
 ];

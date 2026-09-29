@@ -7,6 +7,7 @@ import {
   SMITHY_CHARCOAL,
   QUARRY_DUST,
   QUARRY_CUT,
+  FARM_RAIN,
   FIRE_SCARE,
   GATHERING,
   WALL_DEFENSE,
@@ -503,6 +504,21 @@ export function fireScareNote(state: GameState, tile: Tile, building: string): s
     : null;
 }
 
+// How much rain falls, from forest cover: forests bring rain. Fields grow this share.
+export function rainfall(state: GameState): number {
+  return FARM_RAIN.minRain + (1 - FARM_RAIN.minRain) * forestCover(state);
+}
+
+// The forest a new field would clear: the nearest unbuilt, unprotected forest tile in reach.
+export function forestToClear(state: GameState, tile: Tile): Tile | null {
+  const kept = state.protectedTiles ?? [];
+  return (
+    state.tiles
+      .filter((t) => t.terrain === "forest" && !t.building && !kept.includes(t.id) && hexDistance(t, tile) <= FARM_RAIN.clearRange)
+      .sort((a, b) => hexDistance(a, tile) - hexDistance(b, tile) || b.growth - a.growth)[0] ?? null
+  );
+}
+
 // A food building with a quarry close by: its crops or berries are under dust.
 export function dusty(state: GameState, tile: Tile, building = tile.building): boolean {
   if (!building || !QUARRY_DUST.hits.includes(building)) return false;
@@ -532,8 +548,8 @@ export function production(state: GameState): Resources {
     const factor =
       tile.building === "woodcutter"
         ? woodcutterYield(state, tile)
-        : tile.building === "farm" && state.tiles.some((t) => t.building === "canal" && hexDistance(t, tile) === 1)
-          ? 1.5
+        : tile.building === "farm"
+          ? (state.tiles.some((t) => t.building === "canal" && hexDistance(t, tile) === 1) ? 1.5 : 1) * rainfall(state)
           : 1;
     const dust = (dusty(state, tile) ? 1 - QUARRY_DUST.foodLoss : 1) * (scaredByFire(state, tile) ? 1 - FIRE_SCARE.foodLoss : 1);
     // Gatherer camps share what the wild can give.
@@ -660,7 +676,7 @@ export function perSecond(perTick: number) {
 }
 
 export interface Warning {
-  id: "fire" | "food" | "wood" | "famine" | "unrest" | "land" | "sick";
+  id: "fire" | "food" | "wood" | "famine" | "unrest" | "land" | "sick" | "rain";
   icon: IconId;
   text: string;
   // Ticks left on the countdown in the text; "{secs}" in the text is where it goes.
@@ -749,6 +765,15 @@ export function warnings(state: GameState): Warning[] {
           ? "Wood is running out and your fires are burning it faster than you cut it."
           : "Wood is low. Wait for your woodcutters before building more.",
       severe: state.resources.wood < 2,
+    });
+  }
+
+  if ((countBuildings(state).farm ?? 0) > 0 && rainfall(state) < FARM_RAIN.warnBelow) {
+    out.push({
+      id: "rain",
+      icon: "wheat",
+      text: `The rains are failing: fields grow only ${Math.round(rainfall(state) * 100)}%. Forests bring rain, so plant saplings.`,
+      severe: rainfall(state) < 0.65,
     });
   }
 
@@ -993,6 +1018,8 @@ function lessonReady(id: string, state: GameState) {
       return forestCover(state) < 0.9;
     case "overhunting":
       return (countBuildings(state).gatherer ?? 0) > GATHERING.freeCamps;
+    case "rain":
+      return rainfall(state) < FARM_RAIN.warnBelow && (countBuildings(state).farm ?? 0) > 0;
     case "wildlife":
       return forestCover(state) < 0.7;
     case "smoke":
@@ -1096,6 +1123,8 @@ function snapshotGoals(state: GameState): GameState {
 function goalHave(state: GameState, nodeId: string, g: Goal): number {
   switch (g.kind) {
     case "tally": {
+      // Victories count whenever they happened: raids stop once the legion is on its way.
+      if (g.key === "raidsWon") return tallyOf(state, "raidsWon");
       const start = state.goalStart?.[nodeId]?.[g.key!];
       // Not reachable yet: nothing counts.
       return start === undefined ? 0 : tallyOf(state, g.key!) - start;
@@ -1716,8 +1745,14 @@ function step(state: GameState, action: Action): GameState {
       const def = BUILDINGS_BY_ID[action.buildingId];
       const tile = state.tiles[action.tileId];
       if (!def || !tile || !isUnlocked(state, def) || placementError(state, tile, def)) return state;
+      // A new field clears the nearest patch of forest for good.
+      const cleared = def.id === "farm" ? forestToClear(state, tile) : null;
       const tiles = state.tiles.map((t) =>
-        t.id === tile.id ? { ...t, building: def.id } : t,
+        t.id === tile.id
+          ? { ...t, building: def.id }
+          : t.id === cleared?.id
+            ? { ...t, terrain: "grass" as const, height: terrainHeight("grass"), growth: 0 }
+            : t,
       );
       const radius = def.reveal + (state.culture === "mariners" ? 1 : 0);
       const revealed = tiles.map((t) =>
@@ -1728,7 +1763,10 @@ function step(state: GameState, action: Action): GameState {
         tiles: revealed,
         fires: def.id === "campfire" ? { ...state.fires, [tile.id]: burnTicks(state) } : state.fires,
         resources: spend(state.resources, buildingCost(state, def)),
-        log: [`Built a ${def.name}.`, ...state.log].slice(0, 30),
+        log: [
+          cleared ? `Built ${def.name}, clearing the forest beside it.` : `Built a ${def.name}.`,
+          ...state.log,
+        ].slice(0, 30),
         stats: { ...(state.stats ?? emptyStats()), built: (state.stats?.built ?? 0) + 1 },
       });
     }
