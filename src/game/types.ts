@@ -31,6 +31,8 @@ export interface Tile {
   growth: number;
   // 0–1: how charred the ground is after a fire. Fades back to normal.
   scorch: number;
+  // 0–1: how much of the hill a quarry has cut away. Never grows back.
+  dug?: number;
 }
 
 export interface Raid {

@@ -172,6 +172,11 @@ These were decided with the project owner. Do not change them without being aske
   campfire makes 30% less food. The placement card warns for both buildings
   (`fireScareNote()`); the tutorial and skip-tutorial never put the gatherer next
   to the fire.
+- **Quarries cut the hill** (`QUARRY_CUT`): a working quarry cuts its tile down a
+  little every tick (fully in ~600 ticks). The tile sinks by up to 45%, turns to
+  bare rock, and a mountain loses its peak. The cut (`Tile.dug`) never grows back
+  and keeps costing Sustainability after the quarry is sold (−1 per working
+  quarry, up to −3 per cut hillside). Dev: "Cut hills".
 - **Quarry dust** (`QUARRY_DUST`): gatherers, farms and pens within 2 hexes of a
   quarry make 40% less food. The placement card says how many buildings a new
   quarry would hit (`dustNote()`), and dusty buildings say so in their info card.

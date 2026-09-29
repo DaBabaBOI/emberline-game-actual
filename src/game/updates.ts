@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "Quarries really cut the hill away now: the tile sinks and turns to bare rock, a mountain loses its peak, and the scar (and its Sustainability cost) stays after the quarry is gone.",
       "The raid banner shows where your defense comes from (warriors, spears, war camp, walls).",
       "Mountains now rise in the outer highlands of each island instead of right next to your village.",
       "Hover over a hut or house to see how many people live there.",

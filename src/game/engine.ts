@@ -6,6 +6,7 @@ import {
   GRANARY_KEEPS,
   SMITHY_CHARCOAL,
   QUARRY_DUST,
+  QUARRY_CUT,
   FIRE_SCARE,
   GATHERING,
   WALL_DEFENSE,
@@ -91,7 +92,8 @@ export type Action =
   | { type: "relight"; tileId: number }
   | { type: "devEra"; era: number }
   | { type: "devReveal" }
-  | { type: "devEvent"; id: string };
+  | { type: "devEvent"; id: string }
+  | { type: "devCutHills" };
 
 export interface NewGameOptions {
   dev?: boolean;
@@ -768,6 +770,8 @@ export function sustainabilityBreakdown(state: GameState): SustainPart[] {
   const counts = countBuildings(state);
   const lit = litFires(state).length;
   const cover = forestCover(state);
+  const dugTotal = state.tiles.reduce((sum, t) => sum + (t.dug ?? 0), 0);
+  const cutHills = state.tiles.filter((t) => (t.dug ?? 0) > 0).length;
   const parts: SustainPart[] = [
     {
       label: `Forest standing: ${Math.round(cover * 100)}%`,
@@ -780,9 +784,9 @@ export function sustainabilityBreakdown(state: GameState): SustainPart[] {
       hint: "Every fire burns wood and fills the air with smoke.",
     },
     {
-      label: `${counts.quarry ?? 0} quarr${counts.quarry === 1 ? "y" : "ies"} scarring the hills`,
-      value: -(counts.quarry ?? 0) * 3,
-      hint: "Quarries cut away the hillside for good, and their dust smothers nearby crops.",
+      label: `${cutHills} hillside${cutHills === 1 ? "" : "s"} cut away by quarries`,
+      value: -((counts.quarry ?? 0) * QUARRY_CUT.perQuarry + dugTotal * QUARRY_CUT.perHill),
+      hint: "Quarries cut the hill down for good: the scar stays even after the quarry is gone. Their dust also smothers nearby crops.",
     },
     {
       label: `${counts.gatherer ?? 0} gatherer camp${counts.gatherer === 1 ? "" : "s"} hunting the wild`,
@@ -1224,6 +1228,7 @@ function tick(state: GameState): GameState {
   };
 
   if (next.tick % 3 === 0) next = growForests(next);
+  next = cutHills(next);
   // No raids or events while a new player is still learning.
   if (!inTutorial) next = updateLegion(updateRaids(next));
   // The final battle ends the story (won or lost): nothing else happens today.
@@ -1262,6 +1267,22 @@ function tick(state: GameState): GameState {
   next = knowledgeReady(next);
   next = advanceTutorial(next);
   return { ...next, meters: computeMeters(next) };
+}
+
+// The height of a tile once a quarry has cut part of it away.
+export function cutHeight(tile: Tile): number {
+  return terrainHeight(tile.terrain) * (1 - QUARRY_CUT.depth * (tile.dug ?? 0));
+}
+
+// Every working quarry cuts a little more of its hill away, for good.
+function cutHills(state: GameState): GameState {
+  if (!state.tiles.some((t) => t.building === "quarry" && (t.dug ?? 0) < 1)) return state;
+  const tiles = state.tiles.map((t) => {
+    if (t.building !== "quarry" || (t.dug ?? 0) >= 1) return t;
+    const cut = { ...t, dug: Math.min(1, (t.dug ?? 0) + QUARRY_CUT.perTick) };
+    return { ...cut, height: cutHeight(cut) };
+  });
+  return { ...state, tiles };
 }
 
 // Young and cut-over trees grow back, burnt ground heals, and woodcutters fell
@@ -1896,6 +1917,14 @@ function step(state: GameState, action: Action): GameState {
       return state.dev && event ? { ...state, event } : state;
     }
 
+    case "devCutHills":
+      // Finish every quarry's cut at once, to see the scar.
+      if (!state.dev) return state;
+      return withMeters({
+        ...state,
+        tiles: state.tiles.map((t) => (t.building === "quarry" ? { ...t, dug: 1, height: cutHeight({ ...t, dug: 1 }) } : t)),
+      });
+
     case "devReveal":
       if (!state.dev) return state;
       return { ...state, tiles: state.tiles.map((t) => (t.revealed ? t : { ...t, revealed: true })) };
@@ -1926,7 +1955,7 @@ export function loadGame(): GameState | null {
     const parsed = JSON.parse(raw) as GameState;
     if (parsed.version !== SAVE_VERSION) return null;
     // Mountains used to be tall pillars; older saves keep the new, lower base.
-    for (const t of parsed.tiles) if (t.terrain === "mountain") t.height = terrainHeight("mountain");
+    for (const t of parsed.tiles) if (t.terrain === "mountain") t.height = cutHeight(t);
     return parsed;
   } catch {
     return null;

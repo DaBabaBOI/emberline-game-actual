@@ -79,6 +79,12 @@ export function BuildingInfo({
         </p>
       )}
 
+      {def.id === "quarry" && (
+        <p className="mt-2 border-t-2 border-stone-300 pt-1.5 text-amber-800">
+          Hillside cut away: {Math.round((tile.dug ?? 0) * 100)}%. It will never grow back.
+        </p>
+      )}
+
       {scaredByFire(state, tile) && (
         <p className="mt-2 border-t-2 border-stone-300 pt-1.5 text-amber-800">
           A campfire next door scares off the animals: making {Math.round(FIRE_SCARE.foodLoss * 100)}% less food.

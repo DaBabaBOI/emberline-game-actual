@@ -165,7 +165,7 @@ export const BUILDINGS: BuildingDef[] = [
     icon: "pickaxe",
     description: "Cuts stone from hills. Bonus on stone deposits.",
     gain: "Stone for better buildings",
-    landCost: "Rock dust covers crops and berries within 2 tiles: they make 40% less food",
+    landCost: "Cuts the hill down for good, and its dust covers crops and berries within 2 tiles (40% less food)",
     landImpact: 2,
     era: 0,
     cost: { wood: 15 },
@@ -966,6 +966,11 @@ export const GATHERING = { extraCamp: 0.25, freeCamps: 2, sustainPerExtra: 2 };
 // Smoke, noise and people around a lit campfire scare off the animals: a
 // gatherer camp within `range` hexes of one makes `foodLoss` less food.
 export const FIRE_SCARE = { range: 1, foodLoss: 0.3 };
+// A quarry cuts its hill down, a little every tick (fully cut after about
+// 1 / perTick ticks). A cut hill sinks by up to `depth` of its height and never
+// grows back. Sustainability: −perQuarry for each working quarry, and up to
+// −perHill for each hillside cut away (this stays after the quarry is sold).
+export const QUARRY_CUT = { perTick: 1 / 600, depth: 0.45, perQuarry: 1, perHill: 3 };
 // Quarry dust settles on the land around it: food buildings within `range`
 // hexes make `foodLoss` less food.
 export const QUARRY_DUST = { range: 2, foodLoss: 0.4, hits: ["gatherer", "farm", "pen"] };
