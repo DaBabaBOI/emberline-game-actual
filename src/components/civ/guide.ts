@@ -1,5 +1,5 @@
 import { BUILDINGS_BY_ID, TRAIN_COST, TREE_BY_ID, TUTORIAL } from "@/game/content";
-import { buildingCost, countBuildings, placementError, scoutCost } from "@/game/engine";
+import { buildingCost, countBuildings, placementError, scaredByFire, scoutCost } from "@/game/engine";
 import { hexDistance } from "@/game/hex";
 import type { GameState, Resources } from "@/game/types";
 
@@ -31,7 +31,12 @@ export function suggestTile(state: GameState, buildingId: string) {
   for (const t of state.tiles) {
     const d = hexDistance(t, home);
     if (d > 5 || !t.revealed || placementError(state, t, def)) continue;
-    const score = d - (def.depositBonus && t.deposit === def.depositBonus.deposit ? 2.5 : 0) + (d === 0 ? 1 : 0);
+    // Don't teach a gatherer next to the fire: the smoke scares the game away.
+    const score =
+      d -
+      (def.depositBonus && t.deposit === def.depositBonus.deposit ? 2.5 : 0) +
+      (d === 0 ? 1 : 0) +
+      (scaredByFire(state, t, buildingId) ? 3 : 0);
     if (!best || score < best.score) best = { id: t.id, score };
   }
   return best?.id ?? null;

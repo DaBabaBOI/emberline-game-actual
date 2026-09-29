@@ -6,6 +6,7 @@ import {
   GRANARY_KEEPS,
   SMITHY_CHARCOAL,
   QUARRY_DUST,
+  FIRE_SCARE,
   GATHERING,
   WALL_DEFENSE,
   MIN_SUSTAINABILITY_FOR_BEST_ENDING,
@@ -432,6 +433,28 @@ export function gatherNote(state: GameState): string | null {
   return notes.join(" ");
 }
 
+// A gatherer camp right next to a lit campfire: the smoke and noise scare off the game.
+export function scaredByFire(state: GameState, tile: Tile, building = tile.building): boolean {
+  if (building !== "gatherer") return false;
+  return state.tiles.some((t) => t.id !== tile.id && isLit(state, t) && hexDistance(t, tile) <= FIRE_SCARE.range);
+}
+
+// What a campfire or gatherer placed here would do to the game nearby, for the placement card.
+export function fireScareNote(state: GameState, tile: Tile, building: string): string | null {
+  const loss = Math.round(FIRE_SCARE.foodLoss * 100);
+  if (building === "campfire") {
+    const hit = state.tiles.filter(
+      (t) => t.building === "gatherer" && hexDistance(t, tile) <= FIRE_SCARE.range,
+    ).length;
+    return hit
+      ? `Smoke and noise would scare the animals away from ${hit} gatherer camp${hit === 1 ? "" : "s"} next to it (${loss}% less food).`
+      : null;
+  }
+  return scaredByFire(state, tile, building)
+    ? `A campfire next to it scares off the animals: this camp would make ${loss}% less food.`
+    : null;
+}
+
 // A food building with a quarry close by: its crops or berries are under dust.
 export function dusty(state: GameState, tile: Tile, building = tile.building): boolean {
   if (!building || !QUARRY_DUST.hits.includes(building)) return false;
@@ -463,7 +486,7 @@ export function production(state: GameState): Resources {
         : tile.building === "farm" && state.tiles.some((t) => t.building === "canal" && hexDistance(t, tile) === 1)
           ? 1.5
           : 1;
-    const dust = dusty(state, tile) ? 1 - QUARRY_DUST.foodLoss : 1;
+    const dust = (dusty(state, tile) ? 1 - QUARRY_DUST.foodLoss : 1) * (scaredByFire(state, tile) ? 1 - FIRE_SCARE.foodLoss : 1);
     // Gatherer camps share what the wild can give.
     const share = tile.building === "gatherer" ? gathererShare(state) : 1;
     for (const [k, v] of Object.entries(def.produces ?? {}))
@@ -1569,8 +1592,11 @@ function step(state: GameState, action: Action): GameState {
       const pit = counts.campfire ? null : giveStartingCampfire(tiles, tiles[state.startTile]);
       if (!counts.gatherer) {
         const home = tiles[state.startTile];
+        // Not right next to a campfire: the smoke would scare the game away.
+        const nearFire = (t: Tile) =>
+          tiles.some((f) => f.building === "campfire" && hexDistance(f, t) <= FIRE_SCARE.range);
         const spot = tiles
-          .filter((t) => t.revealed && (t.terrain === "grass" || t.terrain === "forest") && !t.building)
+          .filter((t) => t.revealed && (t.terrain === "grass" || t.terrain === "forest") && !t.building && !nearFire(t))
           .sort((a, b) => hexDistance(a, home) - (a.deposit === "berries" ? 2 : 0) - (hexDistance(b, home) - (b.deposit === "berries" ? 2 : 0)))[0];
         if (spot) spot.building = "gatherer";
       }

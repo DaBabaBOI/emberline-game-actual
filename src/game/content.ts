@@ -951,6 +951,9 @@ export const SMITHY_CHARCOAL = 0.35;
 // makes full food; each extra camp adds only `extraCamp` of a camp's food. Every
 // camp past `freeCamps` also hunts animals faster than they can breed.
 export const GATHERING = { extraCamp: 0.25, freeCamps: 2, sustainPerExtra: 2 };
+// Smoke, noise and people around a lit campfire scare off the animals: a
+// gatherer camp within `range` hexes of one makes `foodLoss` less food.
+export const FIRE_SCARE = { range: 1, foodLoss: 0.3 };
 export const QUARRY_DUST = { range: 2, foodLoss: 0.4, hits: ["gatherer", "farm", "pen"] };
 export const GRANARY_KEEPS = 150;
 export const FORESTER_GROWTH = 0.12;
