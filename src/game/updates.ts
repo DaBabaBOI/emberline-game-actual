@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "You can see the Ancient era now: villagers wear dyed linen, warriors wear leather, the light is warmer, paths wear into the ground between buildings, and the top bar gets a bronze trim.",
       "The tutorial no longer starts you on a big pile: Elder Ama hands over what each step needs as you reach it, and a small reserve (40 food, 10 wood) at the end.",
       "Storytelling and Herbalism now come after Toolmaking, because the Elder's Hut and Healer's Hut need stone from a quarry.",
       "Clearer wording: a spearman counts as 1.5 warriors in a fight; Firekeeping makes fires last 50% longer; canals make fields grow 50% more.",

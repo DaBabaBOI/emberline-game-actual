@@ -27,6 +27,8 @@ const BARE = new Color("#7a6443");
 const DRY = new Color("#b8a060");
 // Bare rock where a quarry has cut the hill away.
 const CUT = new Color("#8d8780");
+// From the Ancient era, open ground between buildings wears into dirt paths.
+const PATH = new Color("#b89a66");
 
 function jitter(id: number, salt: number) {
   const x = Math.sin(id * 127.1 + salt * 311.7) * 43758.5453;
@@ -44,11 +46,13 @@ export function HexTerrain({
   tiles,
   home,
   wear = 0,
+  era = 0,
   onHover,
   onPick,
 }: {
   tiles: Tile[];
   home?: Tile;
+  era?: number;
   // 0–1: how worn out the land around home is (dries the grass).
   wear?: number;
   onHover: (id: number | null) => void;
@@ -64,6 +68,15 @@ export function HexTerrain({
     if (!mesh) return;
     const dummy = new Object3D();
     const color = new Color();
+    // Ancient era: grass with two or more buildings next to it is a worn path.
+    const paths = new Set<number>();
+    if (era >= 1) {
+      const built = tiles.filter((t) => t.building);
+      for (const t of tiles) {
+        if (t.building || (t.terrain !== "grass" && t.terrain !== "steppe")) continue;
+        if (built.filter((b) => hexDistance(b, t) === 1).length >= 2) paths.add(t.id);
+      }
+    }
     for (const tile of tiles) {
       const h = tileTop(tile);
       dummy.position.set(tile.x, h / 2, tile.z);
@@ -79,6 +92,7 @@ export function HexTerrain({
         }
         if (tile.scorch > 0) color.lerp(CHARRED, Math.min(1, tile.scorch * 1.2));
         if (tile.dug) color.lerp(CUT, Math.min(1, tile.dug * 0.9));
+        if (paths.has(tile.id)) color.lerp(PATH, 0.45);
       } else {
         if (isLand(tile.terrain)) {
           color.set("#eef2f6");
@@ -93,7 +107,7 @@ export function HexTerrain({
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     mesh.computeBoundingSphere();
-  }, [tiles, wear, home]);
+  }, [tiles, wear, home, era]);
 
   return (
     <instancedMesh

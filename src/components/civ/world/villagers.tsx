@@ -9,7 +9,11 @@ import { Figures, HAIRS, SKINS, type Agent } from "./figures";
 import { makeGround, type Ground } from "./ground";
 import { tileTop } from "./hex-terrain";
 
+// Stone Age: hides and furs. Ancient era: dyed linen and wool.
 const TUNICS = ["#b5651d", "#8e5a3a", "#a0522d", "#6b8e23", "#c2956b", "#9c6b3f"];
+const ANCIENT_TUNICS = ["#e6dcc3", "#b5432f", "#3f5d8a", "#d9a441", "#7a8a3a", "#c0703a"];
+const tunicsFor = (era: number) => (era >= 1 ? ANCIENT_TUNICS : TUNICS);
+const childTunicFor = (era: number) => (era >= 1 ? "#e6dcc3" : "#4a90d9");
 
 interface Walker extends Agent {
   tx: number;
@@ -22,6 +26,8 @@ interface Walker extends Agent {
   // What they look like and how fast they walk when healthy.
   baseTunic?: string;
   baseSpeed?: number;
+  // The era their clothes were chosen for.
+  era?: number;
 }
 
 const SICK_TUNIC = "#9db38a";
@@ -159,7 +165,10 @@ export function Villagers({
   homeTile,
   litFires,
   sick = 0,
+  era = 0,
 }: {
+  // Clothes change with the era.
+  era?: number;
   tiles: Tile[];
   population: number;
   soldiers: number;
@@ -198,12 +207,17 @@ export function Villagers({
         makeWalker(i, pick(spots.all), ground, {
           child,
           scale: child ? 0.95 : 1.35,
-          tunic: child ? "#4a90d9" : TUNICS[i % TUNICS.length],
+          tunic: child ? childTunicFor(era) : tunicsFor(era)[i % TUNICS.length],
         }),
       );
     }
     list.length = count;
     list.forEach((w, i) => {
+      // New era, new clothes.
+      if (w.era !== era) {
+        w.era = era;
+        w.baseTunic = w.child ? childTunicFor(era) : tunicsFor(era)[i % TUNICS.length];
+      }
       w.baseTunic ??= w.tunic;
       w.baseSpeed ??= w.speed;
       const ill = i < sickFigures;
@@ -221,7 +235,7 @@ export function Villagers({
     }
   });
 
-  return <Figures agents={walkers} max={MAX_FIGURES} colorKey={sickFigures} />;
+  return <Figures agents={walkers} max={MAX_FIGURES} colorKey={`${sickFigures}|${era}`} />;
 }
 
 export function Warriors({
@@ -232,7 +246,10 @@ export function Warriors({
   homeTile,
   rally,
   hidden,
+  era = 0,
 }: {
+  // Ancient-era warriors wear leather instead of hides.
+  era?: number;
   tiles: Tile[];
   population: number;
   soldiers: number;
@@ -264,6 +281,8 @@ export function Warriors({
     }
     list.length = count;
     // Split the figures between spears and clubs in proportion.
+    const gear = era >= 1 ? "#7a5230" : "#5b6f8a";
+    for (const w of list) w.tunic = gear;
     const withSpears = soldiers ? Math.round((count * Math.min(spearmen, soldiers)) / soldiers) : 0;
     spearFigs.current = list.slice(0, withSpears);
     clubFigs.current = list.slice(withSpears);
@@ -280,8 +299,8 @@ export function Warriors({
   if (hidden) return null;
   return (
     <>
-      <Figures agents={spearFigs} max={MAX_FIGURES} weapon="spear" />
-      <Figures agents={clubFigs} max={MAX_FIGURES} weapon="club" />
+      <Figures agents={spearFigs} max={MAX_FIGURES} weapon="spear" colorKey={era} />
+      <Figures agents={clubFigs} max={MAX_FIGURES} weapon="club" colorKey={era} />
     </>
   );
 }
