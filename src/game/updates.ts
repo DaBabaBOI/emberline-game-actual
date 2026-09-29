@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "Famine is hard but you can come back from it: while the stores are empty about one person dies every 10 seconds, and you have 2 minutes (on Normal) to find food. The warning offers three emergency measures, each with a price: forage the forest, slaughter a herd, or eat the seed grain.",
       "Dev mode: new Sparks and Clear forest buttons to test house fires, rain and Sustainability.",
       "The tutorial teaches it too: Elder Ama tells you to leave a patch of ground between your house and the fire.",
       "Huts are now Wooden Houses (log walls, bark roof): thatch needs straw, and there's no straw before farming.",
