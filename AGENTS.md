@@ -72,7 +72,7 @@ These were decided with the project owner. Do not change them without being aske
 - "AI" in the future era means **in-game tech** (automation, data centers), not an
   AI chatbot.
 - In the tutorial the player builds their own woodcutter (step 2). Skipping
-  the tutorial gives the basics it would have built (woodcutter, lit campfire,
+  the tutorial gives the basics it would have built (woodcutter, lit campfire, war camp with one warrior,
   gatherer); dev starts get a woodcutter and a campfire. Unrest can't start
   during the calm period after the tutorial. The last woodcutter can't be
   sold, so the player can never soft-lock with no wood.
@@ -163,8 +163,21 @@ These were decided with the project owner. Do not change them without being aske
   working when adding eras. It must never show without `?dev`. **Every new
   feature gets a dev-panel button (or dev option) to trigger or test it**, e.g.
   Wildfire, +10 people.
+- **Gatherers** (`GATHERING`): the first camp makes full food; each extra camp
+  adds only 25% of a camp's food (`gathererShare()`), so food stays something to
+  manage. Every camp past the second costs −2 Sustainability (overhunting). The
+  placement card explains both (`gatherNote()`), and the "overhunting" lesson
+  tells the ecology.
+- **Fire scares game** (`FIRE_SCARE`): a gatherer camp within 1 hex of a lit
+  campfire makes 30% less food. The placement card warns for both buildings
+  (`fireScareNote()`); the tutorial and skip-tutorial never put the gatherer next
+  to the fire.
+- **Quarry dust** (`QUARRY_DUST`): gatherers, farms and pens within 2 hexes of a
+  quarry make 40% less food. The placement card says how many buildings a new
+  quarry would hit (`dustNote()`), and dusty buildings say so in their info card.
+  Quarries also cost −3 Sustainability each (the hillside is gone for good).
 - **Livestock and clothing:** Herding unlocks the Livestock Pen (a little food,
-  grazing wears the land: −2 Sustainability each). Hide Clothing makes each pen
+  grazing wears the land: −2 Sustainability each). Warm Clothes (research) makes each pen
   keep `peoplePerPen` (6) people warm without a fire, so fewer fires are needed
   (less wood cut, less smoke). A trade-off, not a free upgrade.
 - **Growing is as hard as surviving** (`GROWTH_PRESSURE`): stored food above 60
@@ -212,6 +225,30 @@ These were decided with the project owner. Do not change them without being aske
   `src/components/civ/guide.ts`, drawn by `hud/guide-overlay.tsx`). Targets are
   elements with `data-guide="…"` or a map tile. While the player is saving up
   resources the hand lets go. New tutorial steps need a case in `guideFor()`.
+- **Endings:** a loss (famine, unrest, conquest) always gets the "lost" tier.
+  Land-based tiers (thriving, costly, stripped) are only for eras that end.
+- **Knowledge milestones** (`KNOWLEDGE_MILESTONES`): there is no base Knowledge
+  trickle. Firsts pay out once each (first of each building +4, population
+  10/15/20/30/50 +8, each scouting trip +1, or +2 if it maps 20+ new land tiles (`SCOUT_KNOWLEDGE`), first raid won +6, first planting +4),
+  with a toast. Elder's Huts, schools and literacy add a steady amount.
+- **Knowledge ready:** when Knowledge first covers an advancement, Elder Ama says
+  so in a toast (once per advancement, `knowledgeReady()`), and the Advancements
+  button shows how many are affordable (`affordableResearch()`).
+- **Updates log:** every change a player would notice gets a plain-language line
+  in `UPDATES` (`src/game/updates.ts`), under today's date, newest first. It shows
+  in the Updates bar at the top of the landing page and the title screen.
+- **Placement card:** the trade-off card sits beside the hovered tile, never on it,
+  so the player can see where they are placing.
+- **Tutorial voice:** Elder Ama's lines read as one conversation: each step
+  reacts to what the player just did before asking for the next thing. When the
+  last step is done she says goodbye (`TUTORIAL_FAREWELL`, shown in the lesson
+  panel, not counted as a lesson). Skipping the tutorial skips the goodbye.
+- **HUD stacks:** HUD panels never overlap. Top-centre stack: era prompt, raid
+  banner. Left stack: dev panel, tutorial, elder lesson. Right stack: toasts.
+  On small screens the stacks become one scrolling column with a capped height.
+  Add new panels to a stack instead of positioning them absolutely.
+- During the tutorial, the placement preview card is drawn above the guide's
+  dimming so the player can read the trade-off.
 - Multiplayer is **later**; design state so AI nations could be replaced by humans,
   but do not add a backend now.
 

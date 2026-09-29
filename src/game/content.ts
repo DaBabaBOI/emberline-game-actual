@@ -91,9 +91,9 @@ export const BUILDINGS: BuildingDef[] = [
     name: "Gatherer's Camp",
     icon: "basket",
     description: "Collects food. Bonus on berry bushes.",
-    gain: "Food from wild plants, more on berry bushes",
-    landCost: "Almost nothing: the land stays healthy, but it gives less food",
-    landImpact: 0,
+    gain: "Food from wild plants and game, more on berry bushes",
+    landCost: "The wild only has so much: each extra camp adds just 25% more food, and past 2 camps animals are hunted faster than they breed",
+    landImpact: 1,
     era: 0,
     cost: { wood: 8 },
     terrain: ["grass", "steppe", "forest", "marsh"],
@@ -165,7 +165,7 @@ export const BUILDINGS: BuildingDef[] = [
     icon: "pickaxe",
     description: "Cuts stone from hills. Bonus on stone deposits.",
     gain: "Stone for better buildings",
-    landCost: "Digs pits into the land",
+    landCost: "Rock dust covers crops and berries within 2 tiles: they make 40% less food",
     landImpact: 2,
     era: 0,
     cost: { wood: 15 },
@@ -209,7 +209,7 @@ export const BUILDINGS: BuildingDef[] = [
     name: "Livestock Pen",
     icon: "sheep",
     description: "Goats and sheep behind a fence. A little milk and meat, and later their hides and wool make warm clothes.",
-    gain: "A little food; with Hide Clothing, warm clothes for 6 people so fewer fires are needed",
+    gain: "A little food; with Warm Clothes researched, clothing for 6 people so fewer fires are needed",
     landCost: "Grazing animals wear down the grass around them",
     landImpact: 1,
     era: 0,
@@ -455,7 +455,7 @@ export const TREE: TreeNode[] = [
   },
   {
     id: "hide-clothing",
-    name: "Hide Clothing",
+    name: "Warm Clothes",
     description: "Sew hides and wool into warm clothes. Each Livestock Pen keeps 6 people warm without a fire.",
     branch: "energy",
     era: 0,
@@ -649,7 +649,7 @@ export const EVENTS: EventCard[] = [
     body: "The hunters are bringing back fewer deer each season. Some want one last big hunt before winter; others say to let the herds recover.",
     choices: [
       { label: "One big hunt (+50 food now, the land suffers)", effect: { resources: { food: 50 }, sustainability: -15 } },
-      { label: "Hunt only the old animals (+12 food, the herds recover)", effect: { resources: { food: 12 }, sustainability: 5 } },
+      { label: "Let the herds recover (−15 food: we eat from our stores for now)", effect: { resources: { food: -15 }, sustainability: 8 } },
     ],
     realWorld: "Overhunting has wiped out animals before. Many scientists think people helped drive mammoths and other big Ice Age animals to extinction.",
   },
@@ -806,7 +806,7 @@ export const GROWTH_PRESSURE = {
   foodRots: 0.015,
   // Each lit campfire warms this many people; the rest are cold.
   peoplePerFire: 10,
-  // With Hide Clothing, each Livestock Pen clothes this many people warmly.
+  // With Warm Clothes, each Livestock Pen clothes this many people warmly.
   peoplePerPen: 6,
   // Raiders come in bigger groups the bigger (richer) the tribe: +1 per this many people.
   raidersPerPeople: 10,
@@ -820,12 +820,26 @@ export const PLANT_COST = { food: 4 };
 // Elder Ama's lessons: each appears once, when its moment comes in play (see
 // lessonDue in engine.ts), and links what just happened to a real UN target.
 // Keep claims modest and general; no statistics.
+// Elder Ama's goodbye when the tutorial is finished (shown like a lesson, not counted as one).
+export const TUTORIAL_FAREWELL = {
+  id: "farewell",
+  title: "You are ready, chief",
+  text: "You have warmth, wood, homes, food, guards and fields. From here the choices are yours. Raiders, sickness and hard years will come, so keep food stored and fires lit. And watch the forest: once it is gone, it takes a lifetime to return. I will speak up when I see something you should know.",
+  sdg: "SDG 11: make cities and communities inclusive, safe, resilient and sustainable",
+};
+
 export const LESSONS: { id: string; title: string; text: string; sdg: string }[] = [
   {
     id: "forest",
     title: "The forest is shrinking",
     text: "Our woodcutters take trees faster than the forest can grow back. A tree takes years to grow and a moment to cut. Selective logging and planting saplings let us have wood without losing the forest.",
     sdg: "SDG 15.2: stop deforestation and restore forests",
+  },
+  {
+    id: "overhunting",
+    title: "Too many hunters",
+    text: "Our camps take berries, roots and animals from the wild. With so many camps, we hunt the deer and boar faster than they can have young, so each year there are fewer left. Fewer animals means less food for us too. Fewer camps let the wild keep up.",
+    sdg: "SDG 12.2: use natural resources sustainably and efficiently",
   },
   {
     id: "wildlife",
@@ -931,6 +945,30 @@ export const METER_SDG: Record<MeterKey, string> = {
 // granaries keep this much more food from rotting; foresters add this much
 // growth to one thinned forest tile within reach every 3 ticks; walls add defense.
 export const SMITHY_CHARCOAL = 0.35;
+// Knowledge comes from milestones: every "first" teaches the tribe something.
+// (Elder's Huts, schools and literacy add a steady amount on top.)
+export const KNOWLEDGE_MILESTONES = {
+  firstBuilding: 4,
+  population: [10, 15, 20, 30, 50],
+  populationReward: 8,
+  firstRaidWon: 6,
+  firstPlanted: 4,
+};
+
+// Each scouting trip teaches the tribe: +2 Knowledge if it maps at least
+// `bigTrip` new land tiles, +1 otherwise.
+export const SCOUT_KNOWLEDGE = { bigTrip: 20 };
+
+// Gatherers live off the wild, and the wild only has so much. The first camp
+// makes full food; each extra camp adds only `extraCamp` of a camp's food. Every
+// camp past `freeCamps` also hunts animals faster than they can breed.
+export const GATHERING = { extraCamp: 0.25, freeCamps: 2, sustainPerExtra: 2 };
+// Smoke, noise and people around a lit campfire scare off the animals: a
+// gatherer camp within `range` hexes of one makes `foodLoss` less food.
+export const FIRE_SCARE = { range: 1, foodLoss: 0.3 };
+// Quarry dust settles on the land around it: food buildings within `range`
+// hexes make `foodLoss` less food.
+export const QUARRY_DUST = { range: 2, foodLoss: 0.4, hits: ["gatherer", "farm", "pen"] };
 export const GRANARY_KEEPS = 150;
 export const FORESTER_GROWTH = 0.12;
 export const FORESTER_REACH = 3;
@@ -953,12 +991,12 @@ export const AFTER_TUTORIAL_RESERVE: Partial<Resources> = { food: 60, wood: 15 }
 // `buys` lists what the step pays for: building ids, "scout", "train" or an
 // advancement id. The starting resources are worked out from it.
 export const TUTORIAL: { text: string; done: string; unlocks: string[]; buys: string[] }[] = [
-  { text: "Our people are cold, and without a fire they grow unhappy. Pick the Campfire from the bar below and place it on a green tile.", done: "campfire", unlocks: ["campfire"], buys: ["campfire"] },
-  { text: "Fires burn wood, and wood is scarce. Build a Woodcutter in the forest to keep them going.", done: "woodcutter", unlocks: ["woodcutter"], buys: ["woodcutter"] },
-  { text: "Good! Now build a Hut so more people have shelter.", done: "hut", unlocks: ["hut"], buys: ["hut"] },
-  { text: "We need food. Place a Gatherer's Camp. Berry bushes give a bonus.", done: "gatherer", unlocks: ["gatherer"], buys: ["gatherer"] },
-  { text: "The world is hidden. Press Scout to explore new land.", done: "scout", unlocks: ["scout"], buys: ["scout"] },
-  { text: "Raiders roam these lands. Build a War Camp, then train a warrior to defend us.", done: "train", unlocks: ["warcamp", "train"], buys: ["warcamp", "train"] },
-  { text: "Our elders have learned a lot. Open Advancements and research Early Farming.", done: "early-farming", unlocks: ["advancements"], buys: ["early-farming"] },
-  { text: "Now we can plant grain. Place Farmland on a green tile for a steady supply of food.", done: "farm", unlocks: ["farm"], buys: ["farm"] },
+  { text: "Welcome, chief. Our people are cold and tired after the long walk. First, warmth: pick the Campfire below and place it on open grass. Look at what it gives us, and what it costs.", done: "campfire", unlocks: ["campfire"], buys: ["campfire"] },
+  { text: "Feel that warmth! But a fire eats wood, and so will everything we build. Put a Woodcutter in the forest. See the little tree stumps in the corner of each building below? They show how hard it is on the land: the more stumps, the more harm. A leaf means it is gentle. The Woodcutter has three, because every tree it cuts takes many years to grow back.", done: "woodcutter", unlocks: ["woodcutter"], buys: ["woodcutter"] },
+  { text: "Wood is coming in. Now our people need a roof. Build a Hut, and more families can join us.", done: "hut", unlocks: ["hut"], buys: ["hut"] },
+  { text: "A roof over our heads, but empty bellies. Place a Gatherer's Camp to collect wild food. Berry bushes give more.", done: "gatherer", unlocks: ["gatherer"], buys: ["gatherer"] },
+  { text: "Food is coming. But we don't know what lies beyond these hills. Press Scout and send our young ones to look.", done: "scout", unlocks: ["scout"], buys: ["scout"] },
+  { text: "The scouts saw smoke from other camps, and not everyone out there is friendly. Build a War Camp, then train our first warrior.", done: "train", unlocks: ["warcamp", "train"], buys: ["warcamp", "train"] },
+  { text: "With a guard at the camp, we can think about tomorrow. Every first thing we do teaches us something: the first fire, the first hut, the first time our tribe grows. That learning is Knowledge, the bulb at the top, and one day an Elder's Hut will help the children learn faster. Now, I have noticed wild grain sprouting wherever seeds fall. What if we planted them ourselves? Open Advancements and spend our Knowledge on Early Farming.", done: "early-farming", unlocks: ["advancements"], buys: ["early-farming"] },
+  { text: "Now we know how to plant. Place Farmland on open grass. Fields feed many, but they take the land from the wild. Everything has a price, chief. Choosing which to pay is up to you.", done: "farm", unlocks: ["farm"], buys: ["farm"] },
 ];

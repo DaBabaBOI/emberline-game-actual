@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { BRANCHES, BUILDINGS_BY_ID, ERAS, TREE, TREE_BY_ID } from "@/game/content";
-import { tutorialLocked } from "@/game/engine";
+import { perSecond, production, tutorialLocked } from "@/game/engine";
 import type { GameState, TreeNode } from "@/game/types";
 import type { IconId } from "@/game/sprites";
 import { useGame } from "@/components/civ/game-provider";
@@ -102,9 +102,13 @@ export function TreeOverlay() {
           Advancements
         </h2>
         <div className="font-pixel flex flex-wrap items-center gap-2 text-xs md:gap-4 md:text-sm">
-          <span className="flex items-center gap-1">
+          <span
+            className="flex items-center gap-1"
+            title="Knowledge comes from milestones (firsts, growth, victories). Elder's Huts, Scribe Schools and literacy add a little all the time."
+          >
             <PixelIcon name="bulb" size={16} />
             <span className="font-num">{Math.floor(state.resources.knowledge)}</span> knowledge
+            <span className="font-num text-[11px] opacity-70">(+{perSecond(production(state).knowledge).toFixed(2)}/s)</span>
           </span>
           <span>Secrets found: <span className="font-num">{state.secretsFound.length}</span></span>
           <button
@@ -117,6 +121,11 @@ export function TreeOverlay() {
           </button>
         </div>
       </div>
+      <p className="px-3 pt-1 text-xs text-[#fdf6e3]/70 md:px-5">
+        Knowledge comes from milestones: your first of each building, your tribe growing, each scouting trip (more for a big one),
+        beating raiders, planting saplings. An Elder&apos;s Hut (after Storytelling) or a Scribe School also teaches
+        a little all the time.
+      </p>
 
       <div className="flex gap-1.5 overflow-x-auto px-3 pt-2 md:px-5 md:pt-3">
         {ERAS.map((e, i) => (

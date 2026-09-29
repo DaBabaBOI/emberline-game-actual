@@ -1,19 +1,24 @@
 "use client";
 
-import { BUILDINGS_BY_ID } from "@/game/content";
+import { BUILDINGS_BY_ID, FIRE_SCARE, QUARRY_DUST } from "@/game/content";
 import {
+  dusty,
+  residents,
+  scaredByFire,
+  gathererShare,
+  countBuildings,
   type Action,
   buildingCost,
   canAfford,
   isLit,
   loggingMode,
   perSecond,
-  secs,
   upgradeFor,
   woodcutterYield,
 } from "@/game/engine";
 import type { GameState } from "@/game/types";
 import { PixelIcon } from "@/components/civ/pixel-icon";
+import { CountdownFor } from "@/components/civ/hud/countdown";
 import { cn } from "@/lib/utils";
 
 // The panel that opens when you click one of your buildings: its trade-off,
@@ -60,6 +65,31 @@ export function BuildingInfo({
         <PixelIcon name={def.landImpact ? "stump" : "leaf"} size={12} />
         {def.landCost}
       </p>
+
+      {def.id === "gatherer" && gathererShare(state) < 1 && (
+        <p className="mt-2 border-t-2 border-stone-300 pt-1.5 text-amber-800">
+          {countBuildings(state).gatherer} camps share what the wild can give: each makes{" "}
+          {Math.round(gathererShare(state) * 100)}% of a full camp.
+        </p>
+      )}
+
+      {residents(state, tile) && (
+        <p className="mt-2 border-t-2 border-stone-300 pt-1.5">
+          {residents(state, tile)!.living} of {residents(state, tile)!.room} people live here.
+        </p>
+      )}
+
+      {scaredByFire(state, tile) && (
+        <p className="mt-2 border-t-2 border-stone-300 pt-1.5 text-amber-800">
+          A campfire next door scares off the animals: making {Math.round(FIRE_SCARE.foodLoss * 100)}% less food.
+        </p>
+      )}
+
+      {dusty(state, tile) && (
+        <p className="mt-2 border-t-2 border-stone-300 pt-1.5 text-amber-800">
+          Covered in quarry dust: making {Math.round(QUARRY_DUST.foodLoss * 100)}% less food.
+        </p>
+      )}
 
       {def.id === "woodcutter" && (
         <div className="mt-2 border-t-2 border-stone-300 pt-1.5">
@@ -119,9 +149,13 @@ export function BuildingInfo({
 
       {def.id === "campfire" && (
         <p className="mt-2 border-t-2 border-stone-300 pt-1.5">
-          {isLit(state, tile)
-            ? `Burning: about ${secs(state.fires?.[tile.id] ?? 0)}s of wood left.`
-            : "Burnt out. Click it to relight (1 wood)."}
+          {isLit(state, tile) ? (
+            <>
+              Burning: about <CountdownFor ticks={state.fires?.[tile.id] ?? 0} state={state} />s of wood left.
+            </>
+          ) : (
+            "Burnt out. Click it to relight (1 wood)."
+          )}
         </p>
       )}
     </div>

@@ -82,7 +82,9 @@ export interface Debrief {
   researched: number;
   planted: number;
   lessons: string[];
-  tier: "thriving" | "costly" | "stripped";
+  // "lost": the people starved, left or were conquered. Never a good ending,
+  // however healthy the land is.
+  tier: "thriving" | "costly" | "stripped" | "lost";
 }
 
 export type MeterKey =
@@ -235,6 +237,10 @@ export interface GameState {
   lessonsSeen?: string[];
   lesson?: string | null;
   lessonTick?: number;
+  // Knowledge milestones already reached (each pays out once).
+  milestones?: string[];
+  // Advancements Elder Ama has already said we can afford (so she says it once).
+  knowledgeNotified?: string[];
   // Saplings planted so far.
   planted?: number;
   // The last event card shown, so it isn't repeated right away.

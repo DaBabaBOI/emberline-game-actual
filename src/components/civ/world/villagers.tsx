@@ -56,21 +56,40 @@ function makeWalker(i: number, at: Tile, ground: Ground, look: Partial<Walker> =
 }
 
 // Radius of the log seats around a campfire (model radius × building scale).
-const FIRE_SEAT = 0.78;
+const FIRE_SEAT = 0.5 * 1.55;
+// Model angles of the log seats (must match CampfireModel in building-models.tsx).
+const FIRE_SEATS = [0, 1.3, 2.6, 3.9, 5.2];
 
 function retarget(w: Walker, ground: Ground, pickTarget: () => Tile) {
   const target = pickTarget();
   if (target.building === "campfire") {
-    // Sit on the near side so the walk there doesn't cross the fire itself.
-    const a = Math.atan2(w.z - target.z, w.x - target.x) + (Math.random() - 0.5) * 1.6;
+    // Sit on one of the log seats, picking one on the near side so the walk
+    // there doesn't cross the fire. The model is turned (tile.id % 6) × 60°,
+    // which turns a seat at model angle s to world angle s − turn.
+    const turn = (target.id % 6) * (Math.PI / 3);
+    const toWalker = Math.atan2(w.z - target.z, w.x - target.x);
+    const off = (s: number) => Math.abs(Math.atan2(Math.sin(s - turn - toWalker), Math.cos(s - turn - toWalker)));
+    const near = FIRE_SEATS.filter((s) => off(s) < 1.4);
+    const seat = near.length
+      ? near[Math.floor(Math.random() * near.length)]
+      : FIRE_SEATS.reduce((a, b) => (off(a) < off(b) ? a : b));
+    const a = seat - turn;
     w.tx = target.x + Math.cos(a) * FIRE_SEAT;
     w.tz = target.z + Math.sin(a) * FIRE_SEAT;
     w.sitAt = target;
     return;
   }
-  const spot = ground.spotOn(target);
-  w.tx = spot.x;
-  w.tz = spot.z;
+  if (target.building) {
+    // Go to the side of the building that faces them, so the path doesn't run
+    // into the building and make them turn back and forth.
+    const a = Math.atan2(w.z - target.z, w.x - target.x) + (Math.random() - 0.5) * 1.6;
+    w.tx = target.x + Math.cos(a) * 0.72;
+    w.tz = target.z + Math.sin(a) * 0.72;
+  } else {
+    const spot = ground.spotOn(target);
+    w.tx = spot.x;
+    w.tz = spot.z;
+  }
   w.sitAt = null;
 }
 
@@ -104,8 +123,11 @@ function stepWalker(w: Walker, dt: number, ground: Ground, pickTarget: () => Til
       w.x = nx;
       w.z = nz;
     } else {
+      // Blocked: stop and look around for a moment before heading somewhere else.
       w.moving = false;
-      retarget(w, ground, pickTarget);
+      w.tx = w.x;
+      w.tz = w.z;
+      w.wait = 0.8 + Math.random() * 1.5;
     }
   }
   const floor = ground.heightAt(w.x, w.z);

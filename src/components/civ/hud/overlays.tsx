@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ERAS, EVENTS, LESSONS, TUTORIAL } from "@/game/content";
-import { defenseStrength, secs, warnings } from "@/game/engine";
+import { ERAS, EVENTS, LESSONS, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
+import { defenseBreakdown, defenseStrength, warnings } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
+import { Countdown } from "./countdown";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { useGuide } from "./guide-overlay";
 
@@ -13,7 +14,7 @@ export function TutorialPanel() {
   const step = TUTORIAL[state.tutorialStep];
   if (!step) return null;
   return (
-    <div className="pixel-panel pointer-events-auto absolute left-11 right-11 top-24 z-[26] p-2.5 text-xs md:left-16 md:right-auto md:top-20 md:max-w-xs md:p-3 md:text-sm">
+    <div className="pixel-panel pointer-events-auto relative z-[26] w-full p-2.5 text-xs md:p-3 md:text-sm">
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="font-pixel flex items-center gap-2 text-base font-semibold">
           <PixelIcon name="elder" size={28} />
@@ -40,20 +41,18 @@ export function TutorialPanel() {
 // UN target. One at a time; the game keeps running.
 export function ElderLesson() {
   const { state, dispatch } = useGame();
-  const lesson = LESSONS.find((l) => l.id === state.lesson);
+  const farewell = state.lesson === TUTORIAL_FAREWELL.id;
+  const lesson = farewell ? TUTORIAL_FAREWELL : LESSONS.find((l) => l.id === state.lesson);
   if (!lesson) return null;
   return (
     <div
-      className={
-        "pixel-panel pointer-events-auto absolute left-11 right-11 z-[15] p-2.5 text-xs md:left-16 md:right-auto md:max-w-xs md:p-3 md:text-sm " +
-        (state.dev ? "top-64" : "top-24 md:top-20")
-      }
+      className="pixel-panel pointer-events-auto relative z-[15] w-full p-2.5 text-xs md:p-3 md:text-sm"
       data-testid="elder-lesson"
     >
       <div className="mb-1 flex items-center gap-2">
         <PixelIcon name="elder" size={28} />
         <span className="font-pixel flex flex-col leading-tight">
-          <span className="text-[11px] text-amber-800/80">Elder Ama&apos;s lesson</span>
+          <span className="text-[11px] text-amber-800/80">{farewell ? "Elder Ama" : "Elder Ama\u2019s lesson"}</span>
           <span className="text-base font-semibold">{lesson.title}</span>
         </span>
       </div>
@@ -67,7 +66,7 @@ export function ElderLesson() {
         onClick={() => dispatch({ type: "dismissLesson" })}
         className="pixel-btn font-pixel mt-2 bg-amber-400 px-3 py-1 text-xs font-semibold text-[#2b2119]"
       >
-        Got it
+        {farewell ? "Let's go" : "Got it"}
       </button>
     </div>
   );
@@ -146,7 +145,7 @@ export function Toasts() {
   }, [state.log]);
 
   return (
-    <div className="pointer-events-none absolute right-11 top-24 flex w-56 flex-col items-end gap-1 md:right-16 md:top-20 md:w-64">
+    <div className="pointer-events-none flex w-full flex-col items-end gap-1">
       {toasts.map((t, i) => (
         <div
           key={t.id}
@@ -170,7 +169,7 @@ function LegionWarning() {
   const eta = state.raid ? state.raid.arriveTick - state.tick : (state.legion?.arriveTick ?? state.tick) - state.tick;
   const safe = defense >= attack;
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-28 flex justify-center px-2 md:top-20" data-testid="legion-banner">
+    <div className="pointer-events-none flex justify-center" data-testid="legion-banner">
       <div
         className={
           "font-pixel flex max-w-xl items-start gap-2 border-[3px] border-[#140e0a] px-4 py-2 text-xs font-semibold text-white md:text-sm " +
@@ -181,7 +180,7 @@ function LegionWarning() {
         <span>
           {state.raid ? "The Roman legion has landed" : "A Roman legion is marching on us"}: {size} legionaries, each
           as strong as two of our warriors (attack {attack}). {state.raid ? "They reach us" : "They land"} in{" "}
-          {secs(Math.max(0, eta))}s. Our defense: {defense}
+          <Countdown ticks={Math.max(0, eta)} />s. Our defense: {defense}
           {safe ? ". We can hold them." : ". Train warriors, forge bronze weapons, build walls!"}
         </span>
       </div>
@@ -198,7 +197,7 @@ export function RaidBanner() {
   const safe = defense >= state.raid.strength;
   const eta = Math.max(0, state.raid.arriveTick - state.tick);
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-20 flex justify-center">
+    <div className="pointer-events-none flex justify-center">
       <div
         className={
           "font-pixel flex items-center gap-2 border-[3px] border-[#140e0a] px-4 py-2 text-sm font-semibold text-white " +
@@ -206,8 +205,10 @@ export function RaidBanner() {
         }
       >
         <PixelIcon name="warning" size={18} />
-        {state.raid.strength} raiders arriving in {secs(eta)}s · Your defense: {defense}
-        {safe ? " (you can hold them)" : " (train more warriors!)"}
+        <span>
+          {state.raid.strength} raiders arriving in <Countdown ticks={eta} />s · Defense {defense} ={" "}
+          {defenseBreakdown(state)} · {safe ? "You can hold them" : "Train more warriors!"}
+        </span>
       </div>
     </div>
   );
@@ -221,7 +222,7 @@ export function Warnings() {
   if (list.length === 0) return null;
   const shown = open ? list : list.slice(0, 1);
   return (
-    <div className="pointer-events-none absolute bottom-48 left-11 right-11 flex flex-col gap-1.5 md:bottom-32 md:left-3 md:right-auto md:max-w-72">
+    <div data-testid="warnings" className="pointer-events-none absolute bottom-48 left-11 right-11 flex flex-col gap-1.5 md:bottom-32 md:left-3 md:right-auto md:max-w-72">
       {shown.map((w) => (
         <div
           key={w.id}
@@ -231,7 +232,17 @@ export function Warnings() {
           }
         >
           <PixelIcon name={w.icon} size={20} />
-          <span>{w.text}</span>
+          <span>
+            {w.countdown === undefined ? (
+              w.text
+            ) : (
+              <>
+                {w.text.split("{secs}")[0]}
+                <Countdown ticks={w.countdown} />
+                {w.text.split("{secs}")[1]}
+              </>
+            )}
+          </span>
         </div>
       ))}
       {list.length > 1 && (
@@ -249,10 +260,11 @@ export function Warnings() {
 
 export function DevPanel() {
   const { state, dispatch } = useGame();
-  const [eventIndex, setEventIndex] = useState(0);
+  const [eventId, setEventId] = useState(EVENTS[0].id);
+  const [lessonId, setLessonId] = useState(LESSONS[0].id);
   if (!state.dev) return null;
   return (
-    <div className="pixel-panel-dark font-pixel pointer-events-auto absolute left-16 top-20 flex max-w-xs flex-col gap-1.5 p-2 text-xs">
+    <div className="pixel-panel-dark font-pixel pointer-events-auto flex w-full flex-col gap-1.5 p-2 text-xs">
       <span className="text-amber-300">Dev mode</span>
       <div className="flex max-w-xs flex-wrap gap-1">
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devGrant" })}>
@@ -279,22 +291,44 @@ export function DevPanel() {
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devRomans" })}>
           Romans
         </button>
-        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devLesson" })}>
-          Lesson
-        </button>
-        <button
-          type="button"
-          className="pixel-btn bg-[#4a3b2e] px-2 py-1"
-          title={`Next: ${EVENTS[eventIndex % EVENTS.length].title}`}
-          onClick={() => {
-            dispatch({ type: "devEvent", id: EVENTS[eventIndex % EVENTS.length].id });
-            setEventIndex(eventIndex + 1);
-          }}
-        >
-          Event
-        </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devFinishEra" })}>
           Finish era
+        </button>
+      </div>
+      {/* Trigger any event card or elder lesson on demand. */}
+      <div className="flex gap-1">
+        <select
+          value={eventId}
+          onChange={(e) => setEventId(e.target.value)}
+          className="min-w-0 flex-1 border-2 border-[#140e0a] bg-[#4a3b2e] px-1 py-0.5 text-white"
+          aria-label="Event to trigger"
+          data-testid="dev-event-select"
+        >
+          {EVENTS.map((ev) => (
+            <option key={ev.id} value={ev.id}>
+              {ev.title}
+            </option>
+          ))}
+        </select>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devEvent", id: eventId })}>
+          Event
+        </button>
+      </div>
+      <div className="flex gap-1">
+        <select
+          value={lessonId}
+          onChange={(e) => setLessonId(e.target.value)}
+          className="min-w-0 flex-1 border-2 border-[#140e0a] bg-[#4a3b2e] px-1 py-0.5 text-white"
+          aria-label="Lesson to show"
+        >
+          {LESSONS.map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.title}
+            </option>
+          ))}
+        </select>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devLesson", id: lessonId })}>
+          Lesson
         </button>
       </div>
       <div className="flex flex-wrap gap-1">

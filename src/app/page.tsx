@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BUILDINGS_BY_ID } from "@/game/content";
 import type { IconId } from "@/game/sprites";
 import { PixelIcon } from "@/components/civ/pixel-icon";
+import { UpdatesBar } from "@/components/updates-bar";
 
 // SDG 11 is the core; the others are the goals the game's lessons and events link to.
 // Colours are the official UN SDG colours.
@@ -37,6 +38,7 @@ const TEAM = ["Prithu Sharma", "Aarav Kumar", "Vagisha Sinha", "Aaradhya Verma"]
 export default function Home() {
   return (
     <main className="min-h-screen bg-[#fbf3de] text-[#2b2119]">
+      <UpdatesBar />
       <section className="border-b-4 border-[#2b2119] bg-gradient-to-b from-sky-300 via-sky-200 to-[#fbf3de]">
         <div className="mx-auto max-w-5xl px-4 pb-14 pt-12 text-center">
           <p className="font-pixel text-sm font-semibold uppercase tracking-[0.3em] text-amber-800">
@@ -103,8 +105,15 @@ export default function Home() {
       <section className="mx-auto max-w-5xl px-4 pb-12">
         <h2 className="font-pixel text-2xl font-semibold sm:text-3xl">How it connects to the UN SDGs</h2>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          {SDGS.map((g) => (
-            <div key={g.n} className={"pixel-panel flex gap-4 p-4" + (g.core ? " sm:col-span-2" : "")}>
+          {SDGS.map((g, i) => (
+            // The core goal spans the row; so does a leftover last card, so the grid stays symmetrical.
+            <div
+              key={g.n}
+              className={
+                "pixel-panel flex gap-4 p-4" +
+                (g.core || (i === SDGS.length - 1 && (SDGS.length - 1) % 2 === 1) ? " sm:col-span-2" : "")
+              }
+            >
               <div
                 className="font-pixel flex h-14 w-14 shrink-0 items-center justify-center border-[3px] border-[#2b2119] text-2xl font-bold text-white"
                 style={{ background: g.color }}

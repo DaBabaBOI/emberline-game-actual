@@ -113,6 +113,7 @@ export function CampfireModel({ opacity, lit = true }: ModelProps) {
           ))}
         </group>
       )}
+      {/* Log seats. Villagers sit on these: keep FIRE_SEATS in villagers.tsx in step. */}
       {[0, 1.3, 2.6, 3.9, 5.2].map((a) => (
         <Log key={a} opacity={opacity} position={[Math.cos(a) * 0.5, 0.05, Math.sin(a) * 0.5]} rotation={[0, -a, Math.PI / 2]} length={0.3} radius={0.05} />
       ))}
@@ -388,7 +389,6 @@ export function WarCampModel({ opacity }: ModelProps) {
           <boxGeometry args={[0.15, 0.1, 0.01]} />
         </Part>
       </group>
-      <Flame opacity={opacity} position={[0.2, 0.02, -0.25]} scale={0.7} />
     </group>
   );
 }

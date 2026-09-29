@@ -8,6 +8,10 @@ import { BUILDINGS_BY_ID, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL } from "@/g
 import {
   buildingCost,
   DEMOLISH_TOOL,
+  dustNote,
+  residents,
+  fireScareNote,
+  gatherNote,
   isLit,
   landStrain,
   litFires,
@@ -103,6 +107,13 @@ export function WorldCanvas() {
     def && !error && woodLeft !== null && woodLeft < LOW_WOOD_AFTER_BUY && state.tutorialStep >= TUTORIAL.length
       ? `Leaves only ${woodLeft} wood. Fires need wood, so you might save up first.`
       : null;
+
+  const inTutorialNow = state.tutorialStep < TUTORIAL.length;
+  // With no tool picked, hovering a home shows who lives there.
+  const dwellers = !selected && hoverTile ? residents(state, hoverTile) : null;
+  const scare = def && !error && hoverTile ? fireScareNote(state, hoverTile, def.id) : null;
+  const dust = def && !error && hoverTile ? dustNote(state, hoverTile, def.id) : null;
+  const gather = def?.id === "gatherer" && !error && hoverTile && !inTutorialNow ? gatherNote(state) : null;
 
   const burning = useMemo(() => litFires(state), [state]);
   // A battle is played out for a few ticks after it happens.
@@ -238,7 +249,8 @@ export function WorldCanvas() {
       <Wildfire tiles={state.tiles} />
       <FireVictims tiles={state.tiles} victims={state.fireVictims ?? []} />
 
-      {hoverTile && (
+      {hoverTile && (selected || (hoverTile.terrain !== "deep" && hoverTile.terrain !== "shallow")) && (
+        // With no tool picked, open water isn't worth outlining.
         <HexOutline
           x={hoverTile.x}
           y={tileTop(hoverTile)}
@@ -260,6 +272,13 @@ export function WorldCanvas() {
           }
         />
       )}
+      {hoverTile && dwellers && (
+        <Html zIndexRange={[15, 0]} center position={[hoverTile.x, tileTop(hoverTile) + 1.2, hoverTile.z]} style={{ pointerEvents: "none" }}>
+          <div className="pixel-panel-dark font-pixel whitespace-nowrap px-2 py-1 text-xs" data-testid="home-label">
+            {BUILDINGS_BY_ID[hoverTile.building!].name}: {dwellers.living} of {dwellers.room} people live here
+          </div>
+        </Html>
+      )}
       {hoverTile && demolishNote && hoverTile.building && (
         <Html zIndexRange={[15, 0]} center position={[hoverTile.x, tileTop(hoverTile) + 1.2, hoverTile.z]} style={{ pointerEvents: "none" }}>
           <div className="pixel-panel-dark font-pixel whitespace-nowrap px-2 py-1 text-xs">{demolishNote.text}</div>
@@ -268,7 +287,13 @@ export function WorldCanvas() {
       {hoverTile && Ghost && (
         <group position={[hoverTile.x, tileTop(hoverTile), hoverTile.z]} scale={1.55}>
           <Ghost opacity={0.45} />
-          <Html zIndexRange={[15, 0]} center position={[0, 1.1, 0]} style={{ pointerEvents: "none" }}>
+          <Html
+            // In the tutorial the card sits above the dimming so it can be read.
+            zIndexRange={state.tutorialStep < TUTORIAL.length ? [40, 30] : [15, 0]}
+            // Beside the tile, not on it, so you can see where you're placing.
+            position={[0, 0.3, 0]}
+            style={{ pointerEvents: "none", transform: "translate(56px, -50%)" }}
+          >
             {error ? (
               <div className="pixel-panel-dark font-pixel whitespace-nowrap px-2 py-1 text-xs">{error}</div>
             ) : (
@@ -282,6 +307,24 @@ export function WorldCanvas() {
                   <PixelIcon name={def!.landImpact ? "stump" : "leaf"} size={12} />
                   {def!.landCost}
                 </span>
+                {scare && (
+                  <span className="flex items-start gap-1.5 text-amber-200">
+                    <PixelIcon name="warning" size={12} />
+                    {scare}
+                  </span>
+                )}
+                {gather && (
+                  <span className="flex items-start gap-1.5 text-amber-200">
+                    <PixelIcon name="warning" size={12} />
+                    {gather}
+                  </span>
+                )}
+                {dust && (
+                  <span className="flex items-start gap-1.5 text-amber-200">
+                    <PixelIcon name="warning" size={12} />
+                    {dust}
+                  </span>
+                )}
                 {lowWood && (
                   <span className="flex items-start gap-1.5 text-amber-200">
                     <PixelIcon name="warning" size={12} />

@@ -20,6 +20,11 @@ const TIERS: Record<DebriefData["tier"], { title: string; text: string; tone: st
     text: `Your people grew, but the land paid for it. The best ending needs Sustainability of ${MIN_SUSTAINABILITY_FOR_BEST_ENDING} or more.`,
     tone: "border-amber-700 bg-amber-100 text-amber-900",
   },
+  lost: {
+    title: "The village did not last",
+    text: "A healthy land means little if the people are gone. A village that lasts needs both: land that can recover, and people who are fed, warm and hopeful.",
+    tone: "border-red-800 bg-red-100 text-red-900",
+  },
   stripped: {
     title: "A land stripped bare",
     text: "The forests are gone and the land is exhausted. Whoever comes next inherits the damage.",
@@ -43,7 +48,8 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
   const { state, dispatch } = useGame();
   const d = state.debrief ?? (state.phase === "gameover" ? makeDebrief(state, "loss") : null);
   if (!d) return null;
-  const tier = TIERS[d.tier];
+  // Older saves may have stored a land-only verdict on a loss.
+  const tier = TIERS[d.kind === "loss" ? "lost" : d.tier];
   const deaths = d.stats.deaths;
   const lost = Math.round(deaths.famine + deaths.disease + deaths.fire + deaths.battle);
   const who = state.nation ?? "Your people";
@@ -208,7 +214,7 @@ export function NextEraPrompt() {
   if (!state.researched.includes("agriculture")) return null;
   const ready = readyForNextEra(state);
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-28 flex justify-center md:top-20">
+    <div className="pointer-events-none flex justify-center">
       {ready ? (
         <button
           type="button"

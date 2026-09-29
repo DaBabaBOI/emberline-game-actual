@@ -74,7 +74,9 @@ export function generateMap(seed: number): { tiles: Tile[]; startTile: number } 
       if (value < 0.1) terrain = "deep";
       else if (value < 0.25) terrain = "shallow";
       else if (value < 0.33) terrain = "beach";
-      else if (value > 0.6 && detail > 0.66) terrain = "mountain";
+      // Mountains rise in each island's outer highlands, never in its heart
+      // (where villages start): a ring between the coast and the middle.
+      else if (value > 0.38 && value < 0.56 && detail > 0.64) terrain = "mountain";
       else if (value > 0.5 && detail > 0.56) terrain = "hills";
       else if (value < 0.42 && moisture > 0.6) terrain = "marsh";
       else if (forestNoise > 0.6 && moisture > 0.4) terrain = "forest";
