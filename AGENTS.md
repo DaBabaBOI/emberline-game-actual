@@ -163,6 +163,10 @@ These were decided with the project owner. Do not change them without being aske
   working when adding eras. It must never show without `?dev`. **Every new
   feature gets a dev-panel button (or dev option) to trigger or test it**, e.g.
   Wildfire, +10 people.
+- **Gatherers** (`GATHERING`): camps within 2 hexes share the wild food (each
+  gets 1 / (1 + 0.5 × others)); every camp past the second costs −2
+  Sustainability (overhunting). The placement card explains both (`gatherNote()`),
+  and the "overhunting" lesson tells the ecology.
 - **Quarry dust** (`QUARRY_DUST`): gatherers, farms and pens within 2 hexes of a
   quarry make 40% less food. The placement card says how many buildings a new
   quarry would hit (`dustNote()`), and dusty buildings say so in their info card.
