@@ -3,6 +3,7 @@
 import { BUILDINGS_BY_ID, FIRE_SCARE, QUARRY_DUST } from "@/game/content";
 import {
   dusty,
+  residents,
   scaredByFire,
   gathererShare,
   countBuildings,
@@ -69,6 +70,12 @@ export function BuildingInfo({
         <p className="mt-2 border-t-2 border-stone-300 pt-1.5 text-amber-800">
           {countBuildings(state).gatherer} camps share what the wild can give: each makes{" "}
           {Math.round(gathererShare(state) * 100)}% of a full camp.
+        </p>
+      )}
+
+      {residents(state, tile) && (
+        <p className="mt-2 border-t-2 border-stone-300 pt-1.5">
+          {residents(state, tile)!.living} of {residents(state, tile)!.room} people live here.
         </p>
       )}
 
