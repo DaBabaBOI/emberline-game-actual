@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "Knowledge now comes from milestones: your first of each building, reaching 10, 15, 20, 30 and 50 people, your first scouting trip, beating raiders and planting saplings. Elder's Huts and schools still teach a little all the time.",
       "Dev mode: pick any event card or elder lesson from a list and trigger it.",
       "Elder Ama tells you when you have learned enough to research something new, and the Advancements button shows how many you can afford.",
       "Elder Ama now explains the tree stumps on each building: how hard it is on the land, and where to look.",

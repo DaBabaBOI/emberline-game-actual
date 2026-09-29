@@ -237,6 +237,8 @@ export interface GameState {
   lessonsSeen?: string[];
   lesson?: string | null;
   lessonTick?: number;
+  // Knowledge milestones already reached (each pays out once).
+  milestones?: string[];
   // Advancements Elder Ama has already said we can afford (so she says it once).
   knowledgeNotified?: string[];
   // Saplings planted so far.

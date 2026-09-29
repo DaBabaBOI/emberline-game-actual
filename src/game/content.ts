@@ -945,8 +945,17 @@ export const METER_SDG: Record<MeterKey, string> = {
 // granaries keep this much more food from rotting; foresters add this much
 // growth to one thinned forest tile within reach every 3 ticks; walls add defense.
 export const SMITHY_CHARCOAL = 0.35;
-// Quarry dust settles on the land around it: food buildings within `range`
-// hexes make `foodLoss` less food.
+// Knowledge comes from milestones: every "first" teaches the tribe something.
+// (Elder's Huts, schools and literacy add a steady amount on top.)
+export const KNOWLEDGE_MILESTONES = {
+  firstBuilding: 4,
+  population: [10, 15, 20, 30, 50],
+  populationReward: 8,
+  firstScout: 3,
+  firstRaidWon: 6,
+  firstPlanted: 4,
+};
+
 // Gatherers live off the wild, and the wild only has so much. The first camp
 // makes full food; each extra camp adds only `extraCamp` of a camp's food. Every
 // camp past `freeCamps` also hunts animals faster than they can breed.
@@ -954,6 +963,8 @@ export const GATHERING = { extraCamp: 0.25, freeCamps: 2, sustainPerExtra: 2 };
 // Smoke, noise and people around a lit campfire scare off the animals: a
 // gatherer camp within `range` hexes of one makes `foodLoss` less food.
 export const FIRE_SCARE = { range: 1, foodLoss: 0.3 };
+// Quarry dust settles on the land around it: food buildings within `range`
+// hexes make `foodLoss` less food.
 export const QUARRY_DUST = { range: 2, foodLoss: 0.4, hits: ["gatherer", "farm", "pen"] };
 export const GRANARY_KEEPS = 150;
 export const FORESTER_GROWTH = 0.12;
@@ -983,6 +994,6 @@ export const TUTORIAL: { text: string; done: string; unlocks: string[]; buys: st
   { text: "A roof over our heads, but empty bellies. Place a Gatherer's Camp to collect wild food. Berry bushes give more.", done: "gatherer", unlocks: ["gatherer"], buys: ["gatherer"] },
   { text: "Food is coming. But we don't know what lies beyond these hills. Press Scout and send our young ones to look.", done: "scout", unlocks: ["scout"], buys: ["scout"] },
   { text: "The scouts saw smoke from other camps, and not everyone out there is friendly. Build a War Camp, then train our first warrior.", done: "train", unlocks: ["warcamp", "train"], buys: ["warcamp", "train"] },
-  { text: "With a guard at the camp, we can think about tomorrow. Every day our people learn a little just by living. That is Knowledge, the bulb at the top, and one day an Elder's Hut will help the children learn faster. Now, I have noticed wild grain sprouting wherever seeds fall. What if we planted them ourselves? Open Advancements and spend our Knowledge on Early Farming.", done: "early-farming", unlocks: ["advancements"], buys: ["early-farming"] },
+  { text: "With a guard at the camp, we can think about tomorrow. Every first thing we do teaches us something: the first fire, the first hut, the first time our tribe grows. That learning is Knowledge, the bulb at the top, and one day an Elder's Hut will help the children learn faster. Now, I have noticed wild grain sprouting wherever seeds fall. What if we planted them ourselves? Open Advancements and spend our Knowledge on Early Farming.", done: "early-farming", unlocks: ["advancements"], buys: ["early-farming"] },
   { text: "Now we know how to plant. Place Farmland on open grass. Fields feed many, but they take the land from the wild. Everything has a price, chief. Choosing which to pay is up to you.", done: "farm", unlocks: ["farm"], buys: ["farm"] },
 ];

@@ -31,6 +31,7 @@ import {
   TRAIN_COST,
   TREE,
   TREE_BY_ID,
+  KNOWLEDGE_MILESTONES,
   TUTORIAL,
   TUTORIAL_FAREWELL,
   WARRIORS_PER_CAMP,
@@ -476,7 +477,8 @@ export function dustNote(state: GameState, tile: Tile, building: string): string
 }
 
 export function production(state: GameState): Resources {
-  const out: Resources = { food: 0, wood: 0, stone: 0, knowledge: 0.05, currency: 0 };
+  // No base Knowledge: it comes from milestones, teaching buildings and literacy.
+  const out: Resources = { food: 0, wood: 0, stone: 0, knowledge: 0, currency: 0 };
   for (const tile of state.tiles) {
     if (!tile.building) continue;
     const def = BUILDINGS_BY_ID[tile.building];
@@ -947,6 +949,37 @@ function lessonReady(id: string, state: GameState) {
   }
 }
 
+// Every milestone reached for the first time: [id, what happened, Knowledge].
+function milestonesReached(state: GameState): [string, string, number][] {
+  const M = KNOWLEDGE_MILESTONES;
+  const out: [string, string, number][] = [];
+  for (const [id, n] of Object.entries(countBuildings(state)))
+    if (n > 0 && BUILDINGS_BY_ID[id]) out.push([`build-${id}`, `our first ${BUILDINGS_BY_ID[id].name}`, M.firstBuilding]);
+  for (const p of M.population)
+    if (state.population >= p) out.push([`pop-${p}`, `our tribe has grown to ${p} people`, M.populationReward]);
+  if (state.flags.scouted) out.push(["scout", "our scouts saw new land", M.firstScout]);
+  if ((state.stats?.raidsWon ?? 0) > 0) out.push(["raid", "we held off raiders", M.firstRaidWon]);
+  if ((state.planted ?? 0) > 0) out.push(["plant", "we planted our first saplings", M.firstPlanted]);
+  return out;
+}
+
+// Pay out Knowledge for new milestones, once each.
+function knowledgeMilestones(state: GameState): GameState {
+  const done = state.milestones ?? [];
+  const fresh = milestonesReached(state).filter(([id]) => !done.includes(id));
+  if (!fresh.length) return state;
+  const bonus = state.culture === "scholars" ? 1.5 : 1;
+  const gain = Math.round(fresh.reduce((sum, [, , k]) => sum + k, 0) * bonus);
+  // Several at once (e.g. after the tutorial): one short line, not a list.
+  const what = fresh.length > 2 ? `${fresh.length} firsts for our tribe` : fresh.map(([, text]) => text).join(", ");
+  return {
+    ...state,
+    milestones: [...done, ...fresh.map(([id]) => id)],
+    resources: { ...state.resources, knowledge: state.resources.knowledge + gain },
+    log: [`Milestone: ${what}. We learned from ${fresh.length > 1 ? "them" : "it"} (+${gain} Knowledge).`, ...state.log].slice(0, 30),
+  };
+}
+
 // Advancements the tribe could research right now with the Knowledge it has.
 export function affordableResearch(state: GameState) {
   if (state.tutorialStep < TUTORIAL.length) return [];
@@ -1189,6 +1222,7 @@ function tick(state: GameState): GameState {
   }
   next = checkSecrets(next);
   next = lessonDue(next);
+  next = knowledgeMilestones(next);
   next = knowledgeReady(next);
   next = advanceTutorial(next);
   return { ...next, meters: computeMeters(next) };
