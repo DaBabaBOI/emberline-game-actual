@@ -32,6 +32,7 @@ import {
   TREE,
   TREE_BY_ID,
   KNOWLEDGE_MILESTONES,
+  SCOUT_KNOWLEDGE,
   TUTORIAL,
   TUTORIAL_FAREWELL,
   WARRIORS_PER_CAMP,
@@ -957,8 +958,6 @@ function milestonesReached(state: GameState): [string, string, number][] {
     if (n > 0 && BUILDINGS_BY_ID[id]) out.push([`build-${id}`, `our first ${BUILDINGS_BY_ID[id].name}`, M.firstBuilding]);
   for (const p of M.population)
     if (state.population >= p) out.push([`pop-${p}`, `our tribe has grown to ${p} people`, M.populationReward]);
-  // Every scouting trip brings back something new to learn.
-  for (let i = 1; i <= state.scoutsSent; i++) out.push([`scout-${i}`, "our scouts mapped new land", M.perScout]);
   if ((state.stats?.raidsWon ?? 0) > 0) out.push(["raid", "we held off raiders", M.firstRaidWon]);
   if ((state.planted ?? 0) > 0) out.push(["plant", "we planted our first saplings", M.firstPlanted]);
   return out;
@@ -1556,13 +1555,17 @@ function step(state: GameState, action: Action): GameState {
       const target = frontier[Math.floor(rand() * frontier.length)];
       const tiles = state.tiles.map((t) => ({ ...t }));
       revealAround(tiles, tiles[target.id], state.culture === "mariners" ? 5 : 4);
+      // A trip that maps a lot of new land teaches more than a short one.
+      const newLand = tiles.filter((t, i) => t.revealed && !state.tiles[i].revealed && isLand(t.terrain)).length;
+      const learned = newLand >= SCOUT_KNOWLEDGE.bigTrip ? 2 : 1;
+      const spent = spend(state.resources, cost);
       return withMeters({
         ...state,
         tiles,
         flags: { ...state.flags, scouted: true },
         scoutsSent: state.scoutsSent + 1,
-        resources: spend(state.resources, cost),
-        log: ["Scouts returned with news of new land.", ...state.log].slice(0, 30),
+        resources: { ...spent, knowledge: spent.knowledge + learned },
+        log: [`Scouts mapped ${newLand} tiles of new land (+${learned} Knowledge).`, ...state.log].slice(0, 30),
       });
     }
 
