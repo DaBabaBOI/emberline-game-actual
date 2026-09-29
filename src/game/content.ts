@@ -951,10 +951,13 @@ export const KNOWLEDGE_MILESTONES = {
   firstBuilding: 4,
   population: [10, 15, 20, 30, 50],
   populationReward: 8,
-  perScout: 3,
   firstRaidWon: 6,
   firstPlanted: 4,
 };
+
+// Each scouting trip teaches the tribe: +2 Knowledge if it maps at least
+// `bigTrip` new land tiles, +1 otherwise.
+export const SCOUT_KNOWLEDGE = { bigTrip: 20 };
 
 // Gatherers live off the wild, and the wild only has so much. The first camp
 // makes full food; each extra camp adds only `extraCamp` of a camp's food. Every
