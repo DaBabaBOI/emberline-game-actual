@@ -961,7 +961,7 @@ export function makeDebrief(state: GameState, kind: Debrief["kind"]): Debrief {
     researched: state.researched.filter((id) => !TREE_BY_ID[id]?.secret).length - 1,
     planted: state.planted ?? 0,
     lessons: state.lessonsSeen ?? [],
-    tier: endingTier(meters.sustainability),
+    tier: kind === "loss" ? "lost" : endingTier(meters.sustainability),
   };
 }
 

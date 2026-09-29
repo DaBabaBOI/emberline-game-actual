@@ -82,7 +82,9 @@ export interface Debrief {
   researched: number;
   planted: number;
   lessons: string[];
-  tier: "thriving" | "costly" | "stripped";
+  // "lost": the people starved, left or were conquered. Never a good ending,
+  // however healthy the land is.
+  tier: "thriving" | "costly" | "stripped" | "lost";
 }
 
 export type MeterKey =
