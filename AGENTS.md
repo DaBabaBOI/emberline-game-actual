@@ -168,6 +168,10 @@ These were decided with the project owner. Do not change them without being aske
   manage. Every camp past the second costs −2 Sustainability (overhunting). The
   placement card explains both (`gatherNote()`), and the "overhunting" lesson
   tells the ecology.
+- **Fire scares game** (`FIRE_SCARE`): a gatherer camp within 1 hex of a lit
+  campfire makes 30% less food. The placement card warns for both buildings
+  (`fireScareNote()`); the tutorial and skip-tutorial never put the gatherer next
+  to the fire.
 - **Quarry dust** (`QUARRY_DUST`): gatherers, farms and pens within 2 hexes of a
   quarry make 40% less food. The placement card says how many buildings a new
   quarry would hit (`dustNote()`), and dusty buildings say so in their info card.

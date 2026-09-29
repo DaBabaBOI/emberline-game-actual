@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "A lit campfire right next to a gatherer's camp scares off the animals: that camp makes 30% less food. Keep fires and camps a tile apart.",
       "\"The herds are thinning\": letting the herds recover now costs food today, as holding back really would.",
       "Warriors and villagers no longer pace back and forth beside buildings: they walk to the near side and pause when their path is blocked.",
       "The campfire warning now says cold people become unhappy.",

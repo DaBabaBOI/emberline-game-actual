@@ -9,6 +9,7 @@ import {
   buildingCost,
   DEMOLISH_TOOL,
   dustNote,
+  fireScareNote,
   gatherNote,
   isLit,
   landStrain,
@@ -107,6 +108,7 @@ export function WorldCanvas() {
       : null;
 
   const inTutorialNow = state.tutorialStep < TUTORIAL.length;
+  const scare = def && !error && hoverTile ? fireScareNote(state, hoverTile, def.id) : null;
   const dust = def && !error && hoverTile ? dustNote(state, hoverTile, def.id) : null;
   const gather = def?.id === "gatherer" && !error && hoverTile && !inTutorialNow ? gatherNote(state) : null;
 
@@ -295,6 +297,12 @@ export function WorldCanvas() {
                   <PixelIcon name={def!.landImpact ? "stump" : "leaf"} size={12} />
                   {def!.landCost}
                 </span>
+                {scare && (
+                  <span className="flex items-start gap-1.5 text-amber-200">
+                    <PixelIcon name="warning" size={12} />
+                    {scare}
+                  </span>
+                )}
                 {gather && (
                   <span className="flex items-start gap-1.5 text-amber-200">
                     <PixelIcon name="warning" size={12} />
