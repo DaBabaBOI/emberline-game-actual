@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { BUILDINGS, LOW_WOOD_AFTER_BUY, PLANT_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL } from "@/game/content";
+import { BUILDINGS, LOW_WOOD_AFTER_BUY, PLANT_COST, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL } from "@/game/content";
 import {
   affordableResearch,
   buildingCost,
@@ -19,6 +19,7 @@ import {
   perSecond,
   production,
   scoutCost,
+  spearmenOf,
   tutorialLocked,
   warriorCap,
 } from "@/game/engine";
@@ -252,6 +253,19 @@ export function BottomBar() {
             <Cost cost={PLANT_COST} />
           </ToolButton>
           <ArmyButton />
+          {state.researched.includes("spears") && spearmenOf(state) < state.soldiers && (
+            <ToolButton
+              guide="tool-upgrade"
+              icon="sword"
+              label={`Spear ${spearmenOf(state)}/${state.soldiers}`}
+              onClick={() => dispatch({ type: "upgradeWarrior" })}
+              disabled={!canAfford(state, SPEAR_COST)}
+              title="Give a warrior a spear: spearmen fight 1.5x as hard."
+              tone="bg-red-900 hover:bg-red-800"
+            >
+              <Cost cost={SPEAR_COST} />
+            </ToolButton>
+          )}
           <ToolButton
             guide="tool-scout"
             locked={tutorialLocked(state, "scout")}

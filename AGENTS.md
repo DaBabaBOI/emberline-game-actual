@@ -242,6 +242,20 @@ These were decided with the project owner. Do not change them without being aske
   Paintings give +8. Agriculture costs 100. The Ancient era runs 5 years per
   tick so the Roman legion (year −1600) arrives ~9 minutes in, leaving time to
   research bronze arms. Re-check with a bot sim when tuning.
+- **Advancement goals** (`ADVANCEMENT_GOALS`): every advancement has one goal
+  (more for big ones like Agriculture and Bronze Weapons) that must be met before
+  it can be researched; Knowledge is still the price. Counting goals (`tally`)
+  count from the moment the advancement is reachable (`goalStart` snapshot).
+  Cards show the goal and progress (`goalProgress()`). Dev: "Goals on".
+- **After-steps** (`AFTER_STEPS`, `state.coach`): after researching, Elder Ama
+  explains what it unlocked and the hand walks the player through using it once
+  (place the building, or give a warrior a spear), with the clock held like the
+  tutorial. Explanation-only steps have a "Got it" button; all can be skipped.
+  Buildings from a later era wait until that era. New advancements need a goal
+  and an after-step.
+- **Spearmen:** after Hunting Spears, new warriors carry spears and existing ones
+  can be upgraded (`SPEAR_COST`); spearmen fight 1.5x (`spearmenOf()`), plain
+  warriors 1x. Figures show spears or clubs.
 - **Knowledge ready:** when Knowledge first covers an advancement, Elder Ama says
   so in a toast (once per advancement, `knowledgeReady()`), and the Advancements
   button shows how many are affordable (`affordableResearch()`).

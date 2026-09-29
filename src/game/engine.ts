@@ -32,6 +32,10 @@ import {
   TRAIN_COST,
   TREE,
   TREE_BY_ID,
+  SPEAR_COST,
+  SPEARMAN_STRENGTH,
+  ADVANCEMENT_GOALS,
+  AFTER_STEPS,
   KNOWLEDGE_MILESTONES,
   CAVE_PAINTINGS_KNOWLEDGE,
   TEACHING,
@@ -46,6 +50,9 @@ import { generateMap, isLand, revealAround, terrainHeight } from "./map";
 import { mulberry32 } from "./noise";
 import type { IconId } from "./sprites";
 import type {
+  Goal,
+  TallyKey,
+  TreeNode,
   Debrief,
   Stats,
   BuildingDef,
@@ -95,7 +102,10 @@ export type Action =
   | { type: "devEra"; era: number }
   | { type: "devReveal" }
   | { type: "devEvent"; id: string }
-  | { type: "devCutHills" };
+  | { type: "devCutHills" }
+  | { type: "devGoals" }
+  | { type: "endCoach" }
+  | { type: "upgradeWarrior" };
 
 export interface NewGameOptions {
   dev?: boolean;
@@ -876,26 +886,37 @@ export function warriorCap(state: GameState) {
   return (countBuildings(state).warcamp ?? 0) * WARRIORS_PER_CAMP;
 }
 
+// Warriors carrying spears. Older saves had spears apply to everyone.
+export function spearmenOf(state: GameState): number {
+  const n = state.spearmen ?? (state.researched.includes("spears") ? state.soldiers : 0);
+  return Math.max(0, Math.min(state.soldiers, n));
+}
+
 export function defenseStrength(state: GameState) {
-  const perWarrior =
-    (state.researched.includes("spears") ? 1.5 : 1) * (state.researched.includes("bronze-arms") ? 2 : 1);
+  const bronze = state.researched.includes("bronze-arms") ? 2 : 1;
+  const spears = spearmenOf(state);
   const counts = countBuildings(state);
-  return state.soldiers * perWarrior + ((counts.warcamp ?? 0) > 0 ? 1 : 0) + (counts.walls ?? 0) * WALL_DEFENSE;
+  return (
+    ((state.soldiers - spears) + spears * SPEARMAN_STRENGTH) * bronze +
+    ((counts.warcamp ?? 0) > 0 ? 1 : 0) +
+    (counts.walls ?? 0) * WALL_DEFENSE
+  );
 }
 
 // Where the defense number comes from, in words: "4 warriors × 1.5 (spears) + 1 war camp".
 export function defenseBreakdown(state: GameState): string {
-  const spears = state.researched.includes("spears");
   const bronze = state.researched.includes("bronze-arms");
-  const perWarrior = (spears ? 1.5 : 1) * (bronze ? 2 : 1);
+  const spears = spearmenOf(state);
+  const plain = state.soldiers - spears;
   const counts = countBuildings(state);
-  const why = [spears && "spears", bronze && "bronze"].filter(Boolean).join(", ");
-  const parts = [
-    `${state.soldiers} warrior${state.soldiers === 1 ? "" : "s"}${perWarrior !== 1 ? ` × ${perWarrior} (${why})` : ""}`,
-  ];
-  if ((counts.warcamp ?? 0) > 0) parts.push("1 war camp");
-  if (counts.walls) parts.push(`${counts.walls * WALL_DEFENSE} walls`);
-  return parts.join(" + ");
+  const parts: string[] = [];
+  if (plain || !spears) parts.push(`${plain} warrior${plain === 1 ? "" : "s"}`);
+  if (spears) parts.push(`${spears} spear${spears === 1 ? "man" : "men"} × ${SPEARMAN_STRENGTH}`);
+  let text = parts.join(" + ");
+  if (bronze) text = `(${text}) × 2 bronze`;
+  if ((counts.warcamp ?? 0) > 0) text += " + 1 war camp";
+  if (counts.walls) text += ` + ${counts.walls * WALL_DEFENSE} walls`;
+  return text;
 }
 
 const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
@@ -1030,6 +1051,93 @@ function knowledgeMilestones(state: GameState): GameState {
   };
 }
 
+// ---- Advancement goals ------------------------------------------------------
+
+// How many times something has happened this game (some come from other counters).
+export function tallyOf(state: GameState, key: TallyKey): number {
+  if (key === "scouts") return state.scoutsSent;
+  if (key === "planted") return state.planted ?? 0;
+  if (key === "raidsWon") return state.stats?.raidsWon ?? 0;
+  return state.tally?.[key] ?? 0;
+}
+
+function addTally(state: GameState, key: TallyKey, n: number): GameState {
+  if (n <= 0) return state;
+  return { ...state, tally: { ...state.tally, [key]: (state.tally?.[key] ?? 0) + n } };
+}
+
+// An advancement you could work toward now: everything it needs is researched.
+export function reachable(state: GameState, node: TreeNode): boolean {
+  return (
+    !node.secret &&
+    !node.comingSoon &&
+    !state.researched.includes(node.id) &&
+    node.requires.every((r) => state.researched.includes(r))
+  );
+}
+
+// Remember each goal's starting count the moment its advancement becomes reachable.
+function snapshotGoals(state: GameState): GameState {
+  const start = state.goalStart ?? {};
+  const fresh = TREE.filter((n) => ADVANCEMENT_GOALS[n.id] && !start[n.id] && reachable(state, n));
+  if (!fresh.length) return state;
+  const next = { ...start };
+  for (const n of fresh) {
+    const snap: Partial<Record<TallyKey, number>> = {};
+    for (const g of ADVANCEMENT_GOALS[n.id]) if (g.key) snap[g.key] = tallyOf(state, g.key);
+    next[n.id] = snap;
+  }
+  return { ...state, goalStart: next };
+}
+
+function goalHave(state: GameState, nodeId: string, g: Goal): number {
+  switch (g.kind) {
+    case "tally": {
+      const start = state.goalStart?.[nodeId]?.[g.key!];
+      // Not reachable yet: nothing counts.
+      return start === undefined ? 0 : tallyOf(state, g.key!) - start;
+    }
+    case "have":
+      return countBuildings(state)[g.building!] ?? 0;
+    case "population":
+      return Math.floor(state.population);
+    case "stored":
+      return Math.floor(state.resources[g.resource!]);
+    case "berryCamp":
+      return state.tiles.some((t) => t.building === "gatherer" && t.deposit === "berries") ? 1 : 0;
+  }
+}
+
+// Each goal of an advancement with how far along it is.
+export function goalProgress(state: GameState, nodeId: string) {
+  return (ADVANCEMENT_GOALS[nodeId] ?? []).map((g) => {
+    const have = Math.min(g.amount, Math.max(0, Math.floor(goalHave(state, nodeId, g))));
+    return { label: g.label, have, need: g.amount, done: have >= g.amount };
+  });
+}
+
+export function goalsMet(state: GameState, nodeId: string): boolean {
+  if (state.devGoals) return true;
+  return goalProgress(state, nodeId).every((g) => g.done);
+}
+
+// ---- The guided step after an advancement ---------------------------------
+
+function coachCount(state: GameState, node: string): number {
+  const step = AFTER_STEPS[node];
+  if (step?.upgrade) return spearmenOf(state);
+  return step?.build ? countBuildings(state)[step.build] ?? 0 : 0;
+}
+
+// A build step is done once one more of that building stands.
+function advanceCoach(state: GameState): GameState {
+  const c = state.coach;
+  if (!c) return state;
+  const step = AFTER_STEPS[c.node];
+  if ((step?.build || step?.upgrade) && coachCount(state, c.node) > c.from) return { ...state, coach: null };
+  return state;
+}
+
 // Advancements the tribe could research right now with the Knowledge it has.
 export function affordableResearch(state: GameState) {
   if (state.tutorialStep < TUTORIAL.length) return [];
@@ -1039,7 +1147,8 @@ export function affordableResearch(state: GameState) {
       !n.comingSoon &&
       !state.researched.includes(n.id) &&
       n.requires.every((r) => state.researched.includes(r)) &&
-      state.resources.knowledge >= n.cost,
+      state.resources.knowledge >= n.cost &&
+      goalsMet(state, n.id),
   );
 }
 
@@ -1162,6 +1271,11 @@ function tick(state: GameState): GameState {
   const cons = consumption(state);
   const era = ERAS[state.era];
 
+  const rot = Math.min(foodSpoiling(state), Math.max(0, state.resources.food + prod.food - cons));
+  state = addTally(state, "rotted", rot);
+  state = addTally(state, "wood", Math.max(0, prod.wood));
+  state = addTally(state, "stone", Math.max(0, prod.stone));
+  if (hasLitFire(state)) state = addTally(state, "fireLit", TICK_SECONDS);
   const resources: Resources = {
     food: Math.max(0, state.resources.food + prod.food - cons - foodSpoiling(state)),
     wood: Math.max(0, state.resources.wood + prod.wood),
@@ -1274,6 +1388,7 @@ function tick(state: GameState): GameState {
   next = checkSecrets(next);
   next = lessonDue(next);
   next = knowledgeMilestones(next);
+  next = snapshotGoals(next);
   next = knowledgeReady(next);
   next = advanceTutorial(next);
   return { ...next, meters: computeMeters(next) };
@@ -1574,7 +1689,13 @@ function withMeters(state: GameState): GameState {
   return { ...next, meters: computeMeters(next) };
 }
 
+// Every action, then check whether the guided after-step has been done.
 export function reducer(state: GameState, action: Action): GameState {
+  const next = reduce(state, action);
+  return next.coach ? advanceCoach(next) : next;
+}
+
+function reduce(state: GameState, action: Action): GameState {
   const next = step(state, action);
   // The clock is held during the tutorial, so check progress after every action too.
   return action.type !== "tick" && next !== state ? advanceTutorial(next) : next;
@@ -1646,11 +1767,16 @@ function step(state: GameState, action: Action): GameState {
         node.secret ||
         state.researched.includes(node.id) ||
         !node.requires.every((r) => state.researched.includes(r)) ||
-        state.resources.knowledge < node.cost
+        state.resources.knowledge < node.cost ||
+        !goalsMet(state, node.id)
       )
         return state;
+      // Elder Ama walks you through what it unlocks (the opening tutorial covers its own).
+      const inTut = state.tutorialStep < TUTORIAL.length;
+      const coach = AFTER_STEPS[node.id] && !inTut ? { node: node.id, from: coachCount(state, node.id) } : state.coach ?? null;
       return withMeters({
-        ...state,
+        ...snapshotGoals({ ...state, researched: [...state.researched, node.id] }),
+        coach,
         researched: [...state.researched, node.id],
         flags: { ...state.flags, rocket: state.flags.rocket || node.id === "rocketry" },
         resources: { ...state.resources, knowledge: state.resources.knowledge - node.cost },
@@ -1756,8 +1882,10 @@ function step(state: GameState, action: Action): GameState {
       if (tutorialLocked(state, "train") || state.soldiers >= warriorCap(state) || !canAfford(state, TRAIN_COST))
         return state;
       return withMeters({
-        ...state,
+        ...addTally(state, "trained", 1),
         soldiers: state.soldiers + 1,
+        // After Hunting Spears, new warriors carry spears.
+        spearmen: spearmenOf(state) + (state.researched.includes("spears") ? 1 : 0),
         resources: spend(state.resources, TRAIN_COST),
       });
     }
@@ -1783,7 +1911,7 @@ function step(state: GameState, action: Action): GameState {
         return state;
       }
       return withMeters({
-        ...state,
+        ...addTally(state, "relights", 1),
         fires: { ...state.fires, [tile.id]: burnTicks(state) },
         resources: { ...state.resources, wood: state.resources.wood - RELIGHT_WOOD },
         log: ["Relit the campfire.", ...state.log].slice(0, 30),
@@ -1928,6 +2056,24 @@ function step(state: GameState, action: Action): GameState {
       return state.dev && event ? { ...state, event } : state;
     }
 
+    case "devGoals":
+      // Dev: treat every advancement goal as met (toggle).
+      return state.dev ? { ...state, devGoals: !state.devGoals } : state;
+
+    case "upgradeWarrior": {
+      if (!state.researched.includes("spears") || spearmenOf(state) >= state.soldiers || !canAfford(state, SPEAR_COST))
+        return state;
+      return withMeters({
+        ...state,
+        spearmen: spearmenOf(state) + 1,
+        resources: spend(state.resources, SPEAR_COST),
+        log: ["A warrior took up a spear.", ...state.log].slice(0, 30),
+      });
+    }
+
+    case "endCoach":
+      return { ...state, coach: null };
+
     case "devCutHills":
       // Finish every quarry's cut at once, to see the scar.
       if (!state.dev) return state;
@@ -1942,7 +2088,7 @@ function step(state: GameState, action: Action): GameState {
 
     case "hunt":
       return maybeOutbreak({
-        ...state,
+        ...addTally(state, "hunts", 1),
         resources: { ...state.resources, food: state.resources.food + HUNT_FOOD },
         log: [`Hunters brought down a ${action.animal} (+${HUNT_FOOD} food).`, ...state.log].slice(0, 30),
       }, isCalm(state) ? 0 : DISEASE.hunt, mulberry32(state.seed + state.tick * 37 + Math.round(state.resources.food))(), "It came with the meat from the hunt.");

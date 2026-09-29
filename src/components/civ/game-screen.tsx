@@ -20,6 +20,7 @@ import {
   RaidBanner,
   Toasts,
   TutorialPanel,
+  CoachPanel,
   Warnings,
 } from "./hud/overlays";
 
@@ -68,6 +69,7 @@ function Hud({ onRestart }: { onRestart: () => void }) {
         >
           <DevPanel />
           <TutorialPanel />
+          <CoachPanel />
           <ElderLesson />
         </div>
         <div className="flex flex-col items-end lg:absolute lg:right-16 lg:top-20 lg:w-64">

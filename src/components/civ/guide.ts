@@ -1,5 +1,5 @@
-import { BUILDINGS_BY_ID, TRAIN_COST, TREE_BY_ID, TUTORIAL } from "@/game/content";
-import { buildingCost, countBuildings, placementError, scaredByFire, scoutCost } from "@/game/engine";
+import { AFTER_STEPS, BUILDINGS_BY_ID, ERAS, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL } from "@/game/content";
+import { buildingCost, countBuildings, placementError, scaredByFire, scoutCost, spearmenOf, warriorCap } from "@/game/engine";
 import { hexDistance } from "@/game/hex";
 import type { GameState, Resources } from "@/game/types";
 
@@ -43,18 +43,46 @@ export function suggestTile(state: GameState, buildingId: string) {
 }
 
 function buildStep(state: GameState, id: string, selected: string | null, panel: string | null): Guide {
+  // Researched ahead of time: the building only appears once we reach its era.
+  const era = BUILDINGS_BY_ID[id].era;
+  if (era > state.era) return { target: null, waiting: `We can build it once we reach the ${ERAS[era].name} era.` };
   const wait = missing(state, buildingCost(state, BUILDINGS_BY_ID[id]));
   if (wait) return { target: null, waiting: wait };
   // The bottom bar is hidden behind Advancements, so close it first.
   if (panel === "tree") return { target: { kind: "ui", ids: ["tree-close"] }, waiting: null };
   if (selected !== id) return { target: { kind: "ui", ids: [`build-${id}`] }, waiting: null };
   const tileId = suggestTile(state, id);
-  return tileId === null ? NONE : { target: { kind: "tile", tileId }, waiting: null };
+  // No good spot close by: let the player look around (the clock runs).
+  return tileId === null
+    ? { target: null, waiting: `Find a good spot for the ${BUILDINGS_BY_ID[id].name}.` }
+    : { target: { kind: "tile", tileId }, waiting: null };
+}
+
+// The guided step after an advancement: place what it unlocked, or give a
+// warrior a spear. Explanation-only steps have no target.
+function coachGuide(state: GameState, selected: string | null, panel: string | null): Guide {
+  const step = state.coach ? AFTER_STEPS[state.coach.node] : null;
+  if (!step) return NONE;
+  if (step.build) return buildStep(state, step.build, selected, panel);
+  if (step.upgrade) {
+    if (panel === "tree") return { target: { kind: "ui", ids: ["tree-close"] }, waiting: null };
+    if (spearmenOf(state) < state.soldiers) {
+      const wait = missing(state, SPEAR_COST);
+      return wait ? { target: null, waiting: wait } : { target: { kind: "ui", ids: ["tool-upgrade"] }, waiting: null };
+    }
+    // No warrior without a spear: train a new one (it comes with a spear).
+    if (state.soldiers >= warriorCap(state)) return { target: null, waiting: "Build another War Camp to train more." };
+    const wait = missing(state, TRAIN_COST);
+    return wait ? { target: null, waiting: wait } : { target: { kind: "ui", ids: ["tool-train"] }, waiting: null };
+  }
+  return NONE;
 }
 
 export function guideFor(state: GameState, selected: string | null, panel: string | null): Guide {
   const step = TUTORIAL[state.tutorialStep];
-  if (!step || state.phase !== "playing" || state.event || state.dev) return NONE;
+  if (state.phase !== "playing" || state.event) return NONE;
+  if (!step) return coachGuide(state, selected, panel);
+  if (state.dev) return NONE;
 
   switch (step.done) {
     case "scout": {

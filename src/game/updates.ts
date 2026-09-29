@@ -9,6 +9,9 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "Every advancement now has its own goal before you can research it (e.g. Herding: hunt 3 animals; Agriculture: 3 fields, 12 people, 50 food stored). Each card shows the goal and your progress.",
+      "After each advancement, Elder Ama and the pointing hand walk you through what it unlocked, like the opening tutorial.",
+      "Hunting Spears lets warriors carry spears: train new spearmen or give your warriors spears (4 wood). Spearmen fight 1.5x as hard and you can see them on the map.",
       "Knowledge is harder to come by: milestones and Elder's Huts teach less, extra huts teach only half, only your first 5 scouting trips teach anything, and Agriculture costs 100. Reaching the Ancient era now takes real time, and the Ancient era runs slower so there is time to prepare for the Romans.",
       "Quarries really cut the hill away now: the tile sinks and turns to bare rock, a mountain loses its peak, and the scar (and its Sustainability cost) stays after the quarry is gone.",
       "The raid banner shows where your defense comes from (warriors, spears, war camp, walls).",

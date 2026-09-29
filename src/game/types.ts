@@ -156,6 +156,41 @@ export interface TreeNode {
   comingSoon?: boolean;
 }
 
+// Running counts used by advancement goals (e.g. seconds a fire has burned).
+export type TallyKey =
+  | "fireLit"
+  | "wood"
+  | "stone"
+  | "rotted"
+  | "relights"
+  | "hunts"
+  | "trained"
+  | "scouts"
+  | "planted"
+  | "raidsWon";
+
+// One thing to do before an advancement can be researched.
+export interface Goal {
+  label: string;
+  // tally: do something N more times once reachable; have: own N of a building;
+  // population: have N people; stored: hold N of a resource at once;
+  // berryCamp: a gatherer's camp on berry bushes.
+  kind: "tally" | "have" | "population" | "stored" | "berryCamp";
+  amount: number;
+  key?: TallyKey;
+  building?: string;
+  resource?: "food" | "currency";
+}
+
+// What Elder Ama walks you through right after an advancement: place a building
+// (with the pointing hand), or just an explanation.
+export interface AfterStep {
+  text: string;
+  build?: string;
+  // Give a warrior a spear (Hunting Spears).
+  upgrade?: boolean;
+}
+
 export interface EventChoice {
   label: string;
   effect: {
@@ -239,6 +274,15 @@ export interface GameState {
   lessonsSeen?: string[];
   lesson?: string | null;
   lessonTick?: number;
+  // Running counts for advancement goals, and each goal's count when it became reachable.
+  tally?: Partial<Record<TallyKey, number>>;
+  goalStart?: Record<string, Partial<Record<TallyKey, number>>>;
+  // The guided step after an advancement: which one, and the building count when it began.
+  coach?: { node: string; from: number } | null;
+  // How many warriors carry spears (fight 1.5x). Missing in older saves.
+  spearmen?: number;
+  // Dev mode: advancement goals count as met.
+  devGoals?: boolean;
   // Knowledge milestones already reached (each pays out once).
   milestones?: string[];
   // Advancements Elder Ama has already said we can afford (so she says it once).
