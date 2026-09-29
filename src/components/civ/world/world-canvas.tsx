@@ -8,6 +8,7 @@ import { BUILDINGS_BY_ID, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL } from "@/g
 import {
   buildingCost,
   DEMOLISH_TOOL,
+  dustNote,
   isLit,
   landStrain,
   litFires,
@@ -103,6 +104,8 @@ export function WorldCanvas() {
     def && !error && woodLeft !== null && woodLeft < LOW_WOOD_AFTER_BUY && state.tutorialStep >= TUTORIAL.length
       ? `Leaves only ${woodLeft} wood. Fires need wood, so you might save up first.`
       : null;
+
+  const dust = def && !error && hoverTile ? dustNote(state, hoverTile, def.id) : null;
 
   const burning = useMemo(() => litFires(state), [state]);
   // A battle is played out for a few ticks after it happens.
@@ -288,6 +291,12 @@ export function WorldCanvas() {
                   <PixelIcon name={def!.landImpact ? "stump" : "leaf"} size={12} />
                   {def!.landCost}
                 </span>
+                {dust && (
+                  <span className="flex items-start gap-1.5 text-amber-200">
+                    <PixelIcon name="warning" size={12} />
+                    {dust}
+                  </span>
+                )}
                 {lowWood && (
                   <span className="flex items-start gap-1.5 text-amber-200">
                     <PixelIcon name="warning" size={12} />

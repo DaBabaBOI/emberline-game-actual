@@ -5,6 +5,7 @@ import {
   FORESTER_REACH,
   GRANARY_KEEPS,
   SMITHY_CHARCOAL,
+  QUARRY_DUST,
   WALL_DEFENSE,
   MIN_SUSTAINABILITY_FOR_BEST_ENDING,
   NEXT_ERA_POPULATION,
@@ -410,6 +411,26 @@ export function housingCapacity(state: GameState) {
   return BUILDINGS.reduce((sum, b) => sum + (b.housing ?? 0) * (counts[b.id] ?? 0), BASE_HOUSING);
 }
 
+// A food building with a quarry close by: its crops or berries are under dust.
+export function dusty(state: GameState, tile: Tile, building = tile.building): boolean {
+  if (!building || !QUARRY_DUST.hits.includes(building)) return false;
+  return state.tiles.some(
+    (t) => t.building === "quarry" && t.id !== tile.id && hexDistance(t, tile) <= QUARRY_DUST.range,
+  );
+}
+
+// What placing `building` on `tile` would do with dust, for the placement card.
+export function dustNote(state: GameState, tile: Tile, building: string): string | null {
+  const loss = Math.round(QUARRY_DUST.foodLoss * 100);
+  if (building === "quarry") {
+    const hit = state.tiles.filter(
+      (t) => t.building && QUARRY_DUST.hits.includes(t.building) && hexDistance(t, tile) <= QUARRY_DUST.range,
+    ).length;
+    return hit ? `Dust would cut the food of ${hit} building${hit === 1 ? "" : "s"} nearby by ${loss}%.` : null;
+  }
+  return dusty(state, tile, building) ? `A quarry nearby: this would make ${loss}% less food.` : null;
+}
+
 export function production(state: GameState): Resources {
   const out: Resources = { food: 0, wood: 0, stone: 0, knowledge: 0.05, currency: 0 };
   for (const tile of state.tiles) {
@@ -421,7 +442,9 @@ export function production(state: GameState): Resources {
         : tile.building === "farm" && state.tiles.some((t) => t.building === "canal" && hexDistance(t, tile) === 1)
           ? 1.5
           : 1;
-    for (const [k, v] of Object.entries(def.produces ?? {})) out[k as keyof Resources] += (v ?? 0) * factor;
+    const dust = dusty(state, tile) ? 1 - QUARRY_DUST.foodLoss : 1;
+    for (const [k, v] of Object.entries(def.produces ?? {}))
+      out[k as keyof Resources] += (v ?? 0) * factor * (k === "food" ? dust : 1);
     if (def.depositBonus && tile.deposit === def.depositBonus.deposit) {
       for (const [k, v] of Object.entries(def.depositBonus.amount))
         out[k as keyof Resources] += v ?? 0;
@@ -687,9 +710,9 @@ export function sustainabilityBreakdown(state: GameState): SustainPart[] {
       hint: "Every fire burns wood and fills the air with smoke.",
     },
     {
-      label: `${counts.quarry ?? 0} quarr${counts.quarry === 1 ? "y" : "ies"} digging pits`,
+      label: `${counts.quarry ?? 0} quarr${counts.quarry === 1 ? "y" : "ies"} scarring the hills`,
       value: -(counts.quarry ?? 0) * 3,
-      hint: "Quarries tear up the ground for stone.",
+      hint: "Quarries cut away the hillside for good, and their dust smothers nearby crops.",
     },
     {
       label: `${counts.farm ?? 0} field${counts.farm === 1 ? "" : "s"} cleared`,

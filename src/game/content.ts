@@ -165,7 +165,7 @@ export const BUILDINGS: BuildingDef[] = [
     icon: "pickaxe",
     description: "Cuts stone from hills. Bonus on stone deposits.",
     gain: "Stone for better buildings",
-    landCost: "Digs pits into the land",
+    landCost: "Rock dust covers crops and berries within 2 tiles: they make 40% less food",
     landImpact: 2,
     era: 0,
     cost: { wood: 15 },
@@ -939,6 +939,9 @@ export const METER_SDG: Record<MeterKey, string> = {
 // granaries keep this much more food from rotting; foresters add this much
 // growth to one thinned forest tile within reach every 3 ticks; walls add defense.
 export const SMITHY_CHARCOAL = 0.35;
+// Quarry dust settles on the land around it: food buildings within `range`
+// hexes make `foodLoss` less food.
+export const QUARRY_DUST = { range: 2, foodLoss: 0.4, hits: ["gatherer", "farm", "pen"] };
 export const GRANARY_KEEPS = 150;
 export const FORESTER_GROWTH = 0.12;
 export const FORESTER_REACH = 3;

@@ -163,6 +163,10 @@ These were decided with the project owner. Do not change them without being aske
   working when adding eras. It must never show without `?dev`. **Every new
   feature gets a dev-panel button (or dev option) to trigger or test it**, e.g.
   Wildfire, +10 people.
+- **Quarry dust** (`QUARRY_DUST`): gatherers, farms and pens within 2 hexes of a
+  quarry make 40% less food. The placement card says how many buildings a new
+  quarry would hit (`dustNote()`), and dusty buildings say so in their info card.
+  Quarries also cost −3 Sustainability each (the hillside is gone for good).
 - **Livestock and clothing:** Herding unlocks the Livestock Pen (a little food,
   grazing wears the land: −2 Sustainability each). Warm Clothes (research) makes each pen
   keep `peoplePerPen` (6) people warm without a fire, so fewer fires are needed

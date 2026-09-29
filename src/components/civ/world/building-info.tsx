@@ -1,7 +1,8 @@
 "use client";
 
-import { BUILDINGS_BY_ID } from "@/game/content";
+import { BUILDINGS_BY_ID, QUARRY_DUST } from "@/game/content";
 import {
+  dusty,
   type Action,
   buildingCost,
   canAfford,
@@ -60,6 +61,12 @@ export function BuildingInfo({
         <PixelIcon name={def.landImpact ? "stump" : "leaf"} size={12} />
         {def.landCost}
       </p>
+
+      {dusty(state, tile) && (
+        <p className="mt-2 border-t-2 border-stone-300 pt-1.5 text-amber-800">
+          Covered in quarry dust: making {Math.round(QUARRY_DUST.foodLoss * 100)}% less food.
+        </p>
+      )}
 
       {def.id === "woodcutter" && (
         <div className="mt-2 border-t-2 border-stone-300 pt-1.5">
