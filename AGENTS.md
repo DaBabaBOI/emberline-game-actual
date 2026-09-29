@@ -304,7 +304,7 @@ These were decided with the project owner. Do not change them without being aske
   Add new panels to a stack instead of positioning them absolutely.
 - During the tutorial, the placement preview card is drawn above the guide's
   dimming so the player can read the trade-off.
-- Multiplayer is **later**; design state so AI nations could be replaced by humans,
+- Multiplayer is **later** (the owner wants it; the Supabase project above can host it, e.g. with Realtime); design state so AI nations could be replaced by humans,
   but do not add a backend now.
 
 **Look and feel**
@@ -335,6 +335,15 @@ These were decided with the project owner. Do not change them without being aske
 - The site is a **static export** (`output: "export"`) deployed to GitHub Pages
   under a base path. No API routes, no server code, no dynamic routes, no env
   secrets. Use `next/link` for internal links so the base path is applied.
+- **Online features are optional** (`src/lib/online.ts`, Supabase project
+  `shistech-hackathon`): playtest feedback (Menu > Feedback), the leaderboard
+  (on the end-of-story debrief; lost games aren't listed) and cloud saves
+  (Menu > Save to the cloud gives a code; the title screen loads it). Plain
+  `fetch` to Supabase's REST API with the *publishable* key, no SDK. The
+  database rules are the security: feedback is insert-only, the leaderboard is
+  read + insert only with range checks, and saves are reachable only through the
+  `save_game` / `load_game` functions. Every call must fail quietly: the game
+  has to work fully offline. Never put a secret (service_role) key in the code.
 - Keep the tutorial (`TUTORIAL` in `content.ts`) working when you change buildings.
 - Before committing, run `npm run lint`, `npm run typecheck` and `npm run build`.
   All three must pass.
