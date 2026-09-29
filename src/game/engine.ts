@@ -1648,7 +1648,7 @@ function step(state: GameState, action: Action): GameState {
 
     case "skipTutorial": {
       // Skipping players still get the basics the tutorial would have built:
-      // a woodcutter, a lit campfire and a gatherer, so they don't freeze or starve.
+      // a woodcutter, a lit campfire, a gatherer and a war camp with a warrior.
       const skipped = startGrace({ ...state, tutorialStep: TUTORIAL.length });
       const counts = countBuildings(state);
       const tiles = state.tiles.map((t) => ({ ...t }));
@@ -1664,8 +1664,21 @@ function step(state: GameState, action: Action): GameState {
           .sort((a, b) => hexDistance(a, home) - (a.deposit === "berries" ? 2 : 0) - (hexDistance(b, home) - (b.deposit === "berries" ? 2 : 0)))[0];
         if (spot) spot.building = "gatherer";
       }
+      // ...and the War Camp with one trained warrior, so the first raid isn't a free win for the raiders.
+      let soldiers = state.soldiers;
+      if (!counts.warcamp) {
+        const home = tiles[state.startTile];
+        const camp = BUILDINGS_BY_ID.warcamp;
+        const spot = tiles
+          .filter((t) => t.revealed && camp.terrain.includes(t.terrain) && !t.building)
+          .sort((a, b) => hexDistance(a, home) - hexDistance(b, home))[0];
+        if (spot) {
+          spot.building = "warcamp";
+          soldiers = Math.max(soldiers, 1);
+        }
+      }
       const fires = pit !== null ? { ...state.fires, [pit]: burnTicks(state) } : state.fires;
-      return withMeters({ ...skipped, tiles, fires });
+      return withMeters({ ...skipped, tiles, fires, soldiers });
     }
 
     case "train": {
