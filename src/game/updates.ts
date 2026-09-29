@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "Buildings you can't afford yet are dimmed in the build bar, like Plant, Train and Scout.",
       "The Sustainability panel only lists what is actually affecting the land (no more \"Forest standing: 100% +0\").",
       "The pointing hand now picks spots that avoid harm: quarries go well away from the village and its fields, gatherers away from fires, fields away from forest when it can.",
       "Deer and boar now walk: their legs swing and their bodies bob as they move.",
