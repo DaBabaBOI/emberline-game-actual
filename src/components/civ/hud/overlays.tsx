@@ -258,7 +258,8 @@ export function Warnings() {
 
 export function DevPanel() {
   const { state, dispatch } = useGame();
-  const [eventIndex, setEventIndex] = useState(0);
+  const [eventId, setEventId] = useState(EVENTS[0].id);
+  const [lessonId, setLessonId] = useState(LESSONS[0].id);
   if (!state.dev) return null;
   return (
     <div className="pixel-panel-dark font-pixel pointer-events-auto flex w-full flex-col gap-1.5 p-2 text-xs">
@@ -288,22 +289,44 @@ export function DevPanel() {
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devRomans" })}>
           Romans
         </button>
-        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devLesson" })}>
-          Lesson
-        </button>
-        <button
-          type="button"
-          className="pixel-btn bg-[#4a3b2e] px-2 py-1"
-          title={`Next: ${EVENTS[eventIndex % EVENTS.length].title}`}
-          onClick={() => {
-            dispatch({ type: "devEvent", id: EVENTS[eventIndex % EVENTS.length].id });
-            setEventIndex(eventIndex + 1);
-          }}
-        >
-          Event
-        </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devFinishEra" })}>
           Finish era
+        </button>
+      </div>
+      {/* Trigger any event card or elder lesson on demand. */}
+      <div className="flex gap-1">
+        <select
+          value={eventId}
+          onChange={(e) => setEventId(e.target.value)}
+          className="min-w-0 flex-1 border-2 border-[#140e0a] bg-[#4a3b2e] px-1 py-0.5 text-white"
+          aria-label="Event to trigger"
+          data-testid="dev-event-select"
+        >
+          {EVENTS.map((ev) => (
+            <option key={ev.id} value={ev.id}>
+              {ev.title}
+            </option>
+          ))}
+        </select>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devEvent", id: eventId })}>
+          Event
+        </button>
+      </div>
+      <div className="flex gap-1">
+        <select
+          value={lessonId}
+          onChange={(e) => setLessonId(e.target.value)}
+          className="min-w-0 flex-1 border-2 border-[#140e0a] bg-[#4a3b2e] px-1 py-0.5 text-white"
+          aria-label="Lesson to show"
+        >
+          {LESSONS.map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.title}
+            </option>
+          ))}
+        </select>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devLesson", id: lessonId })}>
+          Lesson
         </button>
       </div>
       <div className="flex flex-wrap gap-1">

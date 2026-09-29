@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "Dev mode: pick any event card or elder lesson from a list and trigger it.",
       "Elder Ama tells you when you have learned enough to research something new, and the Advancements button shows how many you can afford.",
       "Elder Ama now explains the tree stumps on each building: how hard it is on the land, and where to look.",
       "A lit campfire right next to a gatherer's camp scares off the animals: that camp makes 30% less food. Keep fires and camps a tile apart.",
