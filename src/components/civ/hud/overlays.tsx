@@ -335,6 +335,12 @@ export function DevPanel() {
         >
           Goals {state.devGoals ? "on" : "off"}
         </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devSparks" })}>
+          Sparks
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devClearForest" })}>
+          Clear forest
+        </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devCutHills" })}>
           Cut hills
         </button>
