@@ -1853,17 +1853,21 @@ function awardXp(prev: GameState, next: GameState): GameState {
     if (next.meters.food >= 45) gain += XP.fedMinute;
     if (next.meters.sustainability >= MIN_SUSTAINABILITY_FOR_BEST_ENDING) gain += XP.healthyMinute;
   }
-  if (gain <= 0) return next;
-  const xp = (next.xp ?? 0) + gain;
-  let level = next.chiefLevel ?? 1;
-  let knowledge = next.resources.knowledge;
-  const log = [...next.log];
+  return gain > 0 ? addXp(next, gain) : next;
+}
+
+// Add XP and level up as many times as it covers.
+function addXp(state: GameState, gain: number): GameState {
+  const xp = (state.xp ?? 0) + gain;
+  let level = state.chiefLevel ?? 1;
+  let knowledge = state.resources.knowledge;
+  const log = [...state.log];
   while (xp >= xpToReach(level + 1)) {
     level += 1;
     knowledge += XP.levelKnowledge;
     log.unshift(`Chief level ${level}: ${chiefTitle(level)}! (+${XP.levelKnowledge} Knowledge)`);
   }
-  return { ...next, xp, chiefLevel: level, resources: { ...next.resources, knowledge }, log: log.slice(0, 30) };
+  return { ...state, xp, chiefLevel: level, resources: { ...state.resources, knowledge }, log: log.slice(0, 30) };
 }
 
 // The one thing to aim for right now, in a line (null while the tutorial or a
@@ -2249,12 +2253,9 @@ function step(state: GameState, action: Action): GameState {
       if (!state.dev) return state;
       return withMeters({ ...state, fires: {}, log: ["Dev: all campfires put out.", ...state.log].slice(0, 30) });
 
-    case "devXp": {
-      // Award XP the normal way (a planted-sapling-sized nudge would be too slow).
+    case "devXp":
       if (!state.dev) return state;
-      const bumped = { ...state, xp: (state.xp ?? 0) + 100 - XP.plant, planted: (state.planted ?? 0) + 1 };
-      return { ...bumped, log: ["Dev: +100 XP.", ...bumped.log].slice(0, 30) };
-    }
+      return addXp(state, 100);
 
     case "devPeople":
       if (!state.dev) return state;
