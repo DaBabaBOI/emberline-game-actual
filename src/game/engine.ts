@@ -545,7 +545,7 @@ export function production(state: GameState): Resources {
       const fishNearby = state.tiles.some(
         (t) => t.deposit === "fish" && hexDistance(t, tile) === 1,
       );
-      if (fishNearby) out.food += 0.8;
+      if (fishNearby) out.food += 0.4;
     }
   }
   // Bronze tools: each smithy (up to three) makes every worker 20% better.
@@ -1448,7 +1448,7 @@ function growForests(state: GameState): GameState {
   // Woodcutters fell the trees they turn into wood (this runs every 3 ticks),
   // biggest trees first. Too many woodcutters on one patch strip it bare.
   for (const w of woodcutters) {
-    let need = (0.3 * 3 * woodcutterYield(state, w)) / LAND.woodPerGrowth;
+    let need = ((BUILDINGS_BY_ID.woodcutter.produces?.wood ?? 0) * 3 * woodcutterYield(state, w)) / LAND.woodPerGrowth;
     const trees = treesNear(state, w)
       .map((t) => ({ t, growth: changes.get(t.id)?.growth ?? t.growth }))
       .sort((a, b) => b.growth - a.growth);

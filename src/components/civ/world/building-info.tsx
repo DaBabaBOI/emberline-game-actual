@@ -100,7 +100,7 @@ export function BuildingInfo({
       {def.id === "woodcutter" && (
         <div className="mt-2 border-t-2 border-stone-300 pt-1.5">
           <p className="mb-1">
-            Making <span className="font-num">{perSecond(0.3 * woodcutterYield(state, tile)).toFixed(2)}</span>{" "}
+            Making <span className="font-num">{perSecond((def.produces?.wood ?? 0) * woodcutterYield(state, tile)).toFixed(2)}</span>{" "}
             wood/s. How should they cut?
           </p>
           <div className="flex flex-col gap-1">

@@ -102,8 +102,8 @@ export const BUILDINGS: BuildingDef[] = [
     era: 0,
     cost: { wood: 8 },
     terrain: ["grass", "steppe", "forest", "marsh"],
-    produces: { food: 0.9 },
-    depositBonus: { deposit: "berries", amount: { food: 0.6 } },
+    produces: { food: 0.6 },
+    depositBonus: { deposit: "berries", amount: { food: 0.4 } },
     reveal: 2,
   },
   {
@@ -118,7 +118,7 @@ export const BUILDINGS: BuildingDef[] = [
     cost: { wood: 12 },
     terrain: ["grass"],
     requires: "early-farming",
-    produces: { food: 1.5 },
+    produces: { food: 1.0 },
     reveal: 1,
   },
   {
@@ -145,7 +145,7 @@ export const BUILDINGS: BuildingDef[] = [
     era: 0,
     cost: { wood: 4 },
     terrain: ["forest"],
-    produces: { wood: 0.3 },
+    produces: { wood: 0.2 },
     reveal: 2,
   },
   {
@@ -161,7 +161,7 @@ export const BUILDINGS: BuildingDef[] = [
     terrain: ["beach"],
     needsWaterNeighbor: true,
     requires: "fishing",
-    produces: { food: 1.2 },
+    produces: { food: 0.7 },
     reveal: 3,
   },
   {
@@ -221,7 +221,7 @@ export const BUILDINGS: BuildingDef[] = [
     cost: { wood: 12, food: 10 },
     terrain: ["grass", "steppe"],
     requires: "herding",
-    produces: { food: 0.5 },
+    produces: { food: 0.35 },
     reveal: 1,
   },
   // ---- Ancient era ---------------------------------------------------------

@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "Food and wood come in about a third slower (gatherers, farms, fishing, pens and woodcutters), so big stockpiles take real work.",
       "Every advancement now has its own goal before you can research it (e.g. Herding: hunt 3 animals; Agriculture: 3 fields, 12 people, 50 food stored). Each card shows the goal and your progress.",
       "After each advancement, Elder Ama and the pointing hand walk you through what it unlocked, like the opening tutorial.",
       "Hunting Spears lets warriors carry spears: train new spearmen or give your warriors spears (4 wood). Spearmen fight 1.5x as hard and you can see them on the map.",
