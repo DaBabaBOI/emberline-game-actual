@@ -92,7 +92,7 @@ export const BUILDINGS: BuildingDef[] = [
     icon: "basket",
     description: "Collects food. Bonus on berry bushes.",
     gain: "Food from wild plants and game, more on berry bushes",
-    landCost: "Takes animals from the wild: past 2 camps they are hunted faster than they breed. Camps close together share the same food",
+    landCost: "The wild only has so much: each extra camp adds just 25% more food, and past 2 camps animals are hunted faster than they breed",
     landImpact: 1,
     era: 0,
     cost: { wood: 8 },
@@ -838,7 +838,7 @@ export const LESSONS: { id: string; title: string; text: string; sdg: string }[]
   {
     id: "overhunting",
     title: "The herds are thinning",
-    text: "Our camps take berries, roots and animals from the wild. With so many camps, we hunt the deer and boar faster than they can have young, so each year there are fewer left. Fewer animals means less food for us too. Fewer camps, spread further apart, let the wild keep up.",
+    text: "Our camps take berries, roots and animals from the wild. With so many camps, we hunt the deer and boar faster than they can have young, so each year there are fewer left. Fewer animals means less food for us too. Fewer camps let the wild keep up.",
     sdg: "SDG 12.2: use natural resources sustainably and efficiently",
   },
   {
@@ -947,10 +947,10 @@ export const METER_SDG: Record<MeterKey, string> = {
 export const SMITHY_CHARCOAL = 0.35;
 // Quarry dust settles on the land around it: food buildings within `range`
 // hexes make `foodLoss` less food.
-// Gatherers live off the wild. Camps within `shareRange` hexes of each other
-// share the same berries and game (each gets 1 / (1 + share × others)), and
-// every camp past `freeCamps` hunts animals faster than they can breed.
-export const GATHERING = { shareRange: 2, share: 0.5, freeCamps: 2, sustainPerExtra: 2 };
+// Gatherers live off the wild, and the wild only has so much. The first camp
+// makes full food; each extra camp adds only `extraCamp` of a camp's food. Every
+// camp past `freeCamps` also hunts animals faster than they can breed.
+export const GATHERING = { extraCamp: 0.25, freeCamps: 2, sustainPerExtra: 2 };
 export const QUARRY_DUST = { range: 2, foodLoss: 0.4, hits: ["gatherer", "farm", "pen"] };
 export const GRANARY_KEEPS = 150;
 export const FORESTER_GROWTH = 0.12;

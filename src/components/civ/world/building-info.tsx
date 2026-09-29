@@ -3,8 +3,8 @@
 import { BUILDINGS_BY_ID, QUARRY_DUST } from "@/game/content";
 import {
   dusty,
-  nearbyGatherers,
   gathererShare,
+  countBuildings,
   type Action,
   buildingCost,
   canAfford,
@@ -64,10 +64,10 @@ export function BuildingInfo({
         {def.landCost}
       </p>
 
-      {def.id === "gatherer" && nearbyGatherers(state, tile) > 0 && (
+      {def.id === "gatherer" && gathererShare(state) < 1 && (
         <p className="mt-2 border-t-2 border-stone-300 pt-1.5 text-amber-800">
-          Sharing the wild food with {nearbyGatherers(state, tile)} camp{nearbyGatherers(state, tile) === 1 ? "" : "s"} nearby:
-          making {Math.round((1 - gathererShare(state, tile)) * 100)}% less.
+          {countBuildings(state).gatherer} camps share what the wild can give: each makes{" "}
+          {Math.round(gathererShare(state) * 100)}% of a full camp.
         </p>
       )}
 

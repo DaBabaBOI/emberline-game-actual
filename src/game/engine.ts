@@ -412,29 +412,24 @@ export function housingCapacity(state: GameState) {
   return BUILDINGS.reduce((sum, b) => sum + (b.housing ?? 0) * (counts[b.id] ?? 0), BASE_HOUSING);
 }
 
-// Other gatherer camps close enough to share this camp's wild food.
-export function nearbyGatherers(state: GameState, tile: Tile): number {
-  return state.tiles.filter(
-    (t) => t.building === "gatherer" && t.id !== tile.id && hexDistance(t, tile) <= GATHERING.shareRange,
-  ).length;
+// The wild only has so much to give. The first gatherer camp gets a full
+// camp's food; every extra camp adds only `extraCamp` (25%) of one. Every camp
+// makes the same share of that, so this returns each camp's fraction.
+export function gathererShare(state: GameState, camps = countBuildings(state).gatherer ?? 0): number {
+  if (camps <= 1) return 1;
+  return (1 + GATHERING.extraCamp * (camps - 1)) / camps;
 }
 
-// The share of the wild food a gatherer camp gets when others are nearby.
-export function gathererShare(state: GameState, tile: Tile): number {
-  return 1 / (1 + GATHERING.share * nearbyGatherers(state, tile));
-}
-
-// What placing another gatherer here would cost, for the placement card.
-export function gatherNote(state: GameState, tile: Tile): string | null {
-  const notes: string[] = [];
-  const near = nearbyGatherers(state, tile);
-  if (near) {
-    const loss = Math.round((1 - 1 / (1 + GATHERING.share * near)) * 100);
-    notes.push(`${near} camp${near === 1 ? " nearby shares" : "s nearby share"} the same wild food: this one makes ${loss}% less, and so do they.`);
-  }
-  if ((countBuildings(state).gatherer ?? 0) >= GATHERING.freeCamps)
+// What placing another gatherer would do, for the placement card.
+export function gatherNote(state: GameState): string | null {
+  const camps = countBuildings(state).gatherer ?? 0;
+  if (camps === 0) return null;
+  const notes = [
+    `The wild is already being gathered: this camp adds only ${Math.round(GATHERING.extraCamp * 100)}% of a full camp's food.`,
+  ];
+  if (camps >= GATHERING.freeCamps)
     notes.push(`One camp too many for the wild: −${GATHERING.sustainPerExtra} Sustainability.`);
-  return notes.length ? notes.join(" ") : null;
+  return notes.join(" ");
 }
 
 // A food building with a quarry close by: its crops or berries are under dust.
@@ -469,8 +464,8 @@ export function production(state: GameState): Resources {
           ? 1.5
           : 1;
     const dust = dusty(state, tile) ? 1 - QUARRY_DUST.foodLoss : 1;
-    // Neighbouring gatherer camps share the same wild food.
-    const share = tile.building === "gatherer" ? gathererShare(state, tile) : 1;
+    // Gatherer camps share what the wild can give.
+    const share = tile.building === "gatherer" ? gathererShare(state) : 1;
     for (const [k, v] of Object.entries(def.produces ?? {}))
       out[k as keyof Resources] += (v ?? 0) * factor * share * (k === "food" ? dust : 1);
     if (def.depositBonus && tile.deposit === def.depositBonus.deposit) {
