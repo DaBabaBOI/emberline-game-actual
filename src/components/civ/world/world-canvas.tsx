@@ -9,6 +9,7 @@ import {
   buildingCost,
   DEMOLISH_TOOL,
   dustNote,
+  sparkNote,
   forestToClear,
   rainfall,
   spearmenOf,
@@ -147,6 +148,7 @@ export function WorldCanvas() {
   // With no tool picked, hovering a home shows who lives there.
   const dwellers = !selected && hoverTile ? residents(state, hoverTile) : null;
   const scare = def && !error && hoverTile ? fireScareNote(state, hoverTile, def.id) : null;
+  const spark = def && !error && hoverTile ? sparkNote(state, hoverTile, def.id) : null;
   const clears = def?.id === "farm" && !error && hoverTile ? forestToClear(state, hoverTile) : null;
   const farmNote =
     def?.id === "farm" && !error && hoverTile
@@ -357,6 +359,12 @@ export function WorldCanvas() {
                   <span className="flex items-start gap-1.5 text-amber-200">
                     <PixelIcon name="warning" size={12} />
                     {farmNote}
+                  </span>
+                )}
+                {spark && (
+                  <span className="flex items-start gap-1.5 text-amber-200">
+                    <PixelIcon name="warning" size={12} />
+                    {spark}
                   </span>
                 )}
                 {scare && (

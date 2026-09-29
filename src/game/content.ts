@@ -79,11 +79,11 @@ export const BUILDINGS: BuildingDef[] = [
   },
   {
     id: "hut",
-    name: "Hut",
+    name: "Wooden House",
     icon: "hut",
-    description: "Shelter for 6 people.",
+    description: "A small house of logs and bark. Shelter for 6 people.",
     gain: "Room for 6 more people",
-    landCost: "More people eat more food and need more fires",
+    landCost: "More people eat more food and need more fires. Wood burns: sparks from a campfire next door can set it alight",
     landImpact: 1,
     era: 0,
     cost: { wood: 10 },
@@ -229,7 +229,7 @@ export const BUILDINGS: BuildingDef[] = [
     id: "house",
     name: "Mud-brick House",
     icon: "bricks",
-    description: "Sturdy homes of sun-dried and fired brick. Built by upgrading a Hut (click it), or new.",
+    description: "Sturdy homes of sun-dried and fired brick that don't burn. Built by upgrading a Wooden House (click it), or new.",
     gain: "Room for 12 people",
     landCost: "Bricks are fired in kilns that burn wood",
     landImpact: 1,
@@ -821,6 +821,10 @@ export const LAND = {
 
 // Wildfire odds: a little from lightning, more for every campfire near trees.
 export const FIRE_RISK = { base: 0.1, perForestTile: 0.06, max: 1.5 };
+// Sparks: each tick, a lit campfire may spark onto a neighbouring tile. Grass is
+// scorched; a wooden house burns down. Chance per neighbouring grass tile and
+// per neighbouring wooden house; Firekeeping halves it.
+export const SPARKS = { perGrass: 0.0004, perHouse: 0.0015, firekeeping: 0.5 };
 
 // Real seconds per game tick at 1× speed. Everything in the engine counts in
 // ticks; the UI converts to seconds with this. Raising it slows the whole game.
@@ -1074,7 +1078,7 @@ export const TUTORIAL_START_FOOD = 20;
 export const TUTORIAL: { text: string; done: string; unlocks: string[]; buys: string[] }[] = [
   { text: "Welcome, chief. Our people are cold and tired after the long walk. First, warmth: pick the Campfire below and place it on open grass. Look at what it gives us, and what it costs.", done: "campfire", unlocks: ["campfire"], buys: ["campfire"] },
   { text: "Feel that warmth! But a fire eats wood, and so will everything we build. Put a Woodcutter in the forest. See the little tree stumps in the corner of each building below? They show how hard it is on the land: the more stumps, the more harm. A leaf means it is gentle. The Woodcutter has three, because every tree it cuts takes many years to grow back.", done: "woodcutter", unlocks: ["woodcutter"], buys: ["woodcutter"] },
-  { text: "Wood is coming in. Now our people need a roof. Build a Hut, and more families can join us.", done: "hut", unlocks: ["hut"], buys: ["hut"] },
+  { text: "Wood is coming in. Now our people need a roof. Build a Wooden House, and more families can join us.", done: "hut", unlocks: ["hut"], buys: ["hut"] },
   { text: "A roof over our heads, but empty bellies. Place a Gatherer's Camp to collect wild food. Berry bushes give more.", done: "gatherer", unlocks: ["gatherer"], buys: ["gatherer"] },
   { text: "Food is coming. But we don't know what lies beyond these hills. Press Scout and send our young ones to look.", done: "scout", unlocks: ["scout"], buys: ["scout"] },
   { text: "The scouts saw smoke from other camps, and not everyone out there is friendly. Build a War Camp, then train our first warrior.", done: "train", unlocks: ["warcamp", "train"], buys: ["warcamp", "train"] },

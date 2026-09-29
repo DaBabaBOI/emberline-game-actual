@@ -8,6 +8,7 @@ import {
   SMITHY_CHARCOAL,
   QUARRY_DUST,
   QUARRY_CUT,
+  SPARKS,
   FARM_RAIN,
   FIRE_SCARE,
   GATHERING,
@@ -499,6 +500,60 @@ export function scaredByFire(state: GameState, tile: Tile, building = tile.build
 }
 
 // What a campfire or gatherer placed here would do to the game nearby, for the placement card.
+// Tiles next to a lit campfire that its sparks could catch: grass, and wooden houses.
+function sparkTargets(state: GameState, fire: Tile) {
+  return state.tiles.filter(
+    (t) =>
+      hexDistance(t, fire) === 1 &&
+      !state.protectedTiles?.includes(t.id) &&
+      (t.building === "hut" || (!t.building && (t.terrain === "grass" || t.terrain === "steppe"))),
+  );
+}
+
+// Now and then a campfire throws sparks: dry grass next to it scorches, and a
+// wooden house next to it can catch fire and burn down.
+function sparks(state: GameState): GameState {
+  if (state.tutorialStep < TUTORIAL.length) return state;
+  const rand = mulberry32(state.seed + state.tick * 61);
+  const damp = state.researched.includes("firekeeping") ? SPARKS.firekeeping : 1;
+  for (const fire of litFires(state)) {
+    const near = sparkTargets(state, fire);
+    const houses = near.filter((t) => t.building === "hut");
+    const chance = damp * (SPARKS.perHouse * houses.length + SPARKS.perGrass * (near.length - houses.length));
+    if (!near.length || rand() >= chance) continue;
+    // Houses catch more easily than grass; one big moment at a time.
+    const pool = houses.length && quietEnough(state) && rand() < (SPARKS.perHouse * houses.length) / (chance / damp) ? houses : near.filter((t) => !t.building);
+    const hit = pool[Math.floor(rand() * pool.length)];
+    if (!hit) continue;
+    const burnsHouse = hit.building === "hut";
+    return {
+      ...state,
+      tiles: state.tiles.map((t) => (t.id === hit.id ? { ...t, building: burnsHouse ? null : t.building, scorch: 1 } : t)),
+      lastBigTick: burnsHouse ? state.tick : state.lastBigTick,
+      log: [
+        burnsHouse
+          ? "Sparks from the campfire set a wooden house alight. It burned down."
+          : "Sparks from the campfire scorched the grass beside it.",
+        ...state.log,
+      ].slice(0, 30),
+    };
+  }
+  return state;
+}
+
+// What placing a wooden house or a campfire here risks from sparks, for the placement card.
+export function sparkNote(state: GameState, tile: Tile, building: string): string | null {
+  if (building === "hut") {
+    const fire = state.tiles.some((t) => t.building === "campfire" && hexDistance(t, tile) === 1);
+    return fire ? "Right next to a campfire: sparks could set this wooden house alight." : null;
+  }
+  if (building === "campfire") {
+    const n = state.tiles.filter((t) => t.building === "hut" && hexDistance(t, tile) === 1).length;
+    return n ? `Sparks could set ${n} wooden house${n === 1 ? "" : "s"} next to it alight.` : null;
+  }
+  return null;
+}
+
 export function fireScareNote(state: GameState, tile: Tile, building: string): string | null {
   const loss = Math.round(FIRE_SCARE.foodLoss * 100);
   if (building === "campfire") {
@@ -561,6 +616,7 @@ export function placementHarm(state: GameState, tile: Tile, building: string): n
   if (building === "campfire")
     harm += 4 * state.tiles.filter((t) => t.building === "gatherer" && hexDistance(t, tile) <= FIRE_SCARE.range).length;
   if (building === "farm" && forestToClear(state, tile)) harm += 2;
+  if (sparkNote(state, tile, building)) harm += 3;
   return harm;
 }
 
@@ -1424,6 +1480,7 @@ function tick(state: GameState): GameState {
 
   if (next.tick % 3 === 0) next = growForests(next);
   next = cutHills(next);
+  next = sparks(next);
   // No raids or events while a new player is still learning.
   if (!inTutorial) next = updateLegion(updateRaids(next));
   // The final battle ends the story (won or lost): nothing else happens today.
