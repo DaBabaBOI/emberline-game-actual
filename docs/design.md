@@ -57,8 +57,10 @@ go out). To leave the Stone Age you research Agriculture and grow to 15
 people. The Ancient era ends with a Roman legion landing on your shore. After
 each era a **debrief** lists what you achieved next to what it cost.
 
-You lose only by **famine**, **unrest** (people too unhappy for too long), or
-being **conquered** by the legion. Everything else is a setback you can recover from.
+There are four ways to lose, each announced by a countdown first: **famine**,
+**unrest** (people too unhappy for too long), **land collapse**
+(Sustainability below 20 for about two minutes), or being **conquered** by the
+legion. Everything else is a setback you can recover from.
 
 ## 3. The chosen feature: trade-offs you can see
 
@@ -140,6 +142,7 @@ flowchart TD
     FOOD -- shortage --> FAM[Famine: you lose]
     HAP -- too low too long --> UNR[Unrest: you lose]
     SUS -- 60 or more at the end --> END[Best ending]
+    SUS -- below 20 for 2 minutes --> COL[Land collapse: you lose]
 ```
 
 Other systems join the same web:
