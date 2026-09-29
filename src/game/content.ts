@@ -978,7 +978,7 @@ export const AFTER_TUTORIAL_RESERVE: Partial<Resources> = { food: 60, wood: 15 }
 // advancement id. The starting resources are worked out from it.
 export const TUTORIAL: { text: string; done: string; unlocks: string[]; buys: string[] }[] = [
   { text: "Welcome, chief. Our people are cold and tired after the long walk. First, warmth: pick the Campfire below and place it on open grass. Look at what it gives us, and what it costs.", done: "campfire", unlocks: ["campfire"], buys: ["campfire"] },
-  { text: "Feel that warmth! But a fire eats wood, and so will everything we build. Put a Woodcutter in the forest. Remember: every tree it cuts takes many years to grow back.", done: "woodcutter", unlocks: ["woodcutter"], buys: ["woodcutter"] },
+  { text: "Feel that warmth! But a fire eats wood, and so will everything we build. Put a Woodcutter in the forest. See the little tree stumps in the corner of each building below? They show how hard it is on the land: the more stumps, the more harm. A leaf means it is gentle. The Woodcutter has three, because every tree it cuts takes many years to grow back.", done: "woodcutter", unlocks: ["woodcutter"], buys: ["woodcutter"] },
   { text: "Wood is coming in. Now our people need a roof. Build a Hut, and more families can join us.", done: "hut", unlocks: ["hut"], buys: ["hut"] },
   { text: "A roof over our heads, but empty bellies. Place a Gatherer's Camp to collect wild food. Berry bushes give more.", done: "gatherer", unlocks: ["gatherer"], buys: ["gatherer"] },
   { text: "Food is coming. But we don't know what lies beyond these hills. Press Scout and send our young ones to look.", done: "scout", unlocks: ["scout"], buys: ["scout"] },
