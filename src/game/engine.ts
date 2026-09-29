@@ -1,5 +1,6 @@
 import {
   AFTER_TUTORIAL_RESERVE,
+  TUTORIAL_START_FOOD,
   ROMAN_LEGION,
   FORESTER_GROWTH,
   FORESTER_REACH,
@@ -168,9 +169,10 @@ export function newGame(
     log: [`${cleanNation(options.nation)} gather on the shores of Westmarch.`],
   };
   state.forestBaseline = forestGrowthNearHome(state);
-  const budget = tutorialBudget(state);
-  for (const [k, v] of Object.entries(AFTER_TUTORIAL_RESERVE)) budget[k as keyof Resources] += v ?? 0;
-  state.resources = budget;
+  // Elder Ama hands over what each tutorial step needs when it starts (see
+  // advanceTutorial), so there's never a big pile; the reserve comes at the end.
+  state.resources = tutorialBudget(state, [0]);
+  state.resources.food += TUTORIAL_START_FOOD;
   const started = options.dev ? applyDevStart(state, options.startEra ?? 0) : state;
   return { ...started, meters: computeMeters(started) };
 }
@@ -605,12 +607,12 @@ export function consumption(state: GameState) {
 const FIRE_DEATH_SHARE = 0.25;
 
 // Exactly what the tutorial makes the player buy, so they never have to wait.
-export function tutorialBudget(state: GameState): Resources {
+export function tutorialBudget(state: GameState, steps = TUTORIAL.map((_, i) => i)): Resources {
   const total: Resources = { food: 0, wood: 0, stone: 0, knowledge: 0, currency: 0 };
   const add = (cost: Partial<Resources>) => {
     for (const [k, v] of Object.entries(cost)) total[k as keyof Resources] += v ?? 0;
   };
-  for (const id of TUTORIAL.flatMap((step) => step.buys)) {
+  for (const id of steps.flatMap((i) => TUTORIAL[i]?.buys ?? [])) {
     if (id === "scout") add(scoutCost(state));
     else if (id === "train") add(TRAIN_COST);
     else if (BUILDINGS_BY_ID[id]) add(buildingCost(state, BUILDINGS_BY_ID[id]));
@@ -1282,9 +1284,16 @@ function advanceTutorial(state: GameState): GameState {
         : state.researched.includes(step.done) || (counts[step.done] ?? 0) > 0;
   if (!done) return state;
   const next = { ...state, tutorialStep: state.tutorialStep + 1 };
-  if (next.tutorialStep < TUTORIAL.length) return next;
+  // The next step's supplies (or, at the end, the small reserve to start with).
+  const gift =
+    next.tutorialStep < TUTORIAL.length
+      ? tutorialBudget(next, [next.tutorialStep])
+      : { ...AFTER_TUTORIAL_RESERVE, food: (AFTER_TUTORIAL_RESERVE.food ?? 0) - TUTORIAL_START_FOOD };
+  const resources = { ...next.resources };
+  for (const [k, v] of Object.entries(gift)) resources[k as keyof Resources] += v ?? 0;
+  if (next.tutorialStep < TUTORIAL.length) return { ...next, resources };
   // Elder Ama says goodbye; the next real lesson waits its usual gap after this.
-  return startGrace({ ...next, lesson: TUTORIAL_FAREWELL.id, lessonTick: state.tick });
+  return startGrace({ ...next, resources, lesson: TUTORIAL_FAREWELL.id, lessonTick: state.tick });
 }
 
 // The world's troubles start a little after the tutorial ends, not during it.
@@ -1894,8 +1903,9 @@ function step(state: GameState, action: Action): GameState {
         tutorialStep: TUTORIAL.length,
         resources: {
           ...state.resources,
-          food: Math.min(state.resources.food, AFTER_TUTORIAL_RESERVE.food ?? 0),
-          wood: Math.min(state.resources.wood, AFTER_TUTORIAL_RESERVE.wood ?? 0),
+          food: AFTER_TUTORIAL_RESERVE.food ?? 0,
+          wood: AFTER_TUTORIAL_RESERVE.wood ?? 0,
+          knowledge: Math.max(state.resources.knowledge, TREE_BY_ID["early-farming"].cost),
         },
       });
       const counts = countBuildings(state);

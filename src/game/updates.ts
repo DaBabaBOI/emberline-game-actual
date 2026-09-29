@@ -9,6 +9,8 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "The tutorial no longer starts you on a big pile: Elder Ama hands over what each step needs as you reach it, and a small reserve (40 food, 10 wood) at the end.",
+      "Storytelling and Herbalism now come after Toolmaking, because the Elder's Hut and Healer's Hut need stone from a quarry.",
       "Clearer wording: a spearman counts as 1.5 warriors in a fight; Firekeeping makes fires last 50% longer; canals make fields grow 50% more.",
       "Bronze Weapons' \"beat a raid\" goal counts any raid you have ever beaten.",
       "Farmland clears the nearest patch of forest for good, and forests bring rain: the less forest stands, the less rain falls and the less every field grows (down to half). Watch \"rain\" by your food.",
