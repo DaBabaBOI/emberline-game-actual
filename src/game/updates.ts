@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "Losing (famine, unrest or conquest) is never called the best ending any more, however healthy the land is.",
       "Elder Ama's tutorial now reads like one conversation, explains how Knowledge is earned, and says goodbye when you're ready.",
       "Stone quarries throw up dust: gatherers, farms and pens within 2 tiles make 40% less food.",
       "Panels no longer draw over each other, and the building card stays bright during the tutorial.",
