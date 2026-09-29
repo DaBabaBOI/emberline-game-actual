@@ -1,4 +1,4 @@
-import { DISEASE, TUTORIAL } from "./content";
+import { DISEASE, QUIET_GAP, TUTORIAL } from "./content";
 import type { GameState } from "./types";
 
 // Disease: pure rules, no React. The tick calls stepDisease; hunts, fishing and
@@ -52,7 +52,9 @@ export function stepDisease(state: GameState, housing: number, rand: () => numbe
   if (state.tutorialStep < TUTORIAL.length) return state;
   let next = state;
   const fishing = state.tiles.filter((t) => t.building === "fishing").length;
-  if (!isCalm(state)) {
+  // No outbreak out of nowhere right after another big moment.
+  const busy = state.tick - (state.lastBigTick ?? -Infinity) < QUIET_GAP;
+  if (!isCalm(state) && !busy) {
     next = maybeOutbreak(
       next,
       DISEASE.perPerson * state.population * crowding(state, housing),
@@ -62,6 +64,7 @@ export function stepDisease(state: GameState, housing: number, rand: () => numbe
     if (fishing) next = maybeOutbreak(next, DISEASE.fishing * fishing, rand(), "It came with the fish.");
   }
 
+  if (!(state.sick ?? 0) && (next.sick ?? 0) > 0) next = { ...next, lastBigTick: state.tick };
   const sick = next.sick ?? 0;
   const immune = Math.max(0, (next.immune ?? 0) * (1 - DISEASE.immunityFades));
   if (sick <= 0) return immune === (next.immune ?? 0) ? next : { ...next, immune };

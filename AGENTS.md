@@ -277,6 +277,10 @@ These were decided with the project owner. Do not change them without being aske
 - **Knowledge ready:** when Knowledge first covers an advancement, Elder Ama says
   so in a toast (once per advancement, `knowledgeReady()`), and the Advancements
   button shows how many are affordable (`affordableResearch()`).
+- **One big moment at a time** (`QUIET_GAP`, `quietEnough()`, `lastBigTick`):
+  event cards, raid landings, elder lessons and outbreaks out of nowhere never
+  start within a minute of each other; whatever is due waits. The Roman legion
+  and outbreaks the player causes are exempt.
 - **Updates log:** every change a player would notice gets a plain-language line
   in `UPDATES` (`src/game/updates.ts`), under today's date, newest first. It shows
   in the Updates bar at the top of the landing page and the title screen.

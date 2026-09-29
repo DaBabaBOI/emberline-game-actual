@@ -20,6 +20,7 @@ import {
   RELIGHT_WOOD,
   LESSONS,
   LESSON_GAP,
+  QUIET_GAP,
   PLANT_COST,
   SELECTIVE_FLOOR,
   TICK_SECONDS,
@@ -1224,15 +1225,21 @@ function knowledgeReady(state: GameState): GameState {
   };
 }
 
+// One big moment at a time: nothing new starts within QUIET_GAP of the last.
+export function quietEnough(state: GameState): boolean {
+  return state.tick - (state.lastBigTick ?? -Infinity) >= QUIET_GAP;
+}
+
 // Show the next elder lesson whose moment has come: one at a time, spaced out,
 // never during the tutorial or an event.
 export function lessonDue(state: GameState): GameState {
   if (state.tutorialStep < TUTORIAL.length || state.lesson || state.event || state.phase !== "playing") return state;
   if (state.tick - (state.lessonTick ?? -LESSON_GAP) < LESSON_GAP) return state;
+  if (!quietEnough(state)) return state;
   const seen = state.lessonsSeen ?? [];
   const next = LESSONS.find((l) => !seen.includes(l.id) && lessonReady(l.id, state));
   if (!next) return state;
-  return { ...state, lesson: next.id, lessonsSeen: [...seen, next.id], lessonTick: state.tick };
+  return { ...state, lesson: next.id, lessonsSeen: [...seen, next.id], lessonTick: state.tick, lastBigTick: state.tick };
 }
 
 // ---- Debrief ---------------------------------------------------------------
@@ -1431,10 +1438,10 @@ function tick(state: GameState): GameState {
     return { ...lost, debrief: makeDebrief(lost, "loss") };
   }
 
-  if (!inTutorial && next.tick >= next.nextEventTick) {
+  if (!inTutorial && next.tick >= next.nextEventTick && quietEnough(next)) {
     const rand = mulberry32(next.seed + next.tick);
     const event = pickEvent(rand(), next);
-    next = { ...next, event, lastEvent: event.id, nextEventTick: next.tick + 180 + Math.floor(rand() * 120) };
+    next = { ...next, event, lastEvent: event.id, lastBigTick: next.tick, nextEventTick: next.tick + 180 + Math.floor(rand() * 120) };
   }
 
   const beforeDisease = next.population;
@@ -1700,7 +1707,7 @@ function updateRaids(state: GameState): GameState {
     };
   }
 
-  if (!raid && state.tick >= state.nextRaidTick) {
+  if (!raid && state.tick >= state.nextRaidTick && quietEnough(state)) {
     const rand = mulberry32(state.seed + state.tick * 31);
     const home = state.tiles[state.startTile];
     const shores = state.tiles.filter((t) => {
@@ -1736,6 +1743,7 @@ function updateRaids(state: GameState): GameState {
         arriveTick: state.tick + 12,
       },
       nextRaidTick: state.tick + 180 + Math.floor(rand() * 100),
+      lastBigTick: state.tick,
       log: [`${strength} raiders spotted landing on the shore!`, ...state.log].slice(0, 30),
     };
   }

@@ -283,6 +283,8 @@ export interface GameState {
   spearmen?: number;
   // Dev mode: advancement goals count as met.
   devGoals?: boolean;
+  // When the last big moment (event, raid, lesson, outbreak) began, for QUIET_GAP.
+  lastBigTick?: number;
   // Knowledge milestones already reached (each pays out once).
   milestones?: string[];
   // Advancements Elder Ama has already said we can afford (so she says it once).
