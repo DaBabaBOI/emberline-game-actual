@@ -226,6 +226,8 @@ export function BottomBar() {
                   "pixel-btn relative flex w-20 shrink-0 flex-col items-center gap-0.5 px-1 py-1.5 text-center",
                   active ? "bg-amber-400 text-[#2b2119]" : "bg-[#4a3b2e] hover:bg-[#5c4a3a]",
                   (!unlocked || usedUp) && "cursor-not-allowed opacity-40",
+                  // Can't afford it yet: dimmed like the tool buttons (still selectable to look).
+                  unlocked && !usedUp && !affordable && !active && "opacity-50",
                 )}
               >
                 {unlocked && <LandImpact level={b.landImpact} />}
