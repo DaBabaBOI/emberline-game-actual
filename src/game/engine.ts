@@ -82,7 +82,7 @@ export type Action =
   | { type: "enterEra" }
   | { type: "devFinishEra" }
   | { type: "dismissLesson" }
-  | { type: "devLesson" }
+  | { type: "devLesson"; id?: string }
   | { type: "setLogging"; tileId: number; mode: "clear" | "selective" }
   | { type: "plant"; tileId: number }
   | { type: "upgrade"; tileId: number }
@@ -1724,8 +1724,14 @@ function step(state: GameState, action: Action): GameState {
     case "devLesson": {
       if (!state.dev) return state;
       const seen = state.lessonsSeen ?? [];
-      const nextLesson = LESSONS.find((l) => !seen.includes(l.id)) ?? LESSONS[0];
-      return { ...state, lesson: nextLesson.id, lessonsSeen: [...seen, nextLesson.id], lessonTick: state.tick };
+      const nextLesson =
+        LESSONS.find((l) => l.id === action.id) ?? LESSONS.find((l) => !seen.includes(l.id)) ?? LESSONS[0];
+      return {
+        ...state,
+        lesson: nextLesson.id,
+        lessonsSeen: seen.includes(nextLesson.id) ? seen : [...seen, nextLesson.id],
+        lessonTick: state.tick,
+      };
     }
 
     case "advanceEra":
