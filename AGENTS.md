@@ -182,6 +182,11 @@ These were decided with the project owner. Do not change them without being aske
   dyed-linen villager clothes, leather warriors, warmer sunlight, worn dirt paths
   on open ground between buildings, and a bronze trim on the top bar. New eras
   should add their own touches.
+- **Sparks** (`SPARKS`, `sparks()`): each lit campfire may spark onto a
+  neighbouring tile: grass scorches; a Wooden House (the Stone Age home, id
+  `hut`, log walls and bark roof since there's no thatch before farming) burns
+  down. Firekeeping halves it; mud-brick houses don't burn. The placement card
+  warns (`sparkNote()`) and the hand avoids it. House fires count as a big moment.
 - **Farms and rain** (`FARM_RAIN`): placing Farmland clears the nearest
   unprotected forest tile within 2 hexes for good (`forestToClear()`). Rainfall
   = 0.5 + 0.5 x forest cover (`rainfall()`); every field grows that share. The

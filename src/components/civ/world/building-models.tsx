@@ -121,10 +121,41 @@ export function CampfireModel({ opacity, lit = true }: ModelProps) {
   );
 }
 
+// A small wooden house: log walls and a bark-plank roof. No thatch yet: that
+// needs straw from farmed grain.
+function WoodenHouse({ opacity }: ModelProps) {
+  const w = 0.56;
+  const d = 0.42;
+  const h = 0.26;
+  return (
+    <group>
+      <Part color="#8a5a34" opacity={opacity} position={[0, h / 2, 0]}>
+        <boxGeometry args={[w, h, d]} />
+      </Part>
+      {/* Seams between the logs */}
+      {[0.07, 0.14, 0.21].map((y) => (
+        <Part key={y} color="#5e3b1c" opacity={opacity} position={[0, y, 0]}>
+          <boxGeometry args={[w + 0.01, 0.012, d + 0.01]} />
+        </Part>
+      ))}
+      {/* Gabled roof of bark planks, with a ridge log */}
+      {[-1, 1].map((s) => (
+        <Part key={s} color="#4e3220" opacity={opacity} position={[0, h + 0.1, (s * d) / 4]} rotation={[s * 0.62, 0, 0]}>
+          <boxGeometry args={[w + 0.1, 0.03, d * 0.62]} />
+        </Part>
+      ))}
+      <Log opacity={opacity} position={[0, h + 0.19, 0]} rotation={[0, 0, Math.PI / 2]} length={w + 0.12} radius={0.02} />
+      <Part color="#2b1d12" opacity={opacity} position={[0.12, 0.1, d / 2 + 0.005]}>
+        <boxGeometry args={[0.12, 0.19, 0.02]} />
+      </Part>
+    </group>
+  );
+}
+
 export function HutModel({ opacity }: ModelProps) {
   return (
     <group>
-      <ThatchHut opacity={opacity} />
+      <WoodenHouse opacity={opacity} />
       <group position={[0.42, 0, 0.2]}>
         <Log opacity={opacity} position={[0, 0.03, 0]} rotation={[0, 0.2, Math.PI / 2]} length={0.26} radius={0.03} />
         <Log opacity={opacity} position={[0, 0.03, 0.07]} rotation={[0, 0.2, Math.PI / 2]} length={0.26} radius={0.03} />

@@ -9,6 +9,8 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "Huts are now Wooden Houses (log walls, bark roof): thatch needs straw, and there's no straw before farming.",
+      "Campfires throw sparks: grass next to them can scorch, and a wooden house right next to a fire can catch and burn down. Keep a tile between them; Firekeeping halves the risk. Mud-brick houses don't burn.",
       "One thing at a time: event cards, raids, Elder Ama's lessons and outbreaks out of nowhere now wait at least a minute after each other.",
       "Buildings you can't afford yet are dimmed in the build bar, like Plant, Train and Scout.",
       "The Sustainability panel only lists what is actually affecting the land (no more \"Forest standing: 100% +0\").",
