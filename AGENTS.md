@@ -227,6 +227,10 @@ These were decided with the project owner. Do not change them without being aske
   resources the hand lets go. New tutorial steps need a case in `guideFor()`.
 - **Endings:** a loss (famine, unrest, conquest) always gets the "lost" tier.
   Land-based tiers (thriving, costly, stripped) are only for eras that end.
+- **Knowledge milestones** (`KNOWLEDGE_MILESTONES`): there is no base Knowledge
+  trickle. Firsts pay out once each (first of each building +4, population
+  10/15/20/30/50 +8, each scouting trip +3, first raid won +6, first planting +4),
+  with a toast. Elder's Huts, schools and literacy add a steady amount.
 - **Knowledge ready:** when Knowledge first covers an advancement, Elder Ama says
   so in a toast (once per advancement, `knowledgeReady()`), and the Advancements
   button shows how many are affordable (`affordableResearch()`).
