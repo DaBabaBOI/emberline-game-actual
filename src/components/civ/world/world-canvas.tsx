@@ -9,6 +9,7 @@ import {
   buildingCost,
   DEMOLISH_TOOL,
   dustNote,
+  residents,
   fireScareNote,
   gatherNote,
   isLit,
@@ -108,6 +109,8 @@ export function WorldCanvas() {
       : null;
 
   const inTutorialNow = state.tutorialStep < TUTORIAL.length;
+  // With no tool picked, hovering a home shows who lives there.
+  const dwellers = !selected && hoverTile ? residents(state, hoverTile) : null;
   const scare = def && !error && hoverTile ? fireScareNote(state, hoverTile, def.id) : null;
   const dust = def && !error && hoverTile ? dustNote(state, hoverTile, def.id) : null;
   const gather = def?.id === "gatherer" && !error && hoverTile && !inTutorialNow ? gatherNote(state) : null;
@@ -268,6 +271,13 @@ export function WorldCanvas() {
                 : "#ffffff"
           }
         />
+      )}
+      {hoverTile && dwellers && (
+        <Html zIndexRange={[15, 0]} center position={[hoverTile.x, tileTop(hoverTile) + 1.2, hoverTile.z]} style={{ pointerEvents: "none" }}>
+          <div className="pixel-panel-dark font-pixel whitespace-nowrap px-2 py-1 text-xs" data-testid="home-label">
+            {BUILDINGS_BY_ID[hoverTile.building!].name}: {dwellers.living} of {dwellers.room} people live here
+          </div>
+        </Html>
       )}
       {hoverTile && demolishNote && hoverTile.building && (
         <Html zIndexRange={[15, 0]} center position={[hoverTile.x, tileTop(hoverTile) + 1.2, hoverTile.z]} style={{ pointerEvents: "none" }}>

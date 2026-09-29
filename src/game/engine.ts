@@ -410,6 +410,27 @@ export function placementError(state: GameState, tile: Tile, def: BuildingDef): 
   return null;
 }
 
+// How many people live in this home. Families spread out across the homes
+// one at a time (so 8 people in 3 huts is 3, 3, 2); anyone left over when
+// every home is full sleeps in the open camp (BASE_HOUSING).
+export function residents(state: GameState, tile: Tile): { living: number; room: number } | null {
+  const room = tile.building ? BUILDINGS_BY_ID[tile.building]?.housing ?? 0 : 0;
+  if (!room) return null;
+  const homes = state.tiles
+    .map((t) => ({ id: t.id, cap: t.building ? BUILDINGS_BY_ID[t.building]?.housing ?? 0 : 0, living: 0 }))
+    .filter((h) => h.cap > 0);
+  let left = Math.min(Math.floor(state.population), homes.reduce((sum, h) => sum + h.cap, 0));
+  while (left > 0) {
+    for (const h of homes) {
+      if (left > 0 && h.living < h.cap) {
+        h.living++;
+        left--;
+      }
+    }
+  }
+  return { living: homes.find((h) => h.id === tile.id)?.living ?? 0, room };
+}
+
 export function housingCapacity(state: GameState) {
   const counts = countBuildings(state);
   return BUILDINGS.reduce((sum, b) => sum + (b.housing ?? 0) * (counts[b.id] ?? 0), BASE_HOUSING);
