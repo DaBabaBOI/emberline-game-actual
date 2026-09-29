@@ -896,7 +896,8 @@ export function sustainabilityBreakdown(state: GameState): SustainPart[] {
       hint: "Fires and choices you made in events. This fades over time.",
     },
   ];
-  return parts.filter((p, i) => i === 0 || Math.abs(p.value) >= 0.5);
+  // Only what is actually costing (or helping) the land right now.
+  return parts.filter((p) => Math.abs(p.value) >= 0.5);
 }
 
 // How much Sustainability changed over roughly the last minute of play.
