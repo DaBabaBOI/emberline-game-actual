@@ -178,6 +178,10 @@ These were decided with the project owner. Do not change them without being aske
   bare rock, and a mountain loses its peak. The cut (`Tile.dug`) never grows back
   and keeps costing Sustainability after the quarry is sold (−1 per working
   quarry, up to −3 per cut hillside). Dev: "Cut hills".
+- **Each era looks a little different** (subtle, no big UI): Ancient era =
+  dyed-linen villager clothes, leather warriors, warmer sunlight, worn dirt paths
+  on open ground between buildings, and a bronze trim on the top bar. New eras
+  should add their own touches.
 - **Farms and rain** (`FARM_RAIN`): placing Farmland clears the nearest
   unprotected forest tile within 2 hexes for good (`forestToClear()`). Rainfall
   = 0.5 + 0.5 x forest cover (`rainfall()`); every field grows that share. The

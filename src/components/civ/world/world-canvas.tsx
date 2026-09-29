@@ -175,10 +175,12 @@ export function WorldCanvas() {
     >
       <color attach="background" args={["#a8dcf5"]} />
       <Haze fires={burning.length + 2 * buildings.filter((t) => t.building === "smithy").length} />
-      <hemisphereLight args={["#d6f1ff", "#6f8f4e", 0.75]} />
+      {/* The Ancient era is a touch warmer and more golden, so the change of era shows. */}
+      <hemisphereLight args={[state.era >= 1 ? "#ffeccc" : "#d6f1ff", "#6f8f4e", 0.75]} />
       <directionalLight
         position={[home.x + 25, 40, home.z + 15]}
         intensity={1.5}
+        color={state.era >= 1 ? "#fff0d2" : "#ffffff"}
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0004}
@@ -196,7 +198,7 @@ export function WorldCanvas() {
         <meshStandardMaterial color="#1a5f93" roughness={0.3} />
       </mesh>
 
-      <HexTerrain tiles={state.tiles} home={home} wear={landStrain(state)} onHover={setHovered} onPick={pick} />
+      <HexTerrain tiles={state.tiles} home={home} wear={landStrain(state)} era={state.era} onHover={setHovered} onPick={pick} />
       <Forests tiles={state.tiles} />
       <Mountains tiles={state.tiles} onHover={setHovered} onPick={pick} />
       <Deposits tiles={state.tiles} />
@@ -218,12 +220,14 @@ export function WorldCanvas() {
         homeTile={home}
         litFires={burningIds}
         sick={state.population > 0 ? (state.sick ?? 0) / state.population : 0}
+        era={state.era}
       />
       <Warriors
         tiles={state.tiles}
         population={state.population}
         soldiers={state.soldiers}
         spearmen={spearmenOf(state)}
+        era={state.era}
         homeTile={home}
         rally={state.raid ? state.tiles[state.raid.meetTile ?? state.raid.targetTile] : null}
         hidden={battleShowing}
