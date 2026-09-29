@@ -1,7 +1,7 @@
 # Emberline
 
 **A sustainability trade-off game.** Grow a tribe from the Stone Age into the
-Ancient world without destroying the land that feeds it. Every hut, fire,
+Ancient world without destroying the land that feeds it. Every house, fire,
 woodcutter and smithy helps your people now and costs the land later. Made for
 the SHISTECH Hacktrack hackathon (UN Sustainable Development Goals theme), built
 around **SDG 11: Sustainable Cities and Communities**.
@@ -33,9 +33,9 @@ it:
 | You build… | You get… | The land pays… |
 | --- | --- | --- |
 | Woodcutter | Wood for fires and building | It fells the trees around it; once they're gone it makes no wood |
-| Campfire | Warmth for 10 people | Burns wood, adds smoke, raises the risk of a wildfire in nearby trees, and scares the animals away from a gatherer's camp next to it |
+| Campfire | Warmth for 10 people | Burns wood, adds smoke, raises the risk of a wildfire in nearby trees, throws sparks that can scorch grass or burn a house next to it, and scares the animals away from a gatherer's camp next to it |
 | Gatherer's Camp | Wild food, more on berry bushes | Each extra camp adds only a quarter of a camp's food, and past two camps the animals are hunted faster than they can breed |
-| Hut | Room for 6 more people | More people eat more food and need more fires |
+| Wooden House | Room for 6 more people | More people eat more food and need more fires; wood burns, so sparks from a campfire next door can set it alight |
 | Farmland | Lots of steady food | Clears the nearest patch of forest for good, and fewer trees means less rain, so every field grows less |
 | Stone Quarry | Stone for better buildings | Cuts the hill down for good (you can watch it sink into a rocky pit), and its dust covers crops and berries nearby |
 | Livestock Pen | Food, and later warm clothes so fewer fires are needed | Grazing wears down the grass |
@@ -65,7 +65,7 @@ stumps and bare ground, quarried pits, smoke over the fires, fewer deer to hunt.
   (with warnings like "dust would cut the food of 2 buildings nearby"), stumps
   on every building card, and a Sustainability breakdown with a trend arrow.
 - **A tutorial that talks to you.** Elder Ama walks you through your first fire,
-  woodcutter, hut, camp, scouts, warrior and farm as one conversation, handing
+  woodcutter, house, camp, scouts, warrior and farm as one conversation, handing
   over just what each step needs. She explains the stumps on each building and
   how Knowledge is earned, then says goodbye when you're ready.
 - **Every advancement is earned by doing.** Each one has its own goal before you
@@ -109,7 +109,7 @@ and events also link to these goals:
 - **Balance six meters**: Food, Shelter, Happiness, Literacy, Energy and
   Sustainability.
 - **Watch your people** walk to work, sit on the logs around the fire, fall
-  sick, and hunt. Hover a hut to see how many live there.
+  sick, and hunt. Hover a house to see how many live there.
 - **Earn Knowledge from milestones**: your first of each building, your tribe
   growing, your first scouting trips, beating raiders, planting saplings. Elder's
   Huts and schools teach a little all the time. Elder Ama tells you when you can
@@ -191,6 +191,9 @@ carry the same trade-offs further:
 - **The tutorial handed out a big pile.** It started players with everything the
   tutorial would buy, so the first screen showed plenty of food and wood. Now
   Elder Ama hands over each step's supplies as you reach it.
+- **Thatched huts before farming.** Our first homes had straw roofs, but straw
+  comes from farmed grain. The Stone Age home became a log-and-bark Wooden House,
+  which also gave fire a new trade-off: sparks can burn it down.
 - **You couldn't tell the eras apart.** Entering the Ancient era changed the
   buildings on offer but not how the village looked, so we added dyed clothes,
   worn paths, warmer light and a bronze trim.
