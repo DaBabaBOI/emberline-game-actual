@@ -110,6 +110,8 @@ export type Action =
   | { type: "devEvent"; id: string }
   | { type: "devCutHills" }
   | { type: "devGoals" }
+  | { type: "devSparks" }
+  | { type: "devClearForest" }
   | { type: "endCoach" }
   | { type: "upgradeWarrior" };
 
@@ -2203,6 +2205,34 @@ function step(state: GameState, action: Action): GameState {
     case "devEvent": {
       const event = EVENTS.find((e) => e.id === action.id);
       return state.dev && event ? { ...state, event } : state;
+    }
+
+    case "devSparks": {
+      // Every lit fire throws sparks now: a house next to it if there is one, else the grass.
+      if (!state.dev) return state;
+      let tiles = state.tiles;
+      let houses = 0;
+      for (const fire of litFires(state)) {
+        const near = sparkTargets({ ...state, tiles }, fire);
+        const hit = near.find((t) => t.building === "hut") ?? near[0];
+        if (!hit) continue;
+        if (hit.building === "hut") houses++;
+        tiles = tiles.map((t) => (t.id === hit.id ? { ...t, building: t.building === "hut" ? null : t.building, scorch: 1 } : t));
+      }
+      return withMeters({ ...state, tiles, log: [`Dev: sparks (${houses} house${houses === 1 ? "" : "s"} burned).`, ...state.log].slice(0, 30) });
+    }
+
+    case "devClearForest": {
+      // Cut half the forest near the village, to test Sustainability and rain.
+      if (!state.dev) return state;
+      const home = state.tiles[state.startTile];
+      const woods = state.tiles.filter((t) => t.terrain === "forest" && !t.building && hexDistance(t, home) <= LAND.radius);
+      const cut = new Set(woods.filter((_, i) => i % 2 === 0).map((t) => t.id));
+      return withMeters({
+        ...state,
+        tiles: state.tiles.map((t) => (cut.has(t.id) ? { ...t, growth: 0.02 } : t)),
+        log: [`Dev: cut ${cut.size} forest tiles.`, ...state.log].slice(0, 30),
+      });
     }
 
     case "devGoals":
