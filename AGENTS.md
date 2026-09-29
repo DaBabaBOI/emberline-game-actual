@@ -72,7 +72,7 @@ These were decided with the project owner. Do not change them without being aske
 - "AI" in the future era means **in-game tech** (automation, data centers), not an
   AI chatbot.
 - In the tutorial the player builds their own woodcutter (step 2). Skipping
-  the tutorial gives the basics it would have built (woodcutter, lit campfire,
+  the tutorial gives the basics it would have built (woodcutter, lit campfire, war camp with one warrior,
   gatherer); dev starts get a woodcutter and a campfire. Unrest can't start
   during the calm period after the tutorial. The last woodcutter can't be
   sold, so the player can never soft-lock with no wood.
