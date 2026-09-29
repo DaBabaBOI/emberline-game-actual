@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "Deer and boar now walk: their legs swing and their bodies bob as they move.",
       "The old grove is marked on the map once you protect it (standing stones and a label), and nothing can be built on it.",
       "You can see the Ancient era now: villagers wear dyed linen, warriors wear leather, the light is warmer, paths wear into the ground between buildings, and the top bar gets a bronze trim.",
       "The tutorial no longer starts you on a big pile: Elder Ama hands over what each step needs as you reach it, and a small reserve (40 food, 10 wood) at the end.",
