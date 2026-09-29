@@ -8,6 +8,7 @@ import {
   canAfford,
   consumption,
   countBuildings,
+  defenseBreakdown,
   defenseStrength,
   DEMOLISH_TOOL,
   PLANT_TOOL,
@@ -296,7 +297,7 @@ function ArmyButton() {
       ? "Build a War Camp to train warriors"
       : full
         ? "All War Camps are full. Build another to train more."
-        : `Train a warrior. Defense: ${defenseStrength(state)}`;
+        : `Train a warrior. Defense: ${defenseStrength(state)} = ${defenseBreakdown(state)}`;
   return (
     <ToolButton
       guide="tool-train"

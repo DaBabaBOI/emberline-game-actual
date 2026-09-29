@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "The raid banner shows where your defense comes from (warriors, spears, war camp, walls).",
       "Mountains now rise in the outer highlands of each island instead of right next to your village.",
       "Hover over a hut or house to see how many people live there.",
       "Skipping the tutorial now also gives you a War Camp and one warrior, like the tutorial would, so the first raiders don't walk right in.",

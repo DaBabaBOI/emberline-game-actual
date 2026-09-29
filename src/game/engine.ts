@@ -869,6 +869,21 @@ export function defenseStrength(state: GameState) {
   return state.soldiers * perWarrior + ((counts.warcamp ?? 0) > 0 ? 1 : 0) + (counts.walls ?? 0) * WALL_DEFENSE;
 }
 
+// Where the defense number comes from, in words: "4 warriors × 1.5 (spears) + 1 war camp".
+export function defenseBreakdown(state: GameState): string {
+  const spears = state.researched.includes("spears");
+  const bronze = state.researched.includes("bronze-arms");
+  const perWarrior = (spears ? 1.5 : 1) * (bronze ? 2 : 1);
+  const counts = countBuildings(state);
+  const why = [spears && "spears", bronze && "bronze"].filter(Boolean).join(", ");
+  const parts = [
+    `${state.soldiers} warrior${state.soldiers === 1 ? "" : "s"}${perWarrior !== 1 ? ` × ${perWarrior} (${why})` : ""}`,
+  ];
+  if ((counts.warcamp ?? 0) > 0) parts.push("1 war camp");
+  if (counts.walls) parts.push(`${counts.walls * WALL_DEFENSE} walls`);
+  return parts.join(" + ");
+}
+
 const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
 
 export function computeMeters(state: GameState): Meters {
