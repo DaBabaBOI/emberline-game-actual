@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ERAS, EVENTS, LESSONS, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
-import { defenseStrength, warnings } from "@/game/engine";
+import { defenseBreakdown, defenseStrength, warnings } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
 import { Countdown } from "./countdown";
 import { PixelIcon } from "@/components/civ/pixel-icon";
@@ -205,8 +205,10 @@ export function RaidBanner() {
         }
       >
         <PixelIcon name="warning" size={18} />
-        {state.raid.strength} raiders arriving in <Countdown ticks={eta} />s · Your defense: {defense}
-        {safe ? " (you can hold them)" : " (train more warriors!)"}
+        <span>
+          {state.raid.strength} raiders arriving in <Countdown ticks={eta} />s · Defense {defense} ={" "}
+          {defenseBreakdown(state)} · {safe ? "You can hold them" : "Train more warriors!"}
+        </span>
       </div>
     </div>
   );
