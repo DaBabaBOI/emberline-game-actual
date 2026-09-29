@@ -232,16 +232,24 @@ These were decided with the project owner. Do not change them without being aske
   resources the hand lets go. New tutorial steps need a case in `guideFor()`.
 - **Endings:** a loss (famine, unrest, conquest) always gets the "lost" tier.
   Land-based tiers (thriving, costly, stripped) are only for eras that end.
-- **Knowledge is slow on purpose:** reaching the Ancient era should take a
-  focused player 10+ minutes (a greedy bot takes 9-14). There is no base trickle.
-  Milestones pay once each (`KNOWLEDGE_MILESTONES`: first of each building +2,
-  population 10/15/20/30/50 +5, first raid won +6, first planting +4). Only the
-  first 5 scouting trips teach (+1, or +2 for 20+ new tiles). Elder's Huts
-  (0.08/tick) and Scribe Schools (0.12) teach steadily, but each extra one of a
-  kind adds only half (`TEACHING`). Literacy adds 0.001 × literacy. Cave
-  Paintings give +8. Agriculture costs 100. The Ancient era runs 5 years per
-  tick so the Roman legion (year −1600) arrives ~9 minutes in, leaving time to
-  research bronze arms. Re-check with a bot sim when tuning.
+- **Balance is checked with a full-game bot** (skip tutorial, sensible build order,
+  selective logging, replanting, saving up for key buildings). Last check: 4 of 5
+  reached the Ancient era at 17-20 min, 2 of those beat the Roman legion (the
+  ones that grew huge lost: the legion scales with population). Re-run it after
+  changing any rate below.
+- **Knowledge:** no base trickle. Milestones pay once each (`KNOWLEDGE_MILESTONES`:
+  first of each building +2, population 10/15/20/30/50 +5, first raid won +6,
+  first planting +4). Only the first 5 scouting trips teach (+1, or +2 for 20+
+  new tiles). Elder's Huts (0.08/tick) and Scribe Schools (0.12) teach steadily,
+  each extra one of a kind adds half (`TEACHING`). Literacy adds 0.001 x literacy.
+  Cave Paintings +8. Agriculture costs 80.
+- **Rates:** gatherer 0.6 food (+0.4 berries), farm 1.0, fishing 0.7 (+0.4 fish),
+  pen 0.35, woodcutter 0.25 wood (half when selective), quarry 0.3 stone (+0.3 on
+  stone). People eat 0.15 food per tick (`FOOD_PER_PERSON`), warriors 0.12.
+  Skipping the tutorial leaves only `AFTER_TUTORIAL_RESERVE` (40 food, 10 wood).
+- **Raids** grow with the tribe and by one raider every `RAID_GROWTH_TICKS` (300).
+  The Ancient era runs 3 years per tick, so the legion's warning (year -1600)
+  comes about 12 minutes after entering it.
 - **Advancement goals** (`ADVANCEMENT_GOALS`): every advancement has one goal
   (more for big ones like Agriculture and Bronze Weapons) that must be met before
   it can be researched; Knowledge is still the price. Counting goals (`tally`)
@@ -332,3 +340,7 @@ These were decided with the project owner. Do not change them without being aske
 3. Medieval & Renaissance, then Industrial & Modern (pollution gets serious),
    then Future & Space (the space view, fusion, AI tech, interstellar).
 4. Later: multiplayer, where human players replace AI nations.
+5. **Idea saved by the owner for later: the Kardashev scale.** It ranks a
+   civilization by how much energy it can use (Type I: its planet's; Type II:
+   its star's; Type III: its galaxy's). A possible frame for the late eras and
+   the space age, and a way to tie energy back to sustainability. Not designed yet.

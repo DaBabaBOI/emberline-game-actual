@@ -9,6 +9,8 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "Skipping the tutorial no longer leaves you its whole budget: you start with 40 food and 10 wood.",
+      "Rebalanced after full test games: people eat a quarter less, woodcutters and quarries were tuned, Agriculture costs 80, raids grow more slowly over time, and the Roman legion comes about 12 minutes into the Ancient era.",
       "Food and wood come in about a third slower (gatherers, farms, fishing, pens and woodcutters), so big stockpiles take real work.",
       "Every advancement now has its own goal before you can research it (e.g. Herding: hunt 3 animals; Agriculture: 3 fields, 12 people, 50 food stored). Each card shows the goal and your progress.",
       "After each advancement, Elder Ama and the pointing hand walk you through what it unlocked, like the opening tutorial.",

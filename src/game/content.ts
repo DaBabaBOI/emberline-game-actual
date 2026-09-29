@@ -14,7 +14,7 @@ import type {
 
 export const ERAS = [
   { name: "Stone Age", startYear: -50000, yearsPerTick: 100, currency: "Shells" },
-  { name: "Ancient", startYear: -3000, yearsPerTick: 5, currency: "Bronze coins" },
+  { name: "Ancient", startYear: -3000, yearsPerTick: 3, currency: "Bronze coins" },
   { name: "Classical", startYear: -500, yearsPerTick: 10, currency: "Silver coins" },
   { name: "Medieval & Renaissance", startYear: 1000, yearsPerTick: 4, currency: "Florins" },
   { name: "Industrial & Modern", startYear: 1750, yearsPerTick: 1, currency: "Banknotes" },
@@ -145,7 +145,7 @@ export const BUILDINGS: BuildingDef[] = [
     era: 0,
     cost: { wood: 4 },
     terrain: ["forest"],
-    produces: { wood: 0.2 },
+    produces: { wood: 0.25 },
     reveal: 2,
   },
   {
@@ -176,8 +176,8 @@ export const BUILDINGS: BuildingDef[] = [
     cost: { wood: 15 },
     terrain: ["hills", "mountain"],
     requires: "toolmaking",
-    produces: { stone: 0.6 },
-    depositBonus: { deposit: "stone", amount: { stone: 0.8 } },
+    produces: { stone: 0.3 },
+    depositBonus: { deposit: "stone", amount: { stone: 0.3 } },
     reveal: 2,
   },
   {
@@ -483,7 +483,7 @@ export const TREE: TreeNode[] = [
     description: "Settle down to farm for good. With 15 people, your tribe can enter the Ancient era.",
     branch: "knowledge",
     era: 0,
-    cost: 100,
+    cost: 80,
     requires: ["early-farming", "toolmaking"],
   },
   // ---- Ancient era ---------------------------------------------------------
@@ -1050,7 +1050,7 @@ export const LOW_WOOD_AFTER_BUY = 10;
 // and the first disease that isn't the player's own choice. The early game is calm.
 export const GRACE_AFTER_TUTORIAL = { event: 150, raid: 300, disease: 300 };
 
-export const AFTER_TUTORIAL_RESERVE: Partial<Resources> = { food: 60, wood: 15 };
+export const AFTER_TUTORIAL_RESERVE: Partial<Resources> = { food: 40, wood: 10 };
 
 // `buys` lists what the step pays for: building ids, "scout", "train" or an
 // advancement id. The starting resources are worked out from it.

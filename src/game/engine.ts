@@ -67,10 +67,12 @@ import type {
 export const SAVE_VERSION = 6;
 const BASE_HOUSING = 8;
 // Food eaten per second by each person and each warrior.
-export const FOOD_PER_PERSON = 0.2; // 1 food every 5 seconds
-export const FOOD_PER_WARRIOR = 0.15;
+export const FOOD_PER_PERSON = 0.15; // 1 food every 10 ticks
+export const FOOD_PER_WARRIOR = 0.12;
 // Food from each animal the hunters bring back.
 export const HUNT_FOOD = 4;
+// Raids grow by one raider every this many ticks (on top of the tribe's size).
+export const RAID_GROWTH_TICKS = 300;
 
 export type Action =
   | { type: "tick" }
@@ -149,6 +151,7 @@ export function newGame(
     strainTicks: 0,
     forestBaseline: 0,
     soldiers: 0,
+    spearmen: 0,
     raid: null,
     nextRaidTick: 110,
     meters: { food: 60, shelter: 70, happiness: 60, literacy: 0, energy: 0, sustainability: 100 },
@@ -886,9 +889,9 @@ export function warriorCap(state: GameState) {
   return (countBuildings(state).warcamp ?? 0) * WARRIORS_PER_CAMP;
 }
 
-// Warriors carrying spears. Older saves had spears apply to everyone.
+// Warriors carrying spears (older saves are converted when loaded).
 export function spearmenOf(state: GameState): number {
-  const n = state.spearmen ?? (state.researched.includes("spears") ? state.soldiers : 0);
+  const n = state.spearmen ?? 0;
   return Math.max(0, Math.min(state.soldiers, n));
 }
 
@@ -1657,7 +1660,7 @@ function updateRaids(state: GameState): GameState {
     const strength = Math.max(
       2,
       Math.round(
-        (2 + state.tick / 150 + state.population / GROWTH_PRESSURE.raidersPerPeople) *
+        (2 + state.tick / RAID_GROWTH_TICKS + state.population / GROWTH_PRESSURE.raidersPerPeople) *
           DIFFICULTIES[state.difficulty].raiders,
       ),
     );
@@ -1846,7 +1849,17 @@ function step(state: GameState, action: Action): GameState {
     case "skipTutorial": {
       // Skipping players still get the basics the tutorial would have built:
       // a woodcutter, a lit campfire, a gatherer and a war camp with a warrior.
-      const skipped = startGrace({ ...state, tutorialStep: TUTORIAL.length });
+      // The tutorial's buildings are handed over, so its budget isn't: only the
+      // after-tutorial reserve is left (plus the Knowledge for Early Farming).
+      const skipped = startGrace({
+        ...state,
+        tutorialStep: TUTORIAL.length,
+        resources: {
+          ...state.resources,
+          food: Math.min(state.resources.food, AFTER_TUTORIAL_RESERVE.food ?? 0),
+          wood: Math.min(state.resources.wood, AFTER_TUTORIAL_RESERVE.wood ?? 0),
+        },
+      });
       const counts = countBuildings(state);
       const tiles = state.tiles.map((t) => ({ ...t }));
       if (!counts.woodcutter) giveStartingWoodcutter(tiles, tiles[state.startTile]);
@@ -2113,6 +2126,8 @@ export function loadGame(): GameState | null {
     if (parsed.version !== SAVE_VERSION) return null;
     // Mountains used to be tall pillars; older saves keep the new, lower base.
     for (const t of parsed.tiles) if (t.terrain === "mountain") t.height = cutHeight(t);
+    // Saves from before spearmen: Hunting Spears used to arm every warrior.
+    if (parsed.spearmen === undefined) parsed.spearmen = parsed.researched.includes("spears") ? parsed.soldiers : 0;
     return parsed;
   } catch {
     return null;
