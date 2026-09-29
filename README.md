@@ -36,8 +36,8 @@ it:
 | Campfire | Warmth for 10 people | Burns wood, adds smoke, raises the risk of a wildfire in nearby trees, and scares the animals away from a gatherer's camp next to it |
 | Gatherer's Camp | Wild food, more on berry bushes | Each extra camp adds only a quarter of a camp's food, and past two camps the animals are hunted faster than they can breed |
 | Hut | Room for 6 more people | More people eat more food and need more fires |
-| Farmland | Lots of steady food | Clears wild land for good |
-| Stone Quarry | Stone for better buildings | Cuts away the hillside, and its dust covers crops and berries nearby (less food within 2 tiles) |
+| Farmland | Lots of steady food | Clears the nearest patch of forest for good, and fewer trees means less rain, so every field grows less |
+| Stone Quarry | Stone for better buildings | Cuts the hill down for good (you can watch it sink into a rocky pit), and its dust covers crops and berries nearby |
 | Livestock Pen | Food, and later warm clothes so fewer fires are needed | Grazing wears down the grass |
 | Bronze Smithy *(Ancient)* | Better tools: +20% food and wood | Burns wood for charcoal all the time, heavy smoke |
 | Irrigation Canal *(Ancient)* | Neighbouring farms grow 50% more | Watered soil slowly turns salty |
@@ -55,8 +55,9 @@ And for the big choices there is a slower option that lasts:
 village (minus smoke, quarries, fields, too many gatherer camps and more). Click it to see exactly
 what is pulling it down. It recovers only as fast as the forest grows back.
 Push it too low for too long and the land wears out: forests stop regrowing and
-harvests shrink. You can see the damage on the map: stumps and bare ground,
-smoke over the fires, fewer deer to hunt.
+harvests shrink. **Forests also bring rain**: the less forest stands, the less
+rain falls and the less every field grows. You can see the damage on the map:
+stumps and bare ground, quarried pits, smoke over the fires, fewer deer to hunt.
 
 ## How the game teaches
 
@@ -64,13 +65,18 @@ smoke over the fires, fewer deer to hunt.
   (with warnings like "dust would cut the food of 2 buildings nearby"), stumps
   on every building card, and a Sustainability breakdown with a trend arrow.
 - **A tutorial that talks to you.** Elder Ama walks you through your first fire,
-  woodcutter, hut, camp, scouts, warrior and farm as one conversation. She
-  explains the stumps on each building and how Knowledge is earned, then says
-  goodbye when you're ready.
+  woodcutter, hut, camp, scouts, warrior and farm as one conversation, handing
+  over just what each step needs. She explains the stumps on each building and
+  how Knowledge is earned, then says goodbye when you're ready.
+- **Every advancement is earned by doing.** Each one has its own goal before you
+  can research it: keep a fire burning for two minutes before Storytelling, hunt
+  animals before Herding, lose food to rot before Pottery, farm, grow and store
+  food before Agriculture. The card shows your progress. After you research it,
+  Elder Ama and the pointing hand walk you through using it once.
 - **Elder Ama's lessons.** When something happens in play (the forest shrinks,
-  too many camps hunt the herds, food rots, smoke builds up, sickness spreads in
-  crowded huts, the soil turns salty), she explains the lesson and links it to a
-  real UN target.
+  too many camps hunt the herds, the rains fail, food rots, smoke builds up,
+  sickness spreads in crowded huts, the soil turns salty), she explains the
+  lesson and links it to a real UN target.
 - **Real-world event cards.** Dilemmas like a sacred grove, overhunting, a rich
   but flood-prone riverbank, or fires inside the huts. Each card says how it
   connects to the world today.
@@ -89,7 +95,7 @@ and events also link to these goals:
 | Goal | In the game |
 | --- | --- |
 | **11 · Sustainable Cities & Communities** | Shelter, crowding, planning growth, pollution from fires and smithies |
-| 15 · Life on Land | Sustainability is the forest left standing; deforestation, lost wildlife, worn-out and salty soil, replanting |
+| 15 · Life on Land | Sustainability is the forest left standing; deforestation, lost wildlife, failing rains, worn-out and salty soil, quarried hills, replanting |
 | 7 · Affordable & Clean Energy | Warmth costs wood and smoke; clothes are the efficient alternative |
 | 12 · Responsible Consumption | Food waste, overhunting, charcoal eating the forest |
 | 4 · Quality Education | Literacy is a meter; elders and scribe schools |
@@ -105,15 +111,18 @@ and events also link to these goals:
 - **Watch your people** walk to work, sit on the logs around the fire, fall
   sick, and hunt. Hover a hut to see how many live there.
 - **Earn Knowledge from milestones**: your first of each building, your tribe
-  growing, scouting new land, beating raiders, planting saplings. Elder's Huts
-  and schools teach a little all the time. Elder Ama tells you when you have
-  enough to research something new.
-- **Defend against raiders.** Your warriors march out and fight on the map. The
-  raid banner shows how your defense adds up.
+  growing, your first scouting trips, beating raiders, planting saplings. Elder's
+  Huts and schools teach a little all the time. Elder Ama tells you when you can
+  research something new. Knowledge is slow on purpose: a new era takes real
+  play, not five minutes.
+- **Defend against raiders.** Your warriors march out and fight on the map.
+  After Hunting Spears you can arm them: spearmen count as 1.5 warriors and carry
+  spears on the map. The raid banner shows how your defense adds up.
 - **Survive sickness.** Before Herbalism your people call it a curse from the
   gods; after it, healers can help.
 - **Reach the Ancient era** (research Agriculture, grow to 15 people): bronze,
-  irrigation, writing, granaries, walls.
+  irrigation, writing, granaries, walls. You can see it: people wear dyed linen,
+  paths wear into the ground between buildings, and the light turns warmer.
 - **Face the Roman legion** at the end of the Ancient era.
 - **Name your people**, pick a culture and a difficulty, and play on a laptop or
   a phone. A guided tutorial with a pointing hand teaches the basics.
@@ -132,7 +141,7 @@ carry the same trade-offs further:
 | Next | What it adds to the trade-off |
 | --- | --- |
 | Classical era | Larger towns, roads and trade; the Silk Road |
-| Later eras | Industry and the choice between dirty and clean energy, up to a space age |
+| Later eras | Industry and the choice between dirty and clean energy, up to a space age. One idea we want to explore: the Kardashev scale, which ranks a civilization by how much energy it can use |
 | Multiplayer | Neighbouring nations run by other players instead of the computer |
 
 ## What went wrong and how we adapted
@@ -172,6 +181,19 @@ carry the same trade-offs further:
   Knowledge felt both too fast and too slow. Extra camps now add much less food
   and hurt the wildlife, quarry dust cuts nearby harvests, and Knowledge comes
   from milestones.
+- **Knowledge swung from too easy to too hard.** Players reached the Ancient era
+  in five minutes by spamming scouts. We slowed Knowledge down, then wrote a bot
+  that plays the whole game by the real rules. It showed we had gone too far:
+  the economy starved of wood, Agriculture was out of reach, raids outgrew any
+  defense and the Roman legion came before bronze weapons were possible. We
+  rebalanced until the bot, playing sensibly, reaches the Ancient era in about
+  20 minutes and beats the legion in some games but not all.
+- **The tutorial handed out a big pile.** It started players with everything the
+  tutorial would buy, so the first screen showed plenty of food and wood. Now
+  Elder Ama hands over each step's supplies as you reach it.
+- **You couldn't tell the eras apart.** Entering the Ancient era changed the
+  buildings on offer but not how the village looked, so we added dyed clothes,
+  worn paths, warmer light and a bronze trim.
 - **Small bugs added up.** A lost game could be "continued" for a few seconds
   from an old save, a loss could be called "the best ending", digits 2, 5 and 8
   looked alike, countdowns skipped seconds, panels drew over each other, and
@@ -251,7 +273,8 @@ have someone else review it. Commit messages are imperative ("add farmland", not
 (https://dabababoi.github.io/shistech-hackathon/play/?dev). You can start in any
 era with plenty of resources, and a dev panel lets you trigger every feature:
 wildfire, raid, the Roman legion, an outbreak, any event card or elder lesson
-(picked from a list), fires out, +10 people, finish the era.
+(picked from a list), fires out, +10 people, "Goals on" (every advancement goal
+counts as met), "Cut hills" (finish every quarry's cut), finish the era.
 
 **Updates log:** every change a player would notice gets a line in
 `src/game/updates.ts`, which feeds the Updates bar.
