@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { UPDATES } from "@/game/updates";
 import type { GameState } from "@/game/types";
 import { useGame } from "@/components/civ/game-provider";
+import { AccessibilityMenuSection } from "@/components/accessibility-settings";
 import { postScore, saveToCloud, scoreFor, sendFeedback, topScores, type ScoreRow } from "@/lib/online";
 
 const VERSION = UPDATES[0]?.date ?? "dev";
@@ -90,6 +91,10 @@ export function GameMenu() {
           <div className="flex flex-col gap-1">
             <span className="font-semibold text-amber-300">Feedback</span>
             <FeedbackForm state={state} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="font-semibold text-amber-300">Accessibility</span>
+            <AccessibilityMenuSection />
           </div>
         </div>
       )}

@@ -358,3 +358,9 @@ body {
     border-color: #fdf6e3;
   }
 }
+
+/* While a game is on screen its Menu has the accessibility options, so the
+   floating Settings button would only cover the game's controls. */
+html[data-in-game] .accessibility-floating {
+  display: none;
+}
