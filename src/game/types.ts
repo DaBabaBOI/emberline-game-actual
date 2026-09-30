@@ -128,7 +128,7 @@ export type CultureId =
   | "farmers"
   | "mariners";
 
-export type DifficultyId = "easy" | "normal" | "hard";
+export type DifficultyId = "first" | "easy" | "normal" | "hard";
 
 export interface BuildingDef {
   id: string;

@@ -268,7 +268,13 @@ These were decided with the project owner. Do not change them without being aske
   crested bronze helmets and big red shields (`Figures gear="roman"`).
   (Historically Rome only becomes a power right at the end of this period; the
   legion is the Ancient era's climax on purpose.)
-- Seven cultures (Balanced + six with bonuses), three difficulties. There are three
+- **First-time mode** (difficulty `first`, `GENTLE`): the default on the title
+  screen until a game has been started in this browser (`emberline-played` in
+  localStorage). The clock runs at half speed for the first 100 ticks
+  (`tickSeconds()`, used by the game clock and countdowns), events and raids are
+  spaced 1.5x further apart until tick 600, raiders are half as strong, people
+  eat 25% less, and famine/unrest take much longer (150/90 ticks).
+- Seven cultures (Balanced + six with bonuses), four difficulties (First time, Easy, Normal, Hard). There are three
   ways to lose in everyday play: **famine** (no food for too long), **unrest**
   (happiness below 15 for too long, after the tutorial) and **land collapse**
   (`COLLAPSE`: Sustainability below 20 for 80 ticks, about 2 minutes, after the

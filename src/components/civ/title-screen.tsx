@@ -11,6 +11,9 @@ import { loadFromCloud } from "@/lib/online";
 import { cn } from "@/lib/utils";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 
+// Set once a game has been started in this browser (First time is then no longer the default).
+const PLAYED_KEY = "emberline-played";
+
 export function TitleScreen({
   canContinue,
   onContinue,
@@ -32,7 +35,22 @@ export function TitleScreen({
   });
   const [culture, setCulture] = useState<CultureId>("balanced");
   const [nation, setNation] = useState("");
-  const [difficulty, setDifficulty] = useState<DifficultyId>("normal");
+  // Someone who has never started a game here gets First-time mode by default.
+  const [difficulty, setDifficulty] = useState<DifficultyId>(() => {
+    try {
+      return localStorage.getItem(PLAYED_KEY) ? "normal" : "first";
+    } catch {
+      return "normal";
+    }
+  });
+  const start = (options?: NewGameOptions) => {
+    try {
+      localStorage.setItem(PLAYED_KEY, "1");
+    } catch {
+      // Private mode: fine, they just see First time again next visit.
+    }
+    onStart(culture, difficulty, options);
+  };
   const [cloudCode, setCloudCode] = useState("");
   const [cloudStatus, setCloudStatus] = useState<"idle" | "loading" | "missing" | "old">("idle");
 
@@ -99,7 +117,7 @@ export function TitleScreen({
             </div>
 
             <h2 className="font-pixel mb-3 mt-6 text-lg font-semibold">Difficulty</h2>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {(Object.keys(DIFFICULTIES) as DifficultyId[]).map((id) => {
                 const d = DIFFICULTIES[id];
                 return (
@@ -121,7 +139,7 @@ export function TitleScreen({
 
             <button
               type="button"
-              onClick={() => onStart(culture, difficulty, { nation })}
+              onClick={() => start({ nation })}
               className="pixel-btn font-pixel mt-6 w-full bg-emerald-600 py-3 text-xl font-semibold text-white hover:bg-emerald-500"
             >
               {canContinue ? "Start a new game" : "Start"}

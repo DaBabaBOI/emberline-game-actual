@@ -53,6 +53,15 @@ export const DIFFICULTIES: Record<
   DifficultyId,
   { name: string; blurb: string; consumption: number; famineLimit: number; unrestLimit: number; raiders: number }
 > = {
+  // For a first game: see GENTLE for the slower start.
+  first: {
+    name: "First time",
+    blurb: "Slower and gentler while you learn, then normal pace.",
+    consumption: 0.75,
+    famineLimit: 150,
+    unrestLimit: 90,
+    raiders: 0.5,
+  },
   easy: { name: "Easy", blurb: "Forgiving. Famine takes a long time to hit.", consumption: 0.8, famineLimit: 120, unrestLimit: 60, raiders: 0.7 },
   normal: { name: "Normal", blurb: "The intended experience.", consumption: 1, famineLimit: 80, unrestLimit: 40, raiders: 1 },
   hard: { name: "Hard", blurb: "Hungry people, short patience, bold raiders.", consumption: 1.25, famineLimit: 55, unrestLimit: 25, raiders: 1.4 },
@@ -847,6 +856,11 @@ export const SPARKS = { perGrass: 0.0004, perHouse: 0.0015, firekeeping: 0.5 };
 // Real seconds per game tick at 1× speed. Everything in the engine counts in
 // ticks; the UI converts to seconds with this. Raising it slows the whole game.
 export const TICK_SECONDS = 1.5;
+
+// First-time mode: the clock runs `slowFactor` times slower for the first
+// `slowTicks` ticks (about 5 minutes of real time), and events and raids come
+// `gapFactor` times further apart until tick `calmUntil` (about 15 minutes).
+export const GENTLE = { slowTicks: 100, slowFactor: 2, gapFactor: 1.5, calmUntil: 600 };
 
 // A campfire burns this many ticks on one load of wood, then goes out until
 // the player clicks it to relight it (costs RELIGHT_WOOD). Firekeeping: ×1.5.
