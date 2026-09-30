@@ -377,6 +377,7 @@ export function upgradeFor(state: GameState, buildingId: string): BuildingDef | 
 // Where saplings can go: open grass or steppe, or forest that has been thinned.
 export function plantError(state: GameState, tile: Tile): string | null {
   if (tutorialLocked(state, "plant")) return "Unlocks after the tutorial";
+  if (!state.researched.includes("early-farming")) return "Learn Early Farming first";
   if (!tile.revealed) return "Unexplored land";
   if (tile.building) return "Something is built here";
   if (tile.terrain === "forest" && tile.growth >= 0.6) return "The forest here is already healthy";

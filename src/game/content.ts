@@ -1146,8 +1146,9 @@ export const SMITHY_CHARCOAL = 0.35;
 // (Elder's Huts, schools and literacy add a steady amount on top.)
 export const KNOWLEDGE_MILESTONES = {
   firstBuilding: 2,
-  population: [10, 15, 20, 30, 50],
-  populationReward: 5,
+  // Growing the tribe teaches a little, once: +1 when it first reaches 10 people.
+  population: [10],
+  populationReward: 1,
   firstRaidWon: 6,
   firstPlanted: 4,
 };
