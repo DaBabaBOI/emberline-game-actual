@@ -379,11 +379,14 @@ These were decided with the project owner. Do not change them without being aske
 - **Balance is checked with a full-game bot** (skip tutorial, sensible build order,
   selective logging, replanting, saving up for key buildings; after the legion it
   researches Coinage first, and in the Classical era gets water before the
-  drought). Last check (12 seeded games): all reached the Ancient era at 20-26
-  min, 7 beat the legion (the same bot on the previous version: 5 of 12), and
-  every town that reached the Classical era came through the drought, some
-  losing about half their people; one with no water lost to unrest. Re-run it
-  after changing any rate below.
+  drought). Last check, Normal (12 seeded games): all reached the Ancient era
+  at 20-26 min, 7 beat the legion (the same bot on the version before the
+  Classical era: 5 of 12), and 5 of the 6 towns that reached the Classical era
+  came through the drought, most losing about half their people; the one with
+  no water lost to unrest. Hard (6): 3 beat the legion, all 3 came through the
+  drought with heavy losses. First time (3): all came through. In big towns
+  sickness kills the most, which is what latrines are for. Re-run it after
+  changing any rate below.
 - **Knowledge:** no base trickle. Milestones pay once each (`KNOWLEDGE_MILESTONES`:
   first of each building +2, population 10 +1 (once), first raid won +6,
   first planting +4). Only the first 5 scouting trips teach (+1, or +2 for 20+
