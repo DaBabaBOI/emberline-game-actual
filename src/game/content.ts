@@ -6,6 +6,7 @@ import type {
   BuildingDef,
   CultureId,
   DifficultyId,
+  DisasterKind,
   EventCard,
   MeterKey,
   RaidKind,
@@ -1305,6 +1306,18 @@ export const LESSONS: { id: string; title: string; text: string; sdg: string }[]
     sdg: "SDG 3.3: stop the spread of infectious diseases",
   },
   {
+    id: "disasters",
+    title: "Ready for the next storm",
+    text: "Storms, floods and earthquakes will always come. What we build, and where, decides how much they take from us. Forests break the wind and soak up the rain.",
+    sdg: "SDG 11.5: fewer people harmed by disasters",
+  },
+  {
+    id: "slopes",
+    title: "Roots hold the hills",
+    text: "The trees on the hillside held the soil in place with their roots. We cut them, and the hill came down. Keep the forest on the slopes.",
+    sdg: "SDG 15.3: restore degraded land and soil",
+  },
+  {
     id: "drought",
     title: "Ready for dry years",
     text: "Droughts come to every land sooner or later. Towns that store grain, save water and keep their forests standing get through them. Those that don't, suffer.",
@@ -1534,6 +1547,46 @@ export const IRON_STRENGTH = 3;
 export const IRON_CHARCOAL = 1.5;
 // The Jade Road secret: this many caravans.
 export const JADE_ROAD = { caravans: 5, knowledge: 10, happiness: 10 };
+
+// Natural disasters. The first comes `firstAfter` ticks after the tutorial
+// (about 10 minutes), then one every `gap` + up to `spread` ticks. Each is warned
+// of `warn` ticks ahead and lasts `ticks`. `weight` is how often each comes up
+// (a landslide only where slopes have been stripped, a flood only by water).
+export const DISASTERS: {
+  firstAfter: number;
+  gap: number;
+  spread: number;
+  kinds: Record<DisasterKind, { name: string; icon: IconId; warn: number; ticks: number; weight: number; warning: string }>;
+} = {
+  firstAfter: 400,
+  gap: 400,
+  spread: 280,
+  kinds: {
+    storm: { name: "A storm", icon: "storm", warn: 15, ticks: 25, weight: 3, warning: "Dark clouds are rolling in from the sea. A storm is coming!" },
+    flood: { name: "A flood", icon: "flood", warn: 20, ticks: 40, weight: 2, warning: "The water is rising after days of rain. A flood is coming!" },
+    earthquake: { name: "An earthquake", icon: "quake", warn: 5, ticks: 6, weight: 1.5, warning: "The animals are restless and the birds have gone quiet..." },
+    landslide: { name: "A landslide", icon: "landslide", warn: 10, ticks: 8, weight: 0, warning: "Stones are tumbling down the bare hillside!" },
+  },
+};
+// How hard each one hits. Storm: every campfire goes out, and each wooden
+// building has `storm.wreck` chance to be wrecked (at most `storm.max`), unless
+// `storm.shelter` forest tiles next to it break the wind. Flood: up to
+// `flood.tiles` low tiles by the river or sea go under (fewer with more forest
+// standing); their buildings stop working, then fields there grow +`flood.silt`
+// for `flood.siltTicks`. Earthquake: buildings within `quake.radius` fall with
+// `quake.stone` (brick and stone) or `quake.wood` chance, at most `quake.max`.
+// Landslide: a hill with `slide.bare` or more bare neighbours buries what is
+// below it.
+export const DISASTER_HITS = {
+  storm: { wreck: 0.3, max: 2, shelter: 2 },
+  flood: { tiles: 8, radius: 6, silt: 0.4, siltTicks: 160, sickness: 2 },
+  quake: { radius: 4, stone: 0.25, wood: 0.08, max: 3, deaths: 1 },
+  slide: { bare: 3, radius: 7 },
+};
+// Buildings of brick and stone (they crack in an earthquake) and of wood
+// (a storm can wreck them).
+export const STONE_BUILDINGS = ["house", "school", "smithy", "granary", "walls", "quarry", "elder", "healer", "well", "aqueduct", "townhouse", "latrine", "baths", "academy"];
+export const WOOD_BUILDINGS = ["hut", "gatherer", "woodcutter", "fishing", "pen", "warcamp", "watchfire", "forester", "market", "watermill"];
 
 // Buying something that leaves less wood than this shows a "save up" warning.
 export const LOW_WOOD_AFTER_BUY = 10;
