@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { METERS } from "@/game/content";
-import { sustainabilityBreakdown, sustainabilityTrend } from "@/game/engine";
+import { foodMeterNote, sustainabilityBreakdown, sustainabilityTrend } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
 import { cn } from "@/lib/utils";
 import { PixelIcon } from "@/components/civ/pixel-icon";
@@ -63,11 +63,14 @@ export function SideMeters({ side }: { side: "left" | "right" }) {
             {!(land && open) && (
               <span
                 className={cn(
-                  "pixel-panel-dark pointer-events-none absolute top-1/2 hidden -translate-y-1/2 whitespace-nowrap px-2 py-1 text-xs group-hover:block",
+                  "pixel-panel-dark pointer-events-none absolute top-1/2 hidden -translate-y-1/2 px-2 py-1 text-xs group-hover:block",
+                  m.key === "food" ? "w-60" : "whitespace-nowrap",
                   side === "left" ? "left-12" : "right-12",
                 )}
+                data-testid={m.key === "food" ? "food-meter-tip" : undefined}
               >
                 {m.label}: {value}/100{land ? " (click to see why)" : ""}
+                {m.key === "food" && <span className="mt-1 block text-white/70">{foodMeterNote(state)}</span>}
               </span>
             )}
           </div>

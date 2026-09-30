@@ -8,6 +8,7 @@ import type { GameState } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import type { IconId } from "@/game/sprites";
+import { GameMenu } from "./online";
 
 const SPEEDS: { value: GameState["speed"]; label: string }[] = [
   { value: 0, label: "⏸" },
@@ -55,7 +56,7 @@ export function TopBar() {
         <Chip icon="coin" value={Math.floor(r.currency).toLocaleString()} title={era.currency} />
         <Chip icon="sword" value={state.soldiers.toString()} title="Warriors" />
         <span className="hidden h-6 w-px bg-white/20 md:block" />
-        <Chip icon="meat" value={Math.floor(r.food).toString()} title="Food stored" low={low.has("food") || low.has("famine")} />
+        <Chip icon="meat" value={Math.floor(r.food).toString()} title="Stored food" low={low.has("food") || low.has("famine")} />
         <Chip icon="log" value={Math.floor(r.wood).toString()} title="Wood" low={low.has("wood")} />
         <Chip icon="rock" value={Math.floor(r.stone).toString()} title="Stone" />
         <Chip icon="bulb" value={Math.floor(r.knowledge).toString()} title="Knowledge" />
@@ -75,6 +76,7 @@ export function TopBar() {
             </button>
           ))}
         </div>
+        <GameMenu />
       </div>
     </div>
   );
