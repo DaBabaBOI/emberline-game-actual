@@ -1024,6 +1024,43 @@ export const LESSON_GAP = 40;
 // nowhere) never start within this many ticks of each other: one at a time.
 export const QUIET_GAP = 40;
 
+// Chief level: XP only ever goes up, so progress is always easy to see. Each
+// level gives a title and a little Knowledge.
+export const XP = {
+  build: 5,
+  firstBuild: 10,
+  person: 2,
+  research: 20,
+  raidWon: 15,
+  plant: 3,
+  era: 50,
+  // Every `minuteTicks` (a minute at 1x): everyone fed, and the land healthy.
+  fedMinute: 2,
+  healthyMinute: 2,
+  minuteTicks: 40,
+  levelKnowledge: 2,
+};
+export const CHIEF_TITLES = [
+  "Wanderer",
+  "Fire-keeper",
+  "Forager",
+  "Hunter",
+  "Elder",
+  "Chief",
+  "Wise Chief",
+  "High Chief",
+  "Great Chief",
+  "Founder",
+  "Legend",
+];
+// Total XP needed to reach a level (level 1 needs none).
+export function xpToReach(level: number) {
+  return 25 * (level - 1) * level;
+}
+export function chiefTitle(level: number) {
+  return CHIEF_TITLES[Math.min(level, CHIEF_TITLES.length) - 1];
+}
+
 // Raiders come in three kinds (the banner says which). `size` scales the usual
 // raid strength. If they win (or you hide), `steal` is the share of food and wood
 // they take; a fire raid also burns one building, even if you hide.

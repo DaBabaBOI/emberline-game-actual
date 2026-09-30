@@ -267,6 +267,9 @@ export interface GameState {
   famineTicks: number;
   // Seconds in a row that happiness has been below UNREST_LEVEL.
   unrestTicks: number;
+  // Chief XP (only goes up) and level (missing in older saves: 0 and 1).
+  xp?: number;
+  chiefLevel?: number;
   // When the next small moment happens (missing in older saves).
   nextMomentTick?: number;
   lastMoment?: string;

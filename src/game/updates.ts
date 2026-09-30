@@ -9,6 +9,9 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "Chief level: an XP bar in the top bar that fills as you build, grow, research, win raids, plant trees and keep everyone fed. Each level gives a title and a little Knowledge.",
+      "A goal line under the top bar always says what to aim for next, with your progress.",
+      "New games open with a short story: who your people are, your goal, and how you can lose.",
       "New: First-time mode, picked for you on your first game. The clock starts at half speed, raids and events come less often, raiders are weaker, and famine takes longer. After a while it runs at normal pace.",
       "Raiders march smoothly at every speed (at 4x they used to lurch and stutter).",
       "Online (optional): send the team feedback from the Menu, save your game to the cloud and continue it anywhere with a code, and post a finished game to the leaderboard.",

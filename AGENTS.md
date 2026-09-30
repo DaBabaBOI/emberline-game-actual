@@ -214,6 +214,18 @@ These were decided with the project owner. Do not change them without being aske
   rots (no preservation yet), each lit campfire warms only 10 people (the
   rest are cold, scaled happiness penalty), and raids grow with the tribe's
   size as well as time. Disease also gets likelier as the tribe grows.
+- **Chief level** (`XP`, `CHIEF_TITLES`, `xpToReach()`, `awardXp()` in the
+  reducer): XP only goes up. It comes from what the player does (build +5, first
+  of a kind +10, each new peak person +2, research +20, raid won +15, sapling +3,
+  new era +50) and every minute everyone is fed / the land is healthy (+2 each).
+  Levels need 25 x (L-1) x L XP in total; each gives a title and +2 Knowledge. The
+  bar sits in the top bar. Dev: "+100 XP". A sensible game reaches about level 4
+  by the Ancient era.
+- **Goal line** (`currentGoal()`, `GoalLine`): one line under the top bar saying
+  what to aim for now with live progress (Agriculture's goal and Knowledge, then
+  15 people, then Rome). Hidden while the tutorial or a guided step is talking.
+- **Intro story** (`intro-story.tsx`): a new (non-dev) game opens with a few
+  lines of story and three boxes: your goal, then, you lose if. Keep it short.
 - **Raids** (`RAID_KINDS`, `RAID_RESPONSE`, `updateRaids`): three kinds, named
   in the card: a small band (x0.7 strength, takes wood), a war party (x1.35,
   takes food and wood), a fire raid (x1.1, burns the building nearest where they
