@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Pixelify_Sans, VT323 } from "next/font/google";
+import { AccessibilitySettings } from "@/components/accessibility-settings";
 import "./globals.css";
 
 const pixel = Pixelify_Sans({ subsets: ["latin"], variable: "--font-pixel" });
@@ -17,7 +18,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${pixel.variable} ${digits.variable}`}>
-      <body className="flex min-h-screen flex-col">{children}</body>
+      <body className="flex min-h-screen flex-col">
+        {children}
+        <AccessibilitySettings />
+      </body>
     </html>
   );
 }

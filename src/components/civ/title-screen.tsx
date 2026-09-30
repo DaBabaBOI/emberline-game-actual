@@ -5,17 +5,25 @@ import Link from "next/link";
 import { UpdatesBar } from "@/components/updates-bar";
 import { CULTURES, DIFFICULTIES, ERAS } from "@/game/content";
 import { DEFAULT_NATION, type NewGameOptions } from "@/game/engine";
-import type { CultureId, DifficultyId } from "@/game/types";
+import type { CultureId, DifficultyId, GameState } from "@/game/types";
+import { SAVE_VERSION } from "@/game/engine";
+import { loadFromCloud } from "@/lib/online";
 import { cn } from "@/lib/utils";
 import { PixelIcon } from "@/components/civ/pixel-icon";
+
+// Set once a game has been started in this browser (First time is then no longer the default).
+const PLAYED_KEY = "emberline-played";
 
 export function TitleScreen({
   canContinue,
   onContinue,
   onStart,
+  onLoadCloud,
 }: {
   canContinue: boolean;
   onContinue: () => void;
+  // Continue a game saved to the cloud with its code.
+  onLoadCloud: (state: GameState) => void;
   onStart: (culture: CultureId, difficulty: DifficultyId, options?: NewGameOptions) => void;
 }) {
   const [devMode] = useState(() => {
@@ -27,7 +35,24 @@ export function TitleScreen({
   });
   const [culture, setCulture] = useState<CultureId>("balanced");
   const [nation, setNation] = useState("");
-  const [difficulty, setDifficulty] = useState<DifficultyId>("normal");
+  // Someone who has never started a game here gets First-time mode by default.
+  const [difficulty, setDifficulty] = useState<DifficultyId>(() => {
+    try {
+      return localStorage.getItem(PLAYED_KEY) ? "normal" : "first";
+    } catch {
+      return "normal";
+    }
+  });
+  const start = (options?: NewGameOptions) => {
+    try {
+      localStorage.setItem(PLAYED_KEY, "1");
+    } catch {
+      // Private mode: fine, they just see First time again next visit.
+    }
+    onStart(culture, difficulty, options);
+  };
+  const [cloudCode, setCloudCode] = useState("");
+  const [cloudStatus, setCloudStatus] = useState<"idle" | "loading" | "missing" | "old">("idle");
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-sky-200 via-sky-50 to-[#fbf7ef] text-stone-900">
@@ -92,7 +117,7 @@ export function TitleScreen({
             </div>
 
             <h2 className="font-pixel mb-3 mt-6 text-lg font-semibold">Difficulty</h2>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {(Object.keys(DIFFICULTIES) as DifficultyId[]).map((id) => {
                 const d = DIFFICULTIES[id];
                 return (
@@ -114,7 +139,7 @@ export function TitleScreen({
 
             <button
               type="button"
-              onClick={() => onStart(culture, difficulty, { nation })}
+              onClick={() => start({ nation })}
               className="pixel-btn font-pixel mt-6 w-full bg-emerald-600 py-3 text-xl font-semibold text-white hover:bg-emerald-500"
             >
               {canContinue ? "Start a new game" : "Start"}
@@ -141,6 +166,37 @@ export function TitleScreen({
               </div>
             </div>
           )}
+
+          <form
+            className="pixel-panel mt-6 flex flex-wrap items-center gap-2 p-4"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setCloudStatus("loading");
+              const saved = await loadFromCloud(cloudCode);
+              if (!saved) return setCloudStatus("missing");
+              if (saved.version !== SAVE_VERSION) return setCloudStatus("old");
+              onLoadCloud(saved);
+            }}
+          >
+            <span className="font-pixel text-sm font-semibold">Continue from a cloud save</span>
+            <input
+              value={cloudCode}
+              onChange={(e) => setCloudCode(e.target.value)}
+              placeholder="ABCD-1234"
+              maxLength={9}
+              className="font-num w-32 border-2 border-[#2b2119] bg-white px-2 py-1 text-lg uppercase tracking-widest"
+              data-testid="cloud-code-input"
+            />
+            <button
+              type="submit"
+              disabled={cloudCode.replace(/[^A-Za-z0-9]/g, "").length !== 8 || cloudStatus === "loading"}
+              className="pixel-btn font-pixel bg-sky-100 px-3 py-1 text-sm hover:bg-sky-200 disabled:opacity-40"
+            >
+              {cloudStatus === "loading" ? "Loading..." : "Load"}
+            </button>
+            {cloudStatus === "missing" && <span className="text-sm text-red-700">No save with that code (or you&apos;re offline).</span>}
+            {cloudStatus === "old" && <span className="text-sm text-red-700">That save is from an older version of the game.</span>}
+          </form>
 
           <p className="mt-6 text-center text-sm text-stone-500">
             <Link href="/" className="underline">

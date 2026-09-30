@@ -6,6 +6,7 @@ import { ERAS, formatYear, LESSONS, METERS, METER_SDG, MIN_SUSTAINABILITY_FOR_BE
 import { clearSave, currentGoal, makeDebrief, readyForNextEra, secs } from "@/game/engine";
 import type { Debrief as DebriefData } from "@/game/types";
 import { useGame } from "@/components/civ/game-provider";
+import { LeaderboardPanel } from "./online";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { cn } from "@/lib/utils";
 
@@ -62,7 +63,9 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
           ? "The tribe has left"
           : state.lostTo === "conquest"
             ? "Conquered"
-            : "Famine";
+            : state.lostTo === "collapse"
+              ? "The land gave out"
+              : "Famine";
   const sub =
     d.kind === "era"
       ? `${who} are ready to settle down and farm for good. Here is how you got here.`
@@ -72,6 +75,8 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
           ? `The Roman legion broke through in ${formatYear(d.year)} and ${who} lost their village.`
           : state.lostTo === "unrest"
           ? `${who} were too unhappy for too long and wandered away in ${formatYear(d.year)}.`
+          : state.lostTo === "collapse"
+          ? `${who} used up the land that fed them. With the forests gone and the soil worn out, they had to leave in ${formatYear(d.year)}.`
           : `${who} ran out of food in ${formatYear(d.year)}.`;
 
   return (
@@ -79,7 +84,17 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
       <div className="pixel-panel my-auto w-[min(96vw,760px)] p-4 md:p-6" data-testid="debrief">
         <div className="flex items-center gap-3">
           <PixelIcon
-            name={d.kind === "loss" ? (state.lostTo === "unrest" ? "sad" : state.lostTo === "conquest" ? "shield" : "skull") : "star"}
+            name={
+              d.kind === "loss"
+                ? state.lostTo === "unrest"
+                  ? "sad"
+                  : state.lostTo === "conquest"
+                    ? "shield"
+                    : state.lostTo === "collapse"
+                      ? "leaf"
+                      : "skull"
+                : "star"
+            }
             size={48}
           />
           <div>
@@ -90,7 +105,11 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
 
         <div className={cn("font-pixel mt-4 border-l-4 px-3 py-2", tier.tone)} data-testid="ending-tier">
           <div className="text-lg font-semibold">{tier.title}</div>
-          <p className="text-sm">{tier.text}</p>
+          <p className="text-sm">
+            {d.kind === "loss" && state.lostTo === "collapse"
+              ? "People can't outgrow the land that feeds them. A village that lasts takes only what the forest and soil can grow back."
+              : tier.text}
+          </p>
         </div>
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -164,6 +183,9 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
             </ul>
           </>
         )}
+
+        {/* The story is over (won or lost): post it to the leaderboard. */}
+        {d.kind !== "era" && <LeaderboardPanel />}
 
         <div className="mt-5 flex flex-wrap justify-end gap-2">
           {d.kind === "final" && (
