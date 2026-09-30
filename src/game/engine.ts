@@ -2480,18 +2480,18 @@ function step(state: GameState, action: Action): GameState {
     }
 
     case "skipTutorial": {
-      // Skipping players still get the basics the tutorial would have built:
-      // a woodcutter, a lit campfire, a gatherer and a war camp with a warrior.
-      // The tutorial's buildings are handed over, so its budget isn't: only the
-      // after-tutorial reserve is left (plus the Knowledge for Early Farming).
+      // Skipping players still get everything the tutorial would have given:
+      // a woodcutter, a lit campfire, a Wooden House, a gatherer, a war camp
+      // with a warrior, Early Farming and a field. The tutorial's buildings are
+      // handed over, so its budget isn't: only the after-tutorial reserve is left.
       const skipped = startGrace({
         ...state,
         tutorialStep: TUTORIAL.length,
+        researched: state.researched.includes("early-farming") ? state.researched : [...state.researched, "early-farming"],
         resources: {
           ...state.resources,
           food: AFTER_TUTORIAL_RESERVE.food ?? 0,
           wood: AFTER_TUTORIAL_RESERVE.wood ?? 0,
-          knowledge: Math.max(state.resources.knowledge, TREE_BY_ID["early-farming"].cost),
         },
       });
       const counts = countBuildings(state);
@@ -2520,6 +2520,19 @@ function step(state: GameState, action: Action): GameState {
           spot.building = "warcamp";
           soldiers = Math.max(soldiers, 1);
         }
+      }
+      // A Wooden House (not beside the fire: sparks) and a field on open grass.
+      const home = tiles[state.startTile];
+      const free = (t: Tile, terrain: string[]) => t.revealed && terrain.includes(t.terrain) && !t.building;
+      const byHome = (a: Tile, b: Tile) => hexDistance(a, home) - hexDistance(b, home);
+      const clearOfFire = (t: Tile) => !tiles.some((f) => f.building === "campfire" && hexDistance(f, t) <= 1);
+      if (!counts.hut) {
+        const spot = tiles.filter((t) => free(t, BUILDINGS_BY_ID.hut.terrain) && clearOfFire(t)).sort(byHome)[0];
+        if (spot) spot.building = "hut";
+      }
+      if (!counts.farm) {
+        const spot = tiles.filter((t) => free(t, ["grass"]) && clearOfFire(t)).sort(byHome)[0];
+        if (spot) spot.building = "farm";
       }
       const fires = pit !== null ? { ...state.fires, [pit]: burnTicks(state) } : state.fires;
       return withMeters({ ...skipped, tiles, fires, soldiers });
