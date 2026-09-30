@@ -30,6 +30,10 @@ import {
   ERA_INTROS,
   WEAR,
   DISCOVERIES,
+  DISASTERS,
+  DISASTER_HITS,
+  STONE_BUILDINGS,
+  WOOD_BUILDINGS,
   TUTORIAL_START_FOOD,
   ROMAN_LEGION,
   FORESTER_GROWTH,
@@ -88,6 +92,7 @@ import type {
   TallyKey,
   TreeNode,
   Debrief,
+  DisasterKind,
   Stats,
   BuildingDef,
   CultureId,
@@ -142,6 +147,7 @@ export type Action =
   | { type: "devWear" }
   | { type: "dismissCutscene" }
   | { type: "devCutscene"; id: string }
+  | { type: "devDisaster"; kind: DisasterKind }
   | { type: "devBeatLegion" }
   | { type: "devDrought"; when: "soon" | "now" | "end" }
   | { type: "devCaravanBack" }
@@ -673,7 +679,9 @@ export function farmFactor(state: GameState, tile: Tile) {
   const mill = near(state, tile, "watermill", WATER.millReach) ? 1 + WATER.millFarm : 1;
   // In the drought, a field an aqueduct waters still gets most of its water.
   const water = watered && inDrought(state) ? Math.max(rainfall(state), DROUGHT.aqueductFarm) : rainfall(state);
-  return canal * mill * (watered ? 1 + WATER.aqueductFarm : 1) * water * (seedEaten(state) ? 1 - FAMINE.seed.farmLoss : 1);
+  // A flood leaves rich silt behind: the field grows more for a while.
+  const silt = state.tick < (state.silt?.[tile.id] ?? 0) ? 1 + DISASTER_HITS.flood.silt : 1;
+  return canal * mill * silt * (watered ? 1 + WATER.aqueductFarm : 1) * water * (seedEaten(state) ? 1 - FAMINE.seed.farmLoss : 1);
 }
 
 // How many people have water in the drought: springs, wells and aqueducts.
@@ -833,6 +841,8 @@ export function production(state: GameState): Resources {
   const out: Resources = { food: 0, wood: 0, stone: 0, knowledge: 0, currency: 0 };
   for (const tile of state.tiles) {
     if (!tile.building) continue;
+    // Under flood water nothing works until it goes down.
+    if (isFlooded(state, tile)) continue;
     // Hard mode: a worn building makes less, a broken one nothing.
     const worn = wearFactor(tile);
     if (worn <= 0) continue;
@@ -1584,6 +1594,10 @@ function lessonReady(id: string, state: GameState) {
       return tallyOf(state, "caravans") > 0 && !(state.caravans ?? []).length;
     case "drought":
       return !!state.drought;
+    case "disasters":
+      return tallyOf(state, "disasters") > 0 && !state.disaster;
+    case "slopes":
+      return tallyOf(state, "landslides") > 0 && !state.disaster;
     default:
       return false;
   }
@@ -1845,6 +1859,7 @@ function startGrace(state: GameState): GameState {
     nextRaidTick: Math.max(state.nextRaidTick, state.tick + GRACE_AFTER_TUTORIAL.raid * gapFactor(state)),
     calmUntil: state.tick + GRACE_AFTER_TUTORIAL.disease * gapFactor(state),
     nextMomentTick: state.tick + SMALL_MOMENTS.firstAfter,
+    nextDisasterTick: state.tick + Math.round(DISASTERS.firstAfter * gapFactor(state)),
     eraStartTick: state.tick,
   };
 }
@@ -1956,7 +1971,7 @@ function tick(state: GameState): GameState {
   next = cutHills(next);
   next = sparks(next);
   // No raids or events while a new player is still learning.
-  if (!inTutorial) next = updateDrought(updateLegion(updateRaids(next)));
+  if (!inTutorial) next = updateDisasters(updateDrought(updateLegion(updateRaids(next))));
   next = returnCaravans(next);
   // The final battle ends the story (won or lost): nothing else happens today.
   if (next.phase !== "playing" || next.debrief) return { ...next, meters: computeMeters(next) };
@@ -2114,6 +2129,9 @@ function growForests(state: GameState): GameState {
     if (t.scorch > 0) {
       changes.set(t.id, { scorch: Math.max(0, t.scorch - 0.01) });
     }
+    // Earthquake cracks and landslide rubble fade slowly (about 15 minutes).
+    if ((t.cracked ?? 0) > 0) changes.set(t.id, { ...changes.get(t.id), cracked: Math.max(0, (t.cracked ?? 0) - 0.005) });
+    if ((t.rubble ?? 0) > 0) changes.set(t.id, { ...changes.get(t.id), rubble: Math.max(0, (t.rubble ?? 0) - 0.005) });
     if (t.terrain === "forest" && t.growth < 1 && t.scorch < 0.4) {
       if (strain < 1) changes.set(t.id, { ...changes.get(t.id), growth: Math.min(1, t.growth + 0.06 * (1 - strain)) });
     }
@@ -2215,6 +2233,193 @@ function updateLegion(state: GameState): GameState {
         arriveTick: state.tick + 12,
       },
       log: ["The Roman legion has landed!", ...state.log].slice(0, 30),
+    };
+  }
+  return state;
+}
+
+// ---- Natural disasters -------------------------------------------------------
+
+const hexNeighbors = (state: GameState, tile: Tile) => state.tiles.filter((t) => hexDistance(t, tile) === 1);
+
+// Under flood water right now.
+export function isFlooded(state: GameState, tile: Tile) {
+  const d = state.disaster;
+  return !!d && d.kind === "flood" && state.tick >= d.startTick && state.tick < d.endTick && d.tiles.includes(tile.id);
+}
+
+// The disaster is striking right now (after its warning, before it's over).
+export function disasterActive(state: GameState) {
+  const d = state.disaster;
+  return !!d && state.tick >= d.startTick && state.tick < d.endTick;
+}
+
+// Low land by the river or the sea near the village that a flood would cover.
+// Standing forest soaks up the rain: the more forest, the fewer tiles go under.
+function floodTiles(state: GameState): number[] {
+  const home = state.tiles[state.startTile];
+  const low = ["grass", "steppe", "beach", "marsh", "forest"];
+  const byWater = state.tiles.filter(
+    (t) =>
+      t.revealed &&
+      low.includes(t.terrain) &&
+      hexDistance(t, home) <= DISASTER_HITS.flood.radius &&
+      state.tiles.some((n) => (n.terrain === "river" || n.terrain === "shallow") && hexDistance(n, t) === 1),
+  );
+  const n = Math.max(3, Math.min(DISASTER_HITS.flood.tiles, Math.round(DISASTER_HITS.flood.tiles * (1.3 - forestCover(state)))));
+  return byWater.sort((a, b) => hexDistance(a, home) - hexDistance(b, home)).slice(0, n).map((t) => t.id);
+}
+
+// Hills whose trees have been cut (or that quarries have cut into), with
+// buildings below them: a landslide waiting to happen.
+export function riskySlopes(state: GameState): Tile[] {
+  const home = state.tiles[state.startTile];
+  const bare = (t: Tile) => (t.terrain === "forest" && t.growth < 0.3) || (t.dug ?? 0) > 0.3;
+  return state.tiles.filter((t) => {
+    if ((t.terrain !== "hills" && t.terrain !== "mountain") || !t.revealed || hexDistance(t, home) > DISASTER_HITS.slide.radius) return false;
+    const around = hexNeighbors(state, t);
+    const stripped = around.filter(bare).length + ((t.dug ?? 0) > 0.3 ? 2 : 0);
+    return stripped >= DISASTER_HITS.slide.bare && around.some((n) => n.building && n.terrain !== "hills" && n.terrain !== "mountain");
+  });
+}
+
+// Warn of a disaster now; it strikes after its warning.
+function startDisaster(state: GameState, kind: DisasterKind, rand: () => number, warn = DISASTERS.kinds[kind].warn): GameState {
+  const home = state.tiles[state.startTile];
+  let tiles: number[] = [];
+  if (kind === "flood") tiles = floodTiles(state);
+  if (kind === "landslide") {
+    const slopes = riskySlopes(state);
+    if (!slopes.length) return state;
+    tiles = [slopes[Math.floor(rand() * slopes.length)].id];
+  }
+  if (kind === "earthquake") {
+    const near = state.tiles.filter((t) => isLand(t.terrain) && hexDistance(t, home) <= 3);
+    tiles = [near[Math.floor(rand() * near.length)].id];
+  }
+  const k = DISASTERS.kinds[kind];
+  return {
+    ...state,
+    disaster: { kind, warnTick: state.tick, startTick: state.tick + warn, endTick: state.tick + warn + k.ticks, tiles },
+    lastBigTick: state.tick,
+    log: [k.warning, ...state.log].slice(0, 30),
+  };
+}
+
+// Take buildings down: returns the new tiles and what was lost.
+function wreck(state: GameState, ids: number[], mark: Partial<Tile>) {
+  const lost = ids.map((id) => BUILDINGS_BY_ID[state.tiles[id].building!].name);
+  const tiles = state.tiles.map((t) => (ids.includes(t.id) ? { ...t, building: null, ...mark } : t));
+  return { tiles, lost };
+}
+
+// The disaster strikes.
+function strike(state: GameState, rand: () => number): GameState {
+  const d = state.disaster!;
+  const H = DISASTER_HITS;
+  const say = (line: string, s: GameState) => ({ ...s, log: [line, ...s.log].slice(0, 30) });
+  const hurt = (s: GameState, n: number) =>
+    n <= 0
+      ? s
+      : bumpStats({ ...s, population: Math.max(1, s.population - n) }, (st) => {
+          st.deaths.disaster = (st.deaths.disaster ?? 0) + n;
+        });
+  let next = addTally(state, "disasters", 1);
+  const listOf = (lost: string[]) => (lost.length ? lost.join(", ") : "");
+
+  if (d.kind === "storm") {
+    // Every fire goes out; wooden buildings with no forest to break the wind may be wrecked.
+    const exposed = state.tiles.filter(
+      (t) =>
+        t.building &&
+        WOOD_BUILDINGS.includes(t.building) &&
+        !(t.building === "woodcutter" && (countBuildings(state).woodcutter ?? 0) <= 1) &&
+        hexNeighbors(state, t).filter((n) => n.terrain === "forest" && n.growth > 0.5).length < H.storm.shelter,
+    );
+    const hit = exposed.filter(() => rand() < H.storm.wreck).slice(0, H.storm.max).map((t) => t.id);
+    const { tiles, lost } = wreck(next, hit, { scorch: 0 });
+    next = { ...next, tiles, fires: Object.fromEntries(Object.keys(state.fires ?? {}).map((id) => [id, 0])) };
+    return say(
+      `The storm blew out every campfire${lost.length ? ` and wrecked: ${listOf(lost)}` : ", but the buildings held"}. Forest around a building shelters it from the wind.`,
+      next,
+    );
+  }
+  if (d.kind === "flood") {
+    const homes = d.tiles.filter((id) => BUILDINGS_BY_ID[state.tiles[id].building ?? ""]?.housing).length;
+    next = homes ? { ...next, sick: (next.sick ?? 0) + H.flood.sickness } : next;
+    return say(
+      `The flood covered ${d.tiles.length} tiles by the water. Buildings there have stopped working until it goes down${homes ? ", and the damp homes are making people sick" : ""}.`,
+      next,
+    );
+  }
+  if (d.kind === "earthquake") {
+    const centre = state.tiles[d.tiles[0]];
+    const shaken = state.tiles.filter(
+      (t) =>
+        t.building &&
+        hexDistance(t, centre) <= H.quake.radius &&
+        !(t.building === "woodcutter" && (countBuildings(state).woodcutter ?? 0) <= 1),
+    );
+    const hit = shaken.filter((t) => rand() < (STONE_BUILDINGS.includes(t.building!) ? H.quake.stone : H.quake.wood)).slice(0, H.quake.max).map((t) => t.id);
+    const homesLost = hit.filter((id) => BUILDINGS_BY_ID[state.tiles[id].building!].housing).length;
+    const { tiles, lost } = wreck(next, hit, { cracked: 1 });
+    const cracks = new Set(state.tiles.filter((t) => isLand(t.terrain) && hexDistance(t, centre) <= 2 && rand() < 0.5).map((t) => t.id));
+    next = { ...next, tiles: tiles.map((t) => (cracks.has(t.id) || t.id === centre.id ? { ...t, cracked: 1 } : t)) };
+    const deaths = Math.min(homesLost * H.quake.deaths, Math.floor(state.population) - 1);
+    next = hurt(next, deaths);
+    return say(
+      `The ground shook! ${lost.length ? `Collapsed: ${listOf(lost)}.` : "Everything is still standing."}${deaths ? ` ${deaths} ${deaths === 1 ? "person was" : "people were"} killed.` : ""} Brick and stone crack more easily than wood.`,
+      next,
+    );
+  }
+  // Landslide: the stripped hill comes down on what's below it.
+  const slope = state.tiles[d.tiles[0]];
+  const below = hexNeighbors(state, slope)
+    .filter((t) => t.building && t.terrain !== "hills" && t.terrain !== "mountain" && !(t.building === "woodcutter" && (countBuildings(state).woodcutter ?? 0) <= 1))
+    .slice(0, 2)
+    .map((t) => t.id);
+  const { tiles, lost } = wreck(next, below, { rubble: 1 });
+  next = addTally({ ...next, tiles: tiles.map((t) => (t.id === slope.id ? { ...t, rubble: 1 } : t)) }, "landslides", 1);
+  next = hurt(next, Math.min(below.length, Math.floor(state.population) - 1));
+  return say(
+    `The bare hillside gave way! ${lost.length ? `Buried: ${listOf(lost)}.` : ""} With no roots to hold it, the soil slid down.`,
+    next,
+  );
+}
+
+// Storms, floods, earthquakes and landslides: one now and then after the
+// tutorial, never over a raid, the legion or the drought.
+function updateDisasters(state: GameState): GameState {
+  if (state.phase !== "playing") return state;
+  const d = state.disaster;
+  const rand = mulberry32(state.seed + state.tick * 71);
+  if (!d) {
+    if (state.nextDisasterTick === undefined) return { ...state, nextDisasterTick: state.tick + DISASTERS.firstAfter };
+    if (state.tick < state.nextDisasterTick || state.raid || state.legion || state.drought || state.event || !quietEnough(state) || isCalm(state))
+      return state;
+    const weights: [DisasterKind, number][] = [
+      ["storm", DISASTERS.kinds.storm.weight],
+      ["flood", floodTiles(state).length ? DISASTERS.kinds.flood.weight : 0],
+      ["earthquake", DISASTERS.kinds.earthquake.weight],
+      ["landslide", Math.min(3, riskySlopes(state).length * 1.5)],
+    ];
+    let r = rand() * weights.reduce((s, [, w]) => s + w, 0);
+    const kind = weights.find(([, w]) => (r -= w) <= 0)?.[0] ?? "storm";
+    return startDisaster(state, kind, rand);
+  }
+  if (state.tick === d.startTick) return strike(state, rand);
+  if (state.tick >= d.endTick) {
+    // After a flood, the fields it covered grow more for a while.
+    const silt =
+      d.kind === "flood"
+        ? { ...state.silt, ...Object.fromEntries(d.tiles.map((id) => [id, state.tick + DISASTER_HITS.flood.siltTicks])) }
+        : state.silt;
+    return {
+      ...state,
+      disaster: null,
+      silt,
+      nextDisasterTick: state.tick + Math.round((DISASTERS.gap + rand() * DISASTERS.spread) * gapFactor(state)),
+      log: d.kind === "flood" ? ["The water has gone down, leaving rich silt on the fields.", ...state.log].slice(0, 30) : state.log,
     };
   }
   return state;
@@ -3106,6 +3311,13 @@ function step(state: GameState, action: Action): GameState {
         tiles: state.tiles.map((t) => (t.building && t.building !== "campfire" ? { ...t, worn: Math.min(1, (t.worn ?? 0) + 0.8) } : t)),
         log: ["Dev: every building is badly worn.", ...state.log].slice(0, 30),
       });
+
+    case "devDisaster": {
+      // Warn now; it strikes 3 ticks later. A landslide needs a stripped slope.
+      if (!state.dev || state.disaster) return state;
+      const started = startDisaster(state, action.kind, mulberry32(state.seed + state.tick * 71), 3);
+      return started === state ? { ...state, log: ["Dev: no stripped slope with buildings below for a landslide.", ...state.log].slice(0, 30) } : started;
+    }
 
     case "devCaravanBack":
       if (!state.dev) return state;
