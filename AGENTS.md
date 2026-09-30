@@ -240,6 +240,11 @@ These were decided with the project owner. Do not change them without being aske
   Shallow water or a mountain: they get sick. Cloud (unexplored land): they
   vanish and come back only 5% of the time, with a little new map; this must
   stay rare so scouting is still worth buying. Dev: "Back from fog".
+  Controls: a click within `GRAB_RADIUS` (44 px) of a person, or within
+  `GRAB_GROUND` of them on the ground, picks them up. A click (not a drag)
+  keeps them in hand until the next click or Enter; arrow keys / WASD walk
+  them (camera-relative), Esc puts them back, P picks up the person nearest
+  the middle of the screen. Dragging works as before.
 - **Chief level** (`XP`, `CHIEF_TITLES`, `xpToReach()`, `awardXp()` in the
   reducer): XP only goes up. It comes from what the player does (build +5, first
   of a kind +10, each new peak person +2, research +20, raid won +15, sapling +3,

@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-30",
     items: [
+      "Picking people up is easier: click near someone (you no longer have to hit them exactly) and they stay in your hand; click again or press Enter to put them down. Move them with the arrow keys (or WASD), press Esc to put them back, or press P to pick up whoever is nearest the middle of the screen.",
       "In a game, the accessibility settings (dark mode, font, high contrast, larger text) are now in the Menu, so the Settings button no longer covers the Advancements button.",
     ],
   },
