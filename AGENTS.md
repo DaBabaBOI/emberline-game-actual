@@ -322,6 +322,11 @@ These were decided with the project owner. Do not change them without being aske
   the fifth (**left behind**, see below). Everything else is a setback. Balance: the
   sensible bot never gets near 20; a reckless bot (clear-cutting, never
   replanting) collapses around 10 minutes. Dev: "Collapse".
+- **Accessibility settings** (`accessibility-settings.tsx`, mounted in the root
+  layout): a floating Settings button on every page, except while a game is on
+  screen (`data-in-game` on `<html>`, set by `GameScreen`): there the same
+  options are in the game's Menu (`AccessibilityMenuSection`). Nothing may float
+  over the game's bottom bar.
 - **Tutorial hand:** during the tutorial a pixel hand points at the next click
   and the rest of the screen is blocked (`guideFor()` in
   `src/components/civ/guide.ts`, drawn by `hud/guide-overlay.tsx`). Targets are

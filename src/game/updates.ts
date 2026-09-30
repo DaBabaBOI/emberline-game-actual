@@ -7,6 +7,12 @@ export interface Update {
 
 export const UPDATES: Update[] = [
   {
+    date: "2026-09-30",
+    items: [
+      "In a game, the accessibility settings (dark mode, font, high contrast, larger text) are now in the Menu, so the Settings button no longer covers the Advancements button.",
+    ],
+  },
+  {
     date: "2026-09-29",
     items: [
       "Building next to the clouds no longer uncovers new land. Send scouts to explore.",
