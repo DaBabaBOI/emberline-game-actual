@@ -2,6 +2,7 @@
 
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
+import { TICK_SECONDS } from "@/game/content";
 import { hexDistance } from "@/game/hex";
 import { isLand } from "@/game/map";
 import type { Battle, Raid, Tile } from "@/game/types";
@@ -15,7 +16,7 @@ const ANCIENT_TUNICS = ["#e6dcc3", "#b5432f", "#3f5d8a", "#d9a441", "#7a8a3a", "
 const tunicsFor = (era: number) => (era >= 1 ? ANCIENT_TUNICS : TUNICS);
 const childTunicFor = (era: number) => (era >= 1 ? "#e6dcc3" : "#4a90d9");
 
-interface Walker extends Agent {
+export interface Walker extends Agent {
   tx: number;
   tz: number;
   ty: number;
@@ -28,7 +29,15 @@ interface Walker extends Agent {
   baseSpeed?: number;
   // The era their clothes were chosen for.
   era?: number;
+  // Being carried by the player (the pick-up tool moves them).
+  held?: boolean;
+  // Gone (dropped in a fire, the sea or the fog) until this time (performance.now ms).
+  goneUntil?: number;
 }
+
+// Shared with the pick-up tool: the villagers on the map, and who is being carried.
+// There is only ever one game on screen, so one shared store is enough.
+export const grabStore: { walkers: Walker[]; held: Walker | null } = { walkers: [], held: null };
 
 const SICK_TUNIC = "#9db38a";
 
@@ -147,7 +156,9 @@ export const MAX_FIGURES = 20;
 export function figureCounts(population: number, soldiers: number) {
   const budget = MAX_FIGURES - 1;
   let villagers = Math.max(2, Math.ceil(population / 3));
-  let warriors = soldiers > 0 ? Math.ceil(soldiers / 2) : 0;
+  // Warriors never take more than 40% of the figures, so the village never looks
+  // like it's only guards.
+  let warriors = soldiers > 0 ? Math.min(Math.ceil(soldiers / 2), Math.floor(budget * 0.4)) : 0;
   const total = villagers + warriors;
   if (total > budget) {
     warriors = soldiers > 0 ? Math.max(1, Math.round((budget * warriors) / total)) : 0;
@@ -179,6 +190,8 @@ export function Villagers({
   litFires: number[];
 }) {
   const walkers = useRef<Walker[]>([]);
+  // The ones on the map right now (not away in the fog or lost).
+  const shown = useRef<Walker[]>([]);
   const litKey = litFires.join(",");
   const spots = useMemo(() => {
     const built = tiles.filter((t) => t.building && t.building !== "warcamp");
@@ -225,7 +238,14 @@ export function Villagers({
       w.speed = ill ? w.baseSpeed * 0.35 : w.baseSpeed;
     });
     const dt = Math.min(delta, 0.1);
+    const now = performance.now();
     for (const w of list) {
+      // Someone who was lost comes back as a new face at a building.
+      if (w.goneUntil && now >= w.goneUntil) {
+        const spot = ground.spotOn(pick(spots.all));
+        Object.assign(w, { x: spot.x, z: spot.z, tx: spot.x, tz: spot.z, goneUntil: undefined });
+      }
+      if (w.held || w.goneUntil) continue;
       stepWalker(w, dt, ground, () => {
         if (spots.fires.length && Math.random() < 0.45) return pick(spots.fires);
         if (w.child && spots.school.length && Math.random() < 0.6) return pick(spots.school);
@@ -233,9 +253,11 @@ export function Villagers({
         return Math.random() < 0.4 ? pick(spots.wander) : pick(spots.all);
       });
     }
+    shown.current = list.filter((w) => !w.goneUntil);
+    grabStore.walkers = shown.current;
   });
 
-  return <Figures agents={walkers} max={MAX_FIGURES} colorKey={`${sickFigures}|${era}`} />;
+  return <Figures agents={shown} max={MAX_FIGURES} colorKey={`${sickFigures}|${era}`} />;
 }
 
 export function Warriors({
@@ -269,15 +291,34 @@ export function Warriors({
     const list = tiles.filter((t) => t.building === "warcamp");
     return list.length ? list : [homeTile];
   }, [tiles, homeTile]);
+  // Warriors patrol the ground around their camps and the watch fires, and stand
+  // watch at the fires, instead of all milling about on one tile.
+  const patrol = useMemo(() => {
+    const posts = [...camps, ...tiles.filter((t) => t.building === "watchfire")];
+    const ring = tiles.filter(
+      (t) =>
+        t.revealed &&
+        !t.building &&
+        t.terrain !== "mountain" &&
+        t.terrain !== "shallow" &&
+        t.terrain !== "deep" &&
+        posts.some((p) => hexDistance(p, t) <= 2),
+    );
+    return [...posts, ...ring];
+  }, [tiles, camps]);
 
   useFrame((_, delta) => {
     const list = walkers.current;
     const count = figureCounts(population, soldiers).warriors;
     while (list.length < count) {
+      // A new recruit steps out of a war camp and heads off on patrol.
       const i = list.length;
-      list.push(
-        makeWalker(i + 100, pick(camps), ground, { tunic: "#5b6f8a", hair: "#1a1a1a", scale: 1.4, speed: 0.5 }),
-      );
+      const recruit = makeWalker(i + 100, pick(camps), ground, { tunic: "#5b6f8a", hair: "#1a1a1a", scale: 1.4, speed: 0.6 });
+      const post = ground.spotOn(pick(patrol));
+      recruit.tx = post.x;
+      recruit.tz = post.z;
+      recruit.wait = 0;
+      list.push(recruit);
     }
     list.length = count;
     // Split the figures between spears and clubs in proportion.
@@ -292,7 +333,7 @@ export function Warriors({
         w.speed = 0.9;
         w.wait = 0;
       }
-      stepWalker(w, dt, ground, () => rally ?? pick(camps));
+      stepWalker(w, dt, ground, () => rally ?? pick(patrol));
     }
   });
 
@@ -305,21 +346,42 @@ export function Warriors({
   );
 }
 
-export function Raiders({ tiles, raid, tick }: { tiles: Tile[]; raid: Raid | null; tick: number }) {
+export function Raiders({
+  tiles,
+  raid,
+  tick,
+  speed = 1,
+}: {
+  tiles: Tile[];
+  raid: Raid | null;
+  tick: number;
+  // Game speed (0 = paused): raiders march at a steady pace that matches it.
+  speed?: number;
+}) {
   const agents = useRef<Agent[]>([]);
   const ground = useMemo(() => makeGround(tiles), [tiles]);
   const progress = useRef(0);
+  const heights = useRef<number[]>([]);
 
   useFrame((_, delta) => {
     if (!raid) {
       agents.current = [];
+      heights.current = [];
+      progress.current = 0;
       return;
     }
     const from = tiles[raid.fromTile];
     const to = tiles[raid.meetTile ?? raid.targetTile];
-    const goal = Math.min(1, (tick - raid.startTick) / (raid.arriveTick - raid.startTick));
-    progress.current += (goal - progress.current) * Math.min(1, delta * 1.5);
-    if (goal === 0) progress.current = 0;
+    const span = Math.max(1, raid.arriveTick - raid.startTick);
+    const goal = Math.min(1, (tick - raid.startTick) / span);
+    // March at a steady pace (one tick of the way every TICK_SECONDS / speed), but
+    // never more than one tick behind or ahead of the game. The old easing chased a
+    // target that jumped every tick, so at 4x the raiders lurched and stuttered.
+    const dt = Math.min(delta, 0.1);
+    const pace = speed / TICK_SECONDS / span;
+    const oneTick = 1 / span;
+    progress.current = Math.min(1, Math.max(goal - oneTick, Math.min(goal + oneTick, progress.current + pace * dt)));
+    if (goal <= 0) progress.current = 0;
     const p = progress.current;
     const heading = Math.atan2(to.x - from.x, to.z - from.z);
     const list = agents.current;
@@ -331,12 +393,16 @@ export function Raiders({ tiles, raid, tick }: { tiles: Tile[]; raid: Raid | nul
       const x = from.x + (to.x - from.x) * p + offX;
       const z = from.z + (to.z - from.z) * p + offZ;
       const under = ground.tileAt(x, z);
+      // Ease the height too, so they don't pop up and down at tile edges.
+      const floor = ground.heightAt(x, z) + (under?.terrain === "mountain" ? 0.55 : 0);
+      const y = heights.current[i] === undefined ? floor : heights.current[i] + (floor - heights.current[i]) * Math.min(1, dt * 10);
+      heights.current[i] = y;
       list[i] = {
         x,
         z,
-        y: ground.heightAt(x, z) + (under?.terrain === "mountain" ? 0.55 : 0),
+        y,
         heading,
-        moving: p < 0.98,
+        moving: p < 0.98 && speed > 0,
         scale: 1.4,
         tunic: raid.roman ? "#b3261e" : "#9b1c1c",
         skin: SKINS[i % SKINS.length],
