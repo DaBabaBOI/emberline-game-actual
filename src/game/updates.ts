@@ -10,6 +10,7 @@ export const UPDATES: Update[] = [
     date: "2026-09-30",
     items: [
       "Hard mode: buildings wear out. Worn buildings make less and a hammer appears over them; broken ones make nothing and a broken home holds only half its people. Click a building to repair it for a small part of its cost.",
+      "Discovery scenes: every time you research an advancement or find a secret, a short pixel scene shows the moment your people worked it out. Click to speed it up, or skip it.",
       "New era: the Classical era! Beat the Roman legion, learn Coinage (new) and grow to 40 people to enter it.",
       "Beating the legion no longer ends the story. After it, you have 20 minutes (15 on Hard) to reach the Classical era before the world moves on.",
       "A river now runs from the hills south of the village down to the sea.",
@@ -22,6 +23,7 @@ export const UPDATES: Update[] = [
       "In a famine, the people you can't feed at all leave to look for food elsewhere, so a big town shrinks instead of starving to the last person.",
       "Worn-out land now hurts a little just under Sustainability 40 and more the lower it falls (it used to cut harvests by 40% straight away). The warning names what is costing the land the most.",
       "The game now saves right after anything you do, not just every few seconds.",
+      "In a game, the accessibility settings (dark mode, font, high contrast, larger text) are now in the Menu, so the Settings button no longer covers the Advancements button.",
     ],
   },
   {

@@ -268,6 +268,8 @@ export interface GameState {
   // when it starts and when the rains come back. Done once it is over.
   drought?: { warnTick: number; startTick: number; endTick: number } | null;
   droughtDone?: boolean;
+  // The discovery scene on screen (an advancement or secret just found), if any.
+  cutscene?: string | null;
   // Caravans out trading with the Silk Steppe: when each left and when it's back.
   caravans?: { start: number; back: number }[];
   // Running totals for the debrief, and the debrief on screen (if any).
