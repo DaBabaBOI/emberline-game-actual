@@ -28,6 +28,7 @@ import {
   IRON_CHARCOAL,
   JADE_ROAD,
   ERA_INTROS,
+  DISCOVERIES,
   TUTORIAL_START_FOOD,
   ROMAN_LEGION,
   FORESTER_GROWTH,
@@ -137,6 +138,8 @@ export type Action =
   | { type: "famineRelief"; kind: FamineRelief }
   | { type: "devCollapse" }
   | { type: "caravan" }
+  | { type: "dismissCutscene" }
+  | { type: "devCutscene"; id: string }
   | { type: "devBeatLegion" }
   | { type: "devDrought"; when: "soon" | "now" | "end" }
   | { type: "devCaravanBack" }
@@ -1447,6 +1450,7 @@ function checkSecrets(state: GameState): GameState {
     return {
       ...state,
       secretsFound: [...state.secretsFound, "silk-secret"],
+      cutscene: "silk-secret",
       researched: [...state.researched, "silk-secret"],
       resources: { ...state.resources, knowledge: state.resources.knowledge + JADE_ROAD.knowledge },
       modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + JADE_ROAD.happiness },
@@ -1457,6 +1461,7 @@ function checkSecrets(state: GameState): GameState {
     return {
       ...state,
       secretsFound: [...state.secretsFound, "cave-paintings"],
+      cutscene: "cave-paintings",
       researched: [...state.researched, "cave-paintings"],
       resources: { ...state.resources, knowledge: state.resources.knowledge + CAVE_PAINTINGS_KNOWLEDGE },
       modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + 10 },
@@ -2740,6 +2745,8 @@ function step(state: GameState, action: Action): GameState {
       return withMeters({
         ...snapshotGoals({ ...state, researched: [...state.researched, node.id] }),
         coach,
+        // A short scene of the moment it was discovered (see DISCOVERIES).
+        cutscene: DISCOVERIES[node.id] ? node.id : state.cutscene ?? null,
         researched: [...state.researched, node.id],
         flags: { ...state.flags, rocket: state.flags.rocket || node.id === "rocketry" },
         resources: { ...state.resources, knowledge: state.resources.knowledge - node.cost },
@@ -2938,6 +2945,12 @@ function step(state: GameState, action: Action): GameState {
         log: [young ? "Planted saplings: a new forest will grow here." : "Planted saplings in the thinned forest.", ...state.log].slice(0, 30),
       });
     }
+
+    case "dismissCutscene":
+      return { ...state, cutscene: null };
+
+    case "devCutscene":
+      return state.dev && DISCOVERIES[action.id] ? { ...state, cutscene: action.id } : state;
 
     case "dismissLesson":
       return { ...state, lesson: null };

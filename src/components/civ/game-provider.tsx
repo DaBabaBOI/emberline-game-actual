@@ -51,7 +51,8 @@ export function GameProvider({
   const held =
     ((inTutorial && !state.dev) || (!inTutorial && !!state.coach)) && guideFor(state, selected, panel).waiting === null;
   // The world waits while the debrief is on screen.
-  const paused = !!state.debrief;
+  // ...and while a discovery scene plays.
+  const paused = !!state.debrief || !!state.cutscene;
 
   // First-time mode starts with a slower clock (tickSeconds).
   const perTick = tickSeconds(state);
