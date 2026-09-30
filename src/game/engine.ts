@@ -1,5 +1,6 @@
 import {
   AFTER_TUTORIAL_RESERVE,
+  RAW_FOOD,
   TUTORIAL_START_FOOD,
   ROMAN_LEGION,
   FORESTER_GROWTH,
@@ -535,7 +536,7 @@ function sparks(state: GameState): GameState {
       log: [
         burnsHouse
           ? "Sparks from the campfire set a wooden house alight. It burned down."
-          : "Sparks from the campfire scorched the grass beside it.",
+          : "Grass caught fire! A spark from the campfire burned the grass beside it black. Keep a gap between fires and houses.",
         ...state.log,
       ].slice(0, 30),
     };
@@ -678,8 +679,14 @@ export function production(state: GameState): Resources {
 export function consumption(state: GameState) {
   return (
     (state.population * FOOD_PER_PERSON + state.soldiers * FOOD_PER_WARRIOR) *
-    DIFFICULTIES[state.difficulty].consumption
+    DIFFICULTIES[state.difficulty].consumption *
+    (eatingRaw(state) ? RAW_FOOD : 1)
   );
+}
+
+// No lit fire (after the tutorial): nothing can be cooked, so food goes less far.
+export function eatingRaw(state: GameState) {
+  return state.tutorialStep >= TUTORIAL.length && !state.tiles.some((t) => isLit(state, t));
 }
 
 // Every game starts with one woodcutter already working, so the player can
@@ -876,8 +883,8 @@ export function warnings(state: GameState): Warning[] {
       id: "fire",
       icon: "flame",
       text: noCampfire
-        ? `No campfire! Your people are cold (−${NO_FIRE_PENALTY} happiness).`
-        : `Your campfire has gone out. Click it to relight it (${RELIGHT_WOOD} wood). Your people are cold (−${NO_FIRE_PENALTY} happiness).`,
+        ? `No campfire! Your people are cold (−${NO_FIRE_PENALTY} happiness) and eat their food raw (${Math.round((RAW_FOOD - 1) * 100)}% more food).`
+        : `Your campfire has gone out. Click it to relight it (${RELIGHT_WOOD} wood). Your people are cold (−${NO_FIRE_PENALTY} happiness) and eat their food raw (${Math.round((RAW_FOOD - 1) * 100)}% more food).`,
       severe: true,
     });
   }

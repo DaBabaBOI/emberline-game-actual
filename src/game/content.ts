@@ -824,7 +824,11 @@ export const FIRE_RISK = { base: 0.1, perForestTile: 0.06, max: 1.5 };
 // Sparks: each tick, a lit campfire may spark onto a neighbouring tile. Grass is
 // scorched; a wooden house burns down. Chance per neighbouring grass tile and
 // per neighbouring wooden house; Firekeeping halves it.
-export const SPARKS = { perGrass: 0.0004, perHouse: 0.0015, firekeeping: 0.5 };
+export const SPARKS = { perGrass: 0.0001, perHouse: 0.0015, firekeeping: 0.5 };
+
+// With no lit fire nothing can be cooked: raw food fills people less, so they
+// eat this much more.
+export const RAW_FOOD = 1.3;
 
 // Real seconds per game tick at 1× speed. Everything in the engine counts in
 // ticks; the UI converts to seconds with this. Raising it slows the whole game.

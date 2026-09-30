@@ -9,6 +9,8 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "No fire, no cooking: without a lit campfire your people eat their food raw and need 30% more of it.",
+      "Grass fires from campfire sparks are about three times rarer, and you now get a clear message when one happens.",
       "Dev mode: new Sparks and Clear forest buttons to test house fires, rain and Sustainability.",
       "The tutorial teaches it too: Elder Ama tells you to leave a patch of ground between your house and the fire.",
       "Huts are now Wooden Houses (log walls, bark roof): thatch needs straw, and there's no straw before farming.",

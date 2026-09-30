@@ -204,6 +204,11 @@ These were decided with the project owner. Do not change them without being aske
   rots (no preservation yet), each lit campfire warms only 10 people (the
   rest are cold, scaled happiness penalty), and raids grow with the tribe's
   size as well as time. Disease also gets likelier as the tribe grows.
+- **Raw food** (`RAW_FOOD`, `eatingRaw()`): after the tutorial, with no lit
+  campfire nothing can be cooked, so people eat 30% more food. The no-fire
+  warning says so.
+- **Grass fires are rare** (`SPARKS.perGrass` 0.0001: about 1-2 per 30 minutes
+  with three lit fires) and say so clearly ("Grass caught fire!").
 - **Disease** (`src/game/disease.ts`, `DISEASE`): outbreaks start from crowding
   (more people, more crowded = likelier), hunts, fishing spots and especially
   welcomed wanderers. It spreads, people recover and are immune for a while
