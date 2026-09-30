@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { BUILDINGS, LOW_WOOD_AFTER_BUY, PLANT_COST, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL } from "@/game/content";
+import { BUILDINGS, LOW_WOOD_AFTER_BUY, PLANT_COST, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL, WARRIORS_PER_CAMP } from "@/game/content";
 import {
   affordableResearch,
   buildingCost,
@@ -324,7 +324,7 @@ function ArmyButton() {
     cap === 0
       ? "Build a War Camp to train warriors"
       : full
-        ? "All War Camps are full. Build another to train more."
+        ? `All War Camps are full (${WARRIORS_PER_CAMP} warriors each). Build another War Camp to train more.`
         : `Train a warrior. Defense: ${defenseStrength(state)} = ${defenseBreakdown(state)}`;
   return (
     <ToolButton
@@ -337,7 +337,11 @@ function ArmyButton() {
       title={title}
       tone="bg-red-800 hover:bg-red-700"
     >
-      <Cost cost={TRAIN_COST} />
+      {full && cap > 0 ? (
+        <span className="text-[10px] leading-tight text-white/80">+1 camp = +{WARRIORS_PER_CAMP}</span>
+      ) : (
+        <Cost cost={TRAIN_COST} />
+      )}
     </ToolButton>
   );
 }

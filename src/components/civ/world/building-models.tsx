@@ -424,6 +424,41 @@ export function WarCampModel({ opacity }: ModelProps) {
   );
 }
 
+// A log lookout tower on the shore with a fire kept burning on top.
+export function WatchFireModel({ opacity }: ModelProps) {
+  const legs: [number, number][] = [
+    [-0.13, -0.13],
+    [0.13, -0.13],
+    [-0.13, 0.13],
+    [0.13, 0.13],
+  ];
+  return (
+    <group>
+      {legs.map(([x, z]) => (
+        <Log key={`${x}${z}`} opacity={opacity} position={[x, 0.36, z]} rotation={[0, 0, 0]} length={0.72} radius={0.018} />
+      ))}
+      {[0.2, 0.46].map((y) => (
+        <group key={y}>
+          <Log opacity={opacity} position={[0, y, -0.13]} rotation={[0, 0, Math.PI / 2]} length={0.3} radius={0.01} />
+          <Log opacity={opacity} position={[0, y, 0.13]} rotation={[0, 0, Math.PI / 2]} length={0.3} radius={0.01} />
+        </group>
+      ))}
+      <Part color="#7a5534" opacity={opacity} position={[0, 0.72, 0]}>
+        <boxGeometry args={[0.38, 0.04, 0.38]} />
+      </Part>
+      <Part color="#5f656b" opacity={opacity} position={[0, 0.77, 0]}>
+        <cylinderGeometry args={[0.1, 0.08, 0.06, 7]} />
+      </Part>
+      <Flame opacity={opacity} position={[0, 0.8, 0]} scale={0.8} />
+      {[0.12, 0.24, 0.36, 0.48, 0.6].map((y) => (
+        <Log key={y} opacity={opacity} position={[0, y, 0.2]} rotation={[0, 0, Math.PI / 2]} length={0.14} radius={0.007} />
+      ))}
+      <Log opacity={opacity} position={[-0.07, 0.36, 0.2]} rotation={[0, 0, 0]} length={0.72} radius={0.008} />
+      <Log opacity={opacity} position={[0.07, 0.36, 0.2]} rotation={[0, 0, 0]} length={0.72} radius={0.008} />
+    </group>
+  );
+}
+
 // A fenced pen with a few sheep and goats that graze and look around.
 function Sheep({ opacity, position, dark, phase }: ModelProps & { position: [number, number, number]; dark?: boolean; phase: number }) {
   const head = useRef<Mesh>(null);
@@ -691,4 +726,5 @@ export const MODELS: Record<string, (props: ModelProps) => JSX.Element> = {
   healer: HealerModel,
   farm: FarmModel,
   warcamp: WarCampModel,
+  watchfire: WatchFireModel,
 };
