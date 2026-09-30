@@ -555,6 +555,9 @@ export function DevPanel() {
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devCaravanBack" })}>
           Caravan back
         </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devWear" })} title="Hard mode: wear every building down">
+          Wear
+        </button>
       </div>
       {/* Trigger any event card or elder lesson on demand. */}
       <div className="flex gap-1">

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Vector3 } from "three";
 import { Html, MapControls } from "@react-three/drei";
-import { BUILDINGS_BY_ID, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL } from "@/game/content";
+import { BUILDINGS_BY_ID, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL, WEAR } from "@/game/content";
 import {
   buildingCost,
   DEMOLISH_TOOL,
@@ -261,12 +261,32 @@ export function WorldCanvas() {
 
       {buildings.map((t) => {
         const Model = MODELS[t.building!];
+        const broken = (t.worn ?? 0) >= 1;
         return (
-          <group key={t.id} position={[t.x, t.height, t.z]} rotation={[0, (t.id % 6) * (Math.PI / 3), 0]} scale={1.55}>
+          // Hard mode: a broken-down building sags to one side.
+          <group
+            key={t.id}
+            position={[t.x, t.height, t.z]}
+            rotation={[broken ? 0.12 : 0, (t.id % 6) * (Math.PI / 3), broken ? 0.1 : 0]}
+            scale={1.55}
+          >
             <Model opacity={1} lit={t.building !== "campfire" || burningIds.includes(t.id)} />
           </group>
         );
       })}
+      {/* Hard mode: a hammer over buildings that need repair (red when broken). */}
+      {buildings
+        .filter((t) => (t.worn ?? 0) >= WEAR.warnAt)
+        .map((t) => (
+          <Html zIndexRange={[14, 0]} key={`wear-${t.id}`} center position={[t.x, tileTop(t) + 1.5, t.z]} style={{ pointerEvents: "none" }}>
+            <span
+              className={"block border-2 border-[#140e0a] p-0.5 " + ((t.worn ?? 0) >= 1 ? "bg-red-500" : "bg-amber-300")}
+              title="Needs repair"
+            >
+              <PixelIcon name="hammer" size={14} />
+            </span>
+          </Html>
+        ))}
 
       <Villagers
         tiles={state.tiles}

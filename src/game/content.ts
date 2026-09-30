@@ -66,7 +66,7 @@ export const DIFFICULTIES: Record<
   },
   easy: { name: "Easy", blurb: "Forgiving. Famine takes a long time to hit.", consumption: 0.8, famineLimit: 120, unrestLimit: 60, raiders: 0.7 },
   normal: { name: "Normal", blurb: "The intended experience.", consumption: 1, famineLimit: 80, unrestLimit: 40, raiders: 1 },
-  hard: { name: "Hard", blurb: "Hungry people, short patience, bold raiders.", consumption: 1.25, famineLimit: 55, unrestLimit: 25, raiders: 1.4 },
+  hard: { name: "Hard", blurb: "Hungry people, short patience, bold raiders. Buildings wear out and need repairs.", consumption: 1.25, famineLimit: 55, unrestLimit: 25, raiders: 1.4 },
 };
 
 export const WARRIORS_PER_CAMP = 6;
@@ -1534,6 +1534,22 @@ export const IRON_STRENGTH = 3;
 export const IRON_CHARCOAL = 1.5;
 // The Jade Road secret: this many caravans.
 export const JADE_ROAD = { caravans: 5, knowledge: 10, happiness: 10 };
+
+// Hard mode: buildings wear out. Each tick a building wears by `perTick` (fully
+// worn in about 22 minutes), `busy` times faster for hard-worked ones and
+// `sturdy` times as fast for brick and stone. Past `slows` it makes less, down to
+// nothing when broken (worn 1); a broken home holds half its people. Repairing
+// costs `repairShare` of what it cost to build.
+export const WEAR = {
+  perTick: 1 / 900,
+  busy: 1.5,
+  sturdy: 0.6,
+  slows: 0.5,
+  repairShare: 0.15,
+  warnAt: 0.7,
+  busyBuildings: ["smithy", "quarry", "woodcutter", "watermill", "baths"],
+  sturdyBuildings: ["house", "townhouse", "walls", "granary", "school", "academy", "aqueduct", "well", "latrine", "elder", "healer"],
+};
 
 // Buying something that leaves less wood than this shows a "save up" warning.
 export const LOW_WOOD_AFTER_BUY = 10;

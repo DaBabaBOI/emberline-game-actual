@@ -35,6 +35,8 @@ export interface Tile {
   scorch: number;
   // 0–1: how much of the hill a quarry has cut away. Never grows back.
   dug?: number;
+  // 0–1: how worn out the building on this tile is (Hard only; 1 = broken).
+  worn?: number;
 }
 
 export type RaidKind = "band" | "party" | "fire";

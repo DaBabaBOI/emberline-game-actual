@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-30",
     items: [
+      "Hard mode: buildings wear out. Worn buildings make less and a hammer appears over them; broken ones make nothing and a broken home holds only half its people. Click a building to repair it for a small part of its cost.",
       "New era: the Classical era! Beat the Roman legion, learn Coinage (new) and grow to 40 people to enter it.",
       "Beating the legion no longer ends the story. After it, you have 20 minutes (15 on Hard) to reach the Classical era before the world moves on.",
       "A river now runs from the hills south of the village down to the sea.",
