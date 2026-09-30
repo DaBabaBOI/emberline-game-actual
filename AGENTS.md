@@ -200,7 +200,7 @@ These were decided with the project owner. Do not change them without being aske
   grazing wears the land: −2 Sustainability each). Warm Clothes (research) makes each pen
   keep `peoplePerPen` (6) people warm without a fire, so fewer fires are needed
   (less wood cut, less smoke). A trade-off, not a free upgrade.
-- **Growing is as hard as surviving** (`GROWTH_PRESSURE`): stored food above 60
+- **Growing is as hard as surviving** (`GROWTH_PRESSURE`): stored food above 100
   rots (no preservation yet), each lit campfire warms only 10 people (the
   rest are cold, scaled happiness penalty), and raids grow with the tribe's
   size as well as time. Disease also gets likelier as the tribe grows.
@@ -244,16 +244,21 @@ These were decided with the project owner. Do not change them without being aske
   crested bronze helmets and big red shields (`Figures gear="roman"`).
   (Historically Rome only becomes a power right at the end of this period; the
   legion is the Ancient era's climax on purpose.)
-- Seven cultures (Balanced + six with bonuses), three difficulties. There are two
-  ways to lose: **famine** (no food for too long) and **unrest** (happiness below
-  15 for too long, after the tutorial). Both show a countdown warning first.
-  Everything else is a setback.
+- Seven cultures (Balanced + six with bonuses), three difficulties. There are three
+  ways to lose in everyday play: **famine** (no food for too long), **unrest**
+  (happiness below 15 for too long, after the tutorial) and **land collapse**
+  (`COLLAPSE`: Sustainability below 20 for 80 ticks, about 2 minutes, after the
+  tutorial and the calm period; `collapseTicks`, winds down twice as fast once
+  the land recovers). All three show a countdown warning first. The Roman
+  legion is the fourth (conquest). Everything else is a setback. Balance: the
+  sensible bot never gets near 20; a reckless bot (clear-cutting, never
+  replanting) collapses around 10 minutes. Dev: "Collapse".
 - **Tutorial hand:** during the tutorial a pixel hand points at the next click
   and the rest of the screen is blocked (`guideFor()` in
   `src/components/civ/guide.ts`, drawn by `hud/guide-overlay.tsx`). Targets are
   elements with `data-guide="…"` or a map tile. While the player is saving up
   resources the hand lets go. New tutorial steps need a case in `guideFor()`.
-- **Endings:** a loss (famine, unrest, conquest) always gets the "lost" tier.
+- **Endings:** a loss (famine, unrest, collapse, conquest) always gets the "lost" tier.
   Land-based tiers (thriving, costly, stripped) are only for eras that end.
 - **Balance is checked with a full-game bot** (skip tutorial, sensible build order,
   selective logging, replanting, saving up for key buildings). Last check: 4 of 5
@@ -312,6 +317,11 @@ These were decided with the project owner. Do not change them without being aske
   Add new panels to a stack instead of positioning them absolutely.
 - During the tutorial, the placement preview card is drawn above the guide's
   dimming so the player can read the trade-off.
+- **Judging documentation** lives in `docs/` (design, architecture diagrams,
+  process and testing, the finals talk). Screenshots in `docs/images/` are real
+  captures of the build, never mock-ups. When a feature changes what a doc or
+  screenshot shows, update it in the same pull request, and keep every number
+  there matching the code or a test run.
 - Multiplayer is **later**; design state so AI nations could be replaced by humans,
   but do not add a backend now.
 

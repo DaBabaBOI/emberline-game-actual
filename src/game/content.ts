@@ -1006,6 +1006,10 @@ export const FAMINE = {
   // Eat the grain saved for sowing: fields grow half as much for a while.
   seed: { food: 25, farmLoss: 0.5, ticks: 80 },
 };
+// Land collapse: if Sustainability stays below `level` for `ticks` (80 ticks = 2 min
+// at 1x), the land can no longer feed the tribe and the game is lost. A countdown
+// warning shows the whole time; climbing back above the level winds it down.
+export const COLLAPSE = { level: 20, ticks: 80 };
 
 // Leaving the Stone Age: research Agriculture and grow to this many people.
 export const NEXT_ERA_POPULATION = 15;

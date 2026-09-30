@@ -339,6 +339,9 @@ export function DevPanel() {
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devStarve" })}>
           Starve
         </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devCollapse" })}>
+          Collapse
+        </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devOutbreak" })}>
           Outbreak
         </button>
