@@ -11,7 +11,9 @@ export type Terrain =
   | "marsh"
   | "forest"
   | "hills"
-  | "mountain";
+  | "mountain"
+  // Fresh water running from the hills to the sea (the home island has one).
+  | "river";
 
 export type Deposit = "berries" | "stone" | "fish" | "clay";
 
@@ -145,6 +147,8 @@ export interface BuildingDef {
   cost: Partial<Resources>;
   terrain: Terrain[];
   needsWaterNeighbor?: boolean;
+  // Must touch the river (fresh water), not just the sea.
+  needsRiver?: boolean;
   requires?: string;
   housing?: number;
   produces?: Partial<Resources>;
@@ -178,7 +182,8 @@ export type TallyKey =
   | "trained"
   | "scouts"
   | "planted"
-  | "raidsWon";
+  | "raidsWon"
+  | "caravans";
 
 // One thing to do before an advancement can be researched.
 export interface Goal {
@@ -190,7 +195,7 @@ export interface Goal {
   amount: number;
   key?: TallyKey;
   building?: string;
-  resource?: "food" | "currency";
+  resource?: "food" | "currency" | "knowledge";
 }
 
 // What Elder Ama walks you through right after an advancement: place a building
@@ -254,6 +259,15 @@ export interface GameState {
   // The Roman legion on its way (seen by scouts), and whether it has been fought.
   legion?: { size: number; arriveTick: number } | null;
   legionDone?: boolean;
+  // When the legion was beaten (tick and year): the Ancient era's clock runs from then.
+  legionBeatenTick?: number;
+  legionBeatenYear?: number;
+  // The great drought that ends the Classical era: when the elders warned of it,
+  // when it starts and when the rains come back. Done once it is over.
+  drought?: { warnTick: number; startTick: number; endTick: number } | null;
+  droughtDone?: boolean;
+  // Caravans out trading with the Silk Steppe: when each left and when it's back.
+  caravans?: { start: number; back: number }[];
   // Running totals for the debrief, and the debrief on screen (if any).
   stats?: Stats;
   debrief?: Debrief | null;

@@ -707,7 +707,267 @@ export function WallsModel({ opacity }: ModelProps) {
   );
 }
 
+
+// ---- Classical era ---------------------------------------------------------
+const STONE = "#c9c1b3";
+const STONE_DARK = "#a39a8b";
+const MARBLE = "#ece6da";
+const ROOF_TILE = "#b5553a";
+const WATER = "#4a9fd4";
+
+// A round stone well with a little roof on two posts and a bucket.
+export function WellModel({ opacity }: ModelProps) {
+  return (
+    <group>
+      <Part color={STONE} opacity={opacity} position={[0, 0.1, 0]}>
+        <cylinderGeometry args={[0.2, 0.22, 0.2, 12]} />
+      </Part>
+      <Part color={WATER} opacity={opacity} position={[0, 0.201, 0]} roughness={0.15}>
+        <cylinderGeometry args={[0.15, 0.15, 0.01, 12]} />
+      </Part>
+      {[-0.17, 0.17].map((x) => (
+        <Log key={x} opacity={opacity} position={[x, 0.32, 0]} rotation={[0, 0, 0]} length={0.44} radius={0.018} />
+      ))}
+      <Log opacity={opacity} position={[0, 0.46, 0]} rotation={[0, 0, Math.PI / 2]} length={0.38} radius={0.015} />
+      <Part color={ROOF_TILE} opacity={opacity} position={[0, 0.58, 0]} rotation={[0, Math.PI / 4, 0]}>
+        <coneGeometry args={[0.3, 0.2, 4]} />
+      </Part>
+      <Part color="#6b4a2b" opacity={opacity} position={[0.05, 0.32, 0]}>
+        <cylinderGeometry args={[0.04, 0.035, 0.07, 8]} />
+      </Part>
+    </group>
+  );
+}
+
+// Stone arches carrying a water channel across the tile.
+export function AqueductModel({ opacity }: ModelProps) {
+  return (
+    <group>
+      {[-0.54, -0.18, 0.18, 0.54].map((x) => (
+        <Part key={x} color={STONE} opacity={opacity} position={[x, 0.26, 0]}>
+          <boxGeometry args={[0.12, 0.52, 0.2]} />
+        </Part>
+      ))}
+      {[-0.36, 0, 0.36].map((x) => (
+        <Part key={x} color={STONE_DARK} opacity={opacity} position={[x, 0.46, 0]}>
+          <boxGeometry args={[0.26, 0.1, 0.2]} />
+        </Part>
+      ))}
+      <Part color={STONE} opacity={opacity} position={[0, 0.56, 0]}>
+        <boxGeometry args={[1.26, 0.1, 0.24]} />
+      </Part>
+      <Part color={WATER} opacity={opacity} position={[0, 0.615, 0]} roughness={0.15}>
+        <boxGeometry args={[1.24, 0.02, 0.12]} />
+      </Part>
+    </group>
+  );
+}
+
+// A timber mill house with a big water wheel that turns.
+export function WatermillModel({ opacity }: ModelProps) {
+  const wheel = useRef<Mesh>(null);
+  useFrame((_, dt) => {
+    if (wheel.current) wheel.current.rotation.z -= dt * 0.8;
+  });
+  return (
+    <group>
+      <Part color="#8b5a2b" opacity={opacity} position={[-0.08, 0.17, 0]}>
+        <boxGeometry args={[0.46, 0.34, 0.4]} />
+      </Part>
+      <Part color={ROOF_TILE} opacity={opacity} position={[-0.08, 0.42, 0]} rotation={[0, Math.PI / 4, 0]}>
+        <coneGeometry args={[0.38, 0.24, 4]} />
+      </Part>
+      <Part color="#4a3526" opacity={opacity} position={[-0.08, 0.1, 0.201]}>
+        <boxGeometry args={[0.1, 0.18, 0.01]} />
+      </Part>
+      <group position={[0.25, 0.24, 0]}>
+        <mesh ref={wheel} castShadow={opacity >= 1}>
+          <torusGeometry args={[0.2, 0.025, 6, 16]} />
+          <meshStandardMaterial color="#6b4a2b" transparent={opacity < 1} opacity={opacity} />
+          {[0, 1, 2, 3].map((i) => (
+            <mesh key={i} rotation={[0, 0, (i * Math.PI) / 4]}>
+              <boxGeometry args={[0.42, 0.03, 0.03]} />
+              <meshStandardMaterial color="#5e3b1c" transparent={opacity < 1} opacity={opacity} />
+            </mesh>
+          ))}
+        </mesh>
+        <Part color="#5e3b1c" opacity={opacity} position={[-0.02, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.03, 0.03, 0.12, 6]} />
+        </Part>
+      </group>
+    </group>
+  );
+}
+
+// A tall block of flats: three storeys of windows under a red tile roof.
+export function TownHouseModel({ opacity }: ModelProps) {
+  return (
+    <group>
+      <Part color="#e3cfa4" opacity={opacity} position={[0, 0.34, 0]}>
+        <boxGeometry args={[0.66, 0.68, 0.5]} />
+      </Part>
+      <Part color={ROOF_TILE} opacity={opacity} position={[0, 0.78, 0]} rotation={[0, Math.PI / 4, 0]} scale={[1, 1, 0.76]}>
+        <coneGeometry args={[0.5, 0.2, 4]} />
+      </Part>
+      {[0.16, 0.36, 0.56].flatMap((y) =>
+        [-0.2, 0, 0.2].map((x) => (
+          <Part key={`${x}${y}`} color="#4a3526" opacity={opacity} position={[x, y, 0.251]}>
+            <boxGeometry args={[0.08, 0.1, 0.01]} />
+          </Part>
+        )),
+      )}
+      <Part color="#6b4a2b" opacity={opacity} position={[0, 0.07, 0.252]}>
+        <boxGeometry args={[0.12, 0.14, 0.01]} />
+      </Part>
+      <Part color="#d9c294" opacity={opacity} position={[0.33, 0.24, -0.1]}>
+        <boxGeometry args={[0.2, 0.48, 0.3]} />
+      </Part>
+    </group>
+  );
+}
+
+// A long low stone building over a drain of running water.
+export function LatrineModel({ opacity }: ModelProps) {
+  return (
+    <group>
+      <Part color={STONE} opacity={opacity} position={[0, 0.13, -0.08]}>
+        <boxGeometry args={[0.7, 0.26, 0.34]} />
+      </Part>
+      <Part color={ROOF_TILE} opacity={opacity} position={[0, 0.29, -0.08]}>
+        <boxGeometry args={[0.76, 0.05, 0.4]} />
+      </Part>
+      {[-0.2, 0, 0.2].map((x) => (
+        <Part key={x} color="#4a3526" opacity={opacity} position={[x, 0.1, 0.091]}>
+          <boxGeometry args={[0.1, 0.16, 0.01]} />
+        </Part>
+      ))}
+      <Part color={STONE_DARK} opacity={opacity} position={[0, 0.02, 0.26]}>
+        <boxGeometry args={[0.9, 0.04, 0.16]} />
+      </Part>
+      <Part color={WATER} opacity={opacity} position={[0, 0.042, 0.26]} roughness={0.15}>
+        <boxGeometry args={[0.9, 0.01, 0.08]} />
+      </Part>
+    </group>
+  );
+}
+
+// A domed bathhouse with a pool in front and steam rising.
+export function BathsModel({ opacity }: ModelProps) {
+  const steam = useRef<Mesh[]>([]);
+  useFrame(({ clock }) => {
+    steam.current.forEach((m, i) => {
+      if (!m) return;
+      const k = (clock.elapsedTime * 0.35 + i / 3) % 1;
+      m.position.y = 0.12 + k * 0.5;
+      m.scale.setScalar(0.5 + k);
+      (m.material as { opacity: number }).opacity = 0.45 * (1 - k) * opacity;
+    });
+  });
+  return (
+    <group>
+      <Part color={MARBLE} opacity={opacity} position={[0, 0.16, -0.12]}>
+        <boxGeometry args={[0.64, 0.32, 0.4]} />
+      </Part>
+      <Part color="#b8b0a2" opacity={opacity} position={[0, 0.32, -0.12]}>
+        <sphereGeometry args={[0.2, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
+      </Part>
+      <Part color={STONE} opacity={opacity} position={[0, 0.03, 0.26]}>
+        <boxGeometry args={[0.62, 0.06, 0.32]} />
+      </Part>
+      <Part color={WATER} opacity={opacity} position={[0, 0.061, 0.26]} roughness={0.1}>
+        <boxGeometry args={[0.5, 0.01, 0.22]} />
+      </Part>
+      {[-0.12, 0.05, 0.18].map((x, i) => (
+        <mesh
+          key={x}
+          ref={(m) => {
+            if (m) steam.current[i] = m;
+          }}
+          position={[x, 0.2, 0.26]}
+        >
+          <sphereGeometry args={[0.05, 6, 5]} />
+          <meshStandardMaterial color="#ffffff" transparent opacity={0.4} depthWrite={false} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+// Market stalls with striped awnings, crates and jars.
+export function MarketModel({ opacity }: ModelProps) {
+  return (
+    <group>
+      {[
+        [-0.25, -0.12, "#c0392b"],
+        [0.22, 0.02, "#2e7fbf"],
+        [-0.05, 0.3, "#d4a017"],
+      ].map(([x, z, awning]) => (
+        <group key={String(x)} position={[x as number, 0, z as number]}>
+          <Part color="#8b5a2b" opacity={opacity} position={[0, 0.08, 0]}>
+            <boxGeometry args={[0.3, 0.16, 0.2]} />
+          </Part>
+          {[-0.13, 0.13].map((px) => (
+            <Log key={px} opacity={opacity} position={[px, 0.2, -0.09]} rotation={[0, 0, 0]} length={0.4} radius={0.012} />
+          ))}
+          <Part color={awning as string} opacity={opacity} position={[0, 0.38, 0]} rotation={[0.35, 0, 0]}>
+            <boxGeometry args={[0.36, 0.02, 0.28]} />
+          </Part>
+          <Part color="#f4efe6" opacity={opacity} position={[0, 0.385, 0]} rotation={[0.35, 0, 0]}>
+            <boxGeometry args={[0.08, 0.021, 0.28]} />
+          </Part>
+          <Part color="#e0a030" opacity={opacity} position={[-0.06, 0.19, 0.02]}>
+            <sphereGeometry args={[0.035, 6, 5]} />
+          </Part>
+          <Part color="#7fb03a" opacity={opacity} position={[0.06, 0.19, 0.03]}>
+            <sphereGeometry args={[0.035, 6, 5]} />
+          </Part>
+        </group>
+      ))}
+      <Part color={CLAY} opacity={opacity} position={[0.35, 0.09, 0.32]}>
+        <cylinderGeometry args={[0.04, 0.06, 0.18, 8]} />
+      </Part>
+    </group>
+  );
+}
+
+// A marble portico: steps, four columns and a triangular pediment.
+export function AcademyModel({ opacity }: ModelProps) {
+  return (
+    <group>
+      <Part color={STONE} opacity={opacity} position={[0, 0.03, 0]}>
+        <boxGeometry args={[0.82, 0.06, 0.6]} />
+      </Part>
+      <Part color={MARBLE} opacity={opacity} position={[0, 0.08, 0]}>
+        <boxGeometry args={[0.74, 0.04, 0.52]} />
+      </Part>
+      <Part color={MARBLE} opacity={opacity} position={[0, 0.26, -0.1]}>
+        <boxGeometry args={[0.6, 0.32, 0.26]} />
+      </Part>
+      {[-0.3, -0.1, 0.1, 0.3].map((x) => (
+        <Part key={x} color={MARBLE} opacity={opacity} position={[x, 0.26, 0.17]}>
+          <cylinderGeometry args={[0.035, 0.04, 0.32, 8]} />
+        </Part>
+      ))}
+      <Part color="#ddd5c6" opacity={opacity} position={[0, 0.45, 0.02]}>
+        <boxGeometry args={[0.74, 0.05, 0.5]} />
+      </Part>
+      {/* A triangular prism (a 3-sided cylinder) lying front to back, point up. */}
+      <Part color={MARBLE} opacity={opacity} position={[0, 0.5, 0.02]} rotation={[-Math.PI / 2, 0, 0]} scale={[1, 1, 0.35]}>
+        <cylinderGeometry args={[0.43, 0.43, 0.5, 3]} />
+      </Part>
+    </group>
+  );
+}
+
 export const MODELS: Record<string, (props: ModelProps) => JSX.Element> = {
+  well: WellModel,
+  aqueduct: AqueductModel,
+  watermill: WatermillModel,
+  townhouse: TownHouseModel,
+  latrine: LatrineModel,
+  baths: BathsModel,
+  market: MarketModel,
+  academy: AcademyModel,
   house: HouseModel,
   school: SchoolModel,
   smithy: SmithyModel,

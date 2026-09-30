@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useReducer,
+  useRef,
   useState,
   type Dispatch,
   type ReactNode,
@@ -60,10 +61,14 @@ export function GameProvider({
     return () => clearInterval(id);
   }, [state.speed, state.phase, panel, held, paused, perTick]);
 
+  const lastTick = useRef(state.tick);
   useEffect(() => {
-    // Save every few ticks, and always the moment the game ends, so a lost game
-    // can never be "continued" from a save made a few seconds earlier.
-    if (state.tick % 5 === 0 || inTutorial || state.phase !== "playing") saveGame(state);
+    // Save every few ticks, after anything the player does (a change that isn't a
+    // tick, like entering a new era), and always the moment the game ends, so a lost
+    // game can never be "continued" from a save made a few seconds earlier.
+    const ticked = state.tick !== lastTick.current;
+    lastTick.current = state.tick;
+    if (!ticked || state.tick % 5 === 0 || inTutorial || state.phase !== "playing") saveGame(state);
   }, [state, inTutorial]);
 
   return (

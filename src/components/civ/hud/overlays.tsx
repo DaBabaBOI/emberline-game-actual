@@ -1,8 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AFTER_STEPS, ERAS, EVENTS, LESSONS, RAID_KINDS, RAID_RESPONSE, TREE_BY_ID, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
-import { canAfford, defenseBreakdown, defenseStrength, famineOptions, tributeCost, warnings } from "@/game/engine";
+import { AFTER_STEPS, DROUGHT, ERA_INTROS, ERAS, EVENTS, LESSONS, RAID_KINDS, RAID_RESPONSE, TREE_BY_ID, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
+import {
+  canAfford,
+  countBuildings,
+  defenseBreakdown,
+  defenseStrength,
+  famineOptions,
+  inDrought,
+  rainfall,
+  secs,
+  tributeCost,
+  waterSupply,
+  warnings,
+} from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
 import { Countdown } from "./countdown";
 import { PixelIcon } from "@/components/civ/pixel-icon";
@@ -78,7 +90,9 @@ export function CoachPanel() {
 export function ElderLesson() {
   const { state, dispatch } = useGame();
   const farewell = state.lesson === TUTORIAL_FAREWELL.id;
-  const lesson = farewell ? TUTORIAL_FAREWELL : LESSONS.find((l) => l.id === state.lesson);
+  // A new era's welcome is shown the same way.
+  const intro = Object.values(ERA_INTROS).find((l) => l.id === state.lesson);
+  const lesson = farewell ? TUTORIAL_FAREWELL : intro ?? LESSONS.find((l) => l.id === state.lesson);
   if (!lesson) return null;
   return (
     <div
@@ -88,7 +102,7 @@ export function ElderLesson() {
       <div className="mb-1 flex items-center gap-2">
         <PixelIcon name="elder" size={28} />
         <span className="font-pixel flex flex-col leading-tight">
-          <span className="text-[11px] text-amber-800/80">{farewell ? "Elder Ama" : "Elder Ama\u2019s lesson"}</span>
+          <span className="text-[11px] text-amber-800/80">{farewell || intro ? "Elder Ama" : "Elder Ama\u2019s lesson"}</span>
           <span className="text-base font-semibold">{lesson.title}</span>
         </span>
       </div>
@@ -102,7 +116,7 @@ export function ElderLesson() {
         onClick={() => dispatch({ type: "dismissLesson" })}
         className="pixel-btn font-pixel mt-2 bg-amber-400 px-3 py-1 text-xs font-semibold text-[#2b2119]"
       >
-        {farewell ? "Let's go" : "Got it"}
+        {farewell || intro ? "Let's go" : "Got it"}
       </button>
     </div>
   );
@@ -224,8 +238,49 @@ function LegionWarning() {
   );
 }
 
+// The great drought: the elders' warning with a countdown, then how the town is
+// holding up (rain, water for how many people) until the rains return.
+function DroughtBanner() {
+  const { state } = useGame();
+  const d = state.drought!;
+  const on = inDrought(state);
+  const pop = Math.floor(state.population);
+  const water = waterSupply(state);
+  const short = water < pop;
+  const granaries = countBuildings(state).granary ?? 0;
+  return (
+    <div className="pointer-events-none flex justify-center" data-testid="drought-banner">
+      <div
+        className={
+          "font-pixel flex max-w-xl items-start gap-2 border-[3px] border-[#140e0a] px-4 py-2 text-xs font-semibold text-[#2b2119] md:text-sm " +
+          (on ? "bg-amber-500/95" : "bg-amber-200/95")
+        }
+      >
+        <span className="shrink-0">
+          <PixelIcon name="sun" size={20} />
+        </span>
+        <span>
+          {on ? (
+            <>
+              The great drought: rain is down to {Math.round(rainfall(state) * 100)}%. Water for {Math.min(water, pop)} of {pop} people
+              {short ? " (the rest are thirsty and unhappy)" : ""}. The rains return in <Countdown ticks={Math.max(0, d.endTick - state.tick)} />s.
+            </>
+          ) : (
+            <>
+              A great drought comes in <Countdown ticks={Math.max(0, d.startTick - state.tick)} />s and lasts {Math.round(secs(DROUGHT.ticks) / 60)}{" "}
+              minutes. Water for {Math.min(water, pop)} of {pop} people, {granaries} granar{granaries === 1 ? "y" : "ies"}. Dig wells, build
+              aqueducts, fill the granaries and keep the forest standing.
+            </>
+          )}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function RaidBanner() {
   const { state, dispatch } = useGame();
+  if (state.drought && !state.raid) return <DroughtBanner />;
   if (state.legion && !state.raid) return <LegionWarning />;
   if (!state.raid) return null;
   const raid = state.raid;
@@ -481,6 +536,24 @@ export function DevPanel() {
         </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devFinishEra" })}>
           Finish era
+        </button>
+      </div>
+      {/* Ancient and Classical era: skip the legion, the drought, caravans. */}
+      <div className="flex max-w-xs flex-wrap gap-1">
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devBeatLegion" })}>
+          Beat legion
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devDrought", when: "soon" })}>
+          Drought soon
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devDrought", when: "now" })}>
+          Drought now
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devDrought", when: "end" })}>
+          End drought
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devCaravanBack" })}>
+          Caravan back
         </button>
       </div>
       {/* Trigger any event card or elder lesson on demand. */}

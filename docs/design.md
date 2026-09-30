@@ -54,13 +54,16 @@ flowchart LR
 A game has clear stages: an 8-step tutorial, a calm period, then growing
 pressure (bigger raids, sickness in crowded homes, food that rots, fires that
 go out). To leave the Stone Age you research Agriculture and grow to 15
-people. The Ancient era ends with a Roman legion landing on your shore. After
-each era a **debrief** lists what you achieved next to what it cost.
+people. In the Ancient era a Roman legion lands on your shore; beat it, learn
+Coinage and grow to 40 people to reach the Classical era. There the village
+becomes a town by a river (water, sanitation, trade), and the era ends with a
+great drought that only a prepared town gets through well. After each era a
+**debrief** lists what you achieved next to what it cost.
 
 There are five ways to lose, each announced by a countdown first: **famine**,
 **unrest** (people too unhappy for too long), **land collapse**
 (Sustainability below 20 for about two minutes), being **conquered** by the
-legion, or being **left behind** (taking too long to leave the Stone Age). Everything else is a setback you can recover from.
+legion, or being **left behind** (taking too long to reach the next era). Everything else is a setback you can recover from.
 
 ## 3. The chosen feature: trade-offs you can see
 

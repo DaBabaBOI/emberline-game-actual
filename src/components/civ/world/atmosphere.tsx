@@ -8,17 +8,19 @@ import { Flame } from "./building-models";
 
 const CLEAN_SKY = new Color("#a8dcf5");
 const SMOG = new Color("#8f8b80");
+const DUST = new Color("#e2cc93");
 
 // Wood smoke: with many fires burning, a haze settles over the valley.
-export function Haze({ fires }: { fires: number }) {
+// `dust` (0–1): the great drought fills the air with a warm, dusty haze.
+export function Haze({ fires, dust = 0 }: { fires: number; dust?: number }) {
   const goal = useMemo(() => {
     const dirty = Math.min(0.6, Math.max(0, (fires - 2) / 10));
     return {
-      near: 60 - dirty * 45,
-      far: 160 - dirty * 110,
-      color: CLEAN_SKY.clone().lerp(SMOG, dirty),
+      near: 60 - dirty * 45 - dust * 20,
+      far: 160 - dirty * 110 - dust * 40,
+      color: CLEAN_SKY.clone().lerp(SMOG, dirty).lerp(DUST, dust * 0.7),
     };
-  }, [fires]);
+  }, [fires, dust]);
 
   useFrame(({ scene }) => {
     if (!(scene.fog instanceof Fog)) scene.fog = new Fog(CLEAN_SKY, 60, 160);
