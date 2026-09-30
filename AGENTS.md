@@ -200,7 +200,7 @@ These were decided with the project owner. Do not change them without being aske
   grazing wears the land: −2 Sustainability each). Warm Clothes (research) makes each pen
   keep `peoplePerPen` (6) people warm without a fire, so fewer fires are needed
   (less wood cut, less smoke). A trade-off, not a free upgrade.
-- **Growing is as hard as surviving** (`GROWTH_PRESSURE`): stored food above 60
+- **Growing is as hard as surviving** (`GROWTH_PRESSURE`): stored food above 100
   rots (no preservation yet), each lit campfire warms only 10 people (the
   rest are cold, scaled happiness penalty), and raids grow with the tribe's
   size as well as time. Disease also gets likelier as the tribe grows.
@@ -309,6 +309,11 @@ These were decided with the project owner. Do not change them without being aske
   Add new panels to a stack instead of positioning them absolutely.
 - During the tutorial, the placement preview card is drawn above the guide's
   dimming so the player can read the trade-off.
+- **Judging documentation** lives in `docs/` (design, architecture diagrams,
+  process and testing, the finals talk). Screenshots in `docs/images/` are real
+  captures of the build, never mock-ups. When a feature changes what a doc or
+  screenshot shows, update it in the same pull request, and keep every number
+  there matching the code or a test run.
 - Multiplayer is **later**; design state so AI nations could be replaced by humans,
   but do not add a backend now.
 

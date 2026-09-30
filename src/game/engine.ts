@@ -1046,6 +1046,21 @@ export function defenseBreakdown(state: GameState): string {
 
 const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
 
+// The Food & Water meter is not the stored food: it says whether the tribe makes
+// enough to eat. Explained on hover so the two numbers aren't confused.
+export function foodMeterNote(state: GameState): string {
+  const made = production(state).food;
+  const eaten = Math.max(consumption(state), 0.1);
+  const ratio = made / eaten;
+  const now =
+    ratio < 0.9
+      ? "You make less food than you eat, so the store is shrinking."
+      : ratio <= 1.1
+        ? "You make about as much food as you eat."
+        : "You make more food than you eat.";
+  return `${now} 45 means just enough. Stored food (top bar) adds only a little.`;
+}
+
 export function computeMeters(state: GameState): Meters {
   const counts = countBuildings(state);
   const prod = production(state);
