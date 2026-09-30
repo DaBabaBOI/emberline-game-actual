@@ -264,7 +264,7 @@ export function WorldCanvas() {
         spearmen={spearmenOf(state)}
         era={state.era}
         homeTile={home}
-        rally={state.raid ? state.tiles[state.raid.meetTile ?? state.raid.targetTile] : null}
+        rally={state.raid && state.raid.response !== "hide" ? state.tiles[state.raid.meetTile ?? state.raid.targetTile] : null}
         hidden={battleShowing}
       />
       <BattleScene tiles={state.tiles} battle={battleShowing ? state.battle ?? null : null} homeTile={home} />

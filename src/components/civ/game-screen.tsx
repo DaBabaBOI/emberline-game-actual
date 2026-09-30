@@ -95,6 +95,7 @@ export function GameScreen() {
       <TitleScreen
         canContinue={Boolean(saved && saved.phase === "playing")}
         onContinue={() => setGame(saved)}
+        onLoadCloud={(state) => setGame(state)}
         onStart={(culture: CultureId, difficulty: DifficultyId, options?: NewGameOptions) => {
           clearSave();
           setGame(newGame(culture, difficulty, options));
