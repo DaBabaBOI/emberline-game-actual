@@ -2,6 +2,7 @@
 
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
+import { TICK_SECONDS } from "@/game/content";
 import { hexDistance } from "@/game/hex";
 import { isLand } from "@/game/map";
 import type { Battle, Raid, Tile } from "@/game/types";
@@ -326,21 +327,42 @@ export function Warriors({
   );
 }
 
-export function Raiders({ tiles, raid, tick }: { tiles: Tile[]; raid: Raid | null; tick: number }) {
+export function Raiders({
+  tiles,
+  raid,
+  tick,
+  speed = 1,
+}: {
+  tiles: Tile[];
+  raid: Raid | null;
+  tick: number;
+  // Game speed (0 = paused): raiders march at a steady pace that matches it.
+  speed?: number;
+}) {
   const agents = useRef<Agent[]>([]);
   const ground = useMemo(() => makeGround(tiles), [tiles]);
   const progress = useRef(0);
+  const heights = useRef<number[]>([]);
 
   useFrame((_, delta) => {
     if (!raid) {
       agents.current = [];
+      heights.current = [];
+      progress.current = 0;
       return;
     }
     const from = tiles[raid.fromTile];
     const to = tiles[raid.meetTile ?? raid.targetTile];
-    const goal = Math.min(1, (tick - raid.startTick) / (raid.arriveTick - raid.startTick));
-    progress.current += (goal - progress.current) * Math.min(1, delta * 1.5);
-    if (goal === 0) progress.current = 0;
+    const span = Math.max(1, raid.arriveTick - raid.startTick);
+    const goal = Math.min(1, (tick - raid.startTick) / span);
+    // March at a steady pace (one tick of the way every TICK_SECONDS / speed), but
+    // never more than one tick behind or ahead of the game. The old easing chased a
+    // target that jumped every tick, so at 4x the raiders lurched and stuttered.
+    const dt = Math.min(delta, 0.1);
+    const pace = speed / TICK_SECONDS / span;
+    const oneTick = 1 / span;
+    progress.current = Math.min(1, Math.max(goal - oneTick, Math.min(goal + oneTick, progress.current + pace * dt)));
+    if (goal <= 0) progress.current = 0;
     const p = progress.current;
     const heading = Math.atan2(to.x - from.x, to.z - from.z);
     const list = agents.current;
@@ -352,12 +374,16 @@ export function Raiders({ tiles, raid, tick }: { tiles: Tile[]; raid: Raid | nul
       const x = from.x + (to.x - from.x) * p + offX;
       const z = from.z + (to.z - from.z) * p + offZ;
       const under = ground.tileAt(x, z);
+      // Ease the height too, so they don't pop up and down at tile edges.
+      const floor = ground.heightAt(x, z) + (under?.terrain === "mountain" ? 0.55 : 0);
+      const y = heights.current[i] === undefined ? floor : heights.current[i] + (floor - heights.current[i]) * Math.min(1, dt * 10);
+      heights.current[i] = y;
       list[i] = {
         x,
         z,
-        y: ground.heightAt(x, z) + (under?.terrain === "mountain" ? 0.55 : 0),
+        y,
         heading,
-        moving: p < 0.98,
+        moving: p < 0.98 && speed > 0,
         scale: 1.4,
         tunic: raid.roman ? "#b3261e" : "#9b1c1c",
         skin: SKINS[i % SKINS.length],

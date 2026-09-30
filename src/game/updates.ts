@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "Raiders march smoothly at every speed (at 4x they used to lurch and stutter).",
       "Online (optional): send the team feedback from the Menu, save your game to the cloud and continue it anywhere with a code, and post a finished game to the leaderboard.",
       "Raids are yours to answer: when raiders land, choose to fight (watch the battle and train warriors to tip it), hide in the houses (nobody dies, they take less) or pay tribute (they leave, but come back sooner).",
       "Three kinds of raiders: small bands after your wood, war parties after food and wood, and fire raids that burn a building.",
