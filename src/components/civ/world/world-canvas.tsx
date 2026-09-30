@@ -34,6 +34,7 @@ import type { Tile } from "@/game/types";
 import { BiomeDetails, Deposits, Forests, HexTerrain, Mountains, tileTop } from "./hex-terrain";
 import { MODELS } from "./building-models";
 import { BattleScene, FireVictims, Raiders, Villagers, Warriors } from "./villagers";
+import { PickUp } from "./pick-up";
 import { Wildlife } from "./wildlife";
 import { CampfireSmoke, Haze, Wildfire } from "./atmosphere";
 
@@ -111,6 +112,10 @@ export function WorldCanvas() {
   // The building whose info panel is open (click a building with no tool picked).
   const [inspected, setInspected] = useState<number | null>(null);
   const guide = useGuide();
+  // Picking people up (see world/pick-up.tsx).
+  const [holding, setHolding] = useState(false);
+  const canPickUp =
+    !selected && !panel && !guide.target && state.phase === "playing" && !state.debrief && state.tutorialStep >= TUTORIAL.length;
   const guideTile = guide.target?.kind === "tile" ? guide.target.tileId : null;
   // While the tutorial points at a tile, that is the only one you can build on.
   // No map preview while a menu like Advancements covers the map.
@@ -257,6 +262,7 @@ export function WorldCanvas() {
         sick={state.population > 0 ? (state.sick ?? 0) / state.population : 0}
         era={state.era}
       />
+      <PickUp state={state} dispatch={dispatch} enabled={canPickUp} onHolding={setHolding} />
       <Warriors
         tiles={state.tiles}
         population={state.population}
@@ -264,11 +270,11 @@ export function WorldCanvas() {
         spearmen={spearmenOf(state)}
         era={state.era}
         homeTile={home}
-        rally={state.raid ? state.tiles[state.raid.meetTile ?? state.raid.targetTile] : null}
+        rally={state.raid && state.raid.response !== "hide" ? state.tiles[state.raid.meetTile ?? state.raid.targetTile] : null}
         hidden={battleShowing}
       />
       <BattleScene tiles={state.tiles} battle={battleShowing ? state.battle ?? null : null} homeTile={home} />
-      <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} />
+      <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} speed={state.speed} />
       <Wildlife
         tiles={state.tiles}
         homeTile={home}
@@ -420,7 +426,7 @@ export function WorldCanvas() {
       <GuideAnchor tile={guideTile === null ? null : state.tiles[guideTile]} />
 
       <MapControls
-        enabled={!guide.target}
+        enabled={!guide.target && !holding}
         target={target}
         enableDamping
         dampingFactor={0.12}
