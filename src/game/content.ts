@@ -992,6 +992,13 @@ export const LESSON_GAP = 40;
 // nowhere) never start within this many ticks of each other: one at a time.
 export const QUIET_GAP = 40;
 
+// Picking people up and dropping them somewhere (just for fun, with consequences).
+// A person dropped on a working building helps there: +`helpBoost` output for
+// `helpTicks`. One who wanders into the fog comes back after `fogTicks`, with
+// news of new land only `fogLuck` of the time (5%: scouting is the real way to explore), revealing `fogReveal` tiles around.
+export const DROP = { helpBoost: 0.5, helpTicks: 20, fogTicks: 20, fogLuck: 0.05, fogReveal: 2, mood: 6 };
+export const PEOPLE_NAMES = ["Aru", "Mira", "Tok", "Ena", "Bram", "Kaya", "Oro", "Lin", "Senu", "Tavi", "Ilo", "Deka", "Runa", "Pim"];
+
 // Leaving the Stone Age: research Agriculture and grow to this many people.
 export const NEXT_ERA_POPULATION = 15;
 

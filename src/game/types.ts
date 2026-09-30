@@ -69,7 +69,8 @@ export interface Stats {
   raidsLost: number;
   // Seconds (ticks) the land spent below the best-ending Sustainability.
   lowLandTicks: number;
-  deaths: { famine: number; disease: number; fire: number; battle: number };
+  // `accident`: people dropped into the sea or lost in the fog (missing in older saves).
+  deaths: { famine: number; disease: number; fire: number; battle: number; accident?: number };
 }
 
 // What the debrief shows: frozen when the era ends (or the game does).
@@ -259,6 +260,10 @@ export interface GameState {
   famineTicks: number;
   // Seconds in a row that happiness has been below UNREST_LEVEL.
   unrestTicks: number;
+  // People picked up and dropped: who is helping at which building (until tick),
+  // and who wandered into the fog and when they come back.
+  helpers?: Record<number, number>;
+  inFog?: { name: string; back: number }[];
   // How worn out the land is: counts up while Sustainability is below LAND.strainLevel.
   strainTicks: number;
   // How many people are sick right now, and how many the current outbreak has killed.

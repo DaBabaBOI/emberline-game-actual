@@ -204,6 +204,15 @@ These were decided with the project owner. Do not change them without being aske
   rots (no preservation yet), each lit campfire warms only 10 people (the
   rest are cold, scaled happiness penalty), and raids grow with the tribe's
   size as well as time. Disease also gets likelier as the tribe grows.
+- **Picking people up** (`world/pick-up.tsx`, `dropOutcome()` / `dropPerson` in
+  the engine, `DROP`): after the tutorial, with no tool selected, the player can
+  grab a villager and drop them anywhere. A ring and label under them say what
+  will happen. Open ground: nothing. A working building: they help (+50% output
+  for 20 ticks). A cold campfire: they relight it. A lit fire or the open sea:
+  they die (-1 person, happiness -6, counted as fire / accident in the debrief).
+  Shallow water or a mountain: they get sick. Cloud (unexplored land): they
+  vanish and come back only 5% of the time, with a little new map; this must
+  stay rare so scouting is still worth buying. Dev: "Back from fog".
 - **Disease** (`src/game/disease.ts`, `DISEASE`): outbreaks start from crowding
   (more people, more crowded = likelier), hunts, fishing spots and especially
   welcomed wanderers. It spreads, people recover and are immune for a while

@@ -1,5 +1,7 @@
 import {
   AFTER_TUTORIAL_RESERVE,
+  DROP,
+  PEOPLE_NAMES,
   TUTORIAL_START_FOOD,
   ROMAN_LEGION,
   FORESTER_GROWTH,
@@ -92,6 +94,8 @@ export type Action =
   | { type: "devGrant" }
   | { type: "devPeople" }
   | { type: "devFiresOut" }
+  | { type: "dropPerson"; tileId: number | null }
+  | { type: "devFogBack" }
   | { type: "devOutbreak" }
   | { type: "devRaid" }
   | { type: "devRomans" }
@@ -636,7 +640,9 @@ export function production(state: GameState): Resources {
           : 1;
     const dust = (dusty(state, tile) ? 1 - QUARRY_DUST.foodLoss : 1) * (scaredByFire(state, tile) ? 1 - FIRE_SCARE.foodLoss : 1);
     // Gatherer camps share what the wild can give.
-    const share = tile.building === "gatherer" ? gathererShare(state) : teachingShare(state, tile.building);
+    const share =
+      (tile.building === "gatherer" ? gathererShare(state) : teachingShare(state, tile.building)) *
+      (state.tick < (state.helpers?.[tile.id] ?? 0) ? 1 + DROP.helpBoost : 1);
     for (const [k, v] of Object.entries(def.produces ?? {}))
       out[k as keyof Resources] += (v ?? 0) * factor * share * (k === "food" ? dust : 1);
     if (def.depositBonus && tile.deposit === def.depositBonus.deposit) {
@@ -1515,6 +1521,7 @@ function tick(state: GameState): GameState {
   if (next.tick % 5 === 0) {
     next = { ...next, sustainTrail: [...(next.sustainTrail ?? []), next.meters.sustainability].slice(-8) };
   }
+  next = returnFromFog(next);
   next = checkSecrets(next);
   next = lessonDue(next);
   next = knowledgeMilestones(next);
@@ -1703,6 +1710,93 @@ function resolveLegion(state: GameState) {
     log: ["The legion broke through. The village has fallen.", ...state.log].slice(0, 30),
   };
   return { ...lost, debrief: makeDebrief(lost, "loss") };
+}
+
+// Where a picked-up person lands decides what happens to them. The 3D scene uses
+// this too, so what you see matches the rules.
+export type DropOutcome = "land" | "help" | "relight" | "fire" | "shallow" | "deep" | "fog" | "mountain";
+
+export function dropOutcome(state: GameState, tile: Tile | null | undefined): DropOutcome {
+  if (!tile || tile.terrain === "deep") return "deep";
+  if (tile.terrain === "shallow") return "shallow";
+  if (!tile.revealed) return "fog";
+  if (tile.building === "campfire") return isLit(state, tile) ? "fire" : "relight";
+  if (tile.terrain === "mountain") return "mountain";
+  if (tile.building && BUILDINGS_BY_ID[tile.building]?.produces) return "help";
+  return "land";
+}
+
+function personName(state: GameState, salt: number) {
+  return PEOPLE_NAMES[Math.floor(mulberry32(state.seed + state.tick * 13 + salt)() * PEOPLE_NAMES.length)];
+}
+
+function dropPerson(state: GameState, tileId: number | null): GameState {
+  if (state.phase !== "playing" || state.tutorialStep < TUTORIAL.length) return state;
+  const tile = tileId === null ? null : state.tiles[tileId];
+  const outcome = dropOutcome(state, tile);
+  const name = personName(state, (tileId ?? 0) + state.log.length);
+  const say = (line: string) => [line, ...state.log].slice(0, 30);
+  const lose = (s: GameState, cause: "fire" | "accident") =>
+    bumpStats({ ...s, population: Math.max(1, s.population - 1) }, (st) => {
+      st.deaths[cause] = (st.deaths[cause] ?? 0) + 1;
+    });
+  const mood = (s: GameState, n: number) => ({ ...s, modifiers: { ...s.modifiers, happiness: s.modifiers.happiness + n } });
+  switch (outcome) {
+    case "fire":
+      return withMeters(mood(lose({ ...state, log: say(`${name} was dropped into the fire and didn't come out. The tribe is shaken.`) }, "fire"), -DROP.mood));
+    case "deep":
+      return withMeters(mood(lose({ ...state, log: say(`${name} was dropped into the sea and swept away.`) }, "accident"), -DROP.mood));
+    case "fog":
+      return withMeters({
+        ...state,
+        population: Math.max(1, state.population - 1),
+        inFog: [...(state.inFog ?? []), { name, back: state.tick + DROP.fogTicks }],
+        log: say(`${name} wandered off into the unknown...`),
+      });
+    case "shallow":
+      return withMeters({ ...state, sick: (state.sick ?? 0) + 1, log: say(`${name} got soaked in the sea and caught a cold.`) });
+    case "mountain":
+      return withMeters({ ...state, sick: (state.sick ?? 0) + 1, log: say(`${name} tumbled down the mountain. Bruised, but alive.`) });
+    case "relight":
+      return withMeters({ ...state, fires: { ...state.fires, [tile!.id]: burnTicks(state) }, log: say(`${name} blew on the cold embers and the fire caught!`) });
+    case "help":
+      return withMeters({
+        ...state,
+        helpers: { ...state.helpers, [tile!.id]: state.tick + DROP.helpTicks },
+        log: say(`${name} pitches in at the ${BUILDINGS_BY_ID[tile!.building!].name} (+${DROP.helpBoost * 100}% for ${secs(DROP.helpTicks)} s).`),
+      });
+    default:
+      return state;
+  }
+}
+
+// People who wandered into the fog come back (or don't).
+function returnFromFog(state: GameState): GameState {
+  const due = (state.inFog ?? []).filter((p) => state.tick >= p.back);
+  if (!due.length) return state;
+  let next: GameState = { ...state, inFog: (state.inFog ?? []).filter((p) => state.tick < p.back) };
+  for (const p of due) {
+    const rand = mulberry32(state.seed + p.back * 17);
+    if (rand() < DROP.fogLuck) {
+      const tiles = next.tiles.map((t) => ({ ...t }));
+      const home = tiles[next.startTile];
+      const unknown = tiles
+        .filter((t) => !t.revealed && isLand(t.terrain))
+        .sort((a, b) => hexDistance(a, home) - hexDistance(b, home))[0];
+      if (unknown) revealAround(tiles, unknown, DROP.fogReveal);
+      next = {
+        ...next,
+        tiles,
+        population: next.population + 1,
+        log: [`${p.name} came back from the fog with news of new land!`, ...next.log].slice(0, 30),
+      };
+    } else {
+      next = bumpStats({ ...next, log: [`${p.name} never came back from the fog.`, ...next.log].slice(0, 30) }, (st) => {
+        st.deaths.accident = (st.deaths.accident ?? 0) + 1;
+      });
+    }
+  }
+  return next;
 }
 
 function updateRaids(state: GameState): GameState {
@@ -2181,6 +2275,13 @@ function step(state: GameState, action: Action): GameState {
     case "devFiresOut":
       if (!state.dev) return state;
       return withMeters({ ...state, fires: {}, log: ["Dev: all campfires put out.", ...state.log].slice(0, 30) });
+
+    case "dropPerson":
+      return dropPerson(state, action.tileId);
+
+    case "devFogBack":
+      if (!state.dev) return state;
+      return withMeters(returnFromFog({ ...state, inFog: (state.inFog ?? []).map((p) => ({ ...p, back: state.tick })) }));
 
     case "devPeople":
       if (!state.dev) return state;
