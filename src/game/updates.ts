@@ -9,6 +9,8 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "No fire, no cooking: without a lit campfire your people eat their food raw and need 30% more of it.",
+      "Grass fires from campfire sparks are about three times rarer, and you now get a clear message when one happens.",
       "Don't fall behind: reach the Ancient era within 45 minutes (30 on Hard, 60 on Easy) or the world moves on without you. A warning counts down the last 5 minutes.",
       "The Stone Age calendar no longer gets stuck at 3,100 BCE: it keeps moving all game and reaches 3,000 BCE just as the world moves on.",
       "Hunters no longer vanish on the way home from a far-off hunt.",

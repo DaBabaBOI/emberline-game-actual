@@ -214,6 +214,11 @@ These were decided with the project owner. Do not change them without being aske
   rots (no preservation yet), each lit campfire warms only 10 people (the
   rest are cold, scaled happiness penalty), and raids grow with the tribe's
   size as well as time. Disease also gets likelier as the tribe grows.
+- **Raw food** (`RAW_FOOD`, `eatingRaw()`): after the tutorial, with no lit
+  campfire nothing can be cooked, so people eat 30% more food. The no-fire
+  warning says so.
+- **Grass fires are rare** (`SPARKS.perGrass` 0.0001: about 1-2 per 30 minutes
+  with three lit fires) and say so clearly ("Grass caught fire!").
 - **Left behind** (`ERA_DEADLINE`, `behindTicksLeft()`): reach the Ancient era
   within 75 / 60 / 45 / 30 minutes (First time / Easy / Normal / Hard) of the
   tutorial ending, or the world moves on and the game is lost ("Left behind").
