@@ -259,6 +259,9 @@ export interface GameState {
   famineTicks: number;
   // Seconds in a row that happiness has been below UNREST_LEVEL.
   unrestTicks: number;
+  // When the next small moment happens (missing in older saves).
+  nextMomentTick?: number;
+  lastMoment?: string;
   // Famine emergency measures (missing in older saves).
   forageReadyAt?: number;
   seedEatenUntil?: number;

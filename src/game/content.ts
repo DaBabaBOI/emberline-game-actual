@@ -1085,7 +1085,18 @@ export const LOW_WOOD_AFTER_BUY = 10;
 
 // After the tutorial, how long (ticks) before the first event, the first raid,
 // and the first disease that isn't the player's own choice. The early game is calm.
-export const GRACE_AFTER_TUTORIAL = { event: 150, raid: 300, disease: 300 };
+export const GRACE_AFTER_TUTORIAL = { event: 80, raid: 220, disease: 200 };
+
+// Time between event cards and between raids once they have started (ticks):
+// `base` plus up to `spread` more.
+export const EVENT_GAP = { base: 100, spread: 60 };
+export const RAID_GAP = { base: 170, spread: 80 };
+
+// Small moments: little things that happen every 30-60 s after the tutorial so
+// the island feels alive between the big events (a herd passes, a baby is born,
+// wind blows out a fire). Most depend on the state of the land. They are only a
+// line in the log, never a big moment, so QUIET_GAP ignores them.
+export const SMALL_MOMENTS = { firstAfter: 20, base: 20, spread: 20 };
 
 export const AFTER_TUTORIAL_RESERVE: Partial<Resources> = { food: 40, wood: 10 };
 // Of that reserve, this much food is in the stores from the very start (so the

@@ -132,9 +132,19 @@ These were decided with the project owner. Do not change them without being aske
   buildings, leaving charred ground that heals). Keep events meaningful.
 - **Pace:** one game tick = `TICK_SECONDS` (1.5 s) at 1× speed. The engine
   counts in ticks; anything shown to the player in seconds goes through
-  `secs()` / `perSecond()`. The early game is deliberately calm and easy
-  (`GRACE_AFTER_TUTORIAL`: first event after 150 ticks, first raid after 300,
-  no disease out of nowhere for 300); pressure builds as the tribe grows.
+  `secs()` / `perSecond()`. The start after the tutorial is short and gentle
+  (`GRACE_AFTER_TUTORIAL`: first event after 80 ticks, first raid after 220,
+  no disease out of nowhere for 200); then events come every `EVENT_GAP`
+  (100-160 ticks) and raids every `RAID_GAP` (170-250). Pressure builds as the
+  tribe grows. Playtesters called the old, longer gaps "a snoozefest".
+- **Small moments** (`SMALL_MOMENTS`, `MOMENTS` / `smallMoment()` in engine.ts):
+  every 20-40 ticks (30-60 s) after the tutorial, one little thing happens,
+  picked from those that fit the island right now (a deer herd if the forest
+  stands, dust if it's gone, mice in a big store without a granary, wind blowing
+  out one of several fires, a baby when there's food and room...). Each is a
+  log line (toast) with a small effect; never over an event, raid or the legion,
+  never the same one twice in a row, and they don't count as big moments. Tie
+  new ones to the land where you can. Dev: "Moment".
 - **Phones are supported.** Layouts use `md:` breakpoints (bars stack and
   scroll on small screens). There is no hover on touch: the first tap on a tile
   previews (ghost + trade-off card), the second tap builds. Never rely on Esc or

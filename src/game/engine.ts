@@ -1,5 +1,8 @@
 import {
   AFTER_TUTORIAL_RESERVE,
+  EVENT_GAP,
+  RAID_GAP,
+  SMALL_MOMENTS,
   FAMINE,
   COLLAPSE,
   TUTORIAL_START_FOOD,
@@ -94,6 +97,7 @@ export type Action =
   | { type: "devGrant" }
   | { type: "devPeople" }
   | { type: "devFiresOut" }
+  | { type: "devMoment" }
   | { type: "devStarve" }
   | { type: "famineRelief"; kind: FamineRelief }
   | { type: "devCollapse" }
@@ -1468,6 +1472,7 @@ function startGrace(state: GameState): GameState {
     nextEventTick: Math.max(state.nextEventTick, state.tick + GRACE_AFTER_TUTORIAL.event),
     nextRaidTick: Math.max(state.nextRaidTick, state.tick + GRACE_AFTER_TUTORIAL.raid),
     calmUntil: state.tick + GRACE_AFTER_TUTORIAL.disease,
+    nextMomentTick: state.tick + SMALL_MOMENTS.firstAfter,
   };
 }
 
@@ -1589,8 +1594,10 @@ function tick(state: GameState): GameState {
   if (!inTutorial && next.tick >= next.nextEventTick && quietEnough(next)) {
     const rand = mulberry32(next.seed + next.tick);
     const event = pickEvent(rand(), next);
-    next = { ...next, event, lastEvent: event.id, lastBigTick: next.tick, nextEventTick: next.tick + 180 + Math.floor(rand() * 120) };
+    next = { ...next, event, lastEvent: event.id, lastBigTick: next.tick, nextEventTick: next.tick + EVENT_GAP.base + Math.floor(rand() * EVENT_GAP.spread) };
   }
+
+  if (!inTutorial) next = smallMoment(next);
 
   const beforeDisease = next.population;
   next = stepDisease(next, housingCapacity(next), mulberry32(next.seed + next.tick * 31));
@@ -1611,6 +1618,80 @@ function tick(state: GameState): GameState {
   next = knowledgeReady(next);
   next = advanceTutorial(next);
   return { ...next, meters: computeMeters(next) };
+}
+
+// Small moments: a little something every 30-60 s, chosen from what fits the
+// island right now. They only add a log line (a toast) and a small effect.
+interface Moment {
+  id: string;
+  when: (s: GameState) => boolean;
+  apply: (s: GameState) => GameState;
+  text: string;
+}
+
+const addFood = (s: GameState, n: number) => ({ ...s, resources: { ...s.resources, food: Math.max(0, s.resources.food + n) } });
+const addMood = (s: GameState, n: number) => ({ ...s, modifiers: { ...s.modifiers, happiness: s.modifiers.happiness + n } });
+
+const MOMENTS: Moment[] = [
+  { id: "herd", when: (s) => forestCover(s) >= 0.5, apply: (s) => addFood(s, 8), text: "A herd of deer passed the forest edge. The hunters brought back meat (+8 food)." },
+  { id: "berries", when: () => true, apply: (s) => addFood(s, 5), text: "The children found a patch of berries (+5 food)." },
+  {
+    id: "baby",
+    when: (s) => s.meters.food >= 45 && s.population < housingCapacity(s),
+    apply: (s) => ({ ...s, population: s.population + 1 }),
+    text: "A baby was born by the fire (+1 person).",
+  },
+  {
+    id: "windfall",
+    when: (s) => forestCover(s) >= 0.3,
+    apply: (s) => ({ ...s, resources: { ...s.resources, wood: s.resources.wood + 4 } }),
+    text: "The wind brought down an old tree: free firewood (+4 wood).",
+  },
+  {
+    id: "gust",
+    when: (s) => litFires(s).length >= 2,
+    apply: (s) => {
+      const fire = litFires(s)[Math.floor(s.tick / 7) % litFires(s).length];
+      return { ...s, fires: { ...s.fires, [fire.id]: 0 } };
+    },
+    text: "A gust of wind blew out a campfire. Click it to relight it.",
+  },
+  {
+    id: "rain",
+    when: (s) => (countBuildings(s).farm ?? 0) > 0 && rainfall(s) >= 0.8,
+    apply: (s) => addFood(s, 2 * (countBuildings(s).farm ?? 0)),
+    text: "A good rain fell, and the fields drank it up. Forests help bring the rain.",
+  },
+  { id: "story", when: (s) => litFires(s).length > 0, apply: (s) => addMood(s, 5), text: "A storyteller kept everyone up late by the fire. Spirits are high." },
+  { id: "smoke", when: (s) => litFires(s).length >= 3, apply: (s) => addMood(s, -4), text: "Smoke hung over the village all day. People are coughing." },
+  {
+    id: "birds",
+    when: (s) => forestCover(s) >= 0.8,
+    apply: (s) => ({ ...s, modifiers: { ...s.modifiers, sustainability: s.modifiers.sustainability + 2 } }),
+    text: "Birds are nesting in the old forest again (+2 Sustainability for a while).",
+  },
+  {
+    id: "mice",
+    when: (s) => s.resources.food > 60 && !countBuildings(s).granary,
+    apply: (s) => addFood(s, -Math.round(s.resources.food * 0.1)),
+    text: "Mice got into the food stores and spoiled some of it. A granary would keep it safe.",
+  },
+  { id: "dust", when: (s) => forestCover(s) < 0.5, apply: (s) => addMood(s, -3), text: "Wind blew dust off the bare land where the forest used to be." },
+];
+
+export function smallMoment(state: GameState): GameState {
+  const due = state.nextMomentTick ?? state.tick + SMALL_MOMENTS.firstAfter;
+  if (state.tick < due) return state.nextMomentTick === undefined ? { ...state, nextMomentTick: due } : state;
+  // Never over an event card, a raid or the legion: try again a little later.
+  if (state.event || state.raid || state.legion) return { ...state, nextMomentTick: state.tick + 5 };
+  const rand = mulberry32(state.seed + state.tick * 61);
+  const last = state.lastMoment;
+  const options = MOMENTS.filter((m) => m.id !== last && m.when(state));
+  const next = state.tick + SMALL_MOMENTS.base + Math.floor(rand() * SMALL_MOMENTS.spread);
+  if (!options.length) return { ...state, nextMomentTick: next };
+  const moment = options[Math.floor(rand() * options.length)];
+  const after = moment.apply(state);
+  return { ...after, nextMomentTick: next, lastMoment: moment.id, log: [moment.text, ...after.log].slice(0, 30) };
 }
 
 // The height of a tile once a quarry has cut part of it away.
@@ -1890,7 +1971,7 @@ function updateRaids(state: GameState): GameState {
         startTick: state.tick,
         arriveTick: state.tick + 12,
       },
-      nextRaidTick: state.tick + 180 + Math.floor(rand() * 100),
+      nextRaidTick: state.tick + RAID_GAP.base + Math.floor(rand() * RAID_GAP.spread),
       lastBigTick: state.tick,
       log: [`${strength} raiders spotted landing on the shore!`, ...state.log].slice(0, 30),
     };
@@ -2270,6 +2351,10 @@ function step(state: GameState, action: Action): GameState {
     case "devFiresOut":
       if (!state.dev) return state;
       return withMeters({ ...state, fires: {}, log: ["Dev: all campfires put out.", ...state.log].slice(0, 30) });
+
+    case "devMoment":
+      if (!state.dev) return state;
+      return withMeters(smallMoment({ ...state, event: null, nextMomentTick: state.tick }));
 
     case "famineRelief": {
       if (state.famineTicks <= 0 || state.phase !== "playing") return state;
