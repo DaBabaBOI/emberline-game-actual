@@ -28,7 +28,7 @@ export function IntroStory({ nation, onBegin }: { nation: string; onBegin: () =>
           </div>
           <div className="border-2 border-[#2b2119] bg-white p-2">
             <div className="font-semibold text-amber-700">Then</div>
-            Beat the Roman legion, grow into a town and last through the great drought.
+            Grow from a camp into a village, then a town. Every era brings new ideas and new dangers.
           </div>
           <div className="border-2 border-[#2b2119] bg-white p-2">
             <div className="font-semibold text-red-700">You lose if</div>
