@@ -204,6 +204,8 @@ These were decided with the project owner. Do not change them without being aske
   rots (no preservation yet), each lit campfire warms only 10 people (the
   rest are cold, scaled happiness penalty), and raids grow with the tribe's
   size as well as time. Disease also gets likelier as the tribe grows.
+- **Planting needs Early Farming**: the Plant tool only appears once Early
+  Farming is researched (`plantError()` says so too).
 - **Disease** (`src/game/disease.ts`, `DISEASE`): outbreaks start from crowding
   (more people, more crowded = likelier), hunts, fishing spots and especially
   welcomed wanderers. It spreads, people recover and are immune for a while
@@ -253,7 +255,7 @@ These were decided with the project owner. Do not change them without being aske
   ones that grew huge lost: the legion scales with population). Re-run it after
   changing any rate below.
 - **Knowledge:** no base trickle. Milestones pay once each (`KNOWLEDGE_MILESTONES`:
-  first of each building +2, population 10/15/20/30/50 +5, first raid won +6,
+  first of each building +2, population 10 +1 (once), first raid won +6,
   first planting +4). Only the first 5 scouting trips teach (+1, or +2 for 20+
   new tiles). Elder's Huts (0.08/tick) and Scribe Schools (0.12) teach steadily,
   each extra one of a kind adds half (`TEACHING`). Literacy adds 0.001 x literacy.

@@ -251,18 +251,21 @@ export function BottomBar() {
             title="Sell a building to make room. You get half its cost back."
             tone={selected === DEMOLISH_TOOL ? "bg-amber-400 text-[#2b2119]" : "bg-[#4a3b2e] hover:bg-[#5c4a3a]"}
           />
-          <ToolButton
-            guide="tool-plant"
-            locked={tutorialLocked(state, "plant")}
-            icon="sapling"
-            label="Plant"
-            onClick={() => setSelected(selected === PLANT_TOOL ? null : PLANT_TOOL)}
-            disabled={!canAfford(state, PLANT_COST)}
-            title="Plant saplings on open land or thinned forest. A new forest raises Sustainability and gives more wood later."
-            tone={selected === PLANT_TOOL ? "bg-emerald-400 text-[#2b2119]" : "bg-emerald-900 hover:bg-emerald-800"}
-          >
-            <Cost cost={PLANT_COST} />
-          </ToolButton>
+          {/* Planting saplings comes with Early Farming. */}
+          {state.researched.includes("early-farming") && (
+            <ToolButton
+              guide="tool-plant"
+              locked={tutorialLocked(state, "plant")}
+              icon="sapling"
+              label="Plant"
+              onClick={() => setSelected(selected === PLANT_TOOL ? null : PLANT_TOOL)}
+              disabled={!canAfford(state, PLANT_COST)}
+              title="Plant saplings on open land or thinned forest. A new forest raises Sustainability and gives more wood later."
+              tone={selected === PLANT_TOOL ? "bg-emerald-400 text-[#2b2119]" : "bg-emerald-900 hover:bg-emerald-800"}
+            >
+              <Cost cost={PLANT_COST} />
+            </ToolButton>
+          )}
           <ArmyButton />
           {state.researched.includes("spears") && spearmenOf(state) < state.soldiers && (
             <ToolButton

@@ -9,6 +9,8 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "Planting saplings now comes with Early Farming (the Plant button appears once you've learned it).",
+      "Growing your tribe teaches less: +1 Knowledge once, when you first reach 10 people (was +5 at 10, 15, 20, 30 and 50).",
       "Dev mode: new Sparks and Clear forest buttons to test house fires, rain and Sustainability.",
       "The tutorial teaches it too: Elder Ama tells you to leave a patch of ground between your house and the fire.",
       "Huts are now Wooden Houses (log walls, bark roof): thatch needs straw, and there's no straw before farming.",
