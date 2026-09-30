@@ -6,6 +6,7 @@ import { ERAS, formatYear, LESSONS, METERS, METER_SDG, MIN_SUSTAINABILITY_FOR_BE
 import { clearSave, makeDebrief, readyForNextEra, secs } from "@/game/engine";
 import type { Debrief as DebriefData } from "@/game/types";
 import { useGame } from "@/components/civ/game-provider";
+import { LeaderboardPanel } from "./online";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { cn } from "@/lib/utils";
 
@@ -182,6 +183,9 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
             </ul>
           </>
         )}
+
+        {/* The story is over (won or lost): post it to the leaderboard. */}
+        {d.kind !== "era" && <LeaderboardPanel />}
 
         <div className="mt-5 flex flex-wrap justify-end gap-2">
           {d.kind === "final" && (

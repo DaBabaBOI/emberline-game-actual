@@ -8,6 +8,7 @@ import type { GameState } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import type { IconId } from "@/game/sprites";
+import { GameMenu } from "./online";
 
 const SPEEDS: { value: GameState["speed"]; label: string }[] = [
   { value: 0, label: "⏸" },
@@ -75,6 +76,7 @@ export function TopBar() {
             </button>
           ))}
         </div>
+        <GameMenu />
       </div>
     </div>
   );
