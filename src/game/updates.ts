@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "Pick people up! Grab a villager and drop them somewhere. Drop them at a building and they help out, at a cold fire and they relight it. But the fire, the sea, the mountains and the unknown are dangerous.",
       "Chief level: an XP bar in the top bar that fills as you build, grow, research, win raids, plant trees and keep everyone fed. Each level gives a title and a little Knowledge.",
       "A goal line under the top bar always says what to aim for next, with your progress.",
       "New games open with a short story: who your people are, your goal, and how you can lose.",

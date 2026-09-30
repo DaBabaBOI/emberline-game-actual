@@ -1024,6 +1024,13 @@ export const LESSON_GAP = 40;
 // nowhere) never start within this many ticks of each other: one at a time.
 export const QUIET_GAP = 40;
 
+// Picking people up and dropping them somewhere (just for fun, with consequences).
+// A person dropped on a working building helps there: +`helpBoost` output for
+// `helpTicks`. One who wanders into the fog comes back after `fogTicks`, with
+// news of new land only `fogLuck` of the time (5%: scouting is the real way to explore), revealing `fogReveal` tiles around.
+export const DROP = { helpBoost: 0.5, helpTicks: 20, fogTicks: 20, fogLuck: 0.05, fogReveal: 2, mood: 6 };
+export const PEOPLE_NAMES = ["Aru", "Mira", "Tok", "Ena", "Bram", "Kaya", "Oro", "Lin", "Senu", "Tavi", "Ilo", "Deka", "Runa", "Pim"];
+
 // Chief level: XP only ever goes up, so progress is always easy to see. Each
 // level gives a title and a little Knowledge.
 export const XP = {

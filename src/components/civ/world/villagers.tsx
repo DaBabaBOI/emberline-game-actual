@@ -16,7 +16,7 @@ const ANCIENT_TUNICS = ["#e6dcc3", "#b5432f", "#3f5d8a", "#d9a441", "#7a8a3a", "
 const tunicsFor = (era: number) => (era >= 1 ? ANCIENT_TUNICS : TUNICS);
 const childTunicFor = (era: number) => (era >= 1 ? "#e6dcc3" : "#4a90d9");
 
-interface Walker extends Agent {
+export interface Walker extends Agent {
   tx: number;
   tz: number;
   ty: number;
@@ -29,7 +29,15 @@ interface Walker extends Agent {
   baseSpeed?: number;
   // The era their clothes were chosen for.
   era?: number;
+  // Being carried by the player (the pick-up tool moves them).
+  held?: boolean;
+  // Gone (dropped in a fire, the sea or the fog) until this time (performance.now ms).
+  goneUntil?: number;
 }
+
+// Shared with the pick-up tool: the villagers on the map, and who is being carried.
+// There is only ever one game on screen, so one shared store is enough.
+export const grabStore: { walkers: Walker[]; held: Walker | null } = { walkers: [], held: null };
 
 const SICK_TUNIC = "#9db38a";
 
@@ -182,6 +190,8 @@ export function Villagers({
   litFires: number[];
 }) {
   const walkers = useRef<Walker[]>([]);
+  // The ones on the map right now (not away in the fog or lost).
+  const shown = useRef<Walker[]>([]);
   const litKey = litFires.join(",");
   const spots = useMemo(() => {
     const built = tiles.filter((t) => t.building && t.building !== "warcamp");
@@ -228,7 +238,14 @@ export function Villagers({
       w.speed = ill ? w.baseSpeed * 0.35 : w.baseSpeed;
     });
     const dt = Math.min(delta, 0.1);
+    const now = performance.now();
     for (const w of list) {
+      // Someone who was lost comes back as a new face at a building.
+      if (w.goneUntil && now >= w.goneUntil) {
+        const spot = ground.spotOn(pick(spots.all));
+        Object.assign(w, { x: spot.x, z: spot.z, tx: spot.x, tz: spot.z, goneUntil: undefined });
+      }
+      if (w.held || w.goneUntil) continue;
       stepWalker(w, dt, ground, () => {
         if (spots.fires.length && Math.random() < 0.45) return pick(spots.fires);
         if (w.child && spots.school.length && Math.random() < 0.6) return pick(spots.school);
@@ -236,9 +253,11 @@ export function Villagers({
         return Math.random() < 0.4 ? pick(spots.wander) : pick(spots.all);
       });
     }
+    shown.current = list.filter((w) => !w.goneUntil);
+    grabStore.walkers = shown.current;
   });
 
-  return <Figures agents={walkers} max={MAX_FIGURES} colorKey={`${sickFigures}|${era}`} />;
+  return <Figures agents={shown} max={MAX_FIGURES} colorKey={`${sickFigures}|${era}`} />;
 }
 
 export function Warriors({
