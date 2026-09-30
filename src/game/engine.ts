@@ -1853,13 +1853,10 @@ function step(state: GameState, action: Action): GameState {
             ? { ...t, terrain: "grass" as const, height: terrainHeight("grass"), growth: 0 }
             : t,
       );
-      const radius = def.reveal + (state.culture === "mariners" ? 1 : 0);
-      const revealed = tiles.map((t) =>
-        !t.revealed && hexDistance(t, tile) <= radius ? { ...t, revealed: true } : t,
-      );
+      // Building never uncovers the clouds: only scouts reveal new land.
       return withMeters({
         ...state,
-        tiles: revealed,
+        tiles,
         fires: def.id === "campfire" ? { ...state.fires, [tile.id]: burnTicks(state) } : state.fires,
         resources: spend(state.resources, buildingCost(state, def)),
         log: [

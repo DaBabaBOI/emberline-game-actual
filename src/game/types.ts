@@ -140,7 +140,9 @@ export interface BuildingDef {
   housing?: number;
   produces?: Partial<Resources>;
   depositBonus?: { deposit: Deposit; amount: Partial<Resources> };
-  reveal: number;
+  // No longer used: placing a building never reveals land (scouts do). Optional
+  // only so older building data still type-checks; don't add it to new buildings.
+  reveal?: number;
 }
 
 export interface TreeNode {
