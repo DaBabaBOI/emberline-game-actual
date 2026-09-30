@@ -25,6 +25,16 @@ No install needed. It runs in the browser, on a laptop or a phone.
 
 ---
 
+## Why this project exists
+
+Emberline was built for the SHISTECH Hacktrack and the UN Sustainable Development
+Goals theme. The core idea is simple: the player should not be rewarded for
+building endlessly without cost. Every decision changes the land, the people, and
+the future of the village.
+
+The game is about sustainable growth: gather enough food, keep the people warm,
+watch the forest, and decide when a short-term win is worth a long-term loss.
+
 ## The idea: every choice is a trade-off
 
 Most city builders reward you for building as much as you can. Emberline asks the
@@ -108,7 +118,7 @@ and events also link to these goals:
 ## What you can do
 
 - **Explore hex islands** of grassland, forest, dry steppe, marsh and hills.
-- **Build 18 kinds of buildings** across two eras, with a see-through preview and
+- **Build 19 kinds of buildings** across two eras, with a see-through preview and
   a trade-off card first. Sell any of them back for half.
 - **Balance six meters**: Food, Shelter, Happiness, Literacy, Energy and
   Sustainability.
@@ -119,9 +129,13 @@ and events also link to these goals:
   Huts and schools teach a little all the time. Elder Ama tells you when you can
   research something new. Knowledge is slow on purpose: a new era takes real
   play, not five minutes.
-- **Defend against raiders.** Your warriors march out and fight on the map.
-  After Hunting Spears you can arm them: spearmen count as 1.5 warriors and carry
-  spears on the map. The raid banner shows how your defense adds up.
+- **Defend against raiders.** When raiders land you choose: fight, hide in the
+  houses, or pay them off with food. Your warriors march out and fight on the
+  map. After Hunting Spears you can arm them (spearmen count as 1.5 warriors) and
+  build a Watch Fire on the shore to see raiders coming sooner.
+- **Pick your people up** and drop them somewhere: on a building to help out, on
+  a cold campfire to relight it. Drop them in a fire, the sea or the unexplored
+  fog and you may lose them.
 - **Survive sickness.** Before Herbalism your people call it a curse from the
   gods; after it, healers can help.
 - **Reach the Ancient era** (research Agriculture, grow to 15 people): bronze,
@@ -129,12 +143,19 @@ and events also link to these goals:
   paths wear into the ground between buildings, and the light turns warmer.
 - **Face the Roman legion** at the end of the Ancient era.
 - **Name your people**, pick a culture and a difficulty, and play on a laptop or
-  a phone. A guided tutorial with a pointing hand teaches the basics.
-- **Three ways to lose**: famine, unrest (people too unhappy for too long), or
-  conquest. Every warning gives you a countdown first.
+  a phone. A guided tutorial with a pointing hand teaches the basics. New
+  players start in **First time** mode: a slower clock and a gentler start.
+- **Track your progress**: a chief level that only goes up, and a goal line that
+  says what to aim for next.
+- **Five ways to lose**: famine, unrest (people too unhappy for too long), land
+  collapse (Sustainability too low for too long), conquest by the legion, or
+  being left behind (taking too long to leave the Stone Age). Every one gives
+  you a countdown first.
 
-The game autosaves in your browser. An **Updates** bar at the top of the project
-page and the title screen lists what's new.
+The game autosaves in your browser, and you can save to the cloud with a code to
+carry on elsewhere. There is a leaderboard and a feedback form in the menu. An
+**Updates** bar at the top of the project page and the title screen lists what's
+new.
 
 ## Roadmap
 
@@ -156,6 +177,8 @@ carry the same trade-offs further:
 - **We cut multiplayer to ship.** We had built multiplayer rooms on a hosted
   database. When we moved to free static hosting on GitHub Pages there was no
   server to run it, so we removed it and saved games in the browser instead.
+  Later we brought a small hosted database back (Supabase) just for cloud
+  saves, a leaderboard and feedback; the game itself still runs in the browser.
 - **Emojis made it look cheap.** The first HUD used emoji icons. We replaced every
   one with hand-drawn 12×12 pixel sprites and a pixel-style interface.
 - **People walked through mountains.** Villagers clipped into terrain and
@@ -246,10 +269,16 @@ upfront about that.
 
 **Who did what on the team:** _[fill in before submitting]_
 
-## Built with
+## Tech stack
 
-Next.js (static export) · React · TypeScript · Three.js via React Three Fiber ·
-Tailwind CSS. Hosted on GitHub Pages; there is no server or database.
+- Next.js 16 (static export)
+- React 19
+- TypeScript
+- Tailwind CSS
+- React Three Fiber / Three.js
+- Hosted on GitHub Pages
+- Supabase for cloud saves, the leaderboard and feedback (only the public
+  "publishable" key is in the code)
 
 ## Project structure
 
@@ -274,9 +303,13 @@ src/
     world/              Everything 3D: terrain, buildings, people, battles, smoke
   components/
     updates-bar.tsx     The Updates bar at the top of the pages
+  lib/
+    online.ts           Cloud saves, leaderboard and feedback (Supabase)
+    utils.ts            Shared helpers
   app/
     page.tsx            Project page (for judges and visitors)
     play/page.tsx       The game
+    not-found.tsx       Custom 404 page
 ```
 
 ## Working on it
@@ -314,13 +347,42 @@ have someone else review it. Commit messages are imperative ("add farmland", not
 era with plenty of resources, and a dev panel lets you trigger every feature:
 wildfire, raid, the Roman legion, an outbreak, any event card or elder lesson
 (picked from a list), fires out, +10 people, "Goals on" (every advancement goal
-counts as met), "Cut hills" (finish every quarry's cut), finish the era.
+counts as met), "Cut hills" (finish every quarry's cut), finish the era, each
+kind of raid, Starve, Collapse, Nearly behind, a small moment, +100 XP and
+"Back from fog".
 
 **Updates log:** every change a player would notice gets a line in
 `src/game/updates.ts`, which feeds the Updates bar.
 
 **Using an AI assistant?** Point it at [`AGENTS.md`](AGENTS.md) first. It holds
 the design decisions the game must stay true to.
+
+## Design and contribution notes
+
+Before making changes, read [AGENTS.md](AGENTS.md). It documents the game design
+constraints and the project decisions that must stay intact.
+
+This project follows a few important conventions:
+
+- Most game rules belong in `src/game/`
+- The engine should stay reducer-based and immutable
+- UI and 3D code should stay separate from core game logic
+- New mechanics should be added through data-driven content where possible
+- Tutorial flow and balancing changes should be validated against the project
+  goals in [AGENTS.md](AGENTS.md)
+
+## Contributing
+
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and
+development expectations.
+
+## Security
+
+Please see [SECURITY.md](SECURITY.md) for vulnerability reporting guidance.
+
+## License
+
+This project is released into the public domain under the Unlicense. See [LICENSE](LICENSE).
 
 ## Team
 

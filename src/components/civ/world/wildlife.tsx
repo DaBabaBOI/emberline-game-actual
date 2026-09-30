@@ -226,19 +226,23 @@ export function Wildlife({
     }
 
     const man = hunter.current[0];
-    const preyInfo = animals.find((a) => a.id === h.target);
-    const prey = preyInfo ? motion.current.get(preyInfo.id) : undefined;
-    if (!man || !preyInfo || !prey) {
+    if (!man) {
       h.target = -1;
       h.nextAt = now + 20;
       return;
     }
-    const goal = h.phase === "out" ? prey : { x: homeTile.x, z: homeTile.z };
+    const preyInfo = animals.find((a) => a.id === h.target);
+    const prey = preyInfo ? motion.current.get(preyInfo.id) : undefined;
+    // The walk home never depends on the prey: it is cleared away a few seconds
+    // after the kill, and the hunter used to vanish mid-walk when it was. If the
+    // prey is gone before he reaches it, he just heads home.
+    if (h.phase === "out" && (!preyInfo || !prey || prey.downAt !== null)) h.phase = "back";
+    const goal = h.phase === "out" && prey ? prey : { x: homeTile.x, z: homeTile.z };
     const dx = goal.x - man.x;
     const dz = goal.z - man.z;
     const d = Math.hypot(dx, dz);
     if (d < 0.25) {
-      if (h.phase === "out") {
+      if (h.phase === "out" && prey && preyInfo) {
         prey.downAt = now;
         h.phase = "back";
         onHunt(preyInfo.kind);
