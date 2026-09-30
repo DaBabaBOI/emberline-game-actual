@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AFTER_STEPS, ERAS, EVENTS, LESSONS, TREE_BY_ID, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
-import { defenseBreakdown, defenseStrength, warnings } from "@/game/engine";
+import { defenseBreakdown, defenseStrength, famineOptions, warnings } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
 import { Countdown } from "./countdown";
 import { PixelIcon } from "@/components/civ/pixel-icon";
@@ -252,7 +252,7 @@ export function RaidBanner() {
 
 // Only the most urgent warning is shown; the rest wait behind a "+N more" button.
 export function Warnings() {
-  const { state } = useGame();
+  const { state, dispatch } = useGame();
   const [open, setOpen] = useState(false);
   const list = [...warnings(state)].sort((a, b) => Number(b.severe) - Number(a.severe));
   if (list.length === 0) return null;
@@ -267,7 +267,9 @@ export function Warnings() {
             (w.severe ? "!border-red-700" : "")
           }
         >
-          <PixelIcon name={w.icon} size={20} />
+          <span className="shrink-0">
+            <PixelIcon name={w.icon} size={20} />
+          </span>
           <span>
             {w.countdown === undefined ? (
               w.text
@@ -277,6 +279,22 @@ export function Warnings() {
                 <Countdown ticks={w.countdown} />
                 {w.text.split("{secs}")[1]}
               </>
+            )}
+            {w.id === "famine" && (
+              <span className="mt-1.5 flex flex-col gap-1" data-testid="famine-options">
+                {famineOptions(state).map((o) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    disabled={!o.ok}
+                    onClick={() => dispatch({ type: "famineRelief", kind: o.id })}
+                    className="pixel-btn pointer-events-auto bg-[#4a3b2e] px-2 py-1 text-left text-[11px] text-white disabled:opacity-40"
+                  >
+                    {o.label}
+                    <span className="block text-white/60">{o.note}</span>
+                  </button>
+                ))}
+              </span>
             )}
           </span>
         </div>
@@ -320,6 +338,12 @@ export function DevPanel() {
         </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devMoment" })}>
           Moment
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devStarve" })}>
+          Starve
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devCollapse" })}>
+          Collapse
         </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devOutbreak" })}>
           Outbreak
