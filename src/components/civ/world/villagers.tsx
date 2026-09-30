@@ -147,7 +147,9 @@ export const MAX_FIGURES = 20;
 export function figureCounts(population: number, soldiers: number) {
   const budget = MAX_FIGURES - 1;
   let villagers = Math.max(2, Math.ceil(population / 3));
-  let warriors = soldiers > 0 ? Math.ceil(soldiers / 2) : 0;
+  // Warriors never take more than 40% of the figures, so the village never looks
+  // like it's only guards.
+  let warriors = soldiers > 0 ? Math.min(Math.ceil(soldiers / 2), Math.floor(budget * 0.4)) : 0;
   const total = villagers + warriors;
   if (total > budget) {
     warriors = soldiers > 0 ? Math.max(1, Math.round((budget * warriors) / total)) : 0;
@@ -269,15 +271,34 @@ export function Warriors({
     const list = tiles.filter((t) => t.building === "warcamp");
     return list.length ? list : [homeTile];
   }, [tiles, homeTile]);
+  // Warriors patrol the ground around their camps and the watch fires, and stand
+  // watch at the fires, instead of all milling about on one tile.
+  const patrol = useMemo(() => {
+    const posts = [...camps, ...tiles.filter((t) => t.building === "watchfire")];
+    const ring = tiles.filter(
+      (t) =>
+        t.revealed &&
+        !t.building &&
+        t.terrain !== "mountain" &&
+        t.terrain !== "shallow" &&
+        t.terrain !== "deep" &&
+        posts.some((p) => hexDistance(p, t) <= 2),
+    );
+    return [...posts, ...ring];
+  }, [tiles, camps]);
 
   useFrame((_, delta) => {
     const list = walkers.current;
     const count = figureCounts(population, soldiers).warriors;
     while (list.length < count) {
+      // A new recruit steps out of a war camp and heads off on patrol.
       const i = list.length;
-      list.push(
-        makeWalker(i + 100, pick(camps), ground, { tunic: "#5b6f8a", hair: "#1a1a1a", scale: 1.4, speed: 0.5 }),
-      );
+      const recruit = makeWalker(i + 100, pick(camps), ground, { tunic: "#5b6f8a", hair: "#1a1a1a", scale: 1.4, speed: 0.6 });
+      const post = ground.spotOn(pick(patrol));
+      recruit.tx = post.x;
+      recruit.tz = post.z;
+      recruit.wait = 0;
+      list.push(recruit);
     }
     list.length = count;
     // Split the figures between spears and clubs in proportion.
@@ -292,7 +313,7 @@ export function Warriors({
         w.speed = 0.9;
         w.wait = 0;
       }
-      stepWalker(w, dt, ground, () => rally ?? pick(camps));
+      stepWalker(w, dt, ground, () => rally ?? pick(patrol));
     }
   });
 

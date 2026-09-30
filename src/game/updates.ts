@@ -9,6 +9,11 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "Raids are yours to answer: when raiders land, choose to fight (watch the battle and train warriors to tip it), hide in the houses (nobody dies, they take less) or pay tribute (they leave, but come back sooner).",
+      "Three kinds of raiders: small bands after your wood, war parties after food and wood, and fire raids that burn a building.",
+      "War Camps now hold 6 warriors each, and the Train button tells you when to build another camp.",
+      "New: the Watch Fire (after Hunting Spears). Built on the shore, it spots raiders sooner and adds a little defense, but burns wood.",
+      "Warriors patrol around their camps and watch fires, and new recruits march out of the War Camp.",
       "More happens: small moments every 30-60 seconds (a deer herd passes, a baby is born, wind blows out a fire, mice get into the stores...), a shorter quiet start, and event cards about twice as often.",
       "Famine is hard but you can come back from it: while the stores are empty about one person dies every 10 seconds, and you have 2 minutes (on Normal) to find food. The warning offers three emergency measures, each with a price: forage the forest, slaughter a herd, or eat the seed grain.",
       "You can now lose by ruining the land: if Sustainability stays below 20 for about two minutes, the land collapses and your people must leave. A countdown warns you first, and planting, selective logging or clearing less forest brings it back.",

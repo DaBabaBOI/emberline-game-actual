@@ -35,8 +35,16 @@ export interface Tile {
   dug?: number;
 }
 
+export type RaidKind = "band" | "party" | "fire";
+export type RaidResponse = "fight" | "hide" | "tribute";
+
 export interface Raid {
   strength: number;
+  // What kind of raiders (older saves: a war party), and how the player answered.
+  kind?: RaidKind;
+  response?: RaidResponse;
+  // The fight began (the raiders arrived and the player chose to fight).
+  fightStart?: number;
   fromTile: number;
   targetTile: number;
   // Where the warriors march out to meet them.
@@ -315,6 +323,9 @@ export interface GameState {
   forestBaseline: number;
   soldiers: number;
   raid: Raid | null;
+  // Raids seen so far (the first is always a small band), and a dev-chosen next kind.
+  raidsSeen?: number;
+  devNextRaid?: RaidKind;
   nextRaidTick: number;
   meters: Meters;
   modifiers: { sustainability: number; happiness: number };
