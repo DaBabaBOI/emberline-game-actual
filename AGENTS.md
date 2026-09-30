@@ -23,7 +23,8 @@ These were decided with the project owner. Do not change them without being aske
 - The island shapes are fixed (same every game); deposits are random per game.
 - The nation is **fictional**, at a Eurasian, Silk Road-style crossroads.
 - Unexplored land is hidden under cloud tiles; **the sea is always blue**.
-  Scouts reveal land.
+  Scouts reveal land, and only scouts: placing a building never uncovers the
+  clouds next to it (it used to, which made scouting pointless).
 - Forests spread and regrow over time; woodcutters thin them out.
 
 **Time**

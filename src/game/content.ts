@@ -86,7 +86,6 @@ export const BUILDINGS: BuildingDef[] = [
     era: 0,
     cost: { wood: 5 },
     terrain: ["grass", "steppe", "forest", "beach", "hills"],
-    reveal: 3,
   },
   {
     id: "hut",
@@ -100,7 +99,6 @@ export const BUILDINGS: BuildingDef[] = [
     cost: { wood: 10 },
     terrain: ["grass", "steppe", "beach", "hills"],
     housing: 6,
-    reveal: 2,
   },
   {
     id: "gatherer",
@@ -115,7 +113,6 @@ export const BUILDINGS: BuildingDef[] = [
     terrain: ["grass", "steppe", "forest", "marsh"],
     produces: { food: 0.6 },
     depositBonus: { deposit: "berries", amount: { food: 0.4 } },
-    reveal: 2,
   },
   {
     id: "farm",
@@ -130,7 +127,6 @@ export const BUILDINGS: BuildingDef[] = [
     terrain: ["grass"],
     requires: "early-farming",
     produces: { food: 1.0 },
-    reveal: 1,
   },
   {
     id: "warcamp",
@@ -143,7 +139,6 @@ export const BUILDINGS: BuildingDef[] = [
     era: 0,
     cost: { wood: 15, food: 10 },
     terrain: ["grass", "steppe", "hills", "beach"],
-    reveal: 3,
   },
   {
     id: "watchfire",
@@ -159,7 +154,6 @@ export const BUILDINGS: BuildingDef[] = [
     needsWaterNeighbor: true,
     requires: "spears",
     produces: { wood: -0.03 },
-    reveal: 4,
   },
   {
     id: "woodcutter",
@@ -173,7 +167,6 @@ export const BUILDINGS: BuildingDef[] = [
     cost: { wood: 4 },
     terrain: ["forest"],
     produces: { wood: 0.25 },
-    reveal: 2,
   },
   {
     id: "fishing",
@@ -189,7 +182,6 @@ export const BUILDINGS: BuildingDef[] = [
     needsWaterNeighbor: true,
     requires: "fishing",
     produces: { food: 0.7 },
-    reveal: 3,
   },
   {
     id: "quarry",
@@ -205,7 +197,6 @@ export const BUILDINGS: BuildingDef[] = [
     requires: "toolmaking",
     produces: { stone: 0.3 },
     depositBonus: { deposit: "stone", amount: { stone: 0.3 } },
-    reveal: 2,
   },
   {
     id: "elder",
@@ -220,7 +211,6 @@ export const BUILDINGS: BuildingDef[] = [
     terrain: ["grass", "steppe"],
     requires: "storytelling",
     produces: { knowledge: 0.08 },
-    reveal: 2,
   },
   {
     id: "healer",
@@ -234,7 +224,6 @@ export const BUILDINGS: BuildingDef[] = [
     cost: { wood: 10, stone: 5 },
     terrain: ["grass", "steppe", "forest"],
     requires: "herbalism",
-    reveal: 2,
   },
   {
     id: "pen",
@@ -249,7 +238,6 @@ export const BUILDINGS: BuildingDef[] = [
     terrain: ["grass", "steppe"],
     requires: "herding",
     produces: { food: 0.35 },
-    reveal: 1,
   },
   // ---- Ancient era ---------------------------------------------------------
   {
@@ -265,7 +253,6 @@ export const BUILDINGS: BuildingDef[] = [
     terrain: ["grass", "steppe"],
     requires: "agriculture",
     housing: 12,
-    reveal: 1,
   },
   {
     id: "school",
@@ -280,7 +267,6 @@ export const BUILDINGS: BuildingDef[] = [
     terrain: ["grass", "steppe"],
     requires: "writing",
     produces: { knowledge: 0.12 },
-    reveal: 1,
   },
   {
     id: "smithy",
@@ -294,7 +280,6 @@ export const BUILDINGS: BuildingDef[] = [
     cost: { wood: 20, stone: 20 },
     terrain: ["grass", "steppe", "hills"],
     requires: "bronze",
-    reveal: 1,
   },
   {
     id: "canal",
@@ -309,7 +294,6 @@ export const BUILDINGS: BuildingDef[] = [
     terrain: ["grass", "steppe"],
     needsWaterNeighbor: true,
     requires: "irrigation",
-    reveal: 1,
   },
   {
     id: "granary",
@@ -323,7 +307,6 @@ export const BUILDINGS: BuildingDef[] = [
     cost: { wood: 15, stone: 10 },
     terrain: ["grass", "steppe"],
     requires: "pottery",
-    reveal: 1,
   },
   {
     id: "forester",
@@ -337,7 +320,6 @@ export const BUILDINGS: BuildingDef[] = [
     cost: { wood: 15, food: 10 },
     terrain: ["grass", "steppe", "forest"],
     requires: "forestry",
-    reveal: 2,
   },
   {
     id: "walls",
@@ -351,7 +333,6 @@ export const BUILDINGS: BuildingDef[] = [
     cost: { wood: 10, stone: 30 },
     terrain: ["grass", "steppe", "hills"],
     requires: "bronze-arms",
-    reveal: 1,
   },
 ];
 

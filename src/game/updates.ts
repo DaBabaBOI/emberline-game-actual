@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "Building next to the clouds no longer uncovers new land. Send scouts to explore.",
       "Planting saplings now comes with Early Farming (the Plant button appears once you've learned it).",
       "Growing your tribe teaches less: +1 Knowledge once, when you first reach 10 people (was +5 at 10, 15, 20, 30 and 50).",
       "No fire, no cooking: without a lit campfire your people eat their food raw and need 30% more of it.",
