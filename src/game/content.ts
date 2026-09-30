@@ -8,6 +8,7 @@ import type {
   DifficultyId,
   EventCard,
   MeterKey,
+  RaidKind,
   Resources,
   TreeNode,
 } from "./types";
@@ -52,12 +53,12 @@ export const DIFFICULTIES: Record<
   DifficultyId,
   { name: string; blurb: string; consumption: number; famineLimit: number; unrestLimit: number; raiders: number }
 > = {
-  easy: { name: "Easy", blurb: "Forgiving. Famine takes a long time to hit.", consumption: 0.8, famineLimit: 45, unrestLimit: 60, raiders: 0.7 },
-  normal: { name: "Normal", blurb: "The intended experience.", consumption: 1, famineLimit: 30, unrestLimit: 40, raiders: 1 },
-  hard: { name: "Hard", blurb: "Hungry people, short patience, bold raiders.", consumption: 1.25, famineLimit: 18, unrestLimit: 25, raiders: 1.4 },
+  easy: { name: "Easy", blurb: "Forgiving. Famine takes a long time to hit.", consumption: 0.8, famineLimit: 120, unrestLimit: 60, raiders: 0.7 },
+  normal: { name: "Normal", blurb: "The intended experience.", consumption: 1, famineLimit: 80, unrestLimit: 40, raiders: 1 },
+  hard: { name: "Hard", blurb: "Hungry people, short patience, bold raiders.", consumption: 1.25, famineLimit: 55, unrestLimit: 25, raiders: 1.4 },
 };
 
-export const WARRIORS_PER_CAMP = 4;
+export const WARRIORS_PER_CAMP = 6;
 export const TRAIN_COST = { food: 8, wood: 4 };
 // After Hunting Spears: give a warrior a spear. Spearmen fight 1.5x as hard.
 export const SPEAR_COST = { wood: 4 };
@@ -125,7 +126,7 @@ export const BUILDINGS: BuildingDef[] = [
     id: "warcamp",
     name: "War Camp",
     icon: "shield",
-    description: "Trains warriors to fight off raiders. Each camp holds 4 warriors.",
+    description: "Trains warriors to fight off raiders. Each camp holds 6 warriors; build more camps for a bigger army.",
     gain: "Warriors to hold off raiders",
     landCost: "Warriors eat food and don't gather any",
     landImpact: 0,
@@ -133,6 +134,22 @@ export const BUILDINGS: BuildingDef[] = [
     cost: { wood: 15, food: 10 },
     terrain: ["grass", "steppe", "hills", "beach"],
     reveal: 3,
+  },
+  {
+    id: "watchfire",
+    name: "Watch Fire",
+    icon: "beacon",
+    description: "A fire kept burning on the shore. Raiders are seen sooner, and the lookouts add a little defense.",
+    gain: "Raiders seen 12 s sooner, +1 defense (up to 2 watch fires)",
+    landCost: "Burns wood day and night, and adds smoke",
+    landImpact: 1,
+    era: 0,
+    cost: { wood: 12 },
+    terrain: ["beach", "grass", "steppe"],
+    needsWaterNeighbor: true,
+    requires: "spears",
+    produces: { wood: -0.03 },
+    reveal: 4,
   },
   {
     id: "woodcutter",
@@ -432,11 +449,12 @@ export const TREE: TreeNode[] = [
   {
     id: "spears",
     name: "Hunting Spears",
-    description: "+15% food. Warriors can carry spears: train new spearmen, or give your warriors spears, to fight 50% harder.",
+    description: "+15% food. Warriors can carry spears: train new spearmen, or give your warriors spears, to fight 50% harder. Unlocks the Watch Fire.",
     branch: "military",
     era: 0,
     cost: 6,
     requires: ["toolmaking"],
+    unlocks: ["watchfire"],
   },
   {
     id: "herbalism",
@@ -992,6 +1010,46 @@ export const LESSON_GAP = 40;
 // nowhere) never start within this many ticks of each other: one at a time.
 export const QUIET_GAP = 40;
 
+// Raiders come in three kinds (the banner says which). `size` scales the usual
+// raid strength. If they win (or you hide), `steal` is the share of food and wood
+// they take; a fire raid also burns one building, even if you hide.
+export const RAID_KINDS: Record<
+  RaidKind,
+  { name: string; size: number; wants: string; steal: { food: number; wood: number }; hide: { food: number; wood: number }; burns: boolean }
+> = {
+  band: { name: "A small band", size: 0.7, wants: "They are after wood.", steal: { food: 0, wood: 0.4 }, hide: { food: 0, wood: 0.25 }, burns: false },
+  party: { name: "A war party", size: 1.35, wants: "They want food and wood.", steal: { food: 0.35, wood: 0.35 }, hide: { food: 0.2, wood: 0.2 }, burns: false },
+  fire: { name: "A fire raid", size: 1.1, wants: "They carry torches: they will burn a building.", steal: { food: 0.15, wood: 0 }, hide: { food: 0, wood: 0 }, burns: true },
+};
+
+// When raiders land the player picks a response before they arrive: fight (the
+// battle plays out over `fightTicks`, and training more warriors can still tip
+// it), hide in the houses (nobody dies, they take a share) or pay tribute (food,
+// `tributePerRaider` each; they leave but come back `tributeSooner` ticks sooner).
+export const RAID_RESPONSE = { fightTicks: 7, tributePerRaider: 4, tributeSooner: 60, hideMood: 4 };
+
+// A watch fire on the shore sees raiders earlier and adds a little defense.
+export const WATCH_FIRE = { warnTicks: 8, defense: 1, maxDefense: 2, smoke: 1 };
+
+// Famine is hard but you can come back from it: while the stores are empty about
+// one person dies every 10 s (at 1x) and everyone is unhappy, and the tribe is lost
+// only if it lasts the difficulty's famineLimit (Normal: 80 ticks, 2 minutes).
+// Three emergency measures buy time, each at a price.
+export const FAMINE = {
+  deathsPerTick: 0.15,
+  happiness: 15,
+  // Strip the nearby forest for roots, nuts and game.
+  forage: { food: 15, forestLoss: 0.3, tiles: 3, cooldown: 40 },
+  // Slaughter a Livestock Pen's animals (the pen is gone).
+  pen: { food: 30 },
+  // Eat the grain saved for sowing: fields grow half as much for a while.
+  seed: { food: 25, farmLoss: 0.5, ticks: 80 },
+};
+// Land collapse: if Sustainability stays below `level` for `ticks` (80 ticks = 2 min
+// at 1x), the land can no longer feed the tribe and the game is lost. A countdown
+// warning shows the whole time; climbing back above the level winds it down.
+export const COLLAPSE = { level: 20, ticks: 80 };
+
 // Leaving the Stone Age: research Agriculture and grow to this many people.
 export const NEXT_ERA_POPULATION = 15;
 
@@ -1059,14 +1117,25 @@ export const WALL_DEFENSE = 4;
 // The Ancient era ends with a Roman legion. Scouts see it coming when the year
 // reaches warningYear; it lands warningTicks later. Each legionary fights like
 // two of your warriors. Size: (base + population / perPeople) × difficulty.
-export const ROMAN_LEGION = { warningYear: -1600, warningTicks: 90, strengthEach: 2, base: 6, perPeople: 5 };
+export const ROMAN_LEGION = { warningYear: -1600, warningTicks: 90, strengthEach: 2, base: 8, perPeople: 5 };
 
 // Buying something that leaves less wood than this shows a "save up" warning.
 export const LOW_WOOD_AFTER_BUY = 10;
 
 // After the tutorial, how long (ticks) before the first event, the first raid,
 // and the first disease that isn't the player's own choice. The early game is calm.
-export const GRACE_AFTER_TUTORIAL = { event: 150, raid: 300, disease: 300 };
+export const GRACE_AFTER_TUTORIAL = { event: 80, raid: 220, disease: 200 };
+
+// Time between event cards and between raids once they have started (ticks):
+// `base` plus up to `spread` more.
+export const EVENT_GAP = { base: 100, spread: 60 };
+export const RAID_GAP = { base: 170, spread: 80 };
+
+// Small moments: little things that happen every 30-60 s after the tutorial so
+// the island feels alive between the big events (a herd passes, a baby is born,
+// wind blows out a fire). Most depend on the state of the land. They are only a
+// line in the log, never a big moment, so QUIET_GAP ignores them.
+export const SMALL_MOMENTS = { firstAfter: 20, base: 20, spread: 20 };
 
 export const AFTER_TUTORIAL_RESERVE: Partial<Resources> = { food: 40, wood: 10 };
 // Of that reserve, this much food is in the stores from the very start (so the
