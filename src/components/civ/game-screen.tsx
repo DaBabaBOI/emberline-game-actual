@@ -7,12 +7,13 @@ import type { CultureId, DifficultyId, GameState } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { GameProvider, useGame } from "./game-provider";
 import { TitleScreen } from "./title-screen";
+import { IntroStory } from "./intro-story";
 import { TopBar } from "./hud/top-bar";
 import { SideMeters } from "./hud/side-meters";
 import { BottomBar } from "./hud/bottom-bar";
 import { TreeOverlay } from "./hud/tree-overlay";
 import { GuideOverlay } from "./hud/guide-overlay";
-import { Debrief, NextEraPrompt } from "./hud/debrief";
+import { Debrief, GoalLine, NextEraPrompt } from "./hud/debrief";
 import {
   DevPanel,
   ElderLesson,
@@ -58,6 +59,7 @@ function Hud({ onRestart }: { onRestart: () => void }) {
         )}
       >
         <div className="flex flex-col items-center gap-2 lg:absolute lg:left-[25rem] lg:right-[21rem] lg:top-20">
+          <GoalLine />
           <NextEraPrompt />
           <RaidBanner />
         </div>
@@ -89,14 +91,22 @@ function Hud({ onRestart }: { onRestart: () => void }) {
 export function GameScreen() {
   const [game, setGame] = useState<GameState | null>(null);
   const [saved, setSaved] = useState<GameState | null>(() => loadGame());
+  // A new game opens with a short story (not when continuing, and not in dev starts).
+  const [intro, setIntro] = useState(false);
+
+  if (game && intro) {
+    return <IntroStory nation={game.nation ?? "The Emberfolk"} onBegin={() => setIntro(false)} />;
+  }
 
   if (!game) {
     return (
       <TitleScreen
         canContinue={Boolean(saved && saved.phase === "playing")}
         onContinue={() => setGame(saved)}
+        onLoadCloud={(state) => setGame(state)}
         onStart={(culture: CultureId, difficulty: DifficultyId, options?: NewGameOptions) => {
           clearSave();
+          setIntro(!options?.dev);
           setGame(newGame(culture, difficulty, options));
         }}
       />

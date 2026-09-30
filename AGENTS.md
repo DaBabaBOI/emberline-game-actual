@@ -132,9 +132,19 @@ These were decided with the project owner. Do not change them without being aske
   buildings, leaving charred ground that heals). Keep events meaningful.
 - **Pace:** one game tick = `TICK_SECONDS` (1.5 s) at 1× speed. The engine
   counts in ticks; anything shown to the player in seconds goes through
-  `secs()` / `perSecond()`. The early game is deliberately calm and easy
-  (`GRACE_AFTER_TUTORIAL`: first event after 150 ticks, first raid after 300,
-  no disease out of nowhere for 300); pressure builds as the tribe grows.
+  `secs()` / `perSecond()`. The start after the tutorial is short and gentle
+  (`GRACE_AFTER_TUTORIAL`: first event after 80 ticks, first raid after 220,
+  no disease out of nowhere for 200); then events come every `EVENT_GAP`
+  (100-160 ticks) and raids every `RAID_GAP` (170-250). Pressure builds as the
+  tribe grows. Playtesters called the old, longer gaps "a snoozefest".
+- **Small moments** (`SMALL_MOMENTS`, `MOMENTS` / `smallMoment()` in engine.ts):
+  every 20-40 ticks (30-60 s) after the tutorial, one little thing happens,
+  picked from those that fit the island right now (a deer herd if the forest
+  stands, dust if it's gone, mice in a big store without a granary, wind blowing
+  out one of several fires, a baby when there's food and room...). Each is a
+  log line (toast) with a small effect; never over an event, raid or the legion,
+  never the same one twice in a row, and they don't count as big moments. Tie
+  new ones to the land where you can. Dev: "Moment".
 - **Phones are supported.** Layouts use `md:` breakpoints (bars stack and
   scroll on small screens). There is no hover on touch: the first tap on a tile
   previews (ghost + trade-off card), the second tap builds. Never rely on Esc or
@@ -200,7 +210,7 @@ These were decided with the project owner. Do not change them without being aske
   grazing wears the land: −2 Sustainability each). Warm Clothes (research) makes each pen
   keep `peoplePerPen` (6) people warm without a fire, so fewer fires are needed
   (less wood cut, less smoke). A trade-off, not a free upgrade.
-- **Growing is as hard as surviving** (`GROWTH_PRESSURE`): stored food above 60
+- **Growing is as hard as surviving** (`GROWTH_PRESSURE`): stored food above 100
   rots (no preservation yet), each lit campfire warms only 10 people (the
   rest are cold, scaled happiness penalty), and raids grow with the tribe's
   size as well as time. Disease also gets likelier as the tribe grows.
@@ -213,6 +223,40 @@ These were decided with the project owner. Do not change them without being aske
   Shallow water or a mountain: they get sick. Cloud (unexplored land): they
   vanish and come back only 5% of the time, with a little new map; this must
   stay rare so scouting is still worth buying. Dev: "Back from fog".
+- **Chief level** (`XP`, `CHIEF_TITLES`, `xpToReach()`, `awardXp()` in the
+  reducer): XP only goes up. It comes from what the player does (build +5, first
+  of a kind +10, each new peak person +2, research +20, raid won +15, sapling +3,
+  new era +50) and every minute everyone is fed / the land is healthy (+2 each).
+  Levels need 25 x (L-1) x L XP in total; each gives a title and +2 Knowledge. The
+  bar sits in the top bar. Dev: "+100 XP". A sensible game reaches about level 4
+  by the Ancient era.
+- **Goal line** (`currentGoal()`, `GoalLine`): one line under the top bar saying
+  what to aim for now with live progress (Agriculture's goal and Knowledge, then
+  15 people, then Rome). Hidden while the tutorial or a guided step is talking.
+- **Intro story** (`intro-story.tsx`): a new (non-dev) game opens with a few
+  lines of story and three boxes: your goal, then, you lose if. Keep it short.
+- **Raids** (`RAID_KINDS`, `RAID_RESPONSE`, `updateRaids`): three kinds, named
+  in the card: a small band (x0.7 strength, takes wood), a war party (x1.35,
+  takes food and wood), a fire raid (x1.1, burns the building nearest where they
+  landed, even if you hide). The first raid is always a band. When raiders land
+  the player picks a response before they arrive: **Fight** (default if no
+  choice; the fight lasts `fightTicks`, shown as a tug-of-war bar, and training a
+  warrior can still tip it), **Hide** (nobody dies, they take a smaller share)
+  or **Pay tribute** (4 food per raider, they leave but the next raid comes 60
+  ticks sooner). Each War Camp holds `WARRIORS_PER_CAMP` (6); the Train button
+  says "+1 camp = +6" when full. **Watch Fire** (after Hunting Spears, on the
+  shore): raiders seen 8 ticks sooner, +1 defense (max 2), burns wood, -1
+  Sustainability. Warriors patrol around camps and watch fires, recruits walk
+  out of a camp, and warriors take at most 40% of the figures. The legion's base
+  is 8 (was 6) to match the bigger armies. Dev: "Raid: band / party / fire".
+- **Famine is recoverable** (`FAMINE`, `famineOptions()`): with the stores empty,
+  about one person dies every 10 s (`deathsPerTick` 0.15, not a share of the
+  tribe) and happiness drops by 15; the game is lost only after `famineLimit`
+  (Easy 120, Normal 80, Hard 55 ticks) and the counter winds down twice as fast
+  once there is food. The famine warning offers three emergency measures, each a
+  trade-off: forage (+15 food, strips 3 nearby forest tiles, 40-tick cooldown),
+  slaughter a herd (+30, a Livestock Pen is lost), eat the seed grain (+25,
+  fields grow half as much for 80 ticks). Dev: "Starve".
 - **Disease** (`src/game/disease.ts`, `DISEASE`): outbreaks start from crowding
   (more people, more crowded = likelier), hunts, fishing spots and especially
   welcomed wanderers. It spreads, people recover and are immune for a while
@@ -245,16 +289,27 @@ These were decided with the project owner. Do not change them without being aske
   crested bronze helmets and big red shields (`Figures gear="roman"`).
   (Historically Rome only becomes a power right at the end of this period; the
   legion is the Ancient era's climax on purpose.)
-- Seven cultures (Balanced + six with bonuses), three difficulties. There are two
-  ways to lose: **famine** (no food for too long) and **unrest** (happiness below
-  15 for too long, after the tutorial). Both show a countdown warning first.
-  Everything else is a setback.
+- **First-time mode** (difficulty `first`, `GENTLE`): the default on the title
+  screen until a game has been started in this browser (`emberline-played` in
+  localStorage). The clock runs at half speed for the first 100 ticks
+  (`tickSeconds()`, used by the game clock and countdowns), events and raids are
+  spaced 1.5x further apart until tick 600, raiders are half as strong, people
+  eat 25% less, and famine/unrest take much longer (150/90 ticks).
+- Seven cultures (Balanced + six with bonuses), four difficulties (First time, Easy, Normal, Hard). There are three
+  ways to lose in everyday play: **famine** (no food for too long), **unrest**
+  (happiness below 15 for too long, after the tutorial) and **land collapse**
+  (`COLLAPSE`: Sustainability below 20 for 80 ticks, about 2 minutes, after the
+  tutorial and the calm period; `collapseTicks`, winds down twice as fast once
+  the land recovers). All three show a countdown warning first. The Roman
+  legion is the fourth (conquest). Everything else is a setback. Balance: the
+  sensible bot never gets near 20; a reckless bot (clear-cutting, never
+  replanting) collapses around 10 minutes. Dev: "Collapse".
 - **Tutorial hand:** during the tutorial a pixel hand points at the next click
   and the rest of the screen is blocked (`guideFor()` in
   `src/components/civ/guide.ts`, drawn by `hud/guide-overlay.tsx`). Targets are
   elements with `data-guide="…"` or a map tile. While the player is saving up
   resources the hand lets go. New tutorial steps need a case in `guideFor()`.
-- **Endings:** a loss (famine, unrest, conquest) always gets the "lost" tier.
+- **Endings:** a loss (famine, unrest, collapse, conquest) always gets the "lost" tier.
   Land-based tiers (thriving, costly, stripped) are only for eras that end.
 - **Balance is checked with a full-game bot** (skip tutorial, sensible build order,
   selective logging, replanting, saving up for key buildings). Last check: 4 of 5
@@ -313,7 +368,12 @@ These were decided with the project owner. Do not change them without being aske
   Add new panels to a stack instead of positioning them absolutely.
 - During the tutorial, the placement preview card is drawn above the guide's
   dimming so the player can read the trade-off.
-- Multiplayer is **later**; design state so AI nations could be replaced by humans,
+- **Judging documentation** lives in `docs/` (design, architecture diagrams,
+  process and testing, the finals talk). Screenshots in `docs/images/` are real
+  captures of the build, never mock-ups. When a feature changes what a doc or
+  screenshot shows, update it in the same pull request, and keep every number
+  there matching the code or a test run.
+- Multiplayer is **later** (the owner wants it; the Supabase project above can host it, e.g. with Realtime); design state so AI nations could be replaced by humans,
   but do not add a backend now.
 
 **Look and feel**
@@ -344,6 +404,15 @@ These were decided with the project owner. Do not change them without being aske
 - The site is a **static export** (`output: "export"`) deployed to GitHub Pages
   under a base path. No API routes, no server code, no dynamic routes, no env
   secrets. Use `next/link` for internal links so the base path is applied.
+- **Online features are optional** (`src/lib/online.ts`, Supabase project
+  `shistech-hackathon`): playtest feedback (Menu > Feedback), the leaderboard
+  (on the end-of-story debrief; lost games aren't listed) and cloud saves
+  (Menu > Save to the cloud gives a code; the title screen loads it). Plain
+  `fetch` to Supabase's REST API with the *publishable* key, no SDK. The
+  database rules are the security: feedback is insert-only, the leaderboard is
+  read + insert only with range checks, and saves are reachable only through the
+  `save_game` / `load_game` functions. Every call must fail quietly: the game
+  has to work fully offline. Never put a secret (service_role) key in the code.
 - Keep the tutorial (`TUTORIAL` in `content.ts`) working when you change buildings.
 - Before committing, run `npm run lint`, `npm run typecheck` and `npm run build`.
   All three must pass.

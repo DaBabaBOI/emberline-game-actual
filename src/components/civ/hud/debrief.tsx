@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ERAS, formatYear, LESSONS, METERS, METER_SDG, MIN_SUSTAINABILITY_FOR_BEST_ENDING, NEXT_ERA_POPULATION } from "@/game/content";
-import { clearSave, makeDebrief, readyForNextEra, secs } from "@/game/engine";
+import { ERAS, formatYear, LESSONS, METERS, METER_SDG, MIN_SUSTAINABILITY_FOR_BEST_ENDING } from "@/game/content";
+import { clearSave, currentGoal, makeDebrief, readyForNextEra, secs } from "@/game/engine";
 import type { Debrief as DebriefData } from "@/game/types";
 import { useGame } from "@/components/civ/game-provider";
+import { LeaderboardPanel } from "./online";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { cn } from "@/lib/utils";
 
@@ -62,7 +63,9 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
           ? "The tribe has left"
           : state.lostTo === "conquest"
             ? "Conquered"
-            : "Famine";
+            : state.lostTo === "collapse"
+              ? "The land gave out"
+              : "Famine";
   const sub =
     d.kind === "era"
       ? `${who} are ready to settle down and farm for good. Here is how you got here.`
@@ -72,6 +75,8 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
           ? `The Roman legion broke through in ${formatYear(d.year)} and ${who} lost their village.`
           : state.lostTo === "unrest"
           ? `${who} were too unhappy for too long and wandered away in ${formatYear(d.year)}.`
+          : state.lostTo === "collapse"
+          ? `${who} used up the land that fed them. With the forests gone and the soil worn out, they had to leave in ${formatYear(d.year)}.`
           : `${who} ran out of food in ${formatYear(d.year)}.`;
 
   return (
@@ -79,7 +84,17 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
       <div className="pixel-panel my-auto w-[min(96vw,760px)] p-4 md:p-6" data-testid="debrief">
         <div className="flex items-center gap-3">
           <PixelIcon
-            name={d.kind === "loss" ? (state.lostTo === "unrest" ? "sad" : state.lostTo === "conquest" ? "shield" : "skull") : "star"}
+            name={
+              d.kind === "loss"
+                ? state.lostTo === "unrest"
+                  ? "sad"
+                  : state.lostTo === "conquest"
+                    ? "shield"
+                    : state.lostTo === "collapse"
+                      ? "leaf"
+                      : "skull"
+                : "star"
+            }
             size={48}
           />
           <div>
@@ -90,7 +105,11 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
 
         <div className={cn("font-pixel mt-4 border-l-4 px-3 py-2", tier.tone)} data-testid="ending-tier">
           <div className="text-lg font-semibold">{tier.title}</div>
-          <p className="text-sm">{tier.text}</p>
+          <p className="text-sm">
+            {d.kind === "loss" && state.lostTo === "collapse"
+              ? "People can't outgrow the land that feeds them. A village that lasts takes only what the forest and soil can grow back."
+              : tier.text}
+          </p>
         </div>
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -166,6 +185,9 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
           </>
         )}
 
+        {/* The story is over (won or lost): post it to the leaderboard. */}
+        {d.kind !== "era" && <LeaderboardPanel />}
+
         <div className="mt-5 flex flex-wrap justify-end gap-2">
           {d.kind === "final" && (
             <button
@@ -209,6 +231,21 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
 
 // The call to move on: shown once the Stone Age goals are met, with a hint
 // on what's missing once Agriculture is known.
+// Always one line saying what to aim for next (hidden while the tutorial or a
+// guided step is already telling the player).
+export function GoalLine() {
+  const { state } = useGame();
+  const goal = currentGoal(state);
+  if (!goal) return null;
+  return (
+    <div className="pointer-events-none flex justify-center">
+      <span className="pixel-panel-dark font-pixel max-w-[min(92vw,640px)] px-3 py-1 text-center text-xs" data-testid="goal-line">
+        {goal}
+      </span>
+    </div>
+  );
+}
+
 export function NextEraPrompt() {
   const { state, dispatch } = useGame();
   if (state.era !== 0 || state.debrief || state.phase !== "playing") return null;
@@ -225,11 +262,7 @@ export function NextEraPrompt() {
         >
           Your people are ready: enter the Ancient era
         </button>
-      ) : (
-        <span className="pixel-panel-dark font-pixel px-3 py-1 text-xs">
-          Grow to {NEXT_ERA_POPULATION} people to enter the Ancient era (now {Math.floor(state.population)})
-        </span>
-      )}
+      ) : null}
     </div>
   );
 }

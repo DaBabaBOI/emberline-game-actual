@@ -2,6 +2,18 @@ import {
   AFTER_TUTORIAL_RESERVE,
   DROP,
   PEOPLE_NAMES,
+  formatYear,
+  XP,
+  chiefTitle,
+  xpToReach,
+  RAID_KINDS,
+  RAID_RESPONSE,
+  WATCH_FIRE,
+  EVENT_GAP,
+  RAID_GAP,
+  SMALL_MOMENTS,
+  FAMINE,
+  COLLAPSE,
   TUTORIAL_START_FOOD,
   ROMAN_LEGION,
   FORESTER_GROWTH,
@@ -27,6 +39,7 @@ import {
   PLANT_COST,
   SELECTIVE_FLOOR,
   TICK_SECONDS,
+  GENTLE,
   FIRE_RISK,
   LAND,
   GRACE_AFTER_TUTORIAL,
@@ -66,6 +79,9 @@ import type {
   DifficultyId,
   GameState,
   Meters,
+  Raid,
+  RaidKind,
+  RaidResponse,
   Resources,
   Tile,
 } from "./types";
@@ -96,6 +112,13 @@ export type Action =
   | { type: "devFiresOut" }
   | { type: "dropPerson"; tileId: number | null }
   | { type: "devFogBack" }
+  | { type: "devXp" }
+  | { type: "raidResponse"; choice: RaidResponse }
+  | { type: "devRaidKind"; kind: RaidKind }
+  | { type: "devMoment" }
+  | { type: "devStarve" }
+  | { type: "famineRelief"; kind: FamineRelief }
+  | { type: "devCollapse" }
   | { type: "devOutbreak" }
   | { type: "devRaid" }
   | { type: "devRomans" }
@@ -158,6 +181,7 @@ export function newGame(
     population: 8,
     famineTicks: 0,
     unrestTicks: 0,
+    collapseTicks: 0,
     strainTicks: 0,
     forestBaseline: 0,
     soldiers: 0,
@@ -636,7 +660,9 @@ export function production(state: GameState): Resources {
       tile.building === "woodcutter"
         ? woodcutterYield(state, tile)
         : tile.building === "farm"
-          ? (state.tiles.some((t) => t.building === "canal" && hexDistance(t, tile) === 1) ? 1.5 : 1) * rainfall(state)
+          ? (state.tiles.some((t) => t.building === "canal" && hexDistance(t, tile) === 1) ? 1.5 : 1) *
+            rainfall(state) *
+            (seedEaten(state) ? 1 - FAMINE.seed.farmLoss : 1)
           : 1;
     const dust = (dusty(state, tile) ? 1 - QUARRY_DUST.foodLoss : 1) * (scaredByFire(state, tile) ? 1 - FIRE_SCARE.foodLoss : 1);
     // Gatherer camps share what the wild can give.
@@ -764,8 +790,18 @@ export function perSecond(perTick: number) {
   return perTick / TICK_SECONDS;
 }
 
+// Real seconds per tick right now: First-time mode starts with a slower clock.
+export function tickSeconds(state: GameState) {
+  return state.difficulty === "first" && state.tick < GENTLE.slowTicks ? TICK_SECONDS * GENTLE.slowFactor : TICK_SECONDS;
+}
+
+// First-time mode spaces events and raids further apart for its first stretch.
+function gapFactor(state: GameState) {
+  return state.difficulty === "first" && state.tick < GENTLE.calmUntil ? GENTLE.gapFactor : 1;
+}
+
 export interface Warning {
-  id: "fire" | "food" | "wood" | "famine" | "unrest" | "land" | "sick" | "rain";
+  id: "fire" | "food" | "wood" | "famine" | "unrest" | "collapse" | "land" | "sick" | "rain";
   icon: IconId;
   text: string;
   // Ticks left on the countdown in the text; "{secs}" in the text is where it goes.
@@ -785,7 +821,7 @@ export function warnings(state: GameState): Warning[] {
     out.push({
       id: "famine",
       icon: "skull",
-      text: "Your people are starving! Famine in {secs}s unless you find food.",
+      text: "Your people are starving: about one dies every 10 s. The tribe is lost in {secs}s unless you find food.",
       countdown: Math.max(0, famineLimit - state.famineTicks),
       severe: true,
     });
@@ -806,6 +842,16 @@ export function warnings(state: GameState): Warning[] {
       icon: "sad",
       text: "Your people are miserable! They will leave in {secs}s unless you cheer them up.",
       countdown: Math.max(0, unrestLimit - state.unrestTicks),
+      severe: true,
+    });
+  }
+
+  if ((state.collapseTicks ?? 0) > 0) {
+    out.push({
+      id: "collapse",
+      icon: "leaf",
+      text: `The land is collapsing! Sustainability is below ${COLLAPSE.level}. Plant trees, log selectively and stop clearing forest, or your people must leave in {secs}s.`,
+      countdown: Math.max(0, COLLAPSE.ticks - (state.collapseTicks ?? 0)),
       severe: true,
     });
   }
@@ -931,6 +977,11 @@ export function sustainabilityBreakdown(state: GameState): SustainPart[] {
       hint: `The wild can feed ${GATHERING.freeCamps} camps. Past that, animals are hunted faster than they can have young, and there are fewer each year.`,
     },
     {
+      label: `${counts.watchfire ?? 0} watch fire${counts.watchfire === 1 ? "" : "s"} burning`,
+      value: -(counts.watchfire ?? 0) * WATCH_FIRE.smoke,
+      hint: "Watch fires burn wood day and night and add smoke.",
+    },
+    {
       label: `${counts.farm ?? 0} field${counts.farm === 1 ? "" : "s"} cleared`,
       value: -(counts.farm ?? 0) * 1,
       hint: "Farmland replaces wild land.",
@@ -1017,8 +1068,14 @@ export function defenseStrength(state: GameState) {
   return (
     ((state.soldiers - spears) + spears * SPEARMAN_STRENGTH) * bronze +
     ((counts.warcamp ?? 0) > 0 ? 1 : 0) +
-    (counts.walls ?? 0) * WALL_DEFENSE
+    (counts.walls ?? 0) * WALL_DEFENSE +
+    watchDefense(state)
   );
+}
+
+// Lookouts at the watch fires add a little defense (up to WATCH_FIRE.maxDefense).
+export function watchDefense(state: GameState) {
+  return Math.min(WATCH_FIRE.maxDefense, (countBuildings(state).watchfire ?? 0) * WATCH_FIRE.defense);
 }
 
 // Where the defense number comes from, in words: "4 warriors × 1.5 (spears) + 1 war camp".
@@ -1034,10 +1091,69 @@ export function defenseBreakdown(state: GameState): string {
   if (bronze) text = `(${text}) × 2 bronze`;
   if ((counts.warcamp ?? 0) > 0) text += " + 1 war camp";
   if (counts.walls) text += ` + ${counts.walls * WALL_DEFENSE} walls`;
+  if (watchDefense(state)) text += ` + ${watchDefense(state)} watch fire${watchDefense(state) === 1 ? "" : "s"}`;
   return text;
 }
 
 const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
+
+// The seed grain was eaten in a famine: fields grow less until it is replaced.
+export function seedEaten(state: GameState) {
+  return state.tick < (state.seedEatenUntil ?? 0);
+}
+
+export type FamineRelief = "forage" | "pen" | "seed";
+
+// What the tribe can do in a famine right now, and why not when it can't.
+export function famineOptions(state: GameState): { id: FamineRelief; label: string; note: string; ok: boolean }[] {
+  const counts = countBuildings(state);
+  const forageWait = (state.forageReadyAt ?? 0) - state.tick;
+  return [
+    {
+      id: "forage",
+      label: `Forage (+${FAMINE.forage.food} food)`,
+      note: forageWait > 0 ? `The forest is picked bare (${secs(forageWait)}s)` : "Strips the nearby forest",
+      ok: forageWait <= 0 && foragePatch(state).length > 0,
+    },
+    {
+      id: "pen",
+      label: `Slaughter a herd (+${FAMINE.pen.food} food)`,
+      note: counts.pen ? "A Livestock Pen is lost" : "Needs a Livestock Pen",
+      ok: !!counts.pen,
+    },
+    {
+      id: "seed",
+      label: `Eat the seed grain (+${FAMINE.seed.food} food)`,
+      note: seedEaten(state) ? "Already eaten" : counts.farm ? `Fields grow half as much for ${secs(FAMINE.seed.ticks)}s` : "Needs Farmland",
+      ok: !!counts.farm && !seedEaten(state),
+    },
+  ];
+}
+
+// The forest tiles nearest home that foragers would strip.
+function foragePatch(state: GameState): Tile[] {
+  const home = state.tiles[state.startTile];
+  const kept = state.protectedTiles ?? [];
+  return state.tiles
+    .filter((t) => t.terrain === "forest" && !t.building && !kept.includes(t.id) && t.growth > 0.2 && hexDistance(t, home) <= LAND.radius)
+    .sort((a, b) => hexDistance(a, home) - hexDistance(b, home))
+    .slice(0, FAMINE.forage.tiles);
+}
+
+// The Food & Water meter is not the stored food: it says whether the tribe makes
+// enough to eat. Explained on hover so the two numbers aren't confused.
+export function foodMeterNote(state: GameState): string {
+  const made = production(state).food;
+  const eaten = Math.max(consumption(state), 0.1);
+  const ratio = made / eaten;
+  const now =
+    ratio < 0.9
+      ? "You make less food than you eat, so the store is shrinking."
+      : ratio <= 1.1
+        ? "You make about as much food as you eat."
+        : "You make more food than you eat.";
+  return `${now} 45 means just enough. Stored food (top bar) adds only a little.`;
+}
 
 export function computeMeters(state: GameState): Meters {
   const counts = countBuildings(state);
@@ -1072,7 +1188,8 @@ export function computeMeters(state: GameState): Meters {
     // No cold penalty while the tutorial is still teaching you to light a fire.
     (state.tutorialStep < TUTORIAL.length ? 0 : NO_FIRE_PENALTY * coldShare(state)) -
     (100 - clamp(sustainability)) * 0.15 -
-    sickShare(state) * 30 +
+    sickShare(state) * 30 -
+    (state.famineTicks > 0 ? FAMINE.happiness : 0) +
     state.modifiers.happiness;
 
   return {
@@ -1394,9 +1511,10 @@ function advanceTutorial(state: GameState): GameState {
 function startGrace(state: GameState): GameState {
   return {
     ...state,
-    nextEventTick: Math.max(state.nextEventTick, state.tick + GRACE_AFTER_TUTORIAL.event),
-    nextRaidTick: Math.max(state.nextRaidTick, state.tick + GRACE_AFTER_TUTORIAL.raid),
-    calmUntil: state.tick + GRACE_AFTER_TUTORIAL.disease,
+    nextEventTick: Math.max(state.nextEventTick, state.tick + GRACE_AFTER_TUTORIAL.event * gapFactor(state)),
+    nextRaidTick: Math.max(state.nextRaidTick, state.tick + GRACE_AFTER_TUTORIAL.raid * gapFactor(state)),
+    calmUntil: state.tick + GRACE_AFTER_TUTORIAL.disease * gapFactor(state),
+    nextMomentTick: state.tick + SMALL_MOMENTS.firstAfter,
   };
 }
 
@@ -1428,11 +1546,12 @@ function tick(state: GameState): GameState {
   let starved = 0;
   if (resources.food <= 0) {
     const before = population;
-    population = Math.max(1, population - Math.max(0.3, population * 0.02));
+    population = Math.max(1, population - FAMINE.deathsPerTick);
     starved = before - population;
     famineTicks += 1;
   } else {
-    famineTicks = Math.max(0, famineTicks - 1);
+    // Once there is food again, the danger passes twice as fast as it came.
+    famineTicks = Math.max(0, famineTicks - 2);
     if (state.meters.food > 45 && state.meters.shelter > 40 && population < capacity * 1.15) {
       population += Math.max(0.08, population * growth);
     }
@@ -1444,6 +1563,12 @@ function tick(state: GameState): GameState {
     state.meters.happiness < UNREST_LEVEL && !inTutorial && !isCalm(state)
       ? state.unrestTicks + 1
       : Math.max(0, state.unrestTicks - 2);
+
+  // The land can give out too, but never while a new player is still learning.
+  const collapseTicks =
+    state.meters.sustainability < COLLAPSE.level && !inTutorial && !isCalm(state)
+      ? (state.collapseTicks ?? 0) + 1
+      : Math.max(0, (state.collapseTicks ?? 0) - 2);
 
   const strainTicks =
     state.meters.sustainability < LAND.strainLevel
@@ -1482,6 +1607,7 @@ function tick(state: GameState): GameState {
     population,
     famineTicks,
     unrestTicks,
+    collapseTicks,
     strainTicks,
     modifiers,
   };
@@ -1502,12 +1628,18 @@ function tick(state: GameState): GameState {
     const lost: GameState = { ...next, phase: "gameover", lostTo: "unrest", log: ["Your people lost hope and left.", ...next.log] };
     return { ...lost, debrief: makeDebrief(lost, "loss") };
   }
+  if (collapseTicks >= COLLAPSE.ticks) {
+    const lost: GameState = { ...next, phase: "gameover", lostTo: "collapse", log: ["The land gave out, and your people had to leave.", ...next.log] };
+    return { ...lost, debrief: makeDebrief(lost, "loss") };
+  }
 
   if (!inTutorial && next.tick >= next.nextEventTick && quietEnough(next)) {
     const rand = mulberry32(next.seed + next.tick);
     const event = pickEvent(rand(), next);
-    next = { ...next, event, lastEvent: event.id, lastBigTick: next.tick, nextEventTick: next.tick + 180 + Math.floor(rand() * 120) };
+    next = { ...next, event, lastEvent: event.id, lastBigTick: next.tick, nextEventTick: next.tick + Math.round((EVENT_GAP.base + Math.floor(rand() * EVENT_GAP.spread)) * gapFactor(next)) };
   }
+
+  if (!inTutorial) next = smallMoment(next);
 
   const beforeDisease = next.population;
   next = stepDisease(next, housingCapacity(next), mulberry32(next.seed + next.tick * 31));
@@ -1529,6 +1661,80 @@ function tick(state: GameState): GameState {
   next = knowledgeReady(next);
   next = advanceTutorial(next);
   return { ...next, meters: computeMeters(next) };
+}
+
+// Small moments: a little something every 30-60 s, chosen from what fits the
+// island right now. They only add a log line (a toast) and a small effect.
+interface Moment {
+  id: string;
+  when: (s: GameState) => boolean;
+  apply: (s: GameState) => GameState;
+  text: string;
+}
+
+const addFood = (s: GameState, n: number) => ({ ...s, resources: { ...s.resources, food: Math.max(0, s.resources.food + n) } });
+const addMood = (s: GameState, n: number) => ({ ...s, modifiers: { ...s.modifiers, happiness: s.modifiers.happiness + n } });
+
+const MOMENTS: Moment[] = [
+  { id: "herd", when: (s) => forestCover(s) >= 0.5, apply: (s) => addFood(s, 8), text: "A herd of deer passed the forest edge. The hunters brought back meat (+8 food)." },
+  { id: "berries", when: () => true, apply: (s) => addFood(s, 5), text: "The children found a patch of berries (+5 food)." },
+  {
+    id: "baby",
+    when: (s) => s.meters.food >= 45 && s.population < housingCapacity(s),
+    apply: (s) => ({ ...s, population: s.population + 1 }),
+    text: "A baby was born by the fire (+1 person).",
+  },
+  {
+    id: "windfall",
+    when: (s) => forestCover(s) >= 0.3,
+    apply: (s) => ({ ...s, resources: { ...s.resources, wood: s.resources.wood + 4 } }),
+    text: "The wind brought down an old tree: free firewood (+4 wood).",
+  },
+  {
+    id: "gust",
+    when: (s) => litFires(s).length >= 2,
+    apply: (s) => {
+      const fire = litFires(s)[Math.floor(s.tick / 7) % litFires(s).length];
+      return { ...s, fires: { ...s.fires, [fire.id]: 0 } };
+    },
+    text: "A gust of wind blew out a campfire. Click it to relight it.",
+  },
+  {
+    id: "rain",
+    when: (s) => (countBuildings(s).farm ?? 0) > 0 && rainfall(s) >= 0.8,
+    apply: (s) => addFood(s, 2 * (countBuildings(s).farm ?? 0)),
+    text: "A good rain fell, and the fields drank it up. Forests help bring the rain.",
+  },
+  { id: "story", when: (s) => litFires(s).length > 0, apply: (s) => addMood(s, 5), text: "A storyteller kept everyone up late by the fire. Spirits are high." },
+  { id: "smoke", when: (s) => litFires(s).length >= 3, apply: (s) => addMood(s, -4), text: "Smoke hung over the village all day. People are coughing." },
+  {
+    id: "birds",
+    when: (s) => forestCover(s) >= 0.8,
+    apply: (s) => ({ ...s, modifiers: { ...s.modifiers, sustainability: s.modifiers.sustainability + 2 } }),
+    text: "Birds are nesting in the old forest again (+2 Sustainability for a while).",
+  },
+  {
+    id: "mice",
+    when: (s) => s.resources.food > 60 && !countBuildings(s).granary,
+    apply: (s) => addFood(s, -Math.round(s.resources.food * 0.1)),
+    text: "Mice got into the food stores and spoiled some of it. A granary would keep it safe.",
+  },
+  { id: "dust", when: (s) => forestCover(s) < 0.5, apply: (s) => addMood(s, -3), text: "Wind blew dust off the bare land where the forest used to be." },
+];
+
+export function smallMoment(state: GameState): GameState {
+  const due = state.nextMomentTick ?? state.tick + SMALL_MOMENTS.firstAfter;
+  if (state.tick < due) return state.nextMomentTick === undefined ? { ...state, nextMomentTick: due } : state;
+  // Never over an event card, a raid or the legion: try again a little later.
+  if (state.event || state.raid || state.legion) return { ...state, nextMomentTick: state.tick + 5 };
+  const rand = mulberry32(state.seed + state.tick * 61);
+  const last = state.lastMoment;
+  const options = MOMENTS.filter((m) => m.id !== last && m.when(state));
+  const next = state.tick + SMALL_MOMENTS.base + Math.floor(rand() * SMALL_MOMENTS.spread);
+  if (!options.length) return { ...state, nextMomentTick: next };
+  const moment = options[Math.floor(rand() * options.length)];
+  const after = moment.apply(state);
+  return { ...after, nextMomentTick: next, lastMoment: moment.id, log: [moment.text, ...after.log].slice(0, 30) };
 }
 
 // The height of a tile once a quarry has cut part of it away.
@@ -1799,10 +2005,77 @@ function returnFromFog(state: GameState): GameState {
   return next;
 }
 
+// Buildings a fire raid could set alight (not fires, pens of stone or the camp).
+function burnable(state: GameState): Tile[] {
+  return state.tiles.filter((t) => t.building && !["campfire", "warcamp", "quarry", "walls", "watchfire"].includes(t.building));
+}
+
+// What raiders take: a share of food and wood, and for a fire raid one building
+// (the one nearest where they landed).
+function plunder(state: GameState, raid: Raid, share: { food: number; wood: number }): Partial<GameState> {
+  const resources = {
+    ...state.resources,
+    food: state.resources.food * (1 - share.food),
+    wood: state.resources.wood * (1 - share.wood),
+  };
+  if (!RAID_KINDS[raid.kind ?? "party"].burns) return { resources };
+  const from = state.tiles[raid.fromTile];
+  const target = burnable(state).sort((a, b) => hexDistance(a, from) - hexDistance(b, from))[0];
+  if (!target) return { resources };
+  return { resources, tiles: state.tiles.map((t) => (t.id === target.id ? { ...t, building: null, scorch: 1 } : t)) };
+}
+
+function plunderText(state: GameState, raid: Raid): string {
+  const kind = raid.kind ?? "party";
+  const from = state.tiles[raid.fromTile];
+  const burnt = RAID_KINDS[kind].burns ? burnable(state).sort((a, b) => hexDistance(a, from) - hexDistance(b, from))[0] : null;
+  const what = burnt ? ` They set fire to a ${BUILDINGS_BY_ID[burnt.building!].name}.` : "";
+  if (kind === "band") return `The raiders made off with our wood.${what}`;
+  if (kind === "fire") return `Raiders ran through the village with torches!${what}`;
+  return `Raiders plundered the village! Food and wood stolen.${what}`;
+}
+
+// Everyone hid in the houses: nobody dies, but the raiders take what they find.
+function raidHide(state: GameState, raid: Raid): GameState {
+  return {
+    ...state,
+    ...plunder(state, raid, RAID_KINDS[raid.kind ?? "party"].hide),
+    raid: null,
+    modifiers: { ...state.modifiers, happiness: state.modifiers.happiness - RAID_RESPONSE.hideMood },
+    log: [hideText(state, raid), ...state.log].slice(0, 30),
+  };
+}
+
+function hideText(state: GameState, raid: Raid): string {
+  const kind = raid.kind ?? "party";
+  if (RAID_KINDS[kind].burns) {
+    const from = state.tiles[raid.fromTile];
+    const burnt = burnable(state).sort((a, b) => hexDistance(a, from) - hexDistance(b, from))[0];
+    return burnt
+      ? `We hid in the houses. Nobody was hurt, but the raiders burned a ${BUILDINGS_BY_ID[burnt.building!].name}.`
+      : "We hid in the houses. The raiders found nothing to burn and left.";
+  }
+  return kind === "band"
+    ? "We hid in the houses. Nobody was hurt, but they took some of our wood."
+    : "We hid in the houses. Nobody was hurt, but they took some food and wood.";
+}
+
+// The price of buying the raiders off.
+export function tributeCost(raid: Raid) {
+  return raid.strength * RAID_RESPONSE.tributePerRaider;
+}
+
 function updateRaids(state: GameState): GameState {
   const { raid } = state;
   if (raid?.roman) return state.tick >= raid.arriveTick ? resolveLegion(state) : state;
   if (raid && state.tick >= raid.arriveTick) {
+    // They are here. Hiding or tribute was settled when chosen; otherwise we fight,
+    // and the fight takes a few seconds (training a warrior can still tip it).
+    if (raid.response === "hide") return raidHide(state, raid);
+    if (raid.fightStart === undefined) {
+      return { ...state, raid: { ...raid, response: "fight", fightStart: state.tick } };
+    }
+    if (state.tick < raid.fightStart + RAID_RESPONSE.fightTicks) return state;
     const defense = defenseStrength(state);
     const battleAt = raid.meetTile ?? raid.targetTile;
     if (defense >= raid.strength) {
@@ -1850,13 +2123,10 @@ function updateRaids(state: GameState): GameState {
         won: false,
       },
       soldiers: Math.max(0, state.soldiers - raid.strength),
-      resources: {
-        ...state.resources,
-        food: state.resources.food * 0.65,
-        wood: state.resources.wood * 0.65,
-      },
+      spearmen: Math.min(spearmenOf(state), Math.max(0, state.soldiers - raid.strength)),
+      ...plunder(state, raid, RAID_KINDS[raid.kind ?? "party"].steal),
       modifiers: { ...state.modifiers, happiness: state.modifiers.happiness - 12 },
-      log: ["Raiders plundered the village! Food and wood stolen.", ...state.log].slice(0, 30),
+      log: [plunderText(state, raid), ...state.log].slice(0, 30),
     };
   }
 
@@ -1878,26 +2148,43 @@ function updateRaids(state: GameState): GameState {
       .reduce((best, t) =>
         Math.hypot(t.x - mx, t.z - mz) < Math.hypot(best.x - mx, best.z - mz) ? t : best,
       );
+    // The first raid is always a small band; later ones vary. Fire raids need
+    // something to burn.
+    const roll = rand();
+    const kind: RaidKind = state.devNextRaid
+      ? state.devNextRaid
+      : !state.raidsSeen
+        ? "band"
+        : roll < 0.3
+          ? "band"
+          : roll < 0.7 || burnable(state).length === 0
+            ? "party"
+            : "fire";
     const strength = Math.max(
       2,
       Math.round(
         (2 + state.tick / RAID_GROWTH_TICKS + state.population / GROWTH_PRESSURE.raidersPerPeople) *
-          DIFFICULTIES[state.difficulty].raiders,
+          DIFFICULTIES[state.difficulty].raiders *
+          RAID_KINDS[kind].size,
       ),
     );
+    const early = (countBuildings(state).watchfire ?? 0) > 0 ? WATCH_FIRE.warnTicks : 0;
     return {
       ...state,
       raid: {
         strength,
+        kind,
         fromTile: from.id,
         targetTile: home.id,
         meetTile: meet.id,
         startTick: state.tick,
-        arriveTick: state.tick + 12,
+        arriveTick: state.tick + 12 + early,
       },
-      nextRaidTick: state.tick + 180 + Math.floor(rand() * 100),
+      raidsSeen: (state.raidsSeen ?? 0) + 1,
+      devNextRaid: undefined,
+      nextRaidTick: state.tick + Math.round((RAID_GAP.base + Math.floor(rand() * RAID_GAP.spread)) * gapFactor(state)),
       lastBigTick: state.tick,
-      log: [`${strength} raiders spotted landing on the shore!`, ...state.log].slice(0, 30),
+      log: [`${RAID_KINDS[kind].name} of ${strength} raiders is landing on the shore!${early ? " The watch fire saw them early." : ""}`, ...state.log].slice(0, 30),
     };
   }
   return state;
@@ -1917,7 +2204,73 @@ function withMeters(state: GameState): GameState {
 // Every action, then check whether the guided after-step has been done.
 export function reducer(state: GameState, action: Action): GameState {
   const next = reduce(state, action);
-  return next.coach ? advanceCoach(next) : next;
+  return awardXp(state, next.coach ? advanceCoach(next) : next);
+}
+
+// Chief XP for what just happened: compare the state before and after an action.
+function awardXp(prev: GameState, next: GameState): GameState {
+  if (next === prev || next.phase !== "playing") return next;
+  let gain = 0;
+  const a = prev.stats ?? { built: 0, peakPopulation: 0, raidsWon: 0 };
+  const b = next.stats ?? a;
+  const built = b.built - a.built;
+  if (built > 0) {
+    gain += built * XP.build;
+    const before = countBuildings(prev);
+    const after = countBuildings(next);
+    gain += Object.keys(after).filter((id) => !before[id]).length * XP.firstBuild;
+  }
+  gain += Math.max(0, Math.floor(b.peakPopulation) - Math.floor(a.peakPopulation)) * XP.person;
+  gain += Math.max(0, next.researched.length - prev.researched.length) * XP.research;
+  gain += Math.max(0, b.raidsWon - a.raidsWon) * XP.raidWon;
+  gain += Math.max(0, (next.planted ?? 0) - (prev.planted ?? 0)) * XP.plant;
+  gain += Math.max(0, next.era - prev.era) * XP.era;
+  if (next.tick !== prev.tick && next.tick % XP.minuteTicks === 0 && next.tutorialStep >= TUTORIAL.length) {
+    if (next.meters.food >= 45) gain += XP.fedMinute;
+    if (next.meters.sustainability >= MIN_SUSTAINABILITY_FOR_BEST_ENDING) gain += XP.healthyMinute;
+  }
+  return gain > 0 ? addXp(next, gain) : next;
+}
+
+// Add XP and level up as many times as it covers.
+function addXp(state: GameState, gain: number): GameState {
+  const xp = (state.xp ?? 0) + gain;
+  let level = state.chiefLevel ?? 1;
+  let knowledge = state.resources.knowledge;
+  const log = [...state.log];
+  while (xp >= xpToReach(level + 1)) {
+    level += 1;
+    knowledge += XP.levelKnowledge;
+    log.unshift(`Chief level ${level}: ${chiefTitle(level)}! (+${XP.levelKnowledge} Knowledge)`);
+  }
+  return { ...state, xp, chiefLevel: level, resources: { ...state.resources, knowledge }, log: log.slice(0, 30) };
+}
+
+// The one thing to aim for right now, in a line (null while the tutorial or a
+// guided step is already telling the player what to do).
+export function currentGoal(state: GameState): string | null {
+  if (state.tutorialStep < TUTORIAL.length || state.coach || state.phase !== "playing" || state.debrief) return null;
+  const pop = Math.floor(state.population);
+  if (state.era === 0) {
+    if (!state.researched.includes("agriculture")) {
+      const cost = TREE_BY_ID.agriculture.cost;
+      const open = goalProgress(state, "agriculture").find((g) => g.have < g.need);
+      const k = Math.floor(state.resources.knowledge);
+      const parts = [open ? `${open.label} (${Math.floor(open.have)}/${open.need})` : null, k < cost ? `${k}/${cost} Knowledge` : null]
+        .filter(Boolean)
+        .join(", ");
+      return parts
+        ? `Goal: learn Agriculture to reach the Ancient era. Still needed: ${parts}.`
+        : "Goal: Agriculture is ready. Open Advancements and research it.";
+    }
+    if (pop < NEXT_ERA_POPULATION) return `Goal: grow to ${NEXT_ERA_POPULATION} people to enter the Ancient era (${pop}/${NEXT_ERA_POPULATION}).`;
+    return null;
+  }
+  if (state.era === 1 && !state.legionDone) {
+    if (state.legion || state.raid?.roman) return "Goal: hold off the Roman legion!";
+    return `Goal: get ready for Rome. Their legion lands around ${formatYear(ROMAN_LEGION.warningYear)}. Our defense: ${defenseStrength(state)}.`;
+  }
+  return `Goal: keep the village thriving. Land health: ${state.meters.sustainability}.`;
 }
 
 function reduce(state: GameState, action: Action): GameState {
@@ -2264,6 +2617,27 @@ function step(state: GameState, action: Action): GameState {
     case "dismissDebrief":
       return state.debrief?.kind === "final" ? { ...state, debrief: null } : state;
 
+    case "raidResponse": {
+      const raid = state.raid;
+      if (!raid || raid.roman || raid.fightStart !== undefined || raid.response) return state;
+      if (action.choice === "tribute") {
+        const price = tributeCost(raid);
+        if (state.resources.food < price) return state;
+        return withMeters({
+          ...state,
+          raid: null,
+          resources: { ...state.resources, food: state.resources.food - price },
+          nextRaidTick: state.nextRaidTick - RAID_RESPONSE.tributeSooner,
+          log: [`We paid ${price} food. The raiders sailed away, but they will be back sooner.`, ...state.log].slice(0, 30),
+        });
+      }
+      return { ...state, raid: { ...raid, response: action.choice } };
+    }
+
+    case "devRaidKind":
+      if (!state.dev || state.raid) return state;
+      return { ...state, nextRaidTick: state.tick, devNextRaid: action.kind };
+
     case "devRaid":
       if (!state.dev || state.raid) return state;
       return { ...state, nextRaidTick: state.tick };
@@ -2282,6 +2656,68 @@ function step(state: GameState, action: Action): GameState {
     case "devFogBack":
       if (!state.dev) return state;
       return withMeters(returnFromFog({ ...state, inFog: (state.inFog ?? []).map((p) => ({ ...p, back: state.tick })) }));
+
+    case "devXp":
+      if (!state.dev) return state;
+      return addXp(state, 100);
+
+    case "devMoment":
+      if (!state.dev) return state;
+      return withMeters(smallMoment({ ...state, event: null, nextMomentTick: state.tick }));
+
+    case "famineRelief": {
+      if (state.famineTicks <= 0 || state.phase !== "playing") return state;
+      const option = famineOptions(state).find((o) => o.id === action.kind);
+      if (!option?.ok) return state;
+      const log = (line: string) => [line, ...state.log].slice(0, 30);
+      if (action.kind === "forage") {
+        const patch = new Set(foragePatch(state).map((t) => t.id));
+        return withMeters({
+          ...state,
+          tiles: state.tiles.map((t) => (patch.has(t.id) ? { ...t, growth: Math.max(0.02, t.growth - FAMINE.forage.forestLoss) } : t)),
+          resources: { ...state.resources, food: state.resources.food + FAMINE.forage.food },
+          forageReadyAt: state.tick + FAMINE.forage.cooldown,
+          log: log("Foragers stripped the nearby forest for roots, nuts and game."),
+        });
+      }
+      if (action.kind === "pen") {
+        const home = state.tiles[state.startTile];
+        const pen = state.tiles.filter((t) => t.building === "pen").sort((a, b) => hexDistance(b, home) - hexDistance(a, home))[0];
+        return withMeters({
+          ...state,
+          tiles: state.tiles.map((t) => (t.id === pen.id ? { ...t, building: null } : t)),
+          resources: { ...state.resources, food: state.resources.food + FAMINE.pen.food },
+          log: log("The herd was slaughtered to feed the tribe. The pen stands empty."),
+        });
+      }
+      return withMeters({
+        ...state,
+        resources: { ...state.resources, food: state.resources.food + FAMINE.seed.food },
+        seedEatenUntil: state.tick + FAMINE.seed.ticks,
+        log: log("The seed grain was eaten. The fields will grow less for a while."),
+      });
+    }
+
+    case "devStarve":
+      if (!state.dev) return state;
+      // Empty the stores and start the famine clock, so the emergency options show
+      // even in a village that feeds itself (it then winds down as food returns).
+      return withMeters({
+        ...state,
+        resources: { ...state.resources, food: 0 },
+        famineTicks: Math.max(state.famineTicks, 20),
+        log: ["Dev: the stores are empty.", ...state.log].slice(0, 30),
+      });
+
+    case "devCollapse":
+      // Wreck the land for a while and start the countdown 30 s from the end.
+      if (!state.dev) return state;
+      return withMeters({
+        ...state,
+        modifiers: { ...state.modifiers, sustainability: state.modifiers.sustainability - 100 },
+        collapseTicks: Math.max(state.collapseTicks ?? 0, COLLAPSE.ticks - 20),
+        log: ["Dev: the land is collapsing.", ...state.log].slice(0, 30),
+      });
 
     case "devPeople":
       if (!state.dev) return state;
