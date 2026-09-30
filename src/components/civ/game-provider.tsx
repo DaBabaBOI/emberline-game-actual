@@ -9,8 +9,8 @@ import {
   type Dispatch,
   type ReactNode,
 } from "react";
-import { TICK_SECONDS, TUTORIAL } from "@/game/content";
-import { reducer, saveGame, type Action } from "@/game/engine";
+import { TUTORIAL } from "@/game/content";
+import { reducer, saveGame, tickSeconds, type Action } from "@/game/engine";
 import { guideFor } from "./guide";
 import type { GameState } from "@/game/types";
 
@@ -52,11 +52,13 @@ export function GameProvider({
   // The world waits while the debrief is on screen.
   const paused = !!state.debrief;
 
+  // First-time mode starts with a slower clock (tickSeconds).
+  const perTick = tickSeconds(state);
   useEffect(() => {
     if (state.speed === 0 || state.phase !== "playing" || panel || held || paused) return;
-    const id = setInterval(() => dispatch({ type: "tick" }), (TICK_SECONDS * 1000) / state.speed);
+    const id = setInterval(() => dispatch({ type: "tick" }), (perTick * 1000) / state.speed);
     return () => clearInterval(id);
-  }, [state.speed, state.phase, panel, held, paused]);
+  }, [state.speed, state.phase, panel, held, paused, perTick]);
 
   useEffect(() => {
     // Save every few ticks, and always the moment the game ends, so a lost game

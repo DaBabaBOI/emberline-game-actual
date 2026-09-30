@@ -35,8 +35,16 @@ export interface Tile {
   dug?: number;
 }
 
+export type RaidKind = "band" | "party" | "fire";
+export type RaidResponse = "fight" | "hide" | "tribute";
+
 export interface Raid {
   strength: number;
+  // What kind of raiders (older saves: a war party), and how the player answered.
+  kind?: RaidKind;
+  response?: RaidResponse;
+  // The fight began (the raiders arrived and the player chose to fight).
+  fightStart?: number;
   fromTile: number;
   targetTile: number;
   // Where the warriors march out to meet them.
@@ -69,7 +77,8 @@ export interface Stats {
   raidsLost: number;
   // Seconds (ticks) the land spent below the best-ending Sustainability.
   lowLandTicks: number;
-  deaths: { famine: number; disease: number; fire: number; battle: number };
+  // `accident`: people dropped into the sea or lost in the fog (missing in older saves).
+  deaths: { famine: number; disease: number; fire: number; battle: number; accident?: number };
 }
 
 // What the debrief shows: frozen when the era ends (or the game does).
@@ -120,7 +129,7 @@ export type CultureId =
   | "farmers"
   | "mariners";
 
-export type DifficultyId = "easy" | "normal" | "hard";
+export type DifficultyId = "first" | "easy" | "normal" | "hard";
 
 export interface BuildingDef {
   id: string;
@@ -236,7 +245,7 @@ export interface GameState {
   version: number;
   phase: "playing" | "gameover";
   // Why the game ended: everyone starved, or everyone got so sad they left.
-  lostTo: "famine" | "unrest" | "conquest" | "behind" | null;
+  lostTo: "famine" | "unrest" | "conquest" | "collapse" | "behind" | null;
   seed: number;
   culture: CultureId;
   difficulty: DifficultyId;
@@ -261,6 +270,21 @@ export interface GameState {
   unrestTicks: number;
   // When the current era's clock started (the end of the tutorial, or entering the era).
   eraStartTick?: number;
+  // People picked up and dropped: who is helping at which building (until tick),
+  // and who wandered into the fog and when they come back.
+  helpers?: Record<number, number>;
+  inFog?: { name: string; back: number }[];
+  // Chief XP (only goes up) and level (missing in older saves: 0 and 1).
+  xp?: number;
+  chiefLevel?: number;
+  // When the next small moment happens (missing in older saves).
+  nextMomentTick?: number;
+  lastMoment?: string;
+  // Famine emergency measures (missing in older saves).
+  forageReadyAt?: number;
+  seedEatenUntil?: number;
+  // Ticks spent with Sustainability below COLLAPSE.level (missing in older saves).
+  collapseTicks?: number;
   // How worn out the land is: counts up while Sustainability is below LAND.strainLevel.
   strainTicks: number;
   // How many people are sick right now, and how many the current outbreak has killed.
@@ -309,6 +333,9 @@ export interface GameState {
   forestBaseline: number;
   soldiers: number;
   raid: Raid | null;
+  // Raids seen so far (the first is always a small band), and a dev-chosen next kind.
+  raidsSeen?: number;
+  devNextRaid?: RaidKind;
   nextRaidTick: number;
   meters: Meters;
   modifiers: { sustainability: number; happiness: number };

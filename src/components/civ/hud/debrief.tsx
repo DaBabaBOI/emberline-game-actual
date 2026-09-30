@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ERAS, formatYear, LESSONS, METERS, METER_SDG, MIN_SUSTAINABILITY_FOR_BEST_ENDING, NEXT_ERA_POPULATION } from "@/game/content";
-import { clearSave, makeDebrief, readyForNextEra, secs } from "@/game/engine";
+import { ERAS, formatYear, LESSONS, METERS, METER_SDG, MIN_SUSTAINABILITY_FOR_BEST_ENDING } from "@/game/content";
+import { clearSave, currentGoal, makeDebrief, readyForNextEra, secs } from "@/game/engine";
 import type { Debrief as DebriefData } from "@/game/types";
 import { useGame } from "@/components/civ/game-provider";
+import { LeaderboardPanel } from "./online";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { cn } from "@/lib/utils";
 
@@ -51,7 +52,7 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
   // Older saves may have stored a land-only verdict on a loss.
   const tier = TIERS[d.kind === "loss" ? "lost" : d.tier];
   const deaths = d.stats.deaths;
-  const lost = Math.round(deaths.famine + deaths.disease + deaths.fire + deaths.battle);
+  const lost = Math.round(deaths.famine + deaths.disease + deaths.fire + deaths.battle + (deaths.accident ?? 0));
   const who = state.nation ?? "Your people";
   const heading =
     d.kind === "era"
@@ -64,6 +65,8 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
             ? "Conquered"
             : state.lostTo === "behind"
               ? "Left behind"
+            : state.lostTo === "collapse"
+              ? "The land gave out"
               : "Famine";
   const sub =
     d.kind === "era"
@@ -76,6 +79,8 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
           ? `${who} were too unhappy for too long and wandered away in ${formatYear(d.year)}.`
           : state.lostTo === "behind"
           ? `${who} never learned to farm. By ${formatYear(d.year)} the peoples around them had moved on, and they were left behind.`
+          : state.lostTo === "collapse"
+          ? `${who} used up the land that fed them. With the forests gone and the soil worn out, they had to leave in ${formatYear(d.year)}.`
           : `${who} ran out of food in ${formatYear(d.year)}.`;
 
   return (
@@ -91,6 +96,8 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
                     ? "shield"
                     : state.lostTo === "behind"
                       ? "warning"
+                    : state.lostTo === "collapse"
+                      ? "leaf"
                       : "skull"
                 : "star"
             }
@@ -104,7 +111,11 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
 
         <div className={cn("font-pixel mt-4 border-l-4 px-3 py-2", tier.tone)} data-testid="ending-tier">
           <div className="text-lg font-semibold">{tier.title}</div>
-          <p className="text-sm">{tier.text}</p>
+          <p className="text-sm">
+            {d.kind === "loss" && state.lostTo === "collapse"
+              ? "People can't outgrow the land that feeds them. A village that lasts takes only what the forest and soil can grow back."
+              : tier.text}
+          </p>
         </div>
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -132,6 +143,7 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
               <li className="text-xs text-stone-500">
                 famine {Math.round(deaths.famine)} · sickness {Math.round(deaths.disease)} · fire {Math.round(deaths.fire)} ·
                 battle {Math.round(deaths.battle)}
+                {deaths.accident ? ` · accidents ${Math.round(deaths.accident)}` : ""}
               </li>
               <Row label="Raids lost" value={d.stats.raidsLost} bad={d.stats.raidsLost > 0} />
             </ul>
@@ -179,6 +191,9 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
           </>
         )}
 
+        {/* The story is over (won or lost): post it to the leaderboard. */}
+        {d.kind !== "era" && <LeaderboardPanel />}
+
         <div className="mt-5 flex flex-wrap justify-end gap-2">
           {d.kind === "final" && (
             <button
@@ -222,6 +237,21 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
 
 // The call to move on: shown once the Stone Age goals are met, with a hint
 // on what's missing once Agriculture is known.
+// Always one line saying what to aim for next (hidden while the tutorial or a
+// guided step is already telling the player).
+export function GoalLine() {
+  const { state } = useGame();
+  const goal = currentGoal(state);
+  if (!goal) return null;
+  return (
+    <div className="pointer-events-none flex justify-center">
+      <span className="pixel-panel-dark font-pixel max-w-[min(92vw,640px)] px-3 py-1 text-center text-xs" data-testid="goal-line">
+        {goal}
+      </span>
+    </div>
+  );
+}
+
 export function NextEraPrompt() {
   const { state, dispatch } = useGame();
   if (state.era !== 0 || state.debrief || state.phase !== "playing") return null;
@@ -238,11 +268,7 @@ export function NextEraPrompt() {
         >
           Your people are ready: enter the Ancient era
         </button>
-      ) : (
-        <span className="pixel-panel-dark font-pixel px-3 py-1 text-xs">
-          Grow to {NEXT_ERA_POPULATION} people to enter the Ancient era (now {Math.floor(state.population)})
-        </span>
-      )}
+      ) : null}
     </div>
   );
 }
