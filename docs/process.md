@@ -26,6 +26,16 @@ flowchart LR
 - **Every feature can be tested on demand.** Each new mechanic gets a dev-panel
   button, so we can trigger a raid, a spark or the legion without waiting.
 
+### Using an AI coding assistant
+
+We built Emberline with an AI coding assistant (Claude Code), and most of the
+code was written by it. The team set the direction and made the decisions: what
+the game is and its rules (`AGENTS.md`), which option to take for each feature,
+what felt wrong in playtests, and whether each change was good enough to merge.
+The assistant wrote and tested the code, ran the balance bot and drafted the
+documentation, which we reviewed. The "How we built this" section of the
+[main README](../README.md) says the same.
+
 ## 2. Problems we hit, and how we solved them
 
 For each problem we used the same approach: **what did the player see → what
