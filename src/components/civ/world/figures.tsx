@@ -16,6 +16,8 @@ export interface Agent {
   hair: string;
   phase: number;
   sitting?: boolean;
+  // Working at a building (dropped there to help): hoeing or chopping.
+  working?: boolean;
   // 0–1: how far the figure has toppled over (fire victims).
   fallen?: number;
 }
@@ -89,6 +91,8 @@ export function Figures({
     for (let i = 0; i < n; i++) {
       const a = list[i];
       const swing = a.moving ? Math.sin(t * 9 + a.phase) * 0.6 : 0;
+      // Working: both arms raise and bring a tool down, over and over.
+      const work = a.working && !a.moving ? -1.3 + Math.max(0, Math.sin(t * 5 + a.phase)) * 1.1 : null;
       const bob = a.moving ? Math.abs(Math.sin(t * 9 + a.phase)) * 0.015 : 0;
       // Sitting: hips drop to the ground, legs point forward, hands reach out.
       fig.position.set(a.x, a.y + bob - (a.sitting ? 0.15 * a.scale : 0), a.z);
@@ -115,7 +119,7 @@ export function Figures({
         local.position.set(0.035 * side, 0.19 - 0.09 * Math.cos(legAngle), -0.09 * Math.sin(legAngle));
         put(legs.current, i * 2 + k);
 
-        const armSwing = a.sitting ? -0.75 : -swing * side * 0.8;
+        const armSwing = work !== null ? work : a.sitting ? -0.75 : -swing * side * 0.8;
         local.rotation.set(armSwing, 0, side * 0.12);
         local.position.set(0.078 * side, 0.37 - 0.075 * Math.cos(armSwing), -0.075 * Math.sin(armSwing));
         put(arms.current, i * 2 + k);

@@ -82,6 +82,10 @@ export function PickUp({
       e.preventDefault();
       grabStore.held = w;
       w.held = true;
+      // Picked up from the fire or from work: they stop sitting or working.
+      w.sitting = false;
+      w.working = false;
+      w.sitAt = null;
       el.style.cursor = "grabbing";
       live.current.onHolding(true);
     };
@@ -194,7 +198,14 @@ function land(w: Walker, outcome: DropOutcome, tile: Tile | null, tiles: Tile[],
       }
       if (tile) w.y = tile.height;
       w.moving = false;
-      w.wait = outcome === "help" ? 6 : 1.5;
+      w.sitting = false;
+      w.sitAt = null;
+      if (outcome === "help" && tile) {
+        // Get to work for as long as the help lasts, facing the building.
+        w.working = true;
+        w.heading = Math.atan2(tile.x - w.x, tile.z - w.z);
+        w.wait = DROP.helpTicks * TICK_SECONDS;
+      } else w.wait = 1.5;
     }
   }
 }

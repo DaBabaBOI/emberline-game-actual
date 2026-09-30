@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-30",
     items: [
+      "Someone you drop on a field or workplace now gets to work there (hoeing, chopping) instead of sitting down.",
       "In a game, the accessibility settings (dark mode, font, high contrast, larger text) are now in the Menu, so the Settings button no longer covers the Advancements button.",
     ],
   },

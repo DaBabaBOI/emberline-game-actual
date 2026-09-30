@@ -124,6 +124,7 @@ function stepWalker(w: Walker, dt: number, ground: Ground, pickTarget: () => Til
     w.wait -= dt;
     if (w.wait <= 0) {
       w.sitting = false;
+      w.working = false;
       retarget(w, ground, pickTarget);
       w.wait = 1 + Math.random() * 3;
     }
