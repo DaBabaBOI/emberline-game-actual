@@ -8,6 +8,8 @@ import type {
   DifficultyId,
   DisasterKind,
   EventCard,
+  KingdomId,
+  LandmarkId,
   MeterKey,
   RaidKind,
   Resources,
@@ -20,7 +22,8 @@ export const ERAS = [
   { name: "Ancient", startYear: -3000, yearsPerTick: 3, currency: "Bronze coins" },
   // Classical: a year a tick, so the great drought (DROUGHT.warnYear) comes about 15 minutes in.
   { name: "Classical", startYear: -500, yearsPerTick: 1, currency: "Silver coins" },
-  { name: "Medieval & Renaissance", startYear: 1000, yearsPerTick: 4, currency: "Florins" },
+  // Medieval: 0.6 years a tick, so the Black Death (PLAGUE.warnYear) comes about 14 minutes in.
+  { name: "Medieval & Renaissance", startYear: 1000, yearsPerTick: 0.6, currency: "Florins" },
   { name: "Industrial & Modern", startYear: 1750, yearsPerTick: 1, currency: "Banknotes" },
   { name: "Future & Space", startYear: 2050, yearsPerTick: 0.5, currency: "Credits" },
 ];
@@ -76,6 +79,44 @@ export const TRAIN_COST = { food: 8, wood: 4 };
 export const SPEAR_COST = { wood: 4 };
 export const SPEARMAN_STRENGTH = 1.5;
 
+// The landmark that takes a town into the Medieval era: chosen after the great
+// drought, built in three stages (each paid for, then `stageTicks` of work).
+// The first stage's cost is also the building's cost. Its lasting bonus only
+// counts once all three stages are done.
+export const LANDMARKS: Record<LandmarkId, { name: string; icon: IconId; bonus: string; stages: Partial<Resources>[] }> = {
+  library: {
+    name: "Great Library",
+    icon: "book",
+    bonus: "+Knowledge every day, +20 literacy, and every advancement costs 10% less.",
+    stages: [
+      { stone: 30, wood: 20, currency: 60 },
+      { stone: 40, currency: 90 },
+      { stone: 40, wood: 20, currency: 120 },
+    ],
+  },
+  cathedral: {
+    name: "Cathedral",
+    icon: "church",
+    bonus: "+12 happiness, pilgrims bring coins, and the sick are cared for (they get better faster).",
+    stages: [
+      { stone: 50, wood: 30 },
+      { stone: 70, wood: 20, currency: 40 },
+      { stone: 80, currency: 80 },
+    ],
+  },
+  harbour: {
+    name: "Grand Harbour",
+    icon: "anchor",
+    bonus: "Coins from sea trade, fishing +25%, and ships cost half and sail faster. More ships also means more sickness from overseas.",
+    stages: [
+      { wood: 50, stone: 20 },
+      { wood: 40, stone: 40, currency: 50 },
+      { stone: 50, currency: 90 },
+    ],
+  },
+};
+export const LANDMARK = { stageTicks: 60, libraryKnowledge: 0.3, libraryLiteracy: 20, libraryDiscount: 0.9, cathedralMood: 12, cathedralCoins: 0.3, cathedralRecover: 0.03, harbourCoins: 0.6, harbourFish: 1.25 };
+
 export const BUILDINGS: BuildingDef[] = [
   {
     id: "campfire",
@@ -104,6 +145,7 @@ export const BUILDINGS: BuildingDef[] = [
   },
   {
     id: "gatherer",
+    overseas: true,
     name: "Gatherer's Camp",
     icon: "basket",
     description: "Collects food. Bonus on berry bushes.",
@@ -118,6 +160,7 @@ export const BUILDINGS: BuildingDef[] = [
   },
   {
     id: "farm",
+    overseas: true,
     name: "Farmland",
     icon: "wheat",
     description: "Tilled fields of wild grain. Lots of food, but clears the land.",
@@ -159,6 +202,7 @@ export const BUILDINGS: BuildingDef[] = [
   },
   {
     id: "woodcutter",
+    overseas: true,
     name: "Woodcutter",
     icon: "axe",
     description: "Chops wood from the forest around it. Wood only comes from trees that are still standing.",
@@ -172,6 +216,7 @@ export const BUILDINGS: BuildingDef[] = [
   },
   {
     id: "fishing",
+    overseas: true,
     name: "Fishing Spot",
     icon: "fish",
     description: "Food from the sea. Must touch water; bonus near fish.",
@@ -229,6 +274,7 @@ export const BUILDINGS: BuildingDef[] = [
   },
   {
     id: "pen",
+    overseas: true,
     name: "Livestock Pen",
     icon: "sheep",
     description: "Goats and sheep behind a fence. A little milk and meat, and later their hides and wool make warm clothes.",
@@ -447,6 +493,137 @@ export const BUILDINGS: BuildingDef[] = [
     requires: "philosophy",
     produces: { knowledge: 0.15 },
   },
+  // ---- Landmarks (one chosen after the drought; the others in the Medieval era)
+  {
+    id: "library",
+    name: "Great Library",
+    icon: "book",
+    description: "Halls of scrolls and books copied by hand, open to scholars from every land. Built in three stages.",
+    gain: "When finished: Knowledge every day, +20 literacy, advancements cost 10% less",
+    landCost: "Nothing from the land, but a great deal of stone and silver",
+    landImpact: 0,
+    era: 2,
+    cost: LANDMARKS.library.stages[0],
+    terrain: ["grass", "steppe", "hills"],
+    landmark: true,
+    unique: true,
+    produces: { knowledge: LANDMARK.libraryKnowledge },
+  },
+  {
+    id: "cathedral",
+    name: "Cathedral",
+    icon: "church",
+    description: "A great church of stone and coloured glass that takes a whole town to build. Built in three stages.",
+    gain: "When finished: +12 happiness, coins from pilgrims, the sick get better faster",
+    landCost: "A hillside of stone is cut away for it",
+    landImpact: 1,
+    era: 2,
+    cost: LANDMARKS.cathedral.stages[0],
+    terrain: ["grass", "steppe", "hills"],
+    landmark: true,
+    unique: true,
+    produces: { currency: LANDMARK.cathedralCoins },
+  },
+  {
+    id: "harbour",
+    name: "Grand Harbour",
+    icon: "anchor",
+    description: "Stone piers, warehouses and a lighthouse, where ships from every coast tie up. Built in three stages.",
+    gain: "When finished: coins from sea trade, fishing +25%, ships cost half and sail faster",
+    landCost: "Ships from far away bring sickness with them",
+    landImpact: 1,
+    era: 2,
+    cost: LANDMARKS.harbour.stages[0],
+    terrain: ["beach", "grass", "steppe"],
+    needsWaterNeighbor: true,
+    landmark: true,
+    unique: true,
+    produces: { currency: LANDMARK.harbourCoins },
+  },
+  // ---- Medieval era -------------------------------------------------------
+  {
+    id: "castle",
+    name: "Castle",
+    icon: "castle",
+    description: "A stone keep and high walls on strong ground, where the knights live.",
+    gain: "+15 defense and room for 10 more warriors",
+    landCost: "Takes a hillside of stone, and the Eastern Reach sees it as a threat",
+    landImpact: 1,
+    era: 3,
+    cost: { stone: 60, wood: 20, currency: 40 },
+    terrain: ["hills", "grass", "steppe"],
+    requires: "castles",
+  },
+  {
+    id: "windmill",
+    name: "Windmill",
+    icon: "windmill",
+    description: "Sails that catch the wind and turn the millstones. No river needed.",
+    gain: "Fields within 2 tiles give 20% more, and +10 energy",
+    landCost: "Nothing from the land: the wind is free",
+    landImpact: 0,
+    era: 3,
+    cost: { wood: 25, stone: 10 },
+    terrain: ["grass", "steppe", "hills"],
+    requires: "windmills",
+  },
+  {
+    id: "guildhall",
+    name: "Guild Hall",
+    icon: "scales",
+    description: "Where the masters of each craft meet, train apprentices and set the prices.",
+    gain: "Coins, and every Guild Hall makes the smithies' tools 10% better",
+    landCost: "Nothing from the land, but the guilds keep newcomers out (−3 happiness each)",
+    landImpact: 0,
+    era: 3,
+    cost: { wood: 20, stone: 25, currency: 40 },
+    terrain: ["grass", "steppe"],
+    requires: "guilds",
+    produces: { currency: 0.5 },
+  },
+  {
+    id: "university",
+    name: "University",
+    icon: "scroll",
+    description: "Masters and students from many lands, reading, copying and arguing.",
+    gain: "Knowledge and +20 literacy",
+    landCost: "Nothing from the land",
+    landImpact: 0,
+    era: 3,
+    cost: { stone: 40, currency: 60 },
+    terrain: ["grass", "steppe", "hills"],
+    requires: "universities",
+    produces: { knowledge: 0.25 },
+  },
+  {
+    id: "shipyard",
+    name: "Shipyard",
+    icon: "boat",
+    description: "Slipways where ocean-going ships are built from the tallest oaks.",
+    gain: "Send ships to find islands overseas, meet the kingdoms and trade",
+    landCost: "Every ship is built from old trees",
+    landImpact: 1,
+    era: 3,
+    cost: { wood: 40, stone: 10 },
+    terrain: ["beach", "grass", "steppe"],
+    needsWaterNeighbor: true,
+    requires: "navigation",
+  },
+  {
+    id: "tradingpost",
+    name: "Trading Post",
+    icon: "coin",
+    description: "A wooden store and a jetty on a far island. Only on an island your ships have found.",
+    gain: "Coins from trade overseas",
+    landCost: "Ships carry sickness home as well as goods",
+    landImpact: 0,
+    era: 3,
+    cost: { wood: 20, currency: 20 },
+    terrain: ["beach", "grass", "steppe"],
+    requires: "navigation",
+    overseas: true,
+    produces: { currency: 0.5 },
+  },
 ];
 
 export const BUILDINGS_BY_ID = Object.fromEntries(BUILDINGS.map((b) => [b.id, b]));
@@ -463,17 +640,11 @@ export const BRANCHES: { id: Branch; name: string; color: string }[] = [
 type NodeSeed = [id: string, name: string, branch: Branch, era: number, cost: number, requires: string[], description: string];
 
 const LATER_NODES: NodeSeed[] = [
-  ["universities", "Universities", "knowledge", 3, 0, ["philosophy"], "Scholars gather from every land."],
-  ["cathedrals", "Great Cathedrals", "construction", 3, 0, ["concrete"], "Flying buttresses and stained glass."],
-  ["windmills", "Windmills", "energy", 3, 0, ["watermill"], "Wind grinds grain and pumps water."],
-  ["caravels", "Ocean Ships", "transport", 3, 0, ["roads"], "Reach the far islands."],
-  ["gunpowder", "Gunpowder", "military", 3, 0, ["legions"], "Cannons change warfare."],
-  ["printing", "Printing Press", "culture", 3, 0, ["coinage"], "Books for everyone. Literacy soars."],
   ["electricity", "Electricity", "knowledge", 4, 0, ["universities"], "Power lines and light bulbs."],
-  ["steel", "Steel Frames", "construction", 4, 0, ["cathedrals"], "Skyscrapers and bridges."],
+  ["steel", "Steel Frames", "construction", 4, 0, ["castles"], "Skyscrapers and bridges."],
   ["steam", "Steam & Coal", "energy", 4, 0, ["windmills"], "Factories boom. So does pollution."],
-  ["railways", "Railways", "transport", 4, 0, ["caravels"], "Trains link the whole island."],
-  ["tanks", "Mechanized Armies", "military", 4, 0, ["gunpowder"], "Tanks, planes and radar."],
+  ["railways", "Railways", "transport", 4, 0, ["navigation"], "Trains link the whole island."],
+  ["tanks", "Mechanized Armies", "military", 4, 0, ["knights"], "Tanks, planes and radar."],
   ["computers", "Computers", "culture", 4, 0, ["printing"], "The information age begins."],
   ["ai", "Artificial Intelligence", "knowledge", 5, 0, ["electricity", "computers"], "Data centers and automated labs."],
   ["arcology", "Arcologies", "construction", 5, 0, ["steel"], "Cities in a single tower."],
@@ -778,6 +949,121 @@ export const TREE: TreeNode[] = [
     requires: ["barter-roads"],
     secret: true,
   },
+  // ---- Medieval era --------------------------------------------------------
+  {
+    id: "heavy-plough",
+    name: "Heavy Plough",
+    description: "An iron plough pulled by oxen turns heavy, wet soil. Fields give 25% more, and Farmland can be placed on forest (clearing it).",
+    branch: "energy",
+    era: 3,
+    cost: 50,
+    requires: ["watermill"],
+  },
+  {
+    id: "three-field",
+    name: "Three-Field Rotation",
+    description: "Grain, then beans, then a year of rest. Fields give 10% more and wear out the land half as much.",
+    branch: "energy",
+    era: 3,
+    cost: 60,
+    requires: ["heavy-plough"],
+  },
+  {
+    id: "windmills",
+    name: "Windmills",
+    description: "The wind turns the millstones, no river needed. Unlocks the Windmill.",
+    branch: "energy",
+    era: 3,
+    cost: 60,
+    requires: ["three-field"],
+    unlocks: ["windmill"],
+  },
+  {
+    id: "castles",
+    name: "Castles",
+    description: "Stone keeps and high walls. Unlocks the Castle.",
+    branch: "military",
+    era: 3,
+    cost: 60,
+    requires: ["legions"],
+    unlocks: ["castle"],
+  },
+  {
+    id: "knights",
+    name: "Knights",
+    description: "Armoured riders on war horses: each warrior fights four times as hard, but the horses eat (warriors need 50% more food).",
+    branch: "military",
+    era: 3,
+    cost: 70,
+    requires: ["castles"],
+  },
+  {
+    id: "guilds",
+    name: "Guilds",
+    description: "Craftsmen band together to train apprentices and keep standards. Unlocks the Guild Hall.",
+    branch: "culture",
+    era: 3,
+    cost: 50,
+    requires: ["wheel"],
+    unlocks: ["guildhall"],
+  },
+  {
+    id: "diplomacy",
+    name: "Diplomacy",
+    description: "Envoys, gifts and written treaties. A friendly kingdom can sign a treaty: it trades with you and never attacks.",
+    branch: "culture",
+    era: 3,
+    cost: 40,
+    requires: ["barter-roads"],
+  },
+  {
+    id: "universities",
+    name: "Universities",
+    description: "Scholars gather from every land. Unlocks the University.",
+    branch: "knowledge",
+    era: 3,
+    cost: 60,
+    requires: ["philosophy"],
+    unlocks: ["university"],
+  },
+  {
+    id: "printing",
+    name: "Printing Press",
+    description: "Books printed instead of copied by hand. +30% Knowledge and +15 literacy.",
+    branch: "knowledge",
+    era: 3,
+    cost: 90,
+    requires: ["universities"],
+  },
+  {
+    id: "quarantine",
+    name: "Quarantine",
+    description: "Keep ships and travellers waiting before they come ashore, and the sick apart from the well. Much less sickness from overseas.",
+    branch: "knowledge",
+    era: 3,
+    cost: 60,
+    requires: ["sanitation"],
+  },
+  {
+    id: "navigation",
+    name: "Ocean Ships",
+    description: "Deep hulls, the compass and sea charts. Unlocks the Shipyard: ships find islands overseas.",
+    branch: "transport",
+    era: 3,
+    cost: 50,
+    requires: ["wheel"],
+    unlocks: ["shipyard", "tradingpost"],
+  },
+  {
+    id: "far-shores",
+    name: "Far Shores",
+    description: "Secret: send 4 ships. +12 knowledge and +10 happiness.",
+    branch: "transport",
+    era: 3,
+    cost: 0,
+    requires: ["navigation"],
+    secret: true,
+  },
   ...LATER_NODES.map(
     ([id, name, branch, era, cost, requires, description]): TreeNode => ({
       id,
@@ -831,6 +1117,17 @@ export const ADVANCEMENT_GOALS: Record<string, Goal[]> = {
   roads: [{ label: "Send caravans", kind: "tally", key: "caravans", amount: 2 }],
   philosophy: [{ label: "Keep Knowledge unspent", kind: "stored", resource: "knowledge", amount: 40 }],
   legions: [{ label: "Beat raids", kind: "tally", key: "raidsWon", amount: 5 }],
+  "heavy-plough": [{ label: "Have Farmland", kind: "have", building: "farm", amount: 8 }],
+  "three-field": [{ label: "Store food at once", kind: "stored", resource: "food", amount: 300 }],
+  windmills: [{ label: "Have Farmland", kind: "have", building: "farm", amount: 10 }],
+  castles: [{ label: "Have Stone Walls", kind: "have", building: "walls", amount: 1 }],
+  knights: [{ label: "Have a Castle", kind: "have", building: "castle", amount: 1 }],
+  guilds: [{ label: "Have Bronze Smithies", kind: "have", building: "smithy", amount: 2 }],
+  diplomacy: [{ label: "Send gifts to a kingdom", kind: "tally", key: "gifts", amount: 1 }],
+  universities: [{ label: "Have an Academy", kind: "have", building: "academy", amount: 1 }],
+  printing: [{ label: "Have a University", kind: "have", building: "university", amount: 1 }],
+  quarantine: [{ label: "Have Healer's Huts", kind: "have", building: "healer", amount: 2 }],
+  navigation: [{ label: "Have Fishing Spots", kind: "have", building: "fishing", amount: 2 }],
 };
 
 // Elder Ama's guided step right after each advancement. With `build`, the hand
@@ -863,6 +1160,17 @@ export const AFTER_STEPS: Record<string, AfterStep> = {
   roads: { text: "Stone roads link the town. Trade brings 25% more coins, and caravans and scouts cost less." },
   philosophy: { build: "academy", text: "Build an Academy: teachers and students ask questions nobody asked before, and Knowledge grows." },
   legions: { text: "Iron swords and armour: every warrior now fights three times as hard. Iron needs even more charcoal, so every smithy burns more wood." },
+  "heavy-plough": { build: "farm", text: "The heavy plough turns even wet, heavy soil. Fields give 25% more, and Farmland can now go on forest, clearing it. More bread, fewer trees: choose where carefully." },
+  "three-field": { text: "Grain, then beans, then a year of rest: every field gets its turn to recover. Fields give 10% more and wear out the land half as much." },
+  windmills: { build: "windmill", text: "Build a Windmill near the fields: the wind grinds the grain, and fields within 2 tiles give 20% more. No river, no wood to burn." },
+  castles: { build: "castle", text: "Build a Castle on strong ground: +15 defense and room for 10 more warriors. The Eastern Reach will not like it." },
+  knights: { text: "Knights on war horses: every warrior now fights four times as hard. But horses eat, so every warrior needs half as much food again." },
+  guilds: { build: "guildhall", text: "Build a Guild Hall: the crafts organise, make better tools and bring in coins. But the guilds keep newcomers out, and people grumble." },
+  diplomacy: { text: "We can sign treaties now. Open Kingdoms below: when a kingdom is friendly, a treaty means trade every day and no war." },
+  universities: { build: "university", text: "Build a University: scholars come from every land, and literacy and Knowledge grow." },
+  printing: { text: "Books can be printed instead of copied by hand, hundreds at a time. +30% Knowledge and +15 literacy." },
+  quarantine: { text: "Ships wait offshore before they land, and the sick are kept apart. Sickness from overseas will do far less harm." },
+  navigation: { build: "shipyard", text: "Build a Shipyard on the coast, then press Ship below: our ships will find islands overseas, meet the kingdoms and bring back trade." },
 };
 
 // Event cards are trade-offs: every choice gains something and costs something.
@@ -1076,6 +1384,42 @@ export const EVENTS: EventCard[] = [
       { label: "Simple homes for everyone (−30 stone, +10 happiness)", effect: { resources: { stone: -30 }, happiness: 10 } },
     ],
     realWorld: "Towns that grow without homes for everyone end up with crowded slums. SDG 11.1 asks for safe, affordable housing for all.",
+  },
+  {
+    id: "reach-tribute",
+    title: "Envoys from the Eastern Reach",
+    icon: "crown",
+    body: "Riders from the Eastern Reach demand a yearly payment \"for the peace\". Pay, and their king is pleased. Refuse, and he may send his army.",
+    era: 3,
+    choices: [
+      { label: "Pay them (−50 coins, the Reach is pleased)", effect: { resources: { currency: -50 }, mood: { reach: 20 } } },
+      { label: "Refuse (the Reach is angry, +5 happiness)", effect: { mood: { reach: -25 }, happiness: 5 } },
+    ],
+    realWorld: "Paying for peace, or refusing, is a choice rulers have faced for thousands of years. SDG 16 is about peaceful societies and strong institutions.",
+  },
+  {
+    id: "steppe-grain",
+    title: "A hungry neighbour",
+    icon: "wheat",
+    body: "The harvest failed on the Silk Steppe. Their envoy asks if we can spare grain for their people.",
+    era: 3,
+    choices: [
+      { label: "Send grain (−60 food, the Steppe is grateful)", effect: { resources: { food: -60 }, mood: { steppe: 25 } } },
+      { label: "Keep it for ourselves (the Steppe remembers)", effect: { mood: { steppe: -15 } } },
+    ],
+    realWorld: "Neighbours helping each other through bad harvests builds trust that lasts. Today, food aid still crosses borders when harvests fail.",
+  },
+  {
+    id: "wool-trade",
+    title: "The wool merchants",
+    icon: "sheep",
+    body: "Cloth merchants will pay well for wool. More sheep would mean more coins, but the flocks would graze the hills bare.",
+    era: 3,
+    choices: [
+      { label: "More sheep (+100 coins, −6 land health)", effect: { resources: { currency: 100 }, sustainability: -6 } },
+      { label: "Keep the flocks as they are (no coins)", effect: { happiness: 2 } },
+    ],
+    realWorld: "Wool made some medieval towns rich, and overgrazing wore down hillsides. Grazing is still a big cause of land degradation today.",
   },
 ];
 
@@ -1318,6 +1662,30 @@ export const LESSONS: { id: string; title: string; text: string; sdg: string }[]
     sdg: "SDG 15.3: restore degraded land and soil",
   },
   {
+    id: "clearing",
+    title: "Fields where the forest stood",
+    text: "The heavy plough lets us farm land that was forest. Every field feeds families, but every tree cut is shade, rain and animals lost. Clear only what we need.",
+    sdg: "SDG 15.2: stop deforestation and restore forests",
+  },
+  {
+    id: "peace",
+    title: "Neighbours, not enemies",
+    text: "A treaty with a neighbour is worth more than a castle. Gifts, fair trade and help in hard times turn rivals into friends, and friends don't send armies.",
+    sdg: "SDG 16.1: reduce violence everywhere",
+  },
+  {
+    id: "oceans",
+    title: "The sea connects us",
+    text: "Our ships carry grain, cloth and news across the sea. They carry sickness too, and they are built from our oldest trees. The sea gives much, but it is not endless.",
+    sdg: "SDG 14: life below water",
+  },
+  {
+    id: "plague",
+    title: "The great sickness",
+    text: "The sickness came on ships, with rats and fleas and sick sailors. Towns that kept ships waiting, kept the sick apart and kept their streets clean lost fewer people. We can't stop every sickness, but we can be ready.",
+    sdg: "SDG 3.d: early warning and preparing for health risks",
+  },
+  {
     id: "drought",
     title: "Ready for dry years",
     text: "Droughts come to every land sooner or later. Towns that store grain, save water and keep their forests standing get through them. Those that don't, suffer.",
@@ -1332,6 +1700,12 @@ export const ERA_INTROS: Record<number, { id: string; title: string; text: strin
     title: "Welcome to the Classical era",
     text: "We beat Rome, and our coins travel far. Our village is becoming a town, and towns need clean water, drains and roads. Traders will come from across the sea. But the old stories warn of a great drought that comes once in a lifetime. Dig wells, store grain and keep the forests standing.",
     sdg: "SDG 11.3: plan towns and cities that can last",
+  },
+  3: {
+    id: "era-3",
+    title: "Welcome to the Middle Ages",
+    text: "Our great landmark stands, and our town is known across the sea. Two kingdoms watch us: the Silk Steppe and the Eastern Reach. Keep them friendly with gifts and treaties, or build castles to hold them off. New ploughs can feed more of us, but only by clearing the forest. And sailors tell of a terrible sickness spreading from port to port. When it comes, it will come by ship.",
+    sdg: "SDG 16: peace, and SDG 3: health for everyone",
   },
 };
 
@@ -1376,6 +1750,18 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
   philosophy: { bg: "dusk", actors: ["elder", "person", "person"], item: "column", lines: ["In the shade of the columns, a teacher asked: why?", "The students argued until the sun went down.", "Asking questions is how new knowledge begins."] },
   legions: { bg: "night", actors: ["person", "person"], item: "sword", lines: ["A new ore, heated hotter than bronze ever needed.", "Hammered while glowing, it became iron.", "Iron swords are harder still. But they eat charcoal."] },
   "silk-secret": { bg: "sea", actors: ["person"], item: "coin", lines: ["Our fifth caravan came back with a strange green stone.", "Jade, they called it, from lands far to the east.", "The world is bigger than any of us thought."] },
+  "heavy-plough": { bg: "dawn", actors: ["person", "sheep"], item: "plough", lines: ["The old plough only scratched the heavy, wet soil.", "An iron blade, a wheel, and oxen to pull it.", "Now it turns the earth over, deep and dark."] },
+  "three-field": { bg: "day", actors: ["elder", "person"], item: "wheat", lines: ["The same field, sown every year, gave less and less.", "Grain here, beans there, and one field left to rest.", "Each year the fields take turns, and the soil comes back."] },
+  windmills: { bg: "day", actors: ["person"], item: "windmill", lines: ["The wind bent the trees and tugged at the sails of the ships.", "Sails on a tower, turning a millstone.", "Grain ground by the wind, far from any river."] },
+  castles: { bg: "dusk", actors: ["person", "person"], item: "castle", lines: ["Wooden fences burned. Earth banks were climbed.", "Stone walls, thick and high, with a keep inside.", "Behind them, a few can hold off many."] },
+  knights: { bg: "day", actors: ["person", "person"], item: "horse", lines: ["Riders in iron, on horses bred to be strong.", "They charge faster than anyone can run.", "But a war horse eats as much as a family."] },
+  guilds: { bg: "day", actors: ["person", "elder"], item: "scales", lines: ["The weavers argued over prices, and the bakers over flour.", "They met in a hall and wrote down the rules of their craft.", "Masters teach apprentices, and the work gets better."] },
+  diplomacy: { bg: "day", actors: ["elder", "person"], item: "dove", lines: ["Envoys came from across the sea, carrying gifts.", "We sent our own back, with a letter sealed in wax.", "Words on a page can stop a war before it starts."] },
+  universities: { bg: "dusk", actors: ["person", "person", "elder"], item: "scroll", lines: ["Students came from far away to hear the masters.", "They lived together, read together and argued all night.", "A town full of scholars learns faster than any one of them."] },
+  printing: { bg: "day", actors: ["person"], item: "press", lines: ["Copying a book by hand took a scribe a whole year.", "Metal letters, ink and a press: a page in a moment.", "Soon there were books in every town."] },
+  quarantine: { bg: "sea", actors: ["elder", "person"], item: "anchor", lines: ["The sickness always seemed to arrive with the ships.", "So ships had to wait offshore before anyone landed.", "The waiting kept the sickness out. Other ports copied the idea."] },
+  navigation: { bg: "sea", actors: ["person", "person"], item: "boat", lines: ["A needle that always points north, floating in a bowl.", "Deep hulls and tall sails that can cross the open sea.", "Now our ships can sail beyond the edge of the map."] },
+  "far-shores": { bg: "sea", actors: ["person"], item: "spyglass", lines: ["Our fourth ship came back with strange fruit and stories.", "Islands, coasts and peoples nobody here had seen.", "The map keeps growing, and so do we."] },
 };
 
 // Ticks between two lessons, so they never pile up.
@@ -1603,8 +1989,8 @@ export const WEAR = {
   slows: 0.5,
   repairShare: 0.15,
   warnAt: 0.7,
-  busyBuildings: ["smithy", "quarry", "woodcutter", "watermill", "baths"],
-  sturdyBuildings: ["house", "townhouse", "walls", "granary", "school", "academy", "aqueduct", "well", "latrine", "elder", "healer"],
+  busyBuildings: ["smithy", "quarry", "woodcutter", "watermill", "baths", "windmill", "shipyard"],
+  sturdyBuildings: ["house", "townhouse", "walls", "granary", "school", "academy", "aqueduct", "well", "latrine", "elder", "healer", "castle", "university", "guildhall", "library", "cathedral"],
 };
 // Natural disasters. The first comes `firstAfter` ticks after the tutorial
 // (about 10 minutes), then one every `gap` + up to `spread` ticks. Each is warned
@@ -1643,8 +2029,58 @@ export const DISASTER_HITS = {
 };
 // Buildings of brick and stone (they crack in an earthquake) and of wood
 // (a storm can wreck them).
-export const STONE_BUILDINGS = ["house", "school", "smithy", "granary", "walls", "quarry", "elder", "healer", "well", "aqueduct", "townhouse", "latrine", "baths", "academy"];
-export const WOOD_BUILDINGS = ["hut", "gatherer", "woodcutter", "fishing", "pen", "warcamp", "watchfire", "forester", "market", "watermill"];
+export const STONE_BUILDINGS = ["house", "school", "smithy", "granary", "walls", "quarry", "elder", "healer", "well", "aqueduct", "townhouse", "latrine", "baths", "academy", "castle", "guildhall", "university"];
+export const WOOD_BUILDINGS = ["hut", "gatherer", "woodcutter", "fishing", "pen", "warcamp", "watchfire", "forester", "market", "watermill", "windmill", "shipyard", "tradingpost"];
+
+// ---- Medieval era ---------------------------------------------------------
+// The two kingdoms: how they feel about us at first. Mood runs from -100 to 100:
+// `friendly` or more is friendly, `hostile` or less is hostile (their armies
+// raid us); in between they are wary. Mood drifts back toward 0 by `drift` a
+// tick (a treaty holds it at `treatyFloor` or more). A gift costs `gift.coins`
+// (more each time) and waits `gift.wait` ticks; a treaty costs `treaty.coins`.
+export const KINGDOMS: Record<KingdomId, { name: string; start: number; blurb: string }> = {
+  steppe: { name: "the Silk Steppe", start: 25, blurb: "Traders and horse herders. They like silver and fair deals." },
+  reach: { name: "the Eastern Reach", start: -10, blurb: "A proud kingdom with a big army. They watch our walls." },
+};
+export const DIPLOMACY = {
+  friendly: 30,
+  hostile: -30,
+  drift: 0.03,
+  treatyFloor: 20,
+  gift: { coins: 40, more: 20, mood: 15, wait: 30 },
+  treaty: { coins: 60, trade: 0.25 },
+  caravanMood: 6,
+  castleMood: -12,
+  raidWonMood: 5,
+  closeHarbourMood: -15,
+};
+// Ships from a Shipyard (or the Grand Harbour): each costs `cost` and is back
+// `ticks` later. The first finds an island to settle, then the kingdoms'
+// coasts, then more islands; after that each voyage brings trade.
+export const SHIP = { cost: { wood: 30, food: 20 }, ticks: 50, coins: 70, mood: 5, meetMood: 10, secret: 4, secretKnowledge: 12, secretHappiness: 10 };
+// Overseas outposts: at most `buildings` buildings on each island your ships
+// have found, and only while a Shipyard or the Grand Harbour links them home.
+export const OUTPOST = { buildings: 4 };
+// Castles and knights.
+export const CASTLE = { defense: 15, warriors: 10 };
+export const KNIGHTS = { strength: 4, food: 1.5 };
+export const FARMING = { plough: 1.25, rotation: 1.1, rotationStrain: 0.5, windmill: 0.2, windmillReach: 2, windmillEnergy: 10 };
+export const LEARNING = { universityLiteracy: 20, printingKnowledge: 1.3, printingLiteracy: 15, guildTools: 0.1, guildMood: 3 };
+// The Black Death: warned of when the year comes, it arrives by ship
+// `warnTicks` later and lasts `ticks`. Each tick it kills `rate` of the people,
+// cut by how ready the town is (`protection`, at most `maxProtection`).
+export const PLAGUE = {
+  warnYear: 1340,
+  warnTicks: 90,
+  ticks: 180,
+  rate: 0.0033,
+  sickShare: 0.25,
+  maxProtection: 0.85,
+  protection: { quarantine: 0.25, closedEarly: 0.3, closedLate: 0.12, sanitation: 0.15, healer: 0.05, healersMax: 3, cathedral: 0.05 },
+  // Every ship link to the world (a harbour, shipyard, trading post or open
+  // treaty) makes it worse while the harbour stays open.
+  openRisk: 0.04,
+};
 
 // Buying something that leaves less wood than this shows a "save up" warning.
 export const LOW_WOOD_AFTER_BUY = 10;

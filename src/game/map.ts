@@ -14,6 +14,8 @@ export const ISLANDS = [
   { name: "Silk Steppe", x: 5, z: -9, radius: 12, sx: 1.3, sz: 0.8 },
   { name: "Eastern Reach", x: 30, z: 4, radius: 15, sx: 1, sz: 1.15 },
   { name: "Southern Isles", x: 5, z: 15, radius: 8, sx: 1.4, sz: 0.7 },
+  // Only found by ship (Medieval era): a small, misty island far to the north-east.
+  { name: "Misty Isle", x: 35, z: -17, radius: 6, sx: 1.4, sz: 0.8 },
 ];
 
 export const HOME_ISLAND = 0;
