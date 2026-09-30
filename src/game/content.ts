@@ -53,9 +53,9 @@ export const DIFFICULTIES: Record<
   DifficultyId,
   { name: string; blurb: string; consumption: number; famineLimit: number; unrestLimit: number; raiders: number }
 > = {
-  easy: { name: "Easy", blurb: "Forgiving. Famine takes a long time to hit.", consumption: 0.8, famineLimit: 45, unrestLimit: 60, raiders: 0.7 },
-  normal: { name: "Normal", blurb: "The intended experience.", consumption: 1, famineLimit: 30, unrestLimit: 40, raiders: 1 },
-  hard: { name: "Hard", blurb: "Hungry people, short patience, bold raiders.", consumption: 1.25, famineLimit: 18, unrestLimit: 25, raiders: 1.4 },
+  easy: { name: "Easy", blurb: "Forgiving. Famine takes a long time to hit.", consumption: 0.8, famineLimit: 120, unrestLimit: 60, raiders: 0.7 },
+  normal: { name: "Normal", blurb: "The intended experience.", consumption: 1, famineLimit: 80, unrestLimit: 40, raiders: 1 },
+  hard: { name: "Hard", blurb: "Hungry people, short patience, bold raiders.", consumption: 1.25, famineLimit: 55, unrestLimit: 25, raiders: 1.4 },
 };
 
 export const WARRIORS_PER_CAMP = 6;
@@ -1031,6 +1031,25 @@ export const RAID_RESPONSE = { fightTicks: 7, tributePerRaider: 4, tributeSooner
 // A watch fire on the shore sees raiders earlier and adds a little defense.
 export const WATCH_FIRE = { warnTicks: 8, defense: 1, maxDefense: 2, smoke: 1 };
 
+// Famine is hard but you can come back from it: while the stores are empty about
+// one person dies every 10 s (at 1x) and everyone is unhappy, and the tribe is lost
+// only if it lasts the difficulty's famineLimit (Normal: 80 ticks, 2 minutes).
+// Three emergency measures buy time, each at a price.
+export const FAMINE = {
+  deathsPerTick: 0.15,
+  happiness: 15,
+  // Strip the nearby forest for roots, nuts and game.
+  forage: { food: 15, forestLoss: 0.3, tiles: 3, cooldown: 40 },
+  // Slaughter a Livestock Pen's animals (the pen is gone).
+  pen: { food: 30 },
+  // Eat the grain saved for sowing: fields grow half as much for a while.
+  seed: { food: 25, farmLoss: 0.5, ticks: 80 },
+};
+// Land collapse: if Sustainability stays below `level` for `ticks` (80 ticks = 2 min
+// at 1x), the land can no longer feed the tribe and the game is lost. A countdown
+// warning shows the whole time; climbing back above the level winds it down.
+export const COLLAPSE = { level: 20, ticks: 80 };
+
 // Leaving the Stone Age: research Agriculture and grow to this many people.
 export const NEXT_ERA_POPULATION = 15;
 
@@ -1105,7 +1124,18 @@ export const LOW_WOOD_AFTER_BUY = 10;
 
 // After the tutorial, how long (ticks) before the first event, the first raid,
 // and the first disease that isn't the player's own choice. The early game is calm.
-export const GRACE_AFTER_TUTORIAL = { event: 150, raid: 300, disease: 300 };
+export const GRACE_AFTER_TUTORIAL = { event: 80, raid: 220, disease: 200 };
+
+// Time between event cards and between raids once they have started (ticks):
+// `base` plus up to `spread` more.
+export const EVENT_GAP = { base: 100, spread: 60 };
+export const RAID_GAP = { base: 170, spread: 80 };
+
+// Small moments: little things that happen every 30-60 s after the tutorial so
+// the island feels alive between the big events (a herd passes, a baby is born,
+// wind blows out a fire). Most depend on the state of the land. They are only a
+// line in the log, never a big moment, so QUIET_GAP ignores them.
+export const SMALL_MOMENTS = { firstAfter: 20, base: 20, spread: 20 };
 
 export const AFTER_TUTORIAL_RESERVE: Partial<Resources> = { food: 40, wood: 10 };
 // Of that reserve, this much food is in the stores from the very start (so the

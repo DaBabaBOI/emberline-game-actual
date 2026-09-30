@@ -12,20 +12,268 @@
   --primary-foreground: #ffffff;
   --secondary: #fde68a;
   --secondary-foreground: #78350f;
+  --panel-bg: #fdf6e3;
+  --panel-text: #2b2119;
+  --panel-border: #2b2119;
+  --text-body: #2b2119;
+  --text-muted: #4b5563;
+  --text-subtle: #6b7280;
+  --font-ui: var(--font-pixel), ui-monospace, monospace;
+  --font-body: "Segoe UI", sans-serif;
+  --font-display: var(--font-pixel), ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ecfdf5;
-    --muted: #062e21;
-    --muted-foreground: #a1a1aa;
-    --border: #134e37;
-    --primary: #34d399;
-    --primary-foreground: #052e1a;
-    --secondary: #78350f;
-    --secondary-foreground: #fde68a;
-  }
+html[data-theme="dark"] {
+  --background: #0b1220;
+  --foreground: #f8fafc;
+  --muted: #172033;
+  --muted-foreground: #dbeafe;
+  --border: #94a3b8;
+  --primary: #34d399;
+  --primary-foreground: #052e1a;
+  --secondary: #fbbf24;
+  --secondary-foreground: #1c1300;
+  --panel-bg: #111b2e;
+  --panel-text: #f8fafc;
+  --panel-border: #cbd5e1;
+  --text-body: #f8fafc;
+  --text-muted: #dbeafe;
+  --text-subtle: #cbd5e1;
+}
+
+html[data-font="sans"] {
+  --font-ui: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+html[data-font="serif"] {
+  --font-ui: Georgia, "Times New Roman", serif;
+  --font-display: Georgia, "Times New Roman", serif;
+}
+
+html.high-contrast {
+  --background: #000000;
+  --foreground: #ffffff;
+  --muted: #111111;
+  --muted-foreground: #f8fafc;
+  --border: #ffffff;
+  --primary: #ffe082;
+  --primary-foreground: #000000;
+  --secondary: #7dd3fc;
+  --secondary-foreground: #000000;
+  --panel-bg: #000000;
+  --panel-text: #ffffff;
+  --panel-border: #ffffff;
+}
+
+html.large-text {
+  font-size: 1.08em;
+}
+
+html[data-theme="dark"] main {
+  background: linear-gradient(180deg, #16223a 0%, #0b1220 30%, #111b2e 100%) !important;
+  color: var(--foreground) !important;
+}
+
+/* The landing and title screens carry their own pale sky gradients. Without
+ * replacing those, their light text disappears even though dark mode is on. */
+html[data-theme="dark"] :is([class*="from-sky-"], [class*="via-sky-"]) {
+  background-image: linear-gradient(180deg, #1e3a5f 0%, #111b2e 58%, #0b1220 100%) !important;
+}
+
+html[data-theme="dark"] .pixel-panel {
+  background-color: #111b2e !important;
+  color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 0.65);
+}
+
+html[data-theme="dark"] .pixel-panel-dark {
+  background: #09101d !important;
+  color: #f8fafc !important;
+  border-color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .pixel-btn {
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 3px 0 0 #020617;
+}
+
+/* Components supply their own text utilities, including arbitrary colours.
+ * In dark mode they must not be allowed to turn copy back into dark ink. */
+html[data-theme="dark"] body :is(a, button, label, p, li, span, div, input, textarea, select, option, h1, h2, h3, h4) {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] main,
+html[data-theme="dark"] main * {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] [aria-controls="accessibility-settings-panel"] {
+  background-color: #fbbf24 !important;
+  color: #111827 !important;
+  border-color: #fef3c7 !important;
+  box-shadow: 0 3px 0 0 #020617;
+}
+
+/* Light utility backgrounds are used throughout the light UI. Give them a
+ * consistent night surface rather than leaving isolated white cards behind. */
+html[data-theme="dark"] :is(
+  [class*="bg-[#fdf6e3]"],
+  [class*="bg-[#fbf7ef]"],
+  [class*="bg-[#f8e7bd]"],
+  [class*="bg-[#f5d98b]"]
+) {
+  background-color: #1e293b !important;
+}
+
+html[data-theme="dark"] .bg-white {
+  background-color: #1e293b !important;
+}
+
+html[data-theme="dark"] :is(
+  [class~="bg-amber-50"],
+  [class~="bg-amber-100"],
+  [class~="bg-amber-200"],
+  [class~="bg-amber-300"],
+  [class~="bg-amber-400"],
+  [class~="bg-amber-500"]
+) {
+  background-color: #854d0e !important;
+}
+
+html[data-theme="dark"] :is(
+  [class~="bg-emerald-100"],
+  [class~="bg-emerald-200"],
+  [class~="bg-emerald-400"],
+  [class~="bg-emerald-500"],
+  [class~="bg-emerald-600"],
+  [class~="bg-emerald-700"]
+) {
+  background-color: #047857 !important;
+}
+
+html[data-theme="dark"] :is(
+  [class~="bg-red-100"],
+  [class~="bg-red-500"],
+  [class~="bg-red-600"],
+  [class~="bg-red-700"]
+) {
+  background-color: #b91c1c !important;
+}
+
+html[data-theme="dark"] a,
+html[data-theme="dark"] p,
+html[data-theme="dark"] li,
+html[data-theme="dark"] span,
+html[data-theme="dark"] div,
+html[data-theme="dark"] label,
+html[data-theme="dark"] input,
+html[data-theme="dark"] button {
+  color: inherit;
+}
+
+html[data-theme="dark"] [class*="text-stone-"],
+html[data-theme="dark"] [class*="text-slate-"],
+html[data-theme="dark"] [class*="text-amber-"],
+html[data-theme="dark"] [class*="text-emerald-"],
+html[data-theme="dark"] [class*="text-red-"],
+html[data-theme="dark"] [class*="text-white"],
+html[data-theme="dark"] [class*="text-yellow-"] {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] :is(button, input, textarea, select):focus-visible {
+  outline: 3px solid #facc15;
+  outline-offset: 3px;
+}
+
+html[data-theme="dark"] [class*="text-amber-300"],
+html[data-theme="dark"] [class*="text-amber-200"],
+html[data-theme="dark"] [class*="text-amber-100"] {
+  color: #fde68a !important;
+}
+
+html[data-theme="dark"] [class*="text-emerald-300"],
+html[data-theme="dark"] [class*="text-emerald-200"],
+html[data-theme="dark"] [class*="text-emerald-100"] {
+  color: #a7f3d0 !important;
+}
+
+html[data-theme="dark"] [class*="text-red-300"],
+html[data-theme="dark"] [class*="text-red-200"],
+html[data-theme="dark"] [class*="text-red-100"] {
+  color: #fecaca !important;
+}
+
+html [class*="text-stone-600"],
+html [class*="text-stone-500"],
+html [class*="text-stone-700"],
+html [class*="text-slate-600"],
+html [class*="text-slate-500"],
+html [class*="text-stone-400"],
+html [class*="text-stone-800"] {
+  color: #2b2119 !important;
+}
+
+html[data-theme="dark"] [class*="text-stone-600"],
+html[data-theme="dark"] [class*="text-stone-500"],
+html[data-theme="dark"] [class*="text-stone-700"],
+html[data-theme="dark"] [class*="text-slate-600"],
+html[data-theme="dark"] [class*="text-slate-500"],
+html[data-theme="dark"] [class*="text-stone-400"],
+html[data-theme="dark"] [class*="text-stone-800"] {
+  color: #f8fafc !important;
+}
+
+html.high-contrast .pixel-btn,
+html.high-contrast .pixel-panel {
+  outline: 3px solid transparent;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.8), 0 6px 0 0 rgba(255, 255, 255, 0.8);
+}
+
+/* Component-level utility classes and inline tree labels can otherwise keep a
+ * low-contrast colour when this mode is enabled. Keep every piece of copy
+ * light on the dark high-contrast surface, then use ink on the few light
+ * controls. */
+html.high-contrast body :is(a, button, label, p, li, span, div, input, textarea, select, option) {
+  color: #ffffff !important;
+}
+
+html.high-contrast :is(
+  [class*="bg-white"],
+  [class*="bg-amber-"],
+  [class*="bg-emerald-300"],
+  [class*="bg-emerald-400"],
+  [class*="bg-emerald-500"],
+  [class*="bg-emerald-600"],
+  [class*="bg-[#f8e7bd]"],
+  [class*="bg-[#f5d98b]"],
+  [class*="bg-[#fbf7ef]"],
+  [class*="bg-[#fdf6e3]"],
+  [style*="background"]
+) {
+  color: #000000 !important;
+}
+
+/* High contrast is an accessibility mode, not merely a dark-palette variant.
+ * It must win when both toggles are on, including against utility backgrounds. */
+html.high-contrast :is(main, .pixel-panel, .pixel-panel-dark, .pixel-btn, [class*="bg-"]) {
+  background-color: #000000 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 3px 0 0 #ffffff !important;
+}
+
+html.high-contrast input {
+  accent-color: #ffffff;
+}
+
+html body,
+html body * {
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
 }
 
 html,
@@ -34,19 +282,25 @@ body {
   overflow-x: hidden;
 }
 
+html {
+  background: var(--background);
+  color: var(--foreground);
+}
+
 body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   background: var(--background);
   color: var(--foreground);
+  font-family: var(--font-ui);
 }
 
 /* Pixel UI kit: hard edges, chunky outlines, offset shadows, no blur. */
 .pixel-panel {
-  background: #fdf6e3;
-  color: #2b2119;
-  border: 3px solid #2b2119;
+  background: var(--panel-bg);
+  color: var(--panel-text);
+  border: 3px solid var(--panel-border);
   box-shadow: 4px 4px 0 0 rgba(43, 33, 25, 0.3);
 }
 
@@ -58,18 +312,18 @@ body {
 }
 
 .pixel-btn {
-  border: 2px solid #2b2119;
-  box-shadow: 0 3px 0 0 #2b2119;
+  border: 2px solid var(--panel-border);
+  box-shadow: 0 3px 0 0 var(--panel-border);
   transition: transform 60ms, box-shadow 60ms;
 }
 
 .pixel-btn:active:not(:disabled) {
   transform: translateY(2px);
-  box-shadow: 0 1px 0 0 #2b2119;
+  box-shadow: 0 1px 0 0 var(--panel-border);
 }
 
 .font-pixel {
-  font-family: var(--font-pixel), ui-monospace, monospace;
+  font-family: var(--font-display);
   letter-spacing: 0.02em;
 }
 
