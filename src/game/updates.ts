@@ -9,6 +9,12 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-30",
     items: [
+      "Selective logging now really gives half the wood of clear-cutting. It used to drop to a fifth or less once the trees had been thinned. If no tree is big enough to thin yet, the woodcutter waits for them to grow and its panel says so.",
+    ],
+  },
+  {
+    date: "2026-09-30",
+    items: [
       "In a game, the accessibility settings (dark mode, font, high contrast, larger text) are now in the Menu, so the Settings button no longer covers the Advancements button.",
     ],
   },

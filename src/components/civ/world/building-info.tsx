@@ -110,6 +110,9 @@ export function BuildingInfo({
             Making <span className="font-num">{perSecond((def.produces?.wood ?? 0) * woodcutterYield(state, tile)).toFixed(2)}</span>{" "}
             wood/s. How should they cut?
           </p>
+          {mode === "selective" && woodcutterYield(state, tile) === 0 && (
+            <p className="mb-1 text-amber-800">No trees are big enough to thin yet. They'll start again as the forest grows back.</p>
+          )}
           <div className="flex flex-col gap-1">
             {(
               [
