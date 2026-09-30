@@ -21,6 +21,7 @@ export const UPDATES: Update[] = [
       "In a famine, the people you can't feed at all leave to look for food elsewhere, so a big town shrinks instead of starving to the last person.",
       "Worn-out land now hurts a little just under Sustainability 40 and more the lower it falls (it used to cut harvests by 40% straight away). The warning names what is costing the land the most.",
       "The game now saves right after anything you do, not just every few seconds.",
+      "In a game, the accessibility settings (dark mode, font, high contrast, larger text) are now in the Menu, so the Settings button no longer covers the Advancements button.",
     ],
   },
   {
