@@ -384,7 +384,7 @@ These were decided with the project owner. Do not change them without being aske
   Classical era: 5 of 12), and 5 of the 6 towns that reached the Classical era
   came through the drought, most losing about half their people; the one with
   no water lost to unrest. Hard (6): 3 beat the legion, all 3 came through the
-  drought with heavy losses. First time (3): all came through. In big towns
+  drought with heavy losses. First time (4): 3 came through, 1 ruined its land (collapse). In big towns
   sickness kills the most, which is what latrines are for. Re-run it after
   changing any rate below.
 - **Knowledge:** no base trickle. Milestones pay once each (`KNOWLEDGE_MILESTONES`:
