@@ -1,5 +1,6 @@
 import {
   AFTER_TUTORIAL_RESERVE,
+  FAMINE,
   COLLAPSE,
   TUTORIAL_START_FOOD,
   ROMAN_LEGION,
@@ -93,6 +94,8 @@ export type Action =
   | { type: "devGrant" }
   | { type: "devPeople" }
   | { type: "devFiresOut" }
+  | { type: "devStarve" }
+  | { type: "famineRelief"; kind: FamineRelief }
   | { type: "devCollapse" }
   | { type: "devOutbreak" }
   | { type: "devRaid" }
@@ -635,7 +638,9 @@ export function production(state: GameState): Resources {
       tile.building === "woodcutter"
         ? woodcutterYield(state, tile)
         : tile.building === "farm"
-          ? (state.tiles.some((t) => t.building === "canal" && hexDistance(t, tile) === 1) ? 1.5 : 1) * rainfall(state)
+          ? (state.tiles.some((t) => t.building === "canal" && hexDistance(t, tile) === 1) ? 1.5 : 1) *
+            rainfall(state) *
+            (seedEaten(state) ? 1 - FAMINE.seed.farmLoss : 1)
           : 1;
     const dust = (dusty(state, tile) ? 1 - QUARRY_DUST.foodLoss : 1) * (scaredByFire(state, tile) ? 1 - FIRE_SCARE.foodLoss : 1);
     // Gatherer camps share what the wild can give.
@@ -782,7 +787,7 @@ export function warnings(state: GameState): Warning[] {
     out.push({
       id: "famine",
       icon: "skull",
-      text: "Your people are starving! Famine in {secs}s unless you find food.",
+      text: "Your people are starving: about one dies every 10 s. The tribe is lost in {secs}s unless you find food.",
       countdown: Math.max(0, famineLimit - state.famineTicks),
       severe: true,
     });
@@ -1046,6 +1051,49 @@ export function defenseBreakdown(state: GameState): string {
 
 const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
 
+// The seed grain was eaten in a famine: fields grow less until it is replaced.
+export function seedEaten(state: GameState) {
+  return state.tick < (state.seedEatenUntil ?? 0);
+}
+
+export type FamineRelief = "forage" | "pen" | "seed";
+
+// What the tribe can do in a famine right now, and why not when it can't.
+export function famineOptions(state: GameState): { id: FamineRelief; label: string; note: string; ok: boolean }[] {
+  const counts = countBuildings(state);
+  const forageWait = (state.forageReadyAt ?? 0) - state.tick;
+  return [
+    {
+      id: "forage",
+      label: `Forage (+${FAMINE.forage.food} food)`,
+      note: forageWait > 0 ? `The forest is picked bare (${secs(forageWait)}s)` : "Strips the nearby forest",
+      ok: forageWait <= 0 && foragePatch(state).length > 0,
+    },
+    {
+      id: "pen",
+      label: `Slaughter a herd (+${FAMINE.pen.food} food)`,
+      note: counts.pen ? "A Livestock Pen is lost" : "Needs a Livestock Pen",
+      ok: !!counts.pen,
+    },
+    {
+      id: "seed",
+      label: `Eat the seed grain (+${FAMINE.seed.food} food)`,
+      note: seedEaten(state) ? "Already eaten" : counts.farm ? `Fields grow half as much for ${secs(FAMINE.seed.ticks)}s` : "Needs Farmland",
+      ok: !!counts.farm && !seedEaten(state),
+    },
+  ];
+}
+
+// The forest tiles nearest home that foragers would strip.
+function foragePatch(state: GameState): Tile[] {
+  const home = state.tiles[state.startTile];
+  const kept = state.protectedTiles ?? [];
+  return state.tiles
+    .filter((t) => t.terrain === "forest" && !t.building && !kept.includes(t.id) && t.growth > 0.2 && hexDistance(t, home) <= LAND.radius)
+    .sort((a, b) => hexDistance(a, home) - hexDistance(b, home))
+    .slice(0, FAMINE.forage.tiles);
+}
+
 // The Food & Water meter is not the stored food: it says whether the tribe makes
 // enough to eat. Explained on hover so the two numbers aren't confused.
 export function foodMeterNote(state: GameState): string {
@@ -1094,7 +1142,8 @@ export function computeMeters(state: GameState): Meters {
     // No cold penalty while the tutorial is still teaching you to light a fire.
     (state.tutorialStep < TUTORIAL.length ? 0 : NO_FIRE_PENALTY * coldShare(state)) -
     (100 - clamp(sustainability)) * 0.15 -
-    sickShare(state) * 30 +
+    sickShare(state) * 30 -
+    (state.famineTicks > 0 ? FAMINE.happiness : 0) +
     state.modifiers.happiness;
 
   return {
@@ -1450,11 +1499,12 @@ function tick(state: GameState): GameState {
   let starved = 0;
   if (resources.food <= 0) {
     const before = population;
-    population = Math.max(1, population - Math.max(0.3, population * 0.02));
+    population = Math.max(1, population - FAMINE.deathsPerTick);
     starved = before - population;
     famineTicks += 1;
   } else {
-    famineTicks = Math.max(0, famineTicks - 1);
+    // Once there is food again, the danger passes twice as fast as it came.
+    famineTicks = Math.max(0, famineTicks - 2);
     if (state.meters.food > 45 && state.meters.shelter > 40 && population < capacity * 1.15) {
       population += Math.max(0.08, population * growth);
     }
@@ -2220,6 +2270,50 @@ function step(state: GameState, action: Action): GameState {
     case "devFiresOut":
       if (!state.dev) return state;
       return withMeters({ ...state, fires: {}, log: ["Dev: all campfires put out.", ...state.log].slice(0, 30) });
+
+    case "famineRelief": {
+      if (state.famineTicks <= 0 || state.phase !== "playing") return state;
+      const option = famineOptions(state).find((o) => o.id === action.kind);
+      if (!option?.ok) return state;
+      const log = (line: string) => [line, ...state.log].slice(0, 30);
+      if (action.kind === "forage") {
+        const patch = new Set(foragePatch(state).map((t) => t.id));
+        return withMeters({
+          ...state,
+          tiles: state.tiles.map((t) => (patch.has(t.id) ? { ...t, growth: Math.max(0.02, t.growth - FAMINE.forage.forestLoss) } : t)),
+          resources: { ...state.resources, food: state.resources.food + FAMINE.forage.food },
+          forageReadyAt: state.tick + FAMINE.forage.cooldown,
+          log: log("Foragers stripped the nearby forest for roots, nuts and game."),
+        });
+      }
+      if (action.kind === "pen") {
+        const home = state.tiles[state.startTile];
+        const pen = state.tiles.filter((t) => t.building === "pen").sort((a, b) => hexDistance(b, home) - hexDistance(a, home))[0];
+        return withMeters({
+          ...state,
+          tiles: state.tiles.map((t) => (t.id === pen.id ? { ...t, building: null } : t)),
+          resources: { ...state.resources, food: state.resources.food + FAMINE.pen.food },
+          log: log("The herd was slaughtered to feed the tribe. The pen stands empty."),
+        });
+      }
+      return withMeters({
+        ...state,
+        resources: { ...state.resources, food: state.resources.food + FAMINE.seed.food },
+        seedEatenUntil: state.tick + FAMINE.seed.ticks,
+        log: log("The seed grain was eaten. The fields will grow less for a while."),
+      });
+    }
+
+    case "devStarve":
+      if (!state.dev) return state;
+      // Empty the stores and start the famine clock, so the emergency options show
+      // even in a village that feeds itself (it then winds down as food returns).
+      return withMeters({
+        ...state,
+        resources: { ...state.resources, food: 0 },
+        famineTicks: Math.max(state.famineTicks, 20),
+        log: ["Dev: the stores are empty.", ...state.log].slice(0, 30),
+      });
 
     case "devCollapse":
       // Wreck the land for a while and start the countdown 30 s from the end.

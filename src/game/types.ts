@@ -259,6 +259,9 @@ export interface GameState {
   famineTicks: number;
   // Seconds in a row that happiness has been below UNREST_LEVEL.
   unrestTicks: number;
+  // Famine emergency measures (missing in older saves).
+  forageReadyAt?: number;
+  seedEatenUntil?: number;
   // Ticks spent with Sustainability below COLLAPSE.level (missing in older saves).
   collapseTicks?: number;
   // How worn out the land is: counts up while Sustainability is below LAND.strainLevel.

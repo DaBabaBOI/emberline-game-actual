@@ -204,6 +204,14 @@ These were decided with the project owner. Do not change them without being aske
   rots (no preservation yet), each lit campfire warms only 10 people (the
   rest are cold, scaled happiness penalty), and raids grow with the tribe's
   size as well as time. Disease also gets likelier as the tribe grows.
+- **Famine is recoverable** (`FAMINE`, `famineOptions()`): with the stores empty,
+  about one person dies every 10 s (`deathsPerTick` 0.15, not a share of the
+  tribe) and happiness drops by 15; the game is lost only after `famineLimit`
+  (Easy 120, Normal 80, Hard 55 ticks) and the counter winds down twice as fast
+  once there is food. The famine warning offers three emergency measures, each a
+  trade-off: forage (+15 food, strips 3 nearby forest tiles, 40-tick cooldown),
+  slaughter a herd (+30, a Livestock Pen is lost), eat the seed grain (+25,
+  fields grow half as much for 80 ticks). Dev: "Starve".
 - **Disease** (`src/game/disease.ts`, `DISEASE`): outbreaks start from crowding
   (more people, more crowded = likelier), hunts, fishing spots and especially
   welcomed wanderers. It spreads, people recover and are immune for a while

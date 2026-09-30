@@ -52,9 +52,9 @@ export const DIFFICULTIES: Record<
   DifficultyId,
   { name: string; blurb: string; consumption: number; famineLimit: number; unrestLimit: number; raiders: number }
 > = {
-  easy: { name: "Easy", blurb: "Forgiving. Famine takes a long time to hit.", consumption: 0.8, famineLimit: 45, unrestLimit: 60, raiders: 0.7 },
-  normal: { name: "Normal", blurb: "The intended experience.", consumption: 1, famineLimit: 30, unrestLimit: 40, raiders: 1 },
-  hard: { name: "Hard", blurb: "Hungry people, short patience, bold raiders.", consumption: 1.25, famineLimit: 18, unrestLimit: 25, raiders: 1.4 },
+  easy: { name: "Easy", blurb: "Forgiving. Famine takes a long time to hit.", consumption: 0.8, famineLimit: 120, unrestLimit: 60, raiders: 0.7 },
+  normal: { name: "Normal", blurb: "The intended experience.", consumption: 1, famineLimit: 80, unrestLimit: 40, raiders: 1 },
+  hard: { name: "Hard", blurb: "Hungry people, short patience, bold raiders.", consumption: 1.25, famineLimit: 55, unrestLimit: 25, raiders: 1.4 },
 };
 
 export const WARRIORS_PER_CAMP = 4;
@@ -992,6 +992,20 @@ export const LESSON_GAP = 40;
 // nowhere) never start within this many ticks of each other: one at a time.
 export const QUIET_GAP = 40;
 
+// Famine is hard but you can come back from it: while the stores are empty about
+// one person dies every 10 s (at 1x) and everyone is unhappy, and the tribe is lost
+// only if it lasts the difficulty's famineLimit (Normal: 80 ticks, 2 minutes).
+// Three emergency measures buy time, each at a price.
+export const FAMINE = {
+  deathsPerTick: 0.15,
+  happiness: 15,
+  // Strip the nearby forest for roots, nuts and game.
+  forage: { food: 15, forestLoss: 0.3, tiles: 3, cooldown: 40 },
+  // Slaughter a Livestock Pen's animals (the pen is gone).
+  pen: { food: 30 },
+  // Eat the grain saved for sowing: fields grow half as much for a while.
+  seed: { food: 25, farmLoss: 0.5, ticks: 80 },
+};
 // Land collapse: if Sustainability stays below `level` for `ticks` (80 ticks = 2 min
 // at 1x), the land can no longer feed the tribe and the game is lost. A countdown
 // warning shows the whole time; climbing back above the level winds it down.
