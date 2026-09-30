@@ -62,7 +62,9 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
           ? "The tribe has left"
           : state.lostTo === "conquest"
             ? "Conquered"
-            : "Famine";
+            : state.lostTo === "behind"
+              ? "Left behind"
+              : "Famine";
   const sub =
     d.kind === "era"
       ? `${who} are ready to settle down and farm for good. Here is how you got here.`
@@ -72,6 +74,8 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
           ? `The Roman legion broke through in ${formatYear(d.year)} and ${who} lost their village.`
           : state.lostTo === "unrest"
           ? `${who} were too unhappy for too long and wandered away in ${formatYear(d.year)}.`
+          : state.lostTo === "behind"
+          ? `${who} never learned to farm. By ${formatYear(d.year)} the peoples around them had moved on, and they were left behind.`
           : `${who} ran out of food in ${formatYear(d.year)}.`;
 
   return (
@@ -79,7 +83,17 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
       <div className="pixel-panel my-auto w-[min(96vw,760px)] p-4 md:p-6" data-testid="debrief">
         <div className="flex items-center gap-3">
           <PixelIcon
-            name={d.kind === "loss" ? (state.lostTo === "unrest" ? "sad" : state.lostTo === "conquest" ? "shield" : "skull") : "star"}
+            name={
+              d.kind === "loss"
+                ? state.lostTo === "unrest"
+                  ? "sad"
+                  : state.lostTo === "conquest"
+                    ? "shield"
+                    : state.lostTo === "behind"
+                      ? "warning"
+                      : "skull"
+                : "star"
+            }
             size={48}
           />
           <div>

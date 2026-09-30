@@ -1,5 +1,7 @@
 import {
   AFTER_TUTORIAL_RESERVE,
+  ERA_DEADLINE,
+  LEFT_BEHIND_WARN,
   TUTORIAL_START_FOOD,
   ROMAN_LEGION,
   FORESTER_GROWTH,
@@ -92,6 +94,7 @@ export type Action =
   | { type: "devGrant" }
   | { type: "devPeople" }
   | { type: "devFiresOut" }
+  | { type: "devNearlyBehind" }
   | { type: "devOutbreak" }
   | { type: "devRaid" }
   | { type: "devRomans" }
@@ -759,12 +762,21 @@ export function perSecond(perTick: number) {
 }
 
 export interface Warning {
-  id: "fire" | "food" | "wood" | "famine" | "unrest" | "land" | "sick" | "rain";
+  id: "fire" | "food" | "wood" | "famine" | "unrest" | "behind" | "land" | "sick" | "rain";
   icon: IconId;
   text: string;
   // Ticks left on the countdown in the text; "{secs}" in the text is where it goes.
   countdown?: number;
   severe: boolean;
+}
+
+// Ticks left before the tribe falls behind the rest of the world (null when the
+// clock isn't running: not the Stone Age, the tutorial, or already ready to go).
+export function behindTicksLeft(state: GameState): number | null {
+  if (state.era !== 0 || state.phase !== "playing" || state.debrief || state.tutorialStep < TUTORIAL.length) return null;
+  if (readyForNextEra(state)) return null;
+  const deadline = ERA_DEADLINE[state.difficulty] ?? ERA_DEADLINE.normal;
+  return deadline - (state.tick - (state.eraStartTick ?? 0));
 }
 
 export function warnings(state: GameState): Warning[] {
@@ -800,6 +812,17 @@ export function warnings(state: GameState): Warning[] {
       icon: "sad",
       text: "Your people are miserable! They will leave in {secs}s unless you cheer them up.",
       countdown: Math.max(0, unrestLimit - state.unrestTicks),
+      severe: true,
+    });
+  }
+
+  const behind = behindTicksLeft(state);
+  if (behind !== null && behind <= LEFT_BEHIND_WARN) {
+    out.push({
+      id: "behind",
+      icon: "warning",
+      text: "The world is moving on: other peoples have learned to farm. Reach the Ancient era within {secs}s or be left behind.",
+      countdown: Math.max(0, behind),
       severe: true,
     });
   }
@@ -1391,6 +1414,7 @@ function startGrace(state: GameState): GameState {
     nextEventTick: Math.max(state.nextEventTick, state.tick + GRACE_AFTER_TUTORIAL.event),
     nextRaidTick: Math.max(state.nextRaidTick, state.tick + GRACE_AFTER_TUTORIAL.raid),
     calmUntil: state.tick + GRACE_AFTER_TUTORIAL.disease,
+    eraStartTick: state.tick,
   };
 }
 
@@ -1494,6 +1518,11 @@ function tick(state: GameState): GameState {
   }
   if (unrestTicks >= DIFFICULTIES[state.difficulty].unrestLimit) {
     const lost: GameState = { ...next, phase: "gameover", lostTo: "unrest", log: ["Your people lost hope and left.", ...next.log] };
+    return { ...lost, debrief: makeDebrief(lost, "loss") };
+  }
+  const behind = behindTicksLeft(next);
+  if (behind !== null && behind <= 0) {
+    const lost: GameState = { ...next, phase: "gameover", lostTo: "behind", log: ["The world moved on without us.", ...next.log] };
     return { ...lost, debrief: makeDebrief(lost, "loss") };
   }
 
@@ -2143,6 +2172,7 @@ function step(state: GameState, action: Action): GameState {
         ...state,
         era,
         year: ERAS[era].startYear,
+        eraStartTick: state.tick,
         debrief: null,
         log: [`${state.nation ?? "Your people"} enter the ${ERAS[era].name} era.`, ...state.log].slice(0, 30),
       });
@@ -2181,6 +2211,15 @@ function step(state: GameState, action: Action): GameState {
     case "devFiresOut":
       if (!state.dev) return state;
       return withMeters({ ...state, fires: {}, log: ["Dev: all campfires put out.", ...state.log].slice(0, 30) });
+
+    case "devNearlyBehind":
+      // Start the Stone Age clock so only 30 s are left.
+      if (!state.dev || state.era !== 0) return state;
+      return withMeters({
+        ...state,
+        eraStartTick: state.tick - (ERA_DEADLINE[state.difficulty] ?? ERA_DEADLINE.normal) + 20,
+        log: ["Dev: the world is about to move on.", ...state.log].slice(0, 30),
+      });
 
     case "devPeople":
       if (!state.dev) return state;

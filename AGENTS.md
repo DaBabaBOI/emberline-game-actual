@@ -204,6 +204,13 @@ These were decided with the project owner. Do not change them without being aske
   rots (no preservation yet), each lit campfire warms only 10 people (the
   rest are cold, scaled happiness penalty), and raids grow with the tribe's
   size as well as time. Disease also gets likelier as the tribe grows.
+- **Left behind** (`ERA_DEADLINE`, `behindTicksLeft()`): reach the Ancient era
+  within 75 / 60 / 45 / 30 minutes (First time / Easy / Normal / Hard) of the
+  tutorial ending, or the world moves on and the game is lost ("Left behind").
+  A countdown warning shows for the last 5 minutes; the clock pauses once the
+  tribe is ready to advance. Stone Age only for now (the Ancient era ends with
+  the legion); new eras should get their own limit. The sensible bot never hits
+  it on Normal. Dev: "Nearly behind".
 - **Disease** (`src/game/disease.ts`, `DISEASE`): outbreaks start from crowding
   (more people, more crowded = likelier), hunts, fishing spots and especially
   welcomed wanderers. It spreads, people recover and are immune for a while

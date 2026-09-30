@@ -992,6 +992,14 @@ export const LESSON_GAP = 40;
 // nowhere) never start within this many ticks of each other: one at a time.
 export const QUIET_GAP = 40;
 
+// Falling behind the world: reach the next era within this many ticks of the
+// tutorial ending (40 ticks = a minute at 1x), or the tribe is left behind and
+// the game is lost. Faster on harder difficulties. A warning shows for the last
+// `LEFT_BEHIND_WARN` ticks. Only the Stone Age for now: the Ancient era already
+// ends with the Roman legion.
+export const ERA_DEADLINE: Record<string, number> = { first: 75 * 40, easy: 60 * 40, normal: 45 * 40, hard: 30 * 40 };
+export const LEFT_BEHIND_WARN = 200;
+
 // Leaving the Stone Age: research Agriculture and grow to this many people.
 export const NEXT_ERA_POPULATION = 15;
 
