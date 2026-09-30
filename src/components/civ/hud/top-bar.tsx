@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { ERAS, formatYear } from "@/game/content";
+import { ERAS, XP, chiefTitle, formatYear, xpToReach } from "@/game/content";
 import { useGame } from "@/components/civ/game-provider";
 import { warnings } from "@/game/engine";
 import type { GameState } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import type { IconId } from "@/game/sprites";
+import { GameMenu } from "./online";
 
 const SPEEDS: { value: GameState["speed"]; label: string }[] = [
   { value: 0, label: "⏸" },
@@ -22,6 +23,29 @@ function Chip({ icon, value, title, low }: { icon: IconId; value: string; title:
       <PixelIcon name={icon} size={16} />
       <span className="font-num">{value}</span>
     </span>
+  );
+}
+
+// Chief level: a bar that only ever fills up, so progress is always visible.
+function ChiefXp({ state }: { state: GameState }) {
+  const level = state.chiefLevel ?? 1;
+  const xp = state.xp ?? 0;
+  const from = xpToReach(level);
+  const to = xpToReach(level + 1);
+  const share = Math.max(0, Math.min(1, (xp - from) / (to - from)));
+  return (
+    <div
+      className="flex flex-col leading-tight"
+      title={`Chief XP ${xp}/${to}. You earn XP by building (+${XP.build}), growing, researching (+${XP.research}), beating raids (+${XP.raidWon}), planting trees, and every minute everyone is fed and the land is healthy. Each level: +${XP.levelKnowledge} Knowledge.`}
+      data-testid="chief-xp"
+    >
+      <span className="text-[11px] text-amber-300">
+        Lv {level} {chiefTitle(level)}
+      </span>
+      <span className="mt-0.5 block h-2 w-24 border border-[#140e0a] bg-white/15">
+        <span className="block h-full bg-amber-400" style={{ width: `${share * 100}%` }} />
+      </span>
+    </div>
   );
 }
 
@@ -50,12 +74,13 @@ export function TopBar() {
           </span>
           <span className="font-num text-base">{formatYear(state.year)}</span>
         </div>
+        <ChiefXp state={state} />
         <span className="hidden h-6 w-px bg-white/20 md:block" />
         <Chip icon="person" value={Math.floor(state.population).toLocaleString()} title="Population" />
         <Chip icon="coin" value={Math.floor(r.currency).toLocaleString()} title={era.currency} />
         <Chip icon="sword" value={state.soldiers.toString()} title="Warriors" />
         <span className="hidden h-6 w-px bg-white/20 md:block" />
-        <Chip icon="meat" value={Math.floor(r.food).toString()} title="Food stored" low={low.has("food") || low.has("famine")} />
+        <Chip icon="meat" value={Math.floor(r.food).toString()} title="Stored food" low={low.has("food") || low.has("famine")} />
         <Chip icon="log" value={Math.floor(r.wood).toString()} title="Wood" low={low.has("wood")} />
         <Chip icon="rock" value={Math.floor(r.stone).toString()} title="Stone" />
         <Chip icon="bulb" value={Math.floor(r.knowledge).toString()} title="Knowledge" />
@@ -75,6 +100,7 @@ export function TopBar() {
             </button>
           ))}
         </div>
+        <GameMenu />
       </div>
     </div>
   );

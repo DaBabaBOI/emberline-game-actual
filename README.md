@@ -136,7 +136,7 @@ Please see [SECURITY.md](SECURITY.md) for vulnerability reporting guidance.
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE).
+This project is released into the public domain under the Unlicense. See [LICENSE](LICENSE).
 
 ## Team
 
