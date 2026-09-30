@@ -9,6 +9,8 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "Don't fall behind: reach the Ancient era within 45 minutes (30 on Hard, 60 on Easy) or the world moves on without you. A warning counts down the last 5 minutes.",
+      "The Stone Age calendar no longer gets stuck at 3,100 BCE: it keeps moving all game and reaches 3,000 BCE just as the world moves on.",
       "Hunters no longer vanish on the way home from a far-off hunt.",
       "Pick people up! Grab a villager and drop them somewhere. Drop them at a building and they help out, at a cold fire and they relight it. But the fire, the sea, the mountains and the unknown are dangerous.",
       "Chief level: an XP bar in the top bar that fills as you build, grow, research, win raids, plant trees and keep everyone fed. Each level gives a title and a little Knowledge.",

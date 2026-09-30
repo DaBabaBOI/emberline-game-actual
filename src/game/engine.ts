@@ -14,6 +14,8 @@ import {
   SMALL_MOMENTS,
   FAMINE,
   COLLAPSE,
+  ERA_DEADLINE,
+  LEFT_BEHIND_WARN,
   TUTORIAL_START_FOOD,
   ROMAN_LEGION,
   FORESTER_GROWTH,
@@ -110,6 +112,7 @@ export type Action =
   | { type: "devGrant" }
   | { type: "devPeople" }
   | { type: "devFiresOut" }
+  | { type: "devNearlyBehind" }
   | { type: "dropPerson"; tileId: number | null }
   | { type: "devFogBack" }
   | { type: "devXp" }
@@ -801,12 +804,31 @@ function gapFactor(state: GameState) {
 }
 
 export interface Warning {
-  id: "fire" | "food" | "wood" | "famine" | "unrest" | "collapse" | "land" | "sick" | "rain";
+  id: "fire" | "food" | "wood" | "famine" | "unrest" | "collapse" | "behind" | "land" | "sick" | "rain";
   icon: IconId;
   text: string;
   // Ticks left on the countdown in the text; "{secs}" in the text is where it goes.
   countdown?: number;
   severe: boolean;
+}
+
+// Ticks left before the tribe falls behind the rest of the world (null when the
+// clock isn't running: not the Stone Age, the tutorial, or already ready to go).
+export function behindTicksLeft(state: GameState): number | null {
+  if (state.era !== 0 || state.phase !== "playing" || state.debrief || state.tutorialStep < TUTORIAL.length) return null;
+  if (readyForNextEra(state)) return null;
+  const deadline = ERA_DEADLINE[state.difficulty] ?? ERA_DEADLINE.normal;
+  return deadline - (state.tick - (state.eraStartTick ?? 0));
+}
+
+// The Stone Age year at a given tick: from its start year to the Ancient era's
+// start year over the deadline, counted from the end of the tutorial (it holds
+// still during the tutorial).
+export function stoneAgeYear(state: GameState, tick: number) {
+  if (state.eraStartTick === undefined) return state.year;
+  const deadline = ERA_DEADLINE[state.difficulty] ?? ERA_DEADLINE.normal;
+  const progress = Math.min(1, Math.max(0, (tick - state.eraStartTick) / deadline));
+  return ERAS[0].startYear + (ERAS[1].startYear - ERAS[0].startYear) * progress;
 }
 
 export function warnings(state: GameState): Warning[] {
@@ -842,6 +864,17 @@ export function warnings(state: GameState): Warning[] {
       icon: "sad",
       text: "Your people are miserable! They will leave in {secs}s unless you cheer them up.",
       countdown: Math.max(0, unrestLimit - state.unrestTicks),
+      severe: true,
+    });
+  }
+
+  const behind = behindTicksLeft(state);
+  if (behind !== null && behind <= LEFT_BEHIND_WARN) {
+    out.push({
+      id: "behind",
+      icon: "warning",
+      text: `The world is moving on: other peoples have learned to farm. Reach the Ancient era before ${formatYear(ERAS[1].startYear)} (in {secs}s) or be left behind.`,
+      countdown: Math.max(0, behind),
       severe: true,
     });
   }
@@ -1515,6 +1548,7 @@ function startGrace(state: GameState): GameState {
     nextRaidTick: Math.max(state.nextRaidTick, state.tick + GRACE_AFTER_TUTORIAL.raid * gapFactor(state)),
     calmUntil: state.tick + GRACE_AFTER_TUTORIAL.disease * gapFactor(state),
     nextMomentTick: state.tick + SMALL_MOMENTS.firstAfter,
+    eraStartTick: state.tick,
   };
 }
 
@@ -1599,10 +1633,15 @@ function tick(state: GameState): GameState {
       ? [`A campfire burned out. Click it to relight it (${RELIGHT_WOOD} wood).`, ...state.log].slice(0, 30)
       : state.log,
     tick: state.tick + 1,
-    // Time can't run past the start of the next era until the player gets there.
-    year: ERAS[state.era + 1]
-      ? Math.min(state.year + era.yearsPerTick, ERAS[state.era + 1].startYear - 100)
-      : state.year + era.yearsPerTick,
+    // The Stone Age calendar runs at the pace of the "left behind" deadline, so it
+    // never stalls and reaches 3,000 BCE just as the world moves on. Later eras:
+    // time can't run past the start of the next era until the player gets there.
+    year:
+      state.era === 0
+        ? stoneAgeYear(state, state.tick + 1)
+        : ERAS[state.era + 1]
+          ? Math.min(state.year + era.yearsPerTick, ERAS[state.era + 1].startYear - 100)
+          : state.year + era.yearsPerTick,
     resources,
     population,
     famineTicks,
@@ -1626,6 +1665,11 @@ function tick(state: GameState): GameState {
   }
   if (unrestTicks >= DIFFICULTIES[state.difficulty].unrestLimit) {
     const lost: GameState = { ...next, phase: "gameover", lostTo: "unrest", log: ["Your people lost hope and left.", ...next.log] };
+    return { ...lost, debrief: makeDebrief(lost, "loss") };
+  }
+  const behind = behindTicksLeft(next);
+  if (behind !== null && behind <= 0) {
+    const lost: GameState = { ...next, phase: "gameover", lostTo: "behind", log: ["The world moved on without us.", ...next.log] };
     return { ...lost, debrief: makeDebrief(lost, "loss") };
   }
   if (collapseTicks >= COLLAPSE.ticks) {
@@ -2590,6 +2634,7 @@ function step(state: GameState, action: Action): GameState {
         ...state,
         era,
         year: ERAS[era].startYear,
+        eraStartTick: state.tick,
         debrief: null,
         log: [`${state.nation ?? "Your people"} enter the ${ERAS[era].name} era.`, ...state.log].slice(0, 30),
       });
@@ -2649,6 +2694,15 @@ function step(state: GameState, action: Action): GameState {
     case "devFiresOut":
       if (!state.dev) return state;
       return withMeters({ ...state, fires: {}, log: ["Dev: all campfires put out.", ...state.log].slice(0, 30) });
+
+    case "devNearlyBehind":
+      // Start the Stone Age clock so only 30 s are left.
+      if (!state.dev || state.era !== 0) return state;
+      return withMeters({
+        ...state,
+        eraStartTick: state.tick - (ERA_DEADLINE[state.difficulty] ?? ERA_DEADLINE.normal) + 20,
+        log: ["Dev: the world is about to move on.", ...state.log].slice(0, 30),
+      });
 
     case "dropPerson":
       return dropPerson(state, action.tileId);

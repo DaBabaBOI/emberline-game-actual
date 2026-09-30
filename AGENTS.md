@@ -214,6 +214,15 @@ These were decided with the project owner. Do not change them without being aske
   rots (no preservation yet), each lit campfire warms only 10 people (the
   rest are cold, scaled happiness penalty), and raids grow with the tribe's
   size as well as time. Disease also gets likelier as the tribe grows.
+- **Left behind** (`ERA_DEADLINE`, `behindTicksLeft()`): reach the Ancient era
+  within 75 / 60 / 45 / 30 minutes (First time / Easy / Normal / Hard) of the
+  tutorial ending, or the world moves on and the game is lost ("Left behind").
+  A countdown warning shows for the last 5 minutes; the clock pauses once the
+  tribe is ready to advance. Stone Age only for now (the Ancient era ends with
+  the legion); new eras should get their own limit. The sensible bot never hits
+  it on Normal. Dev: "Nearly behind". The Stone Age calendar runs at the pace of
+  this deadline (`stoneAgeYear()`): 50,000 BCE when the tutorial ends, 3,000 BCE
+  exactly when the world moves on, so the year never stalls and doubles as the clock.
 - **Picking people up** (`world/pick-up.tsx`, `dropOutcome()` / `dropPerson` in
   the engine, `DROP`): after the tutorial, with no tool selected, the player can
   grab a villager and drop them anywhere. A ring and label under them say what
@@ -272,8 +281,8 @@ These were decided with the project owner. Do not change them without being aske
   low Sustainability, lives lost by cause), all six meters with their SDG
   target (`METER_SDG`), and the lessons learned. The ending tier needs
   Sustainability ≥ `MIN_SUSTAINABILITY_FOR_BEST_ENDING` (60) for the best
-  ending. Losing shows the same debrief. The Stone Age year stops just before
-  the next era's start until the player moves on.
+  ending. Losing shows the same debrief. The Stone Age year reaches 3,000 BCE
+  only at the "left behind" deadline (see Left behind).
 - **Ancient era** (era 1), all trade-offs: Mud-brick House (Hut upgrade via
   its info panel, `upgradeFor`), Scribe School (literacy), Bronze Smithy (+20%
   food and wood per smithy up to 3, burns `SMITHY_CHARCOAL` wood/tick, −4
@@ -301,7 +310,8 @@ These were decided with the project owner. Do not change them without being aske
   (`COLLAPSE`: Sustainability below 20 for 80 ticks, about 2 minutes, after the
   tutorial and the calm period; `collapseTicks`, winds down twice as fast once
   the land recovers). All three show a countdown warning first. The Roman
-  legion is the fourth (conquest). Everything else is a setback. Balance: the
+  legion is the fourth (conquest) and taking too long to leave the Stone Age is
+  the fifth (**left behind**, see below). Everything else is a setback. Balance: the
   sensible bot never gets near 20; a reckless bot (clear-cutting, never
   replanting) collapses around 10 minutes. Dev: "Collapse".
 - **Tutorial hand:** during the tutorial a pixel hand points at the next click

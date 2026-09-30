@@ -14,6 +14,7 @@ import type {
 } from "./types";
 
 export const ERAS = [
+  // Stone Age: yearsPerTick is not used; its calendar follows ERA_DEADLINE (stoneAgeYear()).
   { name: "Stone Age", startYear: -50000, yearsPerTick: 100, currency: "Shells" },
   { name: "Ancient", startYear: -3000, yearsPerTick: 3, currency: "Bronze coins" },
   { name: "Classical", startYear: -500, yearsPerTick: 10, currency: "Silver coins" },
@@ -1023,6 +1024,14 @@ export const LESSON_GAP = 40;
 // Big moments (an event card, a raid, an elder lesson, an outbreak out of
 // nowhere) never start within this many ticks of each other: one at a time.
 export const QUIET_GAP = 40;
+
+// Falling behind the world: reach the next era within this many ticks of the
+// tutorial ending (40 ticks = a minute at 1x), or the tribe is left behind and
+// the game is lost. Faster on harder difficulties. A warning shows for the last
+// `LEFT_BEHIND_WARN` ticks. Only the Stone Age for now: the Ancient era already
+// ends with the Roman legion.
+export const ERA_DEADLINE: Record<string, number> = { first: 75 * 40, easy: 60 * 40, normal: 45 * 40, hard: 30 * 40 };
+export const LEFT_BEHIND_WARN = 200;
 
 // Picking people up and dropping them somewhere (just for fun, with consequences).
 // A person dropped on a working building helps there: +`helpBoost` output for

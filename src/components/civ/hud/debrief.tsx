@@ -63,6 +63,8 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
           ? "The tribe has left"
           : state.lostTo === "conquest"
             ? "Conquered"
+            : state.lostTo === "behind"
+              ? "Left behind"
             : state.lostTo === "collapse"
               ? "The land gave out"
               : "Famine";
@@ -75,6 +77,8 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
           ? `The Roman legion broke through in ${formatYear(d.year)} and ${who} lost their village.`
           : state.lostTo === "unrest"
           ? `${who} were too unhappy for too long and wandered away in ${formatYear(d.year)}.`
+          : state.lostTo === "behind"
+          ? `${who} never learned to farm. By ${formatYear(d.year)} the peoples around them had moved on, and they were left behind.`
           : state.lostTo === "collapse"
           ? `${who} used up the land that fed them. With the forests gone and the soil worn out, they had to leave in ${formatYear(d.year)}.`
           : `${who} ran out of food in ${formatYear(d.year)}.`;
@@ -90,6 +94,8 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
                   ? "sad"
                   : state.lostTo === "conquest"
                     ? "shield"
+                    : state.lostTo === "behind"
+                      ? "warning"
                     : state.lostTo === "collapse"
                       ? "leaf"
                       : "skull"

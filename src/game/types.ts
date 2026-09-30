@@ -245,7 +245,7 @@ export interface GameState {
   version: number;
   phase: "playing" | "gameover";
   // Why the game ended: everyone starved, or everyone got so sad they left.
-  lostTo: "famine" | "unrest" | "conquest" | "collapse" | null;
+  lostTo: "famine" | "unrest" | "conquest" | "collapse" | "behind" | null;
   seed: number;
   culture: CultureId;
   difficulty: DifficultyId;
@@ -268,6 +268,8 @@ export interface GameState {
   famineTicks: number;
   // Seconds in a row that happiness has been below UNREST_LEVEL.
   unrestTicks: number;
+  // When the current era's clock started (the end of the tutorial, or entering the era).
+  eraStartTick?: number;
   // People picked up and dropped: who is helping at which building (until tick),
   // and who wandered into the fog and when they come back.
   helpers?: Record<number, number>;
