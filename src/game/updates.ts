@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "You can now lose by ruining the land: if Sustainability stays below 20 for about two minutes, the land collapses and your people must leave. A countdown warns you first, and planting, selective logging or clearing less forest brings it back.",
       "Hovering the Food & Water meter now explains it: it shows whether you make enough food for everyone (45 = just enough), not how much is stored. Stored food is the number in the top bar.",
       "Dev mode: new Sparks and Clear forest buttons to test house fires, rain and Sustainability.",
       "The tutorial teaches it too: Elder Ama tells you to leave a patch of ground between your house and the fire.",
