@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-29",
     items: [
+      "Hunters no longer vanish on the way home from a far-off hunt.",
       "Dev mode: new Sparks and Clear forest buttons to test house fires, rain and Sustainability.",
       "The tutorial teaches it too: Elder Ama tells you to leave a patch of ground between your house and the fire.",
       "Huts are now Wooden Houses (log walls, bark roof): thatch needs straw, and there's no straw before farming.",
