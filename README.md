@@ -219,6 +219,33 @@ carry the same trade-offs further:
 | Why is Sustainability low? | Click the leaf meter | Tap the leaf meter |
 | Speed | Pause / 1× / 2× / 4× in the top bar | Same |
 
+## How we built this
+
+We built Emberline with the help of an AI coding assistant (Claude Code). Most of
+the code was written by the assistant, following our instructions. We want to be
+upfront about that.
+
+**What the team did**
+
+- Decided what the game is: the Stone Age start, a cost to the land on every
+  building, the eras, the ways to lose, the look. Every rule is written down in
+  [`AGENTS.md`](AGENTS.md).
+- Played it over and over, and asked friends to play it, then turned what we
+  saw into changes ("too easy", "too much at once", "nothing happens", "raiders
+  look glitchy").
+- Chose between options for each new feature, and checked the result in the game
+  before merging it.
+- Reviewed and merged every change through a pull request.
+
+**What the assistant did**
+
+- Wrote and changed the code, and tested it (including a bot that plays whole
+  games to check the balance).
+- Took the screenshots and drafted the documentation and slides, which we
+  reviewed.
+
+**Who did what on the team:** _[fill in before submitting]_
+
 ## Built with
 
 Next.js (static export) · React · TypeScript · Three.js via React Three Fiber ·
