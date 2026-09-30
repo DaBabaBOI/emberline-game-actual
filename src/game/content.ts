@@ -13,6 +13,7 @@ import type {
 } from "./types";
 
 export const ERAS = [
+  // Stone Age: yearsPerTick is not used; its calendar follows ERA_DEADLINE (stoneAgeYear()).
   { name: "Stone Age", startYear: -50000, yearsPerTick: 100, currency: "Shells" },
   { name: "Ancient", startYear: -3000, yearsPerTick: 3, currency: "Bronze coins" },
   { name: "Classical", startYear: -500, yearsPerTick: 10, currency: "Silver coins" },

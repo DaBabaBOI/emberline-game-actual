@@ -1,5 +1,6 @@
 import {
   AFTER_TUTORIAL_RESERVE,
+  formatYear,
   ERA_DEADLINE,
   LEFT_BEHIND_WARN,
   TUTORIAL_START_FOOD,
@@ -779,6 +780,16 @@ export function behindTicksLeft(state: GameState): number | null {
   return deadline - (state.tick - (state.eraStartTick ?? 0));
 }
 
+// The Stone Age year at a given tick: from its start year to the Ancient era's
+// start year over the deadline, counted from the end of the tutorial (it holds
+// still during the tutorial).
+export function stoneAgeYear(state: GameState, tick: number) {
+  if (state.eraStartTick === undefined) return state.year;
+  const deadline = ERA_DEADLINE[state.difficulty] ?? ERA_DEADLINE.normal;
+  const progress = Math.min(1, Math.max(0, (tick - state.eraStartTick) / deadline));
+  return ERAS[0].startYear + (ERAS[1].startYear - ERAS[0].startYear) * progress;
+}
+
 export function warnings(state: GameState): Warning[] {
   // During the tutorial Elder Ama explains what to do; warnings would only nag.
   if (state.tutorialStep < TUTORIAL.length) return [];
@@ -821,7 +832,7 @@ export function warnings(state: GameState): Warning[] {
     out.push({
       id: "behind",
       icon: "warning",
-      text: "The world is moving on: other peoples have learned to farm. Reach the Ancient era within {secs}s or be left behind.",
+      text: `The world is moving on: other peoples have learned to farm. Reach the Ancient era before ${formatYear(ERAS[1].startYear)} (in {secs}s) or be left behind.`,
       countdown: Math.max(0, behind),
       severe: true,
     });
@@ -1492,10 +1503,15 @@ function tick(state: GameState): GameState {
       ? [`A campfire burned out. Click it to relight it (${RELIGHT_WOOD} wood).`, ...state.log].slice(0, 30)
       : state.log,
     tick: state.tick + 1,
-    // Time can't run past the start of the next era until the player gets there.
-    year: ERAS[state.era + 1]
-      ? Math.min(state.year + era.yearsPerTick, ERAS[state.era + 1].startYear - 100)
-      : state.year + era.yearsPerTick,
+    // The Stone Age calendar runs at the pace of the "left behind" deadline, so it
+    // never stalls and reaches 3,000 BCE just as the world moves on. Later eras:
+    // time can't run past the start of the next era until the player gets there.
+    year:
+      state.era === 0
+        ? stoneAgeYear(state, state.tick + 1)
+        : ERAS[state.era + 1]
+          ? Math.min(state.year + era.yearsPerTick, ERAS[state.era + 1].startYear - 100)
+          : state.year + era.yearsPerTick,
     resources,
     population,
     famineTicks,

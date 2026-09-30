@@ -10,6 +10,7 @@ export const UPDATES: Update[] = [
     date: "2026-09-29",
     items: [
       "Don't fall behind: reach the Ancient era within 45 minutes (30 on Hard, 60 on Easy) or the world moves on without you. A warning counts down the last 5 minutes.",
+      "The Stone Age calendar no longer gets stuck at 3,100 BCE: it keeps moving all game and reaches 3,000 BCE just as the world moves on.",
       "Dev mode: new Sparks and Clear forest buttons to test house fires, rain and Sustainability.",
       "The tutorial teaches it too: Elder Ama tells you to leave a patch of ground between your house and the fire.",
       "Huts are now Wooden Houses (log walls, bark roof): thatch needs straw, and there's no straw before farming.",

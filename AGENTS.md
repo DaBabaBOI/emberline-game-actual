@@ -210,7 +210,9 @@ These were decided with the project owner. Do not change them without being aske
   A countdown warning shows for the last 5 minutes; the clock pauses once the
   tribe is ready to advance. Stone Age only for now (the Ancient era ends with
   the legion); new eras should get their own limit. The sensible bot never hits
-  it on Normal. Dev: "Nearly behind".
+  it on Normal. Dev: "Nearly behind". The Stone Age calendar runs at the pace of
+  this deadline (`stoneAgeYear()`): 50,000 BCE when the tutorial ends, 3,000 BCE
+  exactly when the world moves on, so the year never stalls and doubles as the clock.
 - **Disease** (`src/game/disease.ts`, `DISEASE`): outbreaks start from crowding
   (more people, more crowded = likelier), hunts, fishing spots and especially
   welcomed wanderers. It spreads, people recover and are immune for a while
@@ -226,8 +228,8 @@ These were decided with the project owner. Do not change them without being aske
   low Sustainability, lives lost by cause), all six meters with their SDG
   target (`METER_SDG`), and the lessons learned. The ending tier needs
   Sustainability ≥ `MIN_SUSTAINABILITY_FOR_BEST_ENDING` (60) for the best
-  ending. Losing shows the same debrief. The Stone Age year stops just before
-  the next era's start until the player moves on.
+  ending. Losing shows the same debrief. The Stone Age year reaches 3,000 BCE
+  only at the "left behind" deadline (see Left behind).
 - **Ancient era** (era 1), all trade-offs: Mud-brick House (Hut upgrade via
   its info panel, `upgradeFor`), Scribe School (literacy), Bronze Smithy (+20%
   food and wood per smithy up to 3, burns `SMITHY_CHARCOAL` wood/tick, −4
