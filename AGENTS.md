@@ -145,7 +145,10 @@ These were decided with the project owner. Do not change them without being aske
   out one of several fires, a baby when there's food and room...). Each is a
   log line (toast) with a small effect; never over an event, raid or the legion,
   never the same one twice in a row, and they don't count as big moments. Tie
-  new ones to the land where you can. Dev: "Moment".
+  new ones to the land where you can. Each also plays out on the map where it
+  happens (`where` picks the tile; `state.moment`; `world/moments.tsx`) for
+  `MOMENT_TICKS`, with a short label over the spot: a new moment needs a
+  `where`, a scene and a label. Dev: "Moment", or pick one in "Moment...".
 - **Phones are supported.** Layouts use `md:` breakpoints (bars stack and
   scroll on small screens). There is no hover on touch: the first tap on a tile
   previews (ghost + trade-off card), the second tap builds. Never rely on Esc or

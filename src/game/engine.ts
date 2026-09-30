@@ -119,7 +119,7 @@ export type Action =
   | { type: "devXp" }
   | { type: "raidResponse"; choice: RaidResponse }
   | { type: "devRaidKind"; kind: RaidKind }
-  | { type: "devMoment" }
+  | { type: "devMoment"; id?: string }
   | { type: "devStarve" }
   | { type: "famineRelief"; kind: FamineRelief }
   | { type: "devCollapse" }
@@ -1722,25 +1722,47 @@ interface Moment {
   when: (s: GameState) => boolean;
   apply: (s: GameState) => GameState;
   text: string;
+  // Where on the map it happens (shown there for a few seconds).
+  where: (s: GameState) => Tile | undefined;
 }
+
+// Places for a moment to happen, nearest the village first.
+const nearHome = (s: GameState, ok: (t: Tile) => boolean) => {
+  const home = s.tiles[s.startTile];
+  return s.tiles.filter((t) => t.revealed && ok(t)).sort((a, b) => hexDistance(a, home) - hexDistance(b, home));
+};
+// One of the nearest few, so it isn't always the same spot.
+const pick = (s: GameState, list: Tile[]) => list[Math.floor(s.tick / 3) % Math.min(4, list.length)];
+const forestEdge = (s: GameState) =>
+  pick(s, nearHome(s, (t) => t.terrain === "forest" && !t.building && t.growth > 0.5));
+const bareLand = (s: GameState) => pick(s, nearHome(s, (t) => (t.terrain === "grass" || t.terrain === "steppe") && !t.building && hexDistance(t, s.tiles[s.startTile]) >= 2));
+const aBuilding = (s: GameState, ids: string[]) => pick(s, nearHome(s, (t) => !!t.building && ids.includes(t.building)));
 
 const addFood = (s: GameState, n: number) => ({ ...s, resources: { ...s.resources, food: Math.max(0, s.resources.food + n) } });
 const addMood = (s: GameState, n: number) => ({ ...s, modifiers: { ...s.modifiers, happiness: s.modifiers.happiness + n } });
 
 const MOMENTS: Moment[] = [
-  { id: "herd", when: (s) => forestCover(s) >= 0.5, apply: (s) => addFood(s, 8), text: "A herd of deer passed the forest edge. The hunters brought back meat (+8 food)." },
-  { id: "berries", when: () => true, apply: (s) => addFood(s, 5), text: "The children found a patch of berries (+5 food)." },
+  { id: "herd", when: (s) => forestCover(s) >= 0.5, apply: (s) => addFood(s, 8), text: "A herd of deer passed the forest edge. The hunters brought back meat (+8 food).", where: forestEdge },
+  {
+    id: "berries",
+    when: () => true,
+    apply: (s) => addFood(s, 5),
+    text: "The children found a patch of berries (+5 food).",
+    where: (s) => pick(s, nearHome(s, (t) => !t.building && (t.deposit === "berries" || t.terrain === "grass" || t.terrain === "forest"))),
+  },
   {
     id: "baby",
     when: (s) => s.meters.food >= 45 && s.population < housingCapacity(s),
     apply: (s) => ({ ...s, population: s.population + 1 }),
     text: "A baby was born by the fire (+1 person).",
+    where: (s) => aBuilding(s, ["hut", "house", "townhouse"]) ?? s.tiles[s.startTile],
   },
   {
     id: "windfall",
     when: (s) => forestCover(s) >= 0.3,
     apply: (s) => ({ ...s, resources: { ...s.resources, wood: s.resources.wood + 4 } }),
     text: "The wind brought down an old tree: free firewood (+4 wood).",
+    where: forestEdge,
   },
   {
     id: "gust",
@@ -1750,43 +1772,59 @@ const MOMENTS: Moment[] = [
       return { ...s, fires: { ...s.fires, [fire.id]: 0 } };
     },
     text: "A gust of wind blew out a campfire. Click it to relight it.",
+    // The fire that went out (the same one apply() picks).
+    where: (s) => litFires(s)[Math.floor(s.tick / 7) % litFires(s).length],
   },
   {
     id: "rain",
     when: (s) => (countBuildings(s).farm ?? 0) > 0 && rainfall(s) >= 0.8,
     apply: (s) => addFood(s, 2 * (countBuildings(s).farm ?? 0)),
     text: "A good rain fell, and the fields drank it up. Forests help bring the rain.",
+    where: (s) => aBuilding(s, ["farm"]),
   },
-  { id: "story", when: (s) => litFires(s).length > 0, apply: (s) => addMood(s, 5), text: "A storyteller kept everyone up late by the fire. Spirits are high." },
-  { id: "smoke", when: (s) => litFires(s).length >= 3, apply: (s) => addMood(s, -4), text: "Smoke hung over the village all day. People are coughing." },
+  { id: "story", when: (s) => litFires(s).length > 0, apply: (s) => addMood(s, 5), text: "A storyteller kept everyone up late by the fire. Spirits are high.", where: (s) => litFires(s)[0] },
+  { id: "smoke", when: (s) => litFires(s).length >= 3, apply: (s) => addMood(s, -4), text: "Smoke hung over the village all day. People are coughing.", where: (s) => s.tiles[s.startTile] },
   {
     id: "birds",
     when: (s) => forestCover(s) >= 0.8,
     apply: (s) => ({ ...s, modifiers: { ...s.modifiers, sustainability: s.modifiers.sustainability + 2 } }),
     text: "Birds are nesting in the old forest again (+2 Sustainability for a while).",
+    where: forestEdge,
   },
   {
     id: "mice",
     when: (s) => s.resources.food > 60 && !countBuildings(s).granary,
     apply: (s) => addFood(s, -Math.round(s.resources.food * 0.1)),
     text: "Mice got into the food stores and spoiled some of it. A granary would keep it safe.",
+    where: (s) => aBuilding(s, ["hut", "house", "gatherer", "farm"]) ?? s.tiles[s.startTile],
   },
-  { id: "dust", when: (s) => forestCover(s) < 0.5, apply: (s) => addMood(s, -3), text: "Wind blew dust off the bare land where the forest used to be." },
+  { id: "dust", when: (s) => forestCover(s) < 0.5, apply: (s) => addMood(s, -3), text: "Wind blew dust off the bare land where the forest used to be.", where: bareLand },
 ];
 
-export function smallMoment(state: GameState): GameState {
+// Dev: `force` picks which moment (if it can happen right now).
+export const MOMENT_IDS = () => MOMENTS.map((m) => m.id);
+
+export function smallMoment(state: GameState, force?: string): GameState {
   const due = state.nextMomentTick ?? state.tick + SMALL_MOMENTS.firstAfter;
   if (state.tick < due) return state.nextMomentTick === undefined ? { ...state, nextMomentTick: due } : state;
   // Never over an event card, a raid or the legion: try again a little later.
   if (state.event || state.raid || state.legion) return { ...state, nextMomentTick: state.tick + 5 };
   const rand = mulberry32(state.seed + state.tick * 61);
   const last = state.lastMoment;
-  const options = MOMENTS.filter((m) => m.id !== last && m.when(state));
+  const options = MOMENTS.filter((m) => (force ? m.id === force : m.id !== last) && m.when(state));
   const next = state.tick + SMALL_MOMENTS.base + Math.floor(rand() * SMALL_MOMENTS.spread);
   if (!options.length) return { ...state, nextMomentTick: next };
   const moment = options[Math.floor(rand() * options.length)];
+  // Where it happens is worked out before it happens (a gust picks a lit fire).
+  const spot = moment.where(state) ?? state.tiles[state.startTile];
   const after = moment.apply(state);
-  return { ...after, nextMomentTick: next, lastMoment: moment.id, log: [moment.text, ...after.log].slice(0, 30) };
+  return {
+    ...after,
+    nextMomentTick: next,
+    lastMoment: moment.id,
+    moment: { id: moment.id, tick: state.tick, tile: spot.id },
+    log: [moment.text, ...after.log].slice(0, 30),
+  };
 }
 
 // The height of a tile once a quarry has cut part of it away.
@@ -2722,7 +2760,7 @@ function step(state: GameState, action: Action): GameState {
 
     case "devMoment":
       if (!state.dev) return state;
-      return withMeters(smallMoment({ ...state, event: null, nextMomentTick: state.tick }));
+      return withMeters(smallMoment({ ...state, event: null, nextMomentTick: state.tick }, action.id));
 
     case "famineRelief": {
       if (state.famineTicks <= 0 || state.phase !== "playing") return state;
