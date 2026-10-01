@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Vector3 } from "three";
 import { Html, MapControls } from "@react-three/drei";
-import { BUILDINGS_BY_ID, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL, WEAR } from "@/game/content";
+import { BUILDINGS_BY_ID, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL, WEAR, SMOG } from "@/game/content";
 import {
   buildingCost,
   DEMOLISH_TOOL,
@@ -45,9 +45,10 @@ import { PickUp } from "./pick-up";
 import { SeaTraffic, TradeShips, WaitingShips } from "./trade";
 import { Cracks, DisasterDust, disasterView, FloodWater, QuakeShake, Rubble, StormRain } from "./disasters";
 import { Wildlife } from "./wildlife";
-import { CampfireSmoke, Haze, Wildfire } from "./atmosphere";
+import { CampfireSmoke, Haze, Wildfire, ChimneySmoke } from "./atmosphere";
 import { UnderConstruction } from "./medieval-models";
 import { Mice } from "./moments";
+import { hexDistance } from "@/game/hex";
 
 function HexOutline({ x, y, z, color }: { x: number; y: number; z: number; color: string }) {
   return (
@@ -179,6 +180,19 @@ export function WorldCanvas() {
   const dust = def && !error && hoverTile ? dustNote(state, hoverTile, def.id) : null;
   const gather = def?.id === "gatherer" && !error && hoverTile && !inTutorialNow ? gatherNote(state) : null;
   const town = def && !error && hoverTile ? townNote(state, hoverTile, def.id) : null;
+  // Industrial: what it does to the grid, the air over the homes and the climate.
+  const industry =
+    def && !error && hoverTile && (def.power || def.smog || def.carbon)
+      ? [
+          def.power && def.power > 0 ? `+${def.power} power.` : def.power ? `Needs ${-def.power} power.` : "",
+          def.smog
+            ? `Smoke over ${state.tiles.filter((t) => t.building && ["hut", "house", "townhouse", "apartments"].includes(t.building) && hexDistance(t, hoverTile) <= SMOG.range).length} homes nearby.`
+            : "",
+          def.carbon ? "Carbon into the air, for good." : "",
+        ]
+          .filter(Boolean)
+          .join(" ")
+      : null;
   // Overseas: each building there costs more coins to keep supplied.
   const overseas =
     def && !error && hoverTile && hoverTile.island >= 0 && hoverTile.island !== state.tiles[state.startTile].island
@@ -352,6 +366,7 @@ export function WorldCanvas() {
       <BattleScene tiles={state.tiles} battle={battleShowing ? state.battle ?? null : null} homeTile={home} />
       <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} speed={state.speed} />
       <TradeShips tiles={state.tiles} home={home} caravans={state.caravans ?? []} tick={state.tick} speed={state.speed} />
+      <ChimneySmoke tiles={buildings} cleanAir={state.researched.includes("cleanair")} />
       <SeaTraffic state={state} home={home} />
       <WaitingShips state={state} home={home} />
       {/* The plague: rats scurrying round a few homes. */}
@@ -479,6 +494,12 @@ export function WorldCanvas() {
                   <span className="flex items-start gap-1.5 text-amber-200">
                     <PixelIcon name="warning" size={12} />
                     {gather}
+                  </span>
+                )}
+                {industry && (
+                  <span className="flex items-start gap-1.5 text-amber-200" data-testid="industry-note">
+                    <PixelIcon name="powerplant" size={12} />
+                    {industry}
                   </span>
                 )}
                 {overseas && (

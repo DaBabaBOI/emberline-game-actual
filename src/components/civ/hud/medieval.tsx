@@ -161,14 +161,14 @@ export function KingdomsPanel() {
         <div className="mb-2 flex items-center justify-between">
           <h3 className="font-pixel flex items-center gap-2 text-lg font-bold">
             <PixelIcon name="crown" size={22} />
-            The kingdoms
+            {state.era >= 4 ? "The nations" : "The kingdoms"}
           </h3>
           <button type="button" onClick={() => setPanel(null)} className="font-pixel text-sm underline">
             Close
           </button>
         </div>
         <p className="mb-3 text-[11px] text-stone-600">
-          Friendly kingdoms trade with us; hostile ones send armies. Moods slowly drift back toward wary. Ships that reach their coasts, caravans and
+          {state.era >= 4 ? "They are nations now. " : ""}Friendly ones trade with us; hostile ones send armies. Moods slowly drift back toward wary. Ships that reach their coasts, caravans and
           gifts please them; castles worry them.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">

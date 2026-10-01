@@ -298,7 +298,7 @@ export function BottomBar() {
             <ToolButton
               guide="tool-kingdoms"
               icon="crown"
-              label="Kingdoms"
+              label={state.era >= 4 ? "Nations" : "Kingdoms"}
               onClick={() => setPanel("kingdoms")}
               badge={hostileKingdoms(state).length ? "!" : undefined}
               title={hostileKingdoms(state).length ? "A kingdom is hostile: its armies will raid us" : "Gifts, treaties and raids with the two kingdoms"}

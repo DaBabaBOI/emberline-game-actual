@@ -21,6 +21,7 @@ import { Countdown } from "./countdown";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { useGuide } from "./guide-overlay";
 import { PlagueBanner } from "./medieval";
+import { ClimateBanner } from "./industrial";
 
 export function TutorialPanel() {
   const { state, dispatch } = useGame();
@@ -322,6 +323,7 @@ function DisasterBanner() {
 
 export function RaidBanner() {
   const { state, dispatch } = useGame();
+  if (state.climate && !state.raid) return <ClimateBanner />;
   if (state.plague && !state.raid) return <PlagueBanner />;
   if (state.disaster && !state.raid) return <DisasterBanner />;
   if (state.drought && !state.raid) return <DroughtBanner />;
@@ -640,6 +642,17 @@ export function DevPanel() {
             </button>
           )),
         )}
+      </div>
+      {/* Industrial era: the climate crisis, and carbon in the air. */}
+      <div className="flex max-w-xs flex-wrap gap-1">
+        {(["soon", "now", "end"] as const).map((when) => (
+          <button key={when} type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devClimate", when })}>
+            Climate {when}
+          </button>
+        ))}
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devCarbon", by: 50 })}>
+          Carbon +50
+        </button>
       </div>
       {/* Natural disasters: each is warned of, then strikes 3 ticks later. */}
       <div className="flex max-w-xs flex-wrap gap-1">

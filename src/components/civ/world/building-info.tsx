@@ -1,6 +1,6 @@
 "use client";
 
-import { BUILDINGS_BY_ID, FIRE_SCARE, LANDMARKS, QUARRY_DUST, WEAR } from "@/game/content";
+import { BUILDINGS_BY_ID, FIRE_SCARE, LANDMARKS, QUARRY_DUST, SMOG, WEAR } from "@/game/content";
 import {
   dusty,
   rainfall,
@@ -15,6 +15,8 @@ import {
   landmarkDone,
   nextStageCost,
   outpostUpkeep,
+  powerCover,
+  powerOf,
   outpostsUnpaid,
   overseasBuildings,
   stageError,
@@ -134,6 +136,17 @@ export function BuildingInfo({
             </>
           )}
         </div>
+      )}
+
+      {/* Industrial era: the grid, the smoke and the carbon. */}
+      {(powerOf(state, def.id) !== 0 || def.smog || def.carbon) && (
+        <p className="mt-2 border-t-2 border-stone-300 pt-1.5" data-testid="industry-info">
+          {powerOf(state, def.id) > 0 && `Makes ${powerOf(state, def.id)} power. `}
+          {powerOf(state, def.id) < 0 &&
+            `Needs ${-powerOf(state, def.id)} power; the grid covers ${Math.round(powerCover(state) * 100)}% of what the town needs. `}
+          {def.smog ? `Smoke over homes within ${SMOG.range} tiles${state.researched.includes("cleanair") ? " (halved by Clean Air Laws)" : ""}. ` : ""}
+          {def.carbon ? `Adds ${perSecond(def.carbon).toFixed(2)} ppm of carbon a second, for good.` : ""}
+        </p>
       )}
 
       {/* An outpost overseas: what it costs to keep supplied. */}

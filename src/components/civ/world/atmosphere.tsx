@@ -74,6 +74,21 @@ export function CampfireSmoke({ fires }: { fires: Tile[] }) {
   );
 }
 
+// Industrial chimneys: smoke above every coal plant, factory and station
+// (thinner once Clean Air Laws are passed).
+const CHIMNEYS: Record<string, number> = { coalplant: 1.5, factory: 1.1, station: 0.6 };
+export function ChimneySmoke({ tiles, cleanAir }: { tiles: Tile[]; cleanAir: boolean }) {
+  const sources = tiles.filter((t) => t.building && CHIMNEYS[t.building]).slice(0, 20);
+  if (!sources.length) return null;
+  return (
+    <group>
+      {sources.map((t) => (
+        <Plume key={t.id} x={t.x} y={t.height + 1.1} z={t.z} strength={CHIMNEYS[t.building!] * (cleanAir ? 0.5 : 1)} seed={t.id * 0.41} />
+      ))}
+    </group>
+  );
+}
+
 // Tiles that caught fire recently still burn for a while: flames and smoke.
 export function Wildfire({ tiles }: { tiles: Tile[] }) {
   const burning = useMemo(() => tiles.filter((t) => t.scorch > 0.8).slice(0, 30), [tiles]);
