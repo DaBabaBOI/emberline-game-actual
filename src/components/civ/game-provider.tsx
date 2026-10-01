@@ -15,13 +15,16 @@ import { reducer, saveGame, tickSeconds, type Action } from "@/game/engine";
 import { guideFor } from "./guide";
 import type { GameState } from "@/game/types";
 
+// A screen that covers the map (the game waits while it is open).
+export type Panel = "tree" | "kingdoms" | null;
+
 interface GameContextValue {
   state: GameState;
   dispatch: Dispatch<Action>;
   selected: string | null;
   setSelected: (id: string | null) => void;
-  panel: "tree" | null;
-  setPanel: (panel: "tree" | null) => void;
+  panel: Panel;
+  setPanel: (panel: Panel) => void;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -41,7 +44,7 @@ export function GameProvider({
 }) {
   const [state, dispatch] = useReducer(reducer, initial);
   const [selected, setSelected] = useState<string | null>(null);
-  const [panel, setPanel] = useState<"tree" | null>(null);
+  const [panel, setPanel] = useState<Panel>(null);
 
   // Time stands still while the tutorial hand is guiding: the starting resources
   // cover every step exactly, so nothing should be eaten or burned meanwhile.

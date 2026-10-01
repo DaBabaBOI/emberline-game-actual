@@ -15,6 +15,7 @@ import { TreeOverlay } from "./hud/tree-overlay";
 import { GuideOverlay } from "./hud/guide-overlay";
 import { Debrief, GoalLine, NextEraPrompt } from "./hud/debrief";
 import { DiscoveryScene } from "./hud/discovery-scene";
+import { KingdomsPanel, LandmarkPicker } from "./hud/medieval";
 import {
   DevPanel,
   ElderLesson,
@@ -62,6 +63,7 @@ function Hud({ onRestart }: { onRestart: () => void }) {
         <div className="flex flex-col items-center gap-2 lg:absolute lg:left-[25rem] lg:right-[21rem] lg:top-20">
           <GoalLine />
           <NextEraPrompt />
+          <LandmarkPicker />
           <RaidBanner />
         </div>
         {/* Elder Ama's panels stay above the tutorial's dimmed overlay, so what
@@ -84,6 +86,7 @@ function Hud({ onRestart }: { onRestart: () => void }) {
       <Warnings />
       <BottomBar />
       {panel === "tree" && <TreeOverlay />}
+      {panel === "kingdoms" && <KingdomsPanel />}
       <GuideOverlay />
       <EventModal />
       <DiscoveryScene />

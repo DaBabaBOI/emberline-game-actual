@@ -43,6 +43,10 @@ export interface Tile {
 }
 
 export type RaidKind = "band" | "party" | "fire";
+// The two neighbouring kingdoms of the Medieval era, and the landmark that
+// takes a town into it.
+export type KingdomId = "steppe" | "reach";
+export type LandmarkId = "library" | "cathedral" | "harbour";
 export type DisasterKind = "storm" | "flood" | "earthquake" | "landslide";
 export type RaidResponse = "fight" | "hide" | "tribute";
 
@@ -57,6 +61,8 @@ export interface Raid {
   targetTile: number;
   // Where the warriors march out to meet them.
   meetTile?: number;
+  // An army sent by a hostile kingdom (Medieval era).
+  kingdom?: KingdomId;
   // The Roman legion: `legion` legionaries, each worth two warriors.
   roman?: boolean;
   legion?: number;
@@ -86,7 +92,7 @@ export interface Stats {
   // Seconds (ticks) the land spent below the best-ending Sustainability.
   lowLandTicks: number;
   // `accident`: people dropped into the sea or lost in the fog (missing in older saves).
-  deaths: { famine: number; disease: number; fire: number; battle: number; accident?: number; disaster?: number };
+  deaths: { famine: number; disease: number; fire: number; battle: number; accident?: number; disaster?: number; plague?: number };
 }
 
 // What the debrief shows: frozen when the era ends (or the game does).
@@ -156,6 +162,12 @@ export interface BuildingDef {
   // Must touch the river (fresh water), not just the sea.
   needsRiver?: boolean;
   requires?: string;
+  // A landmark (see LANDMARKS): built in stages, one of each.
+  landmark?: boolean;
+  // Only one of these can stand at a time.
+  unique?: boolean;
+  // Can be built on an overseas outpost island (Medieval era).
+  overseas?: boolean;
   housing?: number;
   produces?: Partial<Resources>;
   depositBonus?: { deposit: Deposit; amount: Partial<Resources> };
@@ -191,7 +203,9 @@ export type TallyKey =
   | "raidsWon"
   | "caravans"
   | "disasters"
-  | "landslides";
+  | "landslides"
+  | "gifts"
+  | "ships";
 
 // One thing to do before an advancement can be researched.
 export interface Goal {
@@ -230,6 +244,8 @@ export interface EventChoice {
     clearForest?: number;
     // Protect this many of the oldest forest tiles near the village for good.
     protectForest?: number;
+    // How each kingdom feels about it (Medieval era).
+    mood?: Partial<Record<KingdomId, number>>;
     // Chance (0–1) that sickness breaks out because of this choice.
     sickness?: number;
     // Something that may or may not happen: rolled when the choice is made.
@@ -260,7 +276,7 @@ export interface GameState {
   version: number;
   phase: "playing" | "gameover";
   // Why the game ended: everyone starved, or everyone got so sad they left.
-  lostTo: "famine" | "unrest" | "conquest" | "collapse" | "behind" | null;
+  lostTo: "famine" | "unrest" | "conquest" | "collapse" | "behind" | "plague" | null;
   seed: number;
   culture: CultureId;
   difficulty: DifficultyId;
@@ -274,14 +290,32 @@ export interface GameState {
   // when it starts and when the rains come back. Done once it is over.
   drought?: { warnTick: number; startTick: number; endTick: number } | null;
   droughtDone?: boolean;
+  // The landmark chosen after the drought: how many of its three stages have
+  // been paid for, where it stands, and when the masons finish the current one.
+  landmark?: { kind: LandmarkId; stage: number; tile?: number; readyTick: number } | null;
+  // Medieval era: how each neighbouring kingdom feels about us (-100 to 100),
+  // whether we have a treaty, and when we last sent a gift.
+  kingdoms?: Record<KingdomId, { mood: number; treaty: boolean; giftTick?: number }>;
+  // Ships out exploring or trading (from a Shipyard), and the islands found
+  // overseas where we may build a few things.
+  ships?: { start: number; back: number }[];
+  outposts?: number[];
+  // We raided a kingdom: its revenge army lands by `tick`. And when we last
+  // raided (our warriors need time before the next).
+  revenge?: { kingdom: KingdomId; tick: number } | null;
+  raidedTick?: number;
+  // The Black Death: warned of, arriving by ship, and over. Whether the harbour
+  // was closed (and when), and how many it has killed.
+  plague?: { warnTick: number; startTick: number; endTick: number; closed: boolean; closedTick?: number; deaths: number } | null;
+  plagueDone?: boolean;
+  // The discovery scene on screen (an advancement or secret just found), if any.
+  cutscene?: string | null;
   // A natural disaster: warned of at warnTick, strikes at startTick, over at
   // endTick. `tiles` are where it hits (flooded tiles, the quake's centre, the slope).
   disaster?: { kind: DisasterKind; warnTick: number; startTick: number; endTick: number; tiles: number[] } | null;
   nextDisasterTick?: number;
   // Fields a flood left rich silt on, until this tick.
   silt?: Record<number, number>;
-  // The discovery scene on screen (an advancement or secret just found), if any.
-  cutscene?: string | null;
   // Caravans out trading with the Silk Steppe: when each left and when it's back.
   caravans?: { start: number; back: number }[];
   // Running totals for the debrief, and the debrief on screen (if any).
