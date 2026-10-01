@@ -52,11 +52,11 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
   // Older saves may have stored a land-only verdict on a loss.
   const tier = TIERS[d.kind === "loss" ? "lost" : d.tier];
   const deaths = d.stats.deaths;
-  const lost = Math.round(deaths.famine + deaths.disease + deaths.fire + deaths.battle + (deaths.accident ?? 0));
+  const lost = Math.round(deaths.famine + deaths.disease + deaths.fire + deaths.battle + (deaths.accident ?? 0) + (deaths.disaster ?? 0));
   const who = state.nation ?? "Your people";
   const heading =
     d.kind === "era"
-      ? `The ${ERAS[d.era].name} is over`
+      ? `The ${ERAS[d.era].name}${ERAS[d.era].name.endsWith("Age") ? "" : " era"} is over`
       : d.kind === "final"
         ? "Your story is complete"
         : state.lostTo === "unrest"
@@ -70,9 +70,11 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
               : "Famine";
   const sub =
     d.kind === "era"
-      ? `${who} are ready to settle down and farm for good. Here is how you got here.`
+      ? d.era === 0
+        ? `${who} are ready to settle down and farm for good. Here is how you got here.`
+        : `${who} beat Rome, and their silver coins travel far. The village is becoming a town. Here is how you got here.`
       : d.kind === "final"
-        ? `${who} held back the Roman legion. Here is the whole story, from the first fire.`
+        ? `${who} came through the great drought. Here is the whole story, from the first fire.`
         : state.lostTo === "conquest"
           ? `The Roman legion broke through in ${formatYear(d.year)} and ${who} lost their village.`
           : state.lostTo === "unrest"
@@ -144,6 +146,7 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
                 famine {Math.round(deaths.famine)} · sickness {Math.round(deaths.disease)} · fire {Math.round(deaths.fire)} ·
                 battle {Math.round(deaths.battle)}
                 {deaths.accident ? ` · accidents ${Math.round(deaths.accident)}` : ""}
+                {deaths.disaster ? ` · disasters ${Math.round(deaths.disaster)}` : ""}
               </li>
               <Row label="Raids lost" value={d.stats.raidsLost} bad={d.stats.raidsLost > 0} />
             </ul>
@@ -254,21 +257,17 @@ export function GoalLine() {
 
 export function NextEraPrompt() {
   const { state, dispatch } = useGame();
-  if (state.era !== 0 || state.debrief || state.phase !== "playing") return null;
-  if (!state.researched.includes("agriculture")) return null;
-  const ready = readyForNextEra(state);
+  if (!readyForNextEra(state)) return null;
   return (
     <div className="pointer-events-none flex justify-center">
-      {ready ? (
-        <button
-          type="button"
-          onClick={() => dispatch({ type: "advanceEra" })}
-          className="pixel-btn font-pixel pointer-events-auto animate-pulse bg-amber-400 px-4 py-2 text-sm font-semibold text-[#2b2119]"
-          data-testid="next-era"
-        >
-          Your people are ready: enter the Ancient era
-        </button>
-      ) : null}
+      <button
+        type="button"
+        onClick={() => dispatch({ type: "advanceEra" })}
+        className="pixel-btn font-pixel pointer-events-auto animate-pulse bg-amber-400 px-4 py-2 text-sm font-semibold text-[#2b2119]"
+        data-testid="next-era"
+      >
+        Your people are ready: enter the {ERAS[state.era + 1].name} era
+      </button>
     </div>
   );
 }

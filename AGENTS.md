@@ -226,9 +226,11 @@ These were decided with the project owner. Do not change them without being aske
   within 75 / 60 / 45 / 30 minutes (First time / Easy / Normal / Hard) of the
   tutorial ending, or the world moves on and the game is lost ("Left behind").
   A countdown warning shows for the last 5 minutes; the clock pauses once the
-  tribe is ready to advance. Stone Age only for now (the Ancient era ends with
-  the legion); new eras should get their own limit. The sensible bot never hits
-  it on Normal. Dev: "Nearly behind". The Stone Age calendar runs at the pace of
+  tribe is ready to advance. The Ancient era has its own clock
+  (`ANCIENT_DEADLINE`: 30 / 25 / 20 / 15 minutes), counted from the moment the
+  Roman legion is beaten, to reach the Classical era. The Classical era ends
+  with the drought, so it has none. New eras should get their own limit. The
+  sensible bot never hits it on Normal. Dev: "Nearly behind". The Stone Age calendar runs at the pace of
   this deadline (`stoneAgeYear()`): 50,000 BCE when the tutorial ends, 3,000 BCE
   exactly when the world moves on, so the year never stalls and doubles as the clock.
 - **Picking people up** (`world/pick-up.tsx`, `dropOutcome()` / `dropPerson` in
@@ -303,11 +305,56 @@ These were decided with the project owner. Do not change them without being aske
   the soil −3), Granary (+`GRANARY_KEEPS` food keeps), Forester's Lodge
   (regrows thinned forest nearby), Stone Walls (+`WALL_DEFENSE`). Bronze
   Weapons doubles each warrior. Era-gated event cards use `era`.
-- **The Ancient era ends with a Roman legion** (`ROMAN_LEGION`, `updateLegion`):
+- **The Roman legion is the Ancient era's big test** (`ROMAN_LEGION`, `updateLegion`):
   scouts see it at 1600 BCE, it lands ~90 ticks later. Size grows with
-  population and difficulty; each legionary fights like 2 warriors. Win → the
-  **final debrief** (ending tier as above, then "Keep playing"); lose → the
-  loss debrief ("Conquered"). No ordinary raids while it's coming. Romans wear
+  population and difficulty; each legionary fights like 2 warriors. Lose → the
+  loss debrief ("Conquered"). Win → the era goes on (`legionBeatenTick`), raids
+  come back, and the "left behind" clock starts. No ordinary raids while it's coming.
+- **Leaving the Ancient era** (`readyForNextEra`): the legion beaten, **Coinage**
+  researched (era 1, 60 Knowledge, goal: hold 150 coins) and
+  `CLASSICAL_POPULATION` (40) people. After the legion the Ancient calendar runs
+  from the year of the victory to 500 BCE over `ANCIENT_DEADLINE` (`nextYear()`),
+  like the Stone Age's.
+- **Classical era** (era 2, a year per tick; `WATER`, `TOWN`, `CARAVAN`):
+  - **River:** the home island has one (`riverPath()` in `map.ts`, terrain
+    `river`: water, not land). It is fixed geography, from the hills just south
+    of the village to the sea. Old saves get it added on load (only where
+    nothing is built).
+  - **Water:** Well (+12 people's water, past 4 wells −2 Sustainability each),
+    Aqueduct (must touch the river, `needsRiver`; water for 40, fields within 3
+    tiles +20% and they keep 70% in the drought; −3), Watermill (touches the
+    river; fields within 2 tiles +25%; −2).
+  - **Towns:** Town House (24 people, upgrade from a Mud-brick House; keeps its
+    24 warm without a campfire, `TOWN.warmth`). With Town Houses standing,
+    sickness starts and spreads up to 2x faster for the share without clean
+    streets (`sanitation()`: Public Latrines 25 each, Bathhouses 10). Bathhouse:
+    +8 happiness (up to 2), the sick recover faster, burns wood, −2.
+  - **Trade:** Market (coins; traders bring a little sickness), Silk Road
+    Contact → the Caravan button (one per Market at a time, 40 ticks, +60 coins
+    +4 Knowledge, 20% chance of sickness; drawn as a ship to the Silk Steppe,
+    `world/trade.tsx`). Paved Roads: paths become stone roads, +25% coins,
+    travel 20% cheaper. Jade Road secret: 5 caravans.
+  - **Also:** Academy (Philosophy, teaching building), Iron Weapons (warriors
+    ×3, smithies burn 50% more charcoal). New lessons (water, sanitation, river,
+    towns, trade, drought) and event cards (dirty river, timber merchant, new
+    quarter). Elder Ama welcomes the player to the era (`ERA_INTROS`).
+- **The great drought ends the Classical era** (`DROUGHT`, `updateDrought`):
+  the elders warn at 100 AD (about 15 minutes in), it starts 120 ticks later and
+  lasts 120 ticks (3 minutes). Rain falls to 10% plus up to 30% more with the
+  forest standing; gatherers and pens give half. People without water
+  (`waterSupply()` vs population) lose happiness and fall sick more. Granaries
+  keep the stored food. In the drought the famine clock runs at half speed
+  (`FAMINE.droughtClock`). No raids from the warning until the rains return.
+  Coming through it → the **final debrief** ("Keep playing"). The drought parches
+  the grass, muddies the river and puts dust in the air. Dev: "Drought soon /
+  now / End drought", "Beat legion", "Caravan back".
+- **Growth and famine in big towns:** the tribe only grows when it makes at
+  least as much food as it eats (not just when the Food meter is 45+), by at most
+  `GROWTH_CAP` (0.35) people a tick. In a famine, on top of the deaths, the
+  people the town can't feed leave (`FAMINE.leaveShare` of them a tick).
+- **Land strain is a slope:** harvests shrink by up to 40% as Sustainability
+  falls from 40 to 20 (`LAND.strainDepth`), after a minute below 40. The warning
+  names the biggest cost from the Sustainability breakdown. Romans wear
   crested bronze helmets and big red shields (`Figures gear="roman"`).
   (Historically Rome only becomes a power right at the end of this period; the
   legion is the Ancient era's climax on purpose.)
@@ -327,6 +374,34 @@ These were decided with the project owner. Do not change them without being aske
   the fifth (**left behind**, see below). Everything else is a setback. Balance: the
   sensible bot never gets near 20; a reckless bot (clear-cutting, never
   replanting) collapses around 10 minutes. Dev: "Collapse".
+- **Hard mode: wear and repairs** (`WEAR`, `wearBuildings`, `wearFactor`,
+  `repairCost`, tile `worn`): in Hard only, every building but the campfire
+  wears by 1/900 a tick (busy ones 1.5x, brick and stone 0.6x). Past 50% worn
+  it makes less, down to nothing when broken (worn 1); a broken home holds
+  half its people; costs (like a bathhouse's wood) don't shrink. A hammer
+  shows over buildings 70%+ worn (red when broken) and a warning counts them.
+  Repair in the building panel: 15% of its cost, scaled by how worn it is
+  (at least 30%). New and upgraded buildings start fresh. Dev: "Wear".
+- **Natural disasters** (`DISASTERS`, `DISASTER_HITS`, `updateDisasters` /
+  `strike` in the engine, `world/disasters.tsx`): the first about 10 minutes
+  after the tutorial, then one every 10–17 minutes; never over a raid, the
+  legion, the drought or an event, one big moment at a time. Each is warned of
+  (banner with a countdown), then strikes. Storm: all fires out, wooden
+  buildings without 2 forest tiles beside them may be wrecked (rain,
+  lightning, dark sky). Flood: low tiles by the river or sea go under (fewer
+  with more forest standing); buildings there stop; afterwards fields there
+  get silt (+40%). Earthquake: camera shake, cracks, buildings near it fall
+  (brick/stone 25%, wood 8%, at most 3; lost homes kill). Landslide: only on
+  hills with stripped forest or quarry cuts around them and buildings below.
+  The last woodcutter is never destroyed. Deaths count as "disasters" in the
+  debrief. Lessons: disasters (SDG 11.5), slopes (SDG 15.3). Dev: Storm,
+  Flood, Earthquake, Landslide.
+- **Discovery scenes** (`DISCOVERIES` in content, `hud/discovery-scene.tsx`,
+  `state.cutscene`): researching an advancement or finding a secret plays a
+  short pixel scene (sky, people walking in, the discovery appearing, three
+  lines of story). The clock waits until it's closed; it can be skipped or
+  sped up. Every new advancement needs a scene (lines in the tribe's voice,
+  modest about history). Dev: pick one and press "Scene".
 - **Accessibility settings** (`accessibility-settings.tsx`, mounted in the root
   layout): a floating Settings button on every page, except while a game is on
   screen (`data-in-game` on `<html>`, set by `GameScreen`): there the same
@@ -337,12 +412,18 @@ These were decided with the project owner. Do not change them without being aske
   `src/components/civ/guide.ts`, drawn by `hud/guide-overlay.tsx`). Targets are
   elements with `data-guide="…"` or a map tile. While the player is saving up
   resources the hand lets go. New tutorial steps need a case in `guideFor()`.
-- **Endings:** a loss (famine, unrest, collapse, conquest) always gets the "lost" tier.
+- **Endings:** a loss (famine, unrest, collapse, conquest, left behind) always gets the "lost" tier.
   Land-based tiers (thriving, costly, stripped) are only for eras that end.
 - **Balance is checked with a full-game bot** (skip tutorial, sensible build order,
-  selective logging, replanting, saving up for key buildings). Last check: 4 of 5
-  reached the Ancient era at 17-20 min, 2 of those beat the Roman legion (the
-  ones that grew huge lost: the legion scales with population). Re-run it after
+  selective logging, replanting, saving up for key buildings; after the legion it
+  researches Coinage first, and in the Classical era gets water before the
+  drought). Last check, Normal (12 seeded games): all reached the Ancient era
+  at 20-26 min, 7 beat the legion (the same bot on the version before the
+  Classical era: 5 of 12), and 5 of the 6 towns that reached the Classical era
+  came through the drought, most losing about half their people; the one with
+  no water lost to unrest. Hard (6): 3 beat the legion, all 3 came through the
+  drought with heavy losses. First time (4): 3 came through, 1 ruined its land (collapse). In big towns
+  sickness kills the most, which is what latrines are for. Re-run it after
   changing any rate below.
 - **Knowledge:** no base trickle. Milestones pay once each (`KNOWLEDGE_MILESTONES`:
   first of each building +2, population 10 +1 (once), first raid won +6,
@@ -464,7 +545,7 @@ These were decided with the project owner. Do not change them without being aske
      (historically accurate: Minoan/Phoenician/Greek colonies).
    - **Raiders:** bigger raids; unlock bronze spearmen, archers, and palisade/stone
      walls that protect nearby tiles.
-2. Classical: coinage, roads, iron legions, philosophy, the first landmark project.
+2. Classical: built (see above). Still open: a landmark project.
 3. Medieval & Renaissance, then Industrial & Modern (pollution gets serious),
    then Future & Space (the space view, fusion, AI tech, interstellar).
 4. Later: multiplayer, where human players replace AI nations.

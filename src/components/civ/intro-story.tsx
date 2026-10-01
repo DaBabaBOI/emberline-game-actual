@@ -28,11 +28,11 @@ export function IntroStory({ nation, onBegin }: { nation: string; onBegin: () =>
           </div>
           <div className="border-2 border-[#2b2119] bg-white p-2">
             <div className="font-semibold text-amber-700">Then</div>
-            Get strong before the Roman legion lands.
+            Lead your people through the ages, from the first fire to the stars, without using up the land that feeds them.
           </div>
           <div className="border-2 border-[#2b2119] bg-white p-2">
             <div className="font-semibold text-red-700">You lose if</div>
-            Your people starve, lose hope, or you ruin the land.
+            Your people starve, lose hope, fall behind the world, or you ruin the land.
           </div>
         </div>
         <button
