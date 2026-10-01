@@ -345,6 +345,11 @@ export interface GameState {
   grief?: number;
   // Scouts out exploring: the tile they head for, and the tick they come back.
   scouting?: { tile: number; back: number };
+  // Unrest that may turn into a rebellion (REBELLION in content.ts): brewing
+  // until riseTick, then risen (rebels on the map) until crushed, paid or sackTick.
+  rebellion?: { stage: "brewing" | "risen"; riseTick: number; rebels: number; tile: number; sackTick: number } | null;
+  // No new rebellion before this tick.
+  rebellionCalm?: number;
   // Chief XP (only goes up) and level (missing in older saves: 0 and 1).
   xp?: number;
   chiefLevel?: number;

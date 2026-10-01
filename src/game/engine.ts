@@ -93,6 +93,7 @@ import {
   TEACHING,
   SCOUT_KNOWLEDGE,
   SCOUT_TRIP,
+  REBELLION,
   TUTORIAL,
   TUTORIAL_FAREWELL,
   WARRIORS_PER_CAMP,
@@ -174,6 +175,9 @@ export type Action =
   | { type: "raidKingdom"; kingdom: KingdomId }
   | { type: "ship" }
   | { type: "harbour"; closed: boolean }
+  | { type: "crushRebels" }
+  | { type: "meetDemands" }
+  | { type: "devRebellion"; when: "soon" | "now" }
   | { type: "devLandmark" }
   | { type: "devPlague"; when: "soon" | "now" | "end" }
   | { type: "devShipBack" }
@@ -2579,7 +2583,7 @@ function tickOnce(state: GameState): GameState {
   next = cutHills(next);
   next = sparks(next);
   // No raids or events while a new player is still learning.
-  if (!inTutorial) next = updatePlague(updateDisasters(updateDrought(updateLegion(updateRaids(next)))));
+  if (!inTutorial) next = updateRebellion(updatePlague(updateDisasters(updateDrought(updateLegion(updateRaids(next))))));
   next = returnCaravans(next);
   next = returnScouts(next);
   next = returnShips(updateKingdoms(next));
@@ -3249,6 +3253,65 @@ function personName(state: GameState, salt: number) {
 const SHAKEN = `The tribe is shaken (−${GRIEF.happiness} happiness, fading over ${Math.round(secs(GRIEF.ticks) / 60)} minutes).`;
 function grieve(state: GameState): GameState {
   return { ...state, grief: Math.min(GRIEF.max, (state.grief ?? 0) + GRIEF.happiness) };
+}
+
+// What the rebels want for going home: coins and food for each of them.
+export function rebelDemands(state: GameState): Partial<Resources> {
+  const n = state.rebellion?.rebels ?? 0;
+  return { currency: REBELLION.demand.currency * n, food: REBELLION.demand.food * n };
+}
+
+// The chance our warriors put a rebellion down (their strength against ours).
+export function crushOdds(state: GameState) {
+  const ours = defenseStrength(state);
+  const theirs = (state.rebellion?.rebels ?? 0) * REBELLION.strength;
+  return ours <= 0 ? 0 : ours / (ours + theirs);
+}
+
+function endRebellion(state: GameState, line: string): GameState {
+  return { ...state, rebellion: null, rebellionCalm: state.tick + REBELLION.cooldown, log: [line, ...state.log].slice(0, 30) };
+}
+
+// Unhappy people in the Middle Ages may rise up: unrest brews, then rebels
+// take up arms, and left alone they sack the stores and leave.
+function updateRebellion(state: GameState): GameState {
+  const r = state.rebellion;
+  if (!r) {
+    if (state.era < REBELLION.era || state.meters.happiness >= REBELLION.mood || isCalm(state)) return state;
+    if (state.tick < (state.rebellionCalm ?? 0) || !quietEnough(state) || state.raid || state.legion) return state;
+    return {
+      ...state,
+      lastBigTick: state.tick,
+      rebellion: { stage: "brewing", riseTick: state.tick + REBELLION.warnTicks, rebels: 0, tile: state.startTile, sackTick: 0 },
+      log: [`Unrest in the streets! If happiness stays under ${REBELLION.mood}, people will rise up in ${secs(REBELLION.warnTicks)} s.`, ...state.log].slice(0, 30),
+    };
+  }
+  if (r.stage === "brewing") {
+    if (state.meters.happiness >= REBELLION.mood) return { ...endRebellion(state, "The unrest has died down: people are happier again."), rebellionCalm: state.tick + REBELLION.cooldown / 2 };
+    if (state.tick < r.riseTick) return state;
+    const pop = Math.floor(state.population);
+    const rebels = Math.min(pop - 1, Math.max(REBELLION.min, Math.round(pop * REBELLION.share)));
+    if (rebels < 1) return endRebellion(state, "The unrest has died down.");
+    const home = state.tiles[state.startTile];
+    // They gather at a building near the middle of the town.
+    const spot =
+      state.tiles
+        .filter((t) => t.building && t.island === home.island && t.building !== "warcamp")
+        .sort((a, b) => hexDistance(a, home) - hexDistance(b, home))[1] ?? home;
+    return {
+      ...state,
+      population: state.population - rebels,
+      rebellion: { stage: "risen", riseTick: r.riseTick, rebels, tile: spot.id, sackTick: state.tick + REBELLION.sackTicks },
+      log: [`Rebellion! ${rebels} of our people have taken up arms. Crush them, or meet their demands.`, ...state.log].slice(0, 30),
+    };
+  }
+  if (state.tick < r.sackTick) return state;
+  const sacked = {
+    ...state.resources,
+    food: state.resources.food * (1 - REBELLION.sack),
+    currency: state.resources.currency * (1 - REBELLION.sack),
+  };
+  return endRebellion({ ...state, resources: sacked }, `The rebels sacked the stores (${Math.round(REBELLION.sack * 100)}% of our food and coins) and left for good.`);
 }
 
 // Scouts back from a trip: the land around where they went is mapped.
@@ -4147,6 +4210,64 @@ function step(state: GameState, action: Action): GameState {
         resources: spend(state.resources, shipCost(state)),
         log: [`A ship set sail ${where}. It will be back in ${secs(shipTicks(state))} s.`, ...state.log].slice(0, 30),
       });
+    }
+
+    case "crushRebels": {
+      const r = state.rebellion;
+      if (!r || r.stage !== "risen" || state.soldiers < 1) return state;
+      const odds = crushOdds(state);
+      const won = mulberry32(state.seed + state.tick * 41)() < odds;
+      // Warriors lost: more when the rebels are strong compared with us.
+      const lost = Math.min(state.soldiers, Math.ceil(state.soldiers * (won ? 0.5 : 0.8) * (1 - odds)));
+      const killed = won ? r.rebels : Math.ceil(r.rebels / 3);
+      const after = bumpStats(
+        {
+          ...state,
+          soldiers: state.soldiers - lost,
+          population: Math.max(1, state.population - lost),
+          modifiers: { ...state.modifiers, happiness: state.modifiers.happiness - REBELLION.crushMood },
+        },
+        (st) => {
+          st.deaths.battle += lost + killed;
+        },
+      );
+      return withMeters(
+        won
+          ? endRebellion(after, `The rebellion was crushed. ${killed} rebels and ${lost} of our warriors died, and the town is shaken (−${REBELLION.crushMood} happiness).`)
+          : endRebellion(
+              { ...after, resources: { ...after.resources, food: after.resources.food * (1 - REBELLION.sack), currency: after.resources.currency * (1 - REBELLION.sack) } },
+              `Our warriors were beaten (${lost} died). The rebels sacked the stores and left for good.`,
+            ),
+      );
+    }
+
+    case "meetDemands": {
+      const r = state.rebellion;
+      const cost = rebelDemands(state);
+      if (!r || r.stage !== "risen" || !canAfford(state, cost)) return state;
+      return withMeters(
+        endRebellion(
+          {
+            ...state,
+            resources: spend(state.resources, cost),
+            population: state.population + r.rebels,
+            modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + REBELLION.demandMood },
+          },
+          `We met the rebels' demands. They put down their arms and went home (+${REBELLION.demandMood} happiness).`,
+        ),
+      );
+    }
+
+    case "devRebellion": {
+      // Unrest now, or straight to the rising (any era, for testing).
+      if (!state.dev || state.rebellion) return state;
+      const brewing: GameState = {
+        ...state,
+        rebellion: { stage: "brewing", riseTick: action.when === "now" ? state.tick : state.tick + REBELLION.warnTicks, rebels: 0, tile: state.startTile, sackTick: 0 },
+        log: ["Dev: unrest in the streets.", ...state.log].slice(0, 30),
+      };
+      // Rise even if people are happy enough right now.
+      return withMeters(action.when === "now" ? { ...updateRebellion({ ...brewing, meters: { ...brewing.meters, happiness: 0 } }), meters: state.meters } : brewing);
     }
 
     case "harbour": {
