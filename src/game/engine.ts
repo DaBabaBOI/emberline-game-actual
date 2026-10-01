@@ -1618,6 +1618,39 @@ function milestonesReached(state: GameState): [string, string, number][] {
   return out;
 }
 
+// Where Knowledge comes from, for the "How to get Knowledge" panel: what
+// teaches every day (per tick), and the one-time firsts still to come.
+export function knowledgeSources(state: GameState) {
+  const counts = countBuildings(state);
+  const bonus = state.culture === "scholars" ? 1.5 : 1;
+  const daily: { label: string; perTick: number }[] = [];
+  for (const [id, n] of Object.entries(counts)) {
+    const k = BUILDINGS_BY_ID[id]?.produces?.knowledge ?? 0;
+    if (k > 0 && n > 0)
+      daily.push({ label: `${n} ${BUILDINGS_BY_ID[id].name}${n > 1 ? "s" : ""}`, perTick: k * n * teachingShare(state, id) * bonus });
+  }
+  daily.push({ label: `Literacy ${state.meters.literacy}`, perTick: state.meters.literacy * 0.001 * bonus });
+  const M = KNOWLEDGE_MILESTONES;
+  const done = state.milestones ?? [];
+  // Milestones get the Scholars bonus; scouting, caravans and levels don't.
+  const firsts: { label: string; gain: number }[] = [];
+  const milestone = (label: string, gain: number) => firsts.push({ label, gain: Math.round(gain * bonus) });
+  const unbuilt = Object.values(BUILDINGS_BY_ID).filter(
+    (d) => isUnlocked(state, d) && !counts[d.id] && !done.includes(`build-${d.id}`),
+  );
+  if (unbuilt.length)
+    milestone(`Build your first ${unbuilt.slice(0, 3).map((d) => d.name).join(", ")}${unbuilt.length > 3 ? "..." : ""} (each new kind)`, M.firstBuilding);
+  for (const p of M.population) if (!done.includes(`pop-${p}`)) milestone(`Grow to ${p} people`, M.populationReward);
+  if (!done.includes("raid")) milestone("Drive off raiders for the first time", M.firstRaidWon);
+  if (!done.includes("plant") && state.researched.includes("early-farming")) milestone("Plant your first saplings", M.firstPlanted);
+  const trips = Math.max(0, SCOUT_KNOWLEDGE.trips - state.scoutsSent);
+  if (trips) firsts.push({ label: `Send scouts (${trips} more trip${trips === 1 ? "" : "s"} teach us; big ones +2)`, gain: 1 });
+  // Caravans to the Silk Steppe bring new ideas home (Classical era).
+  if (state.researched.includes("barter-roads")) firsts.push({ label: "Each caravan that comes home", gain: CARAVAN.knowledge });
+  firsts.push({ label: "Each new chief level", gain: XP.levelKnowledge });
+  return { daily, firsts };
+}
+
 // Pay out Knowledge for new milestones, once each.
 function knowledgeMilestones(state: GameState): GameState {
   const done = state.milestones ?? [];

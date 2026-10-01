@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-30",
     items: [
+      "Click the Knowledge counter (the bulb at the top) to see how to get more: the firsts still waiting for you and what teaches every day. A +N pops up whenever you learn something.",
       "Someone you drop on a field or workplace now gets to work there instead of sitting down: a hoe in the fields, an axe at the woodcutter, a pick at the quarry, moving from patch to patch.",
       "Skipping the tutorial now gives you everything it would have: Early Farming, a Farmland and a Wooden House as well.",
       "Small moments now happen on the map: deer run past, a tree blows down, birds circle the forest, rain falls on the fields, with a label over the spot.",

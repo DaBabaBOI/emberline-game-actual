@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import type { IconId } from "@/game/sprites";
 import { GameMenu } from "./online";
+import { KnowledgeGain, KnowledgeHelp } from "./knowledge-help";
+import { useState } from "react";
 
 const SPEEDS: { value: GameState["speed"]; label: string }[] = [
   { value: 0, label: "⏸" },
@@ -54,6 +56,7 @@ export function TopBar() {
   const era = ERAS[state.era];
   const r = state.resources;
   const low = new Set(warnings(state).map((w) => w.id));
+  const [knowHelp, setKnowHelp] = useState(false);
 
   return (
     <div className="pointer-events-auto absolute inset-x-0 top-2 flex justify-center px-2 md:top-3 md:px-3">
@@ -83,7 +86,22 @@ export function TopBar() {
         <Chip icon="meat" value={Math.floor(r.food).toString()} title="Stored food" low={low.has("food") || low.has("famine")} />
         <Chip icon="log" value={Math.floor(r.wood).toString()} title="Wood" low={low.has("wood")} />
         <Chip icon="rock" value={Math.floor(r.stone).toString()} title="Stone" />
-        <Chip icon="bulb" value={Math.floor(r.knowledge).toString()} title="Knowledge" />
+        {/* Knowledge: click to see how to get more. */}
+        <span className="relative">
+          <button
+            type="button"
+            onClick={() => setKnowHelp(!knowHelp)}
+            className={cn("flex items-center gap-1 whitespace-nowrap px-1", knowHelp ? "bg-amber-400 text-[#2b2119]" : "hover:bg-white/15")}
+            title="Knowledge: click to see how to get more"
+            data-testid="knowledge-chip"
+          >
+            <PixelIcon name="bulb" size={16} />
+            <span className="font-num">{Math.floor(r.knowledge)}</span>
+            <span className="text-[10px] text-amber-300">?</span>
+          </button>
+          <KnowledgeGain value={r.knowledge} />
+          {knowHelp && <KnowledgeHelp state={state} onClose={() => setKnowHelp(false)} />}
+        </span>
         <span className="hidden h-6 w-px bg-white/20 md:block" />
         <div className="flex gap-1">
           {SPEEDS.map((s) => (
