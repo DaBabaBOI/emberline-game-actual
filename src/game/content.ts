@@ -2164,7 +2164,12 @@ export const LEFT_BEHIND_WARN = 200;
 // A person dropped on a working building helps there: +`helpBoost` output for
 // `helpTicks`. One who wanders into the fog comes back after `fogTicks`, with
 // news of new land only `fogLuck` of the time (5%: scouting is the real way to explore), revealing `fogReveal` tiles around.
-export const DROP = { helpBoost: 0.5, helpTicks: 20, fogTicks: 20, fogLuck: 0.05, fogReveal: 2, mood: 6 };
+export const DROP = { helpBoost: 0.5, helpTicks: 20, fogTicks: 20, fogLuck: 0.05, fogReveal: 2 };
+// Someone dropped into a fire or the open sea dies, and the tribe grieves: each
+// death costs `happiness`, taken off after the 0-100 cap so it always shows. It
+// adds up with every death (to `max`) and fades over `ticks` (3 minutes). Two
+// close together can tip a tribe into unrest: killing people never pays.
+export const GRIEF = { happiness: 35, ticks: 120, max: 100 };
 export const PEOPLE_NAMES = ["Aru", "Mira", "Tok", "Ena", "Bram", "Kaya", "Oro", "Lin", "Senu", "Tavi", "Ilo", "Deka", "Runa", "Pim"];
 
 // Chief level: XP only ever goes up, so progress is always easy to see. Each

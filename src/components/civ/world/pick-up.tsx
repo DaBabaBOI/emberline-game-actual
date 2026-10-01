@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import { Plane, Raycaster, Vector2, Vector3 } from "three";
-import { BUILDINGS_BY_ID, DROP, TICK_SECONDS } from "@/game/content";
+import { BUILDINGS_BY_ID, DROP, GRIEF, TICK_SECONDS } from "@/game/content";
 import { dropOutcome, type Action, type DropOutcome } from "@/game/engine";
 import { isLand } from "@/game/map";
 import type { GameState, Tile } from "@/game/types";
@@ -323,6 +323,7 @@ export function PickUp({
           {armed && DEADLY.includes(target.outcome) && (
             <span className="block text-[11px] font-bold text-amber-200" data-testid="drop-confirm">
               Click again to really drop them there
+              <span className="block font-normal text-white">They die, and the tribe grieves: −{GRIEF.happiness} happiness</span>
             </span>
           )}
           {carrying && <span className="block text-[10px] text-white/80">Click or Enter: put down · Arrows: move · Esc: put back</span>}
