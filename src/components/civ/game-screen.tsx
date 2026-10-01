@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
 import { clearSave, loadGame, newGame, type NewGameOptions } from "@/game/engine";
 import type { CultureId, DifficultyId, GameState } from "@/game/types";
 import { cn } from "@/lib/utils";
@@ -12,7 +12,7 @@ import { TopBar } from "./hud/top-bar";
 import { SideMeters } from "./hud/side-meters";
 import { BottomBar } from "./hud/bottom-bar";
 import { TreeOverlay } from "./hud/tree-overlay";
-import { GuideOverlay } from "./hud/guide-overlay";
+import { GuideOverlay, useGuide } from "./hud/guide-overlay";
 import { Debrief, GoalLine, NextEraPrompt } from "./hud/debrief";
 import { DiscoveryScene } from "./hud/discovery-scene";
 import { KingdomsPanel, LandmarkPicker } from "./hud/medieval";
@@ -34,8 +34,12 @@ const WorldCanvas = dynamic(
 
 function Hud({ onRestart }: { onRestart: () => void }) {
   const { panel, setSelected } = useGame();
-  // The Advancements tree fills the screen: Elder Ama steps down to the corner.
+  // The Advancements tree fills the screen: Elder Ama moves out of the way.
   const treeOpen = panel === "tree";
+  const { target } = useGuide();
+  const stack = useRef<HTMLDivElement>(null);
+  const elder = useRef<HTMLDivElement>(null);
+  const spot = useSpotInTree(treeOpen, stack, elder, target?.kind === "ui" ? target.ids : []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -55,9 +59,13 @@ function Hud({ onRestart }: { onRestart: () => void }) {
           columns (panels left, notices centre, messages right); smaller
           screens get one column. */}
       <div
+        ref={stack}
+        style={spot}
         className={cn(
-          "absolute left-11 right-11 top-24 flex max-h-[calc(100dvh-22rem)] flex-col gap-2 overflow-y-auto md:left-16 md:right-auto md:top-20 md:max-h-[calc(100dvh-17rem)] md:w-80 lg:contents",
-          treeOpen && "bottom-10 top-auto md:left-auto md:right-6 md:top-auto",
+          "absolute left-11 right-11 flex flex-col gap-2 overflow-y-auto md:left-16 md:right-auto md:w-80 lg:contents",
+          treeOpen
+            ? "bottom-[var(--spot-bottom)] top-[var(--spot-top)] max-h-[var(--spot-max)] md:left-auto md:right-6"
+            : "top-24 max-h-[calc(100dvh-22rem)] md:top-20 md:max-h-[calc(100dvh-17rem)]",
         )}
       >
         <div className="flex flex-col items-center gap-2 lg:absolute lg:left-[25rem] lg:right-[21rem] lg:top-20">
@@ -69,9 +77,12 @@ function Hud({ onRestart }: { onRestart: () => void }) {
         {/* Elder Ama's panels stay above the tutorial's dimmed overlay, so what
             she is waiting for can always be read. */}
         <div
+          ref={elder}
           className={cn(
-            "relative z-[26] flex flex-col gap-2 lg:absolute lg:left-16 lg:top-20 lg:max-h-[calc(100dvh-16rem)] lg:w-80 lg:overflow-y-auto",
-            treeOpen && "lg:bottom-12 lg:left-auto lg:right-8 lg:top-auto",
+            "relative z-[26] flex flex-col gap-2 lg:absolute lg:w-80 lg:overflow-y-auto",
+            treeOpen
+              ? "lg:bottom-[var(--spot-bottom)] lg:right-8 lg:top-[var(--spot-top)] lg:max-h-[var(--spot-max)]"
+              : "lg:left-16 lg:top-20 lg:max-h-[calc(100dvh-16rem)]",
           )}
         >
           <DevPanel />
@@ -145,4 +156,53 @@ export function GameScreen() {
       </GameProvider>
     </div>
   );
+}
+
+// With Advancements open, Elder Ama's panels sit between the tree's header and
+// its details bar, so they never cover the Research button or the description:
+// just above the details bar, or just under the header when what she is
+// pointing at is down there. Below 1024 px the whole stack moves; above, only
+// her column (the stack is `display: contents` there).
+function useSpotInTree(
+  open: boolean,
+  stack: RefObject<HTMLDivElement | null>,
+  elder: RefObject<HTMLDivElement | null>,
+  targetIds: string[],
+): CSSProperties | undefined {
+  const [spot, setSpot] = useState<CSSProperties>();
+  const ids = targetIds.join(" ");
+  useEffect(() => {
+    if (!open) return;
+    const gap = 8;
+    const place = () => {
+      const area = document.querySelector("[data-tree-area]")?.getBoundingClientRect();
+      const details = document.querySelector("[data-tree-details]")?.getBoundingClientRect();
+      const box = (window.innerWidth >= 1024 ? elder.current : stack.current)?.getBoundingClientRect();
+      if (!area || !details || !box) return;
+      const room = Math.max(120, details.top - area.top - 2 * gap);
+      const height = Math.min(box.height, room);
+      // Where she would be, just above the details bar.
+      const low = { top: details.top - gap - height, bottom: details.top - gap };
+      const target = ids
+        .split(" ")
+        .map((id) => document.querySelector(`[data-guide="${id}"]`)?.getBoundingClientRect())
+        .find((r) => r && r.width > 0);
+      const inTheWay = !!target && target.left < box.right && box.left < target.right && target.top < low.bottom && low.top < target.bottom;
+      const next = {
+        "--spot-top": inTheWay ? `${Math.round(area.top + gap)}px` : "auto",
+        "--spot-bottom": inTheWay ? "auto" : `${Math.round(window.innerHeight - details.top + gap)}px`,
+        "--spot-max": `${Math.round(room)}px`,
+      } as CSSProperties;
+      setSpot((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+    };
+    const first = requestAnimationFrame(place);
+    const timer = window.setInterval(place, 250);
+    window.addEventListener("resize", place);
+    return () => {
+      cancelAnimationFrame(first);
+      window.clearInterval(timer);
+      window.removeEventListener("resize", place);
+    };
+  }, [open, stack, elder, ids]);
+  return open ? spot : undefined;
 }

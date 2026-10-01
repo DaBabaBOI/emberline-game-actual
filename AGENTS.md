@@ -624,6 +624,10 @@ These were decided with the project owner. Do not change them without being aske
   -PI/2 = straight ahead, -PI = straight up; figures face +z. Check new poses
   side-on in a browser before shipping.
 - Keep the tutorial (`TUTORIAL` in `content.ts`) working when you change buildings.
+- **Elder Ama never covers what she asks for:** with Advancements open her
+  panels sit between the tree's header and its details bar (`useSpotInTree()`
+  in `game-screen.tsx`, using `data-tree-area` / `data-tree-details`): just
+  above the bar, or under the header when the guide's target is down there.
 - During guided steps the camera may turn and zoom but not slide (`enablePan`
   off), and the guide overlay forwards right-button presses, touches and the
   wheel to the map's outer element (`[data-world-map]`), where drei's controls

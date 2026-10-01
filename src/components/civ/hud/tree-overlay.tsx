@@ -166,7 +166,7 @@ export function TreeOverlay() {
         ))}
       </div>
 
-      <div className="relative m-2 mb-2 flex-1 overflow-auto border-[3px] border-[#140e0a] bg-[#2a211a] md:m-5 md:mb-3">
+      <div className="relative m-2 mb-2 flex-1 overflow-auto border-[3px] border-[#140e0a] bg-[#2a211a] md:m-5 md:mb-3" data-tree-area>
         <div className="relative" style={{ width, height, minWidth: "100%" }}>
           {rowTops.map((row, i) => (
             <div
@@ -263,7 +263,7 @@ export function TreeOverlay() {
         </div>
       </div>
 
-      <div className="flex min-h-[72px] flex-wrap items-center justify-between gap-2 border-t-[3px] border-[#140e0a] px-3 py-2 md:flex-nowrap md:gap-4 md:px-5 md:py-3">
+      <div className="flex min-h-[72px] flex-wrap items-center justify-between gap-2 border-t-[3px] border-[#140e0a] px-3 py-2 md:flex-nowrap md:gap-4 md:px-5 md:py-3" data-tree-details>
         {focused && focusStatus ? (
           <>
             <div className="min-w-0">
