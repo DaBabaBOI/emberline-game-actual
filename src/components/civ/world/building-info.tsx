@@ -15,6 +15,7 @@ import {
   loggingMode,
   perSecond,
   repairCost,
+  tended,
   upgradeFor,
   wearFactor,
   wearsOut,
@@ -197,15 +198,29 @@ export function BuildingInfo({
       })()}
 
       {def.id === "campfire" && (
-        <p className="mt-2 border-t-2 border-stone-300 pt-1.5">
-          {isLit(state, tile) ? (
-            <>
-              Burning: about <CountdownFor ticks={state.fires?.[tile.id] ?? 0} state={state} />s of wood left.
-            </>
-          ) : (
-            "Burnt out. Click it to relight (1 wood)."
-          )}
-        </p>
+        <div className="mt-2 border-t-2 border-stone-300 pt-1.5">
+          <p>
+            {isLit(state, tile) ? (
+              <>
+                Burning: about <CountdownFor ticks={state.fires?.[tile.id] ?? 0} state={state} />s of wood left.
+              </>
+            ) : (
+              "Burnt out. Click it to relight (1 wood)."
+            )}
+          </p>
+          {/* The fire keeper: adds wood when it burns out, so you don't have to. */}
+          <label className="mt-1 flex cursor-pointer items-start gap-2" data-testid="keeper">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={tended(state, tile)}
+              onChange={(e) => dispatch({ type: "setKeeper", tileId: tile.id, on: e.target.checked })}
+            />
+            <span>
+              Keep it lit: someone adds wood each time it burns out (1 wood). Turn off to save wood.
+            </span>
+          </label>
+        </div>
       )}
     </div>
   );
