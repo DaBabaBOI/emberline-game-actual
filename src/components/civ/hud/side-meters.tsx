@@ -27,6 +27,7 @@ export function SideMeters({ side }: { side: "left" | "right" }) {
       {METERS.filter((m) => m.side === side).map((m) => {
         const value = state.meters[m.key];
         const land = m.key === "sustainability";
+        const grief = m.key === "happiness" ? Math.round(state.grief ?? 0) : 0;
         return (
           <div
             key={m.key}
@@ -64,13 +65,18 @@ export function SideMeters({ side }: { side: "left" | "right" }) {
               <span
                 className={cn(
                   "pixel-panel-dark pointer-events-none absolute top-1/2 hidden -translate-y-1/2 px-2 py-1 text-xs group-hover:block",
-                  m.key === "food" ? "w-60" : "whitespace-nowrap",
+                  m.key === "food" || grief > 0 ? "w-60" : "whitespace-nowrap",
                   side === "left" ? "left-12" : "right-12",
                 )}
                 data-testid={m.key === "food" ? "food-meter-tip" : undefined}
               >
                 {m.label}: {value}/100{land ? " (click to see why)" : ""}
                 {m.key === "food" && <span className="mt-1 block text-white/70">{foodMeterNote(state)}</span>}
+                {grief > 0 && (
+                  <span className="mt-1 block text-red-300" data-testid="grief-note">
+                    Grieving: −{grief}. Someone was dropped into a fire or the sea. It fades slowly.
+                  </span>
+                )}
               </span>
             )}
           </div>

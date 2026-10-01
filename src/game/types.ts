@@ -340,6 +340,9 @@ export interface GameState {
   // and who wandered into the fog and when they come back.
   helpers?: Record<number, number>;
   inFog?: { name: string; back: number }[];
+  // Happiness lost to grief: people the player dropped into a fire or the sea
+  // (GRIEF in content.ts). Fades every tick. Missing in older saves.
+  grief?: number;
   // Chief XP (only goes up) and level (missing in older saves: 0 and 1).
   xp?: number;
   chiefLevel?: number;

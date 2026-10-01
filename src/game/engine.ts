@@ -2,6 +2,7 @@ import {
   AFTER_TUTORIAL_RESERVE,
   RAW_FOOD,
   DROP,
+  GRIEF,
   PEOPLE_NAMES,
   formatYear,
   XP,
@@ -146,6 +147,7 @@ export type Action =
   | { type: "devGrant" }
   | { type: "devPeople" }
   | { type: "devFiresOut" }
+  | { type: "devGrief" }
   | { type: "devNearlyBehind" }
   | { type: "dropPerson"; tileId: number | null }
   | { type: "devFogBack" }
@@ -2017,7 +2019,8 @@ export function computeMeters(state: GameState): Meters {
   return {
     food: clamp(food),
     shelter: clamp(shelter),
-    happiness: clamp(happiness),
+    // Grief comes off after the cap, so a happy tribe still feels it.
+    happiness: Math.max(0, clamp(happiness) - Math.round(state.grief ?? 0)),
     literacy: clamp(literacy),
     energy: clamp(energy),
     sustainability: clamp(sustainability),
@@ -2512,6 +2515,7 @@ function tickOnce(state: GameState): GameState {
     sustainability: state.modifiers.sustainability * 0.995,
     happiness: state.modifiers.happiness * 0.993,
   };
+  const grief = Math.max(0, (state.grief ?? 0) - GRIEF.happiness / GRIEF.ticks);
 
   // Campfires burn down; one going out is worth telling the player about.
   let fires = state.fires;
@@ -2543,6 +2547,7 @@ function tickOnce(state: GameState): GameState {
     collapseTicks,
     strainTicks,
     modifiers,
+    grief,
   };
 
   next = keepFires(next);
@@ -3203,6 +3208,12 @@ function personName(state: GameState, salt: number) {
   return PEOPLE_NAMES[Math.floor(mulberry32(state.seed + state.tick * 13 + salt)() * PEOPLE_NAMES.length)];
 }
 
+// A death by the player's hand: the whole tribe grieves (see GRIEF).
+const SHAKEN = `The tribe is shaken (−${GRIEF.happiness} happiness, fading over ${Math.round(secs(GRIEF.ticks) / 60)} minutes).`;
+function grieve(state: GameState): GameState {
+  return { ...state, grief: Math.min(GRIEF.max, (state.grief ?? 0) + GRIEF.happiness) };
+}
+
 function dropPerson(state: GameState, tileId: number | null): GameState {
   if (state.phase !== "playing" || state.tutorialStep < TUTORIAL.length) return state;
   const tile = tileId === null ? null : state.tiles[tileId];
@@ -3213,12 +3224,11 @@ function dropPerson(state: GameState, tileId: number | null): GameState {
     bumpStats({ ...s, population: Math.max(1, s.population - 1) }, (st) => {
       st.deaths[cause] = (st.deaths[cause] ?? 0) + 1;
     });
-  const mood = (s: GameState, n: number) => ({ ...s, modifiers: { ...s.modifiers, happiness: s.modifiers.happiness + n } });
   switch (outcome) {
     case "fire":
-      return withMeters(mood(lose({ ...state, log: say(`${name} was dropped into the fire and didn't come out. The tribe is shaken.`) }, "fire"), -DROP.mood));
+      return withMeters(grieve(lose({ ...state, log: say(`${name} was dropped into the fire and didn't come out. ${SHAKEN}`) }, "fire")));
     case "deep":
-      return withMeters(mood(lose({ ...state, log: say(`${name} was dropped into the sea and swept away.`) }, "accident"), -DROP.mood));
+      return withMeters(grieve(lose({ ...state, log: say(`${name} was dropped into the sea and swept away. ${SHAKEN}`) }, "accident")));
     case "fog":
       return withMeters({
         ...state,
@@ -4339,6 +4349,10 @@ function step(state: GameState, action: Action): GameState {
         collapseTicks: Math.max(state.collapseTicks ?? 0, COLLAPSE.ticks - 20),
         log: ["Dev: the land is collapsing.", ...state.log].slice(0, 30),
       });
+
+    case "devGrief":
+      if (!state.dev) return state;
+      return withMeters(grieve({ ...state, population: Math.max(1, state.population - 1), log: [`Dev: someone dropped into the fire. ${SHAKEN}`, ...state.log].slice(0, 30) }));
 
     case "devPeople":
       if (!state.dev) return state;
