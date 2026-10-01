@@ -2170,6 +2170,11 @@ export const DROP = { helpBoost: 0.5, helpTicks: 20, fogTicks: 20, fogLuck: 0.05
 // adds up with every death (to `max`) and fades over `ticks` (3 minutes). Two
 // close together can tip a tribe into unrest: killing people never pays.
 export const GRIEF = { happiness: 35, ticks: 120, max: 100 };
+// People with no roof over their heads (more people than homes have room
+// for): each costs `mood` happiness (up to `maxMood`), and each adds `outbreak`
+// to the chance of sickness breaking out every tick, on top of the crowding
+// that already spreads it faster.
+export const HOMELESS = { mood: 4, maxMood: 30, outbreak: 0.004 };
 export const PEOPLE_NAMES = ["Aru", "Mira", "Tok", "Ena", "Bram", "Kaya", "Oro", "Lin", "Senu", "Tavi", "Ilo", "Deka", "Runa", "Pim"];
 
 // Chief level: XP only ever goes up, so progress is always easy to see. Each

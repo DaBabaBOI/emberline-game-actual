@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { METERS } from "@/game/content";
-import { foodMeterNote, sustainabilityBreakdown, sustainabilityTrend } from "@/game/engine";
+import { foodMeterNote, homelessCount, homelessMood, sustainabilityBreakdown, sustainabilityTrend } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
 import { cn } from "@/lib/utils";
 import { PixelIcon } from "@/components/civ/pixel-icon";
@@ -28,6 +28,7 @@ export function SideMeters({ side }: { side: "left" | "right" }) {
         const value = state.meters[m.key];
         const land = m.key === "sustainability";
         const grief = m.key === "happiness" ? Math.round(state.grief ?? 0) : 0;
+        const roofless = m.key === "happiness" ? homelessMood(state) : 0;
         return (
           <div
             key={m.key}
@@ -65,13 +66,18 @@ export function SideMeters({ side }: { side: "left" | "right" }) {
               <span
                 className={cn(
                   "pixel-panel-dark pointer-events-none absolute top-1/2 hidden -translate-y-1/2 px-2 py-1 text-xs group-hover:block",
-                  m.key === "food" || grief > 0 ? "w-60" : "whitespace-nowrap",
+                  m.key === "food" || grief > 0 || roofless > 0 ? "w-60" : "whitespace-nowrap",
                   side === "left" ? "left-12" : "right-12",
                 )}
                 data-testid={m.key === "food" ? "food-meter-tip" : undefined}
               >
                 {m.label}: {value}/100{land ? " (click to see why)" : ""}
                 {m.key === "food" && <span className="mt-1 block text-white/70">{foodMeterNote(state)}</span>}
+                {roofless > 0 && (
+                  <span className="mt-1 block text-red-300" data-testid="roof-note">
+                    No roof: −{roofless}. {homelessCount(state)} sleeping out in the cold. Build homes.
+                  </span>
+                )}
                 {grief > 0 && (
                   <span className="mt-1 block text-red-300" data-testid="grief-note">
                     Grieving: −{grief}. Someone was dropped into a fire or the sea. It fades slowly.
