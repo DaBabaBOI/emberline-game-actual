@@ -314,8 +314,7 @@ export function Warriors({
         t.revealed &&
         !t.building &&
         t.terrain !== "mountain" &&
-        t.terrain !== "shallow" &&
-        t.terrain !== "deep" &&
+        isLand(t.terrain) &&
         posts.some((p) => hexDistance(p, t) <= 2),
     );
     return [...posts, ...ring];

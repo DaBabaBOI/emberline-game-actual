@@ -6,6 +6,7 @@ import type {
   BuildingDef,
   CultureId,
   DifficultyId,
+  DisasterKind,
   EventCard,
   MeterKey,
   RaidKind,
@@ -17,7 +18,8 @@ export const ERAS = [
   // Stone Age: yearsPerTick is not used; its calendar follows ERA_DEADLINE (stoneAgeYear()).
   { name: "Stone Age", startYear: -50000, yearsPerTick: 100, currency: "Shells" },
   { name: "Ancient", startYear: -3000, yearsPerTick: 3, currency: "Bronze coins" },
-  { name: "Classical", startYear: -500, yearsPerTick: 10, currency: "Silver coins" },
+  // Classical: a year a tick, so the great drought (DROUGHT.warnYear) comes about 15 minutes in.
+  { name: "Classical", startYear: -500, yearsPerTick: 1, currency: "Silver coins" },
   { name: "Medieval & Renaissance", startYear: 1000, yearsPerTick: 4, currency: "Florins" },
   { name: "Industrial & Modern", startYear: 1750, yearsPerTick: 1, currency: "Banknotes" },
   { name: "Future & Space", startYear: 2050, yearsPerTick: 0.5, currency: "Credits" },
@@ -65,7 +67,7 @@ export const DIFFICULTIES: Record<
   },
   easy: { name: "Easy", blurb: "Forgiving. Famine takes a long time to hit.", consumption: 0.8, famineLimit: 120, unrestLimit: 60, raiders: 0.7 },
   normal: { name: "Normal", blurb: "The intended experience.", consumption: 1, famineLimit: 80, unrestLimit: 40, raiders: 1 },
-  hard: { name: "Hard", blurb: "Hungry people, short patience, bold raiders.", consumption: 1.25, famineLimit: 55, unrestLimit: 25, raiders: 1.4 },
+  hard: { name: "Hard", blurb: "Hungry people, short patience, bold raiders. Buildings wear out and need repairs.", consumption: 1.25, famineLimit: 55, unrestLimit: 25, raiders: 1.4 },
 };
 
 export const WARRIORS_PER_CAMP = 6;
@@ -334,6 +336,117 @@ export const BUILDINGS: BuildingDef[] = [
     terrain: ["grass", "steppe", "hills"],
     requires: "bronze-arms",
   },
+  // ---- Classical era -------------------------------------------------------
+  {
+    id: "well",
+    name: "Well",
+    icon: "well",
+    description: "A deep shaft down to the water under the ground. Clean water close to home, even when the rain fails.",
+    gain: "Clean water for 12 people, even in a drought",
+    landCost: "Draws down the water under the ground: past 4 wells the land around them dries out",
+    landImpact: 1,
+    era: 2,
+    cost: { stone: 8, wood: 6 },
+    terrain: ["grass", "steppe"],
+    requires: "hydraulics",
+  },
+  {
+    id: "aqueduct",
+    name: "Aqueduct",
+    icon: "aqueduct",
+    description: "Stone arches that carry river water into town and out to the fields. Must touch the river.",
+    gain: "Water for 40 people; fields within 3 tiles grow 20% more, and keep most of their harvest in a drought",
+    landCost: "Takes water from the river: fish and marshes downstream suffer",
+    landImpact: 2,
+    era: 2,
+    cost: { stone: 30, wood: 10, currency: 30 },
+    terrain: ["grass", "steppe", "hills"],
+    needsRiver: true,
+    requires: "concrete",
+  },
+  {
+    id: "watermill",
+    name: "Watermill",
+    icon: "mill",
+    description: "The river turns a wheel that grinds the grain. Must touch the river.",
+    gain: "Fields within 2 tiles give 25% more food",
+    landCost: "Its dam blocks the river: fish can't swim upstream",
+    landImpact: 1,
+    era: 2,
+    cost: { wood: 20, stone: 10 },
+    terrain: ["grass", "steppe", "forest"],
+    needsRiver: true,
+    requires: "watermill",
+  },
+  {
+    id: "townhouse",
+    name: "Town House",
+    icon: "insula",
+    description: "Tall stone houses on straight streets. Built by upgrading a Mud-brick House (click it), or new.",
+    gain: "Room for 24 people on one tile, kept warm by shared walls and hearths (no campfire needed)",
+    landCost: "Packed towns spread sickness fast unless there are latrines",
+    landImpact: 0,
+    era: 2,
+    cost: { stone: 20, wood: 12, currency: 10 },
+    terrain: ["grass", "steppe"],
+    requires: "planning",
+    housing: 24,
+  },
+  {
+    id: "latrine",
+    name: "Public Latrines",
+    icon: "drop",
+    description: "Stone seats over running water, and drains that carry the waste away from the streets.",
+    gain: "Clean streets for 25 people: sickness spreads much less in town",
+    landCost: "The waste still ends up in the river or the sea",
+    landImpact: 1,
+    era: 2,
+    cost: { stone: 10, wood: 6 },
+    terrain: ["grass", "steppe", "beach"],
+    requires: "sanitation",
+  },
+  {
+    id: "baths",
+    name: "Bathhouse",
+    icon: "baths",
+    description: "Warm pools where the whole town comes to wash, talk and rest.",
+    gain: "+8 happiness, and the sick get better faster",
+    landCost: "Heats its water with wood fires all day",
+    landImpact: 2,
+    era: 2,
+    cost: { stone: 25, wood: 10, currency: 20 },
+    terrain: ["grass", "steppe"],
+    requires: "sanitation",
+    produces: { wood: -0.2 },
+  },
+  {
+    id: "market",
+    name: "Market",
+    icon: "market",
+    description: "Stalls and carts in the town square. Traders pay in silver, and caravans leave from here.",
+    gain: "Coins from trade; caravans to the Silk Steppe (after Silk Road Contact)",
+    landCost: "Traders from far away can bring sickness with them",
+    landImpact: 0,
+    era: 2,
+    cost: { wood: 15, stone: 10 },
+    terrain: ["grass", "steppe", "beach"],
+    requires: "wheel",
+    produces: { currency: 0.4 },
+  },
+  {
+    id: "academy",
+    name: "Academy",
+    icon: "column",
+    description: "A shady courtyard where teachers and students argue about everything.",
+    gain: "Knowledge and literacy",
+    landCost: "Nothing from the land",
+    landImpact: 0,
+    era: 2,
+    cost: { stone: 25, currency: 30 },
+    terrain: ["grass", "steppe", "hills"],
+    requires: "philosophy",
+    produces: { knowledge: 0.15 },
+  },
 ];
 
 export const BUILDINGS_BY_ID = Object.fromEntries(BUILDINGS.map((b) => [b.id, b]));
@@ -350,14 +463,6 @@ export const BRANCHES: { id: Branch; name: string; color: string }[] = [
 type NodeSeed = [id: string, name: string, branch: Branch, era: number, cost: number, requires: string[], description: string];
 
 const LATER_NODES: NodeSeed[] = [
-  ["wheel", "The Wheel", "transport", 1, 0, ["agriculture"], "Carts and the first trade caravans."],
-  ["barter-roads", "Silk Road Contact", "culture", 1, 0, ["wheel"], "Traders from the east arrive."],
-  ["philosophy", "Philosophy", "knowledge", 2, 0, ["writing"], "Academies and great thinkers."],
-  ["concrete", "Roman Concrete", "construction", 2, 0, ["bronze"], "Limestone + ash → aqueducts and domes."],
-  ["watermill", "Watermills", "energy", 2, 0, ["irrigation"], "Rivers grind grain."],
-  ["roads", "Paved Roads", "transport", 2, 0, ["wheel"], "Faster trade across the steppe."],
-  ["legions", "Iron Legions", "military", 2, 0, ["bronze-arms"], "Disciplined iron-armed infantry."],
-  ["coinage", "Coinage", "culture", 2, 0, ["barter-roads"], "Silver coins replace barter."],
   ["universities", "Universities", "knowledge", 3, 0, ["philosophy"], "Scholars gather from every land."],
   ["cathedrals", "Great Cathedrals", "construction", 3, 0, ["concrete"], "Flying buttresses and stained glass."],
   ["windmills", "Windmills", "energy", 3, 0, ["watermill"], "Wind grinds grain and pumps water."],
@@ -557,15 +662,121 @@ export const TREE: TreeNode[] = [
     unlocks: ["walls"],
   },
   {
-    id: "silk-secret",
-    name: "Jade Road",
-    description: "Secret discovered through trade.",
+    id: "coinage",
+    name: "Coinage",
+    description: "Stamped silver coins replace barter. With the Roman legion beaten and 40 people, your people can enter the Classical era.",
     branch: "culture",
     era: 1,
+    cost: 60,
+    requires: ["writing"],
+  },
+  // ---- Classical era -------------------------------------------------------
+  {
+    id: "hydraulics",
+    name: "Water Engineering",
+    description: "Dig down to the water under the ground. Unlocks the Well.",
+    branch: "energy",
+    era: 2,
+    cost: 20,
+    requires: ["irrigation"],
+    unlocks: ["well"],
+  },
+  {
+    id: "watermill",
+    name: "Watermills",
+    description: "The river turns the millstones. Unlocks the Watermill.",
+    branch: "energy",
+    era: 2,
+    cost: 30,
+    requires: ["hydraulics"],
+    unlocks: ["watermill"],
+  },
+  {
+    id: "concrete",
+    name: "Roman Concrete",
+    description: "Lime and ash that sets hard, even under water. Unlocks the Aqueduct.",
+    branch: "construction",
+    era: 2,
+    cost: 30,
+    requires: ["hydraulics", "bronze"],
+    unlocks: ["aqueduct"],
+  },
+  {
+    id: "planning",
+    name: "Town Planning",
+    description: "Straight streets and tall houses. Unlocks the Town House.",
+    branch: "construction",
+    era: 2,
+    cost: 25,
+    requires: ["coinage"],
+    unlocks: ["townhouse"],
+  },
+  {
+    id: "sanitation",
+    name: "Sanitation",
+    description: "Drains, latrines and baths keep a crowded town healthy. Unlocks Public Latrines and the Bathhouse.",
+    branch: "culture",
+    era: 2,
+    cost: 30,
+    requires: ["planning"],
+    unlocks: ["latrine", "baths"],
+  },
+  {
+    id: "wheel",
+    name: "The Wheel",
+    description: "Carts carry goods to market. Unlocks the Market.",
+    branch: "transport",
+    era: 2,
+    cost: 25,
+    requires: ["coinage"],
+    unlocks: ["market"],
+  },
+  {
+    id: "barter-roads",
+    name: "Silk Road Contact",
+    description: "Traders from the Silk Steppe arrive. Send caravans from your Market.",
+    branch: "culture",
+    era: 2,
+    cost: 25,
+    requires: ["wheel"],
+  },
+  {
+    id: "roads",
+    name: "Paved Roads",
+    description: "Stone roads between the buildings: 25% more coins from trade, and caravans and scouts cost less.",
+    branch: "transport",
+    era: 2,
+    cost: 35,
+    requires: ["wheel", "concrete"],
+  },
+  {
+    id: "philosophy",
+    name: "Philosophy",
+    description: "Teachers and students ask why. Unlocks the Academy.",
+    branch: "knowledge",
+    era: 2,
+    cost: 30,
+    requires: ["writing"],
+    unlocks: ["academy"],
+  },
+  {
+    id: "legions",
+    name: "Iron Weapons",
+    description: "Iron swords and armour: each warrior fights three times as hard. Smithies burn more charcoal.",
+    branch: "military",
+    era: 2,
+    cost: 35,
+    requires: ["bronze-arms"],
+  },
+  {
+    id: "silk-secret",
+    name: "Jade Road",
+    description: "Secret: send 5 caravans. +10 knowledge and +10 happiness.",
+    branch: "culture",
+    era: 2,
     cost: 0,
     requires: ["barter-roads"],
     secret: true,
-    comingSoon: true,
   },
   ...LATER_NODES.map(
     ([id, name, branch, era, cost, requires, description]): TreeNode => ({
@@ -609,6 +820,17 @@ export const ADVANCEMENT_GOALS: Record<string, Goal[]> = {
     { label: "Have a Bronze Smithy", kind: "have", building: "smithy", amount: 1 },
     { label: "Beat a raid", kind: "tally", key: "raidsWon", amount: 1 },
   ],
+  coinage: [{ label: "Save up coins", kind: "stored", resource: "currency", amount: 150 }],
+  hydraulics: [{ label: "Grow your town", kind: "population", amount: 45 }],
+  watermill: [{ label: "Have Wells", kind: "have", building: "well", amount: 2 }],
+  concrete: [{ label: "Quarry stone", kind: "tally", key: "stone", amount: 80 }],
+  planning: [{ label: "Have Mud-brick Houses", kind: "have", building: "house", amount: 3 }],
+  sanitation: [{ label: "Have Town Houses", kind: "have", building: "townhouse", amount: 2 }],
+  wheel: [{ label: "Save up coins", kind: "stored", resource: "currency", amount: 200 }],
+  "barter-roads": [{ label: "Have a Market", kind: "have", building: "market", amount: 1 }],
+  roads: [{ label: "Send caravans", kind: "tally", key: "caravans", amount: 2 }],
+  philosophy: [{ label: "Keep Knowledge unspent", kind: "stored", resource: "knowledge", amount: 40 }],
+  legions: [{ label: "Beat raids", kind: "tally", key: "raidsWon", amount: 5 }],
 };
 
 // Elder Ama's guided step right after each advancement. With `build`, the hand
@@ -630,6 +852,17 @@ export const AFTER_STEPS: Record<string, AfterStep> = {
   irrigation: { build: "canal", text: "Place an Irrigation Canal next to your fields: they grow 50% more food, but watered soil slowly turns salty." },
   forestry: { build: "forester", text: "Build a Forester's Lodge near the woods: it tends young trees so the forest grows back faster." },
   "bronze-arms": { build: "walls", text: "Bronze spears and shields: every warrior fights twice as hard. Build Stone Walls to guard the village too." },
+  coinage: { text: "Silver coins! Traders take them anywhere. Once the Roman legion is beaten and we are 40 people, we can enter the Classical era. Watch the goal at the top of the screen." },
+  hydraulics: { build: "well", text: "We can dig down to the water under our feet. Dig a Well: clean water for 12 people, even when the rain fails. But too many wells drain the ground dry." },
+  watermill: { build: "watermill", text: "Place a Watermill on the river bank: the river turns the millstones, and the fields near it give more. Its dam blocks the fish." },
+  concrete: { build: "aqueduct", text: "Stone and lime that sets even under water! Build an Aqueduct touching the river: it carries water to 40 people and out to the fields. The river pays for it." },
+  planning: { build: "townhouse", text: "Straight streets and tall houses. Build a Town House: room for 24 people on one tile. A packed town spreads sickness, so plan for latrines too." },
+  sanitation: { build: "latrine", text: "Build Public Latrines: drains carry the waste away, and sickness spreads far less in town. The waste still ends up downstream." },
+  wheel: { build: "market", text: "Wheels and carts! Build a Market: traders bring coins into town, and now and then sickness from far away." },
+  "barter-roads": { text: "Traders from the Silk Steppe want to deal with us. Press Caravan below to send one from the Market: it comes back with coins and new ideas. Sickness travels the same roads." },
+  roads: { text: "Stone roads link the town. Trade brings 25% more coins, and caravans and scouts cost less." },
+  philosophy: { build: "academy", text: "Build an Academy: teachers and students ask questions nobody asked before, and Knowledge grows." },
+  legions: { text: "Iron swords and armour: every warrior now fights three times as hard. Iron needs even more charcoal, so every smithy burns more wood." },
 };
 
 // Event cards are trade-offs: every choice gains something and costs something.
@@ -808,6 +1041,42 @@ export const EVENTS: EventCard[] = [
     ],
     realWorld: "In ancient Mesopotamia, centuries of irrigation left salt in the soil, and historians think it helped push farmers to hardier crops like barley.",
   },
+  {
+    id: "dirty-river",
+    title: "The river smells",
+    icon: "drop",
+    body: "The town's drains empty into the river, and the families downstream have started to fall sick.",
+    era: 2,
+    choices: [
+      { label: "Dig a drain out to the sea (−20 stone)", effect: { resources: { stone: -20 }, happiness: 4 } },
+      { label: "Leave it (sickness may spread)", effect: { sickness: 0.6, sustainability: -6 } },
+    ],
+    realWorld: "Untreated waste in rivers still makes people sick in many places today. Treating wastewater is part of SDG 6.3.",
+  },
+  {
+    id: "timber-merchant",
+    title: "A timber merchant",
+    icon: "coin",
+    body: "A merchant from the Eastern Reach wants our tallest trees for his ships. He pays in silver, and he pays well.",
+    era: 2,
+    choices: [
+      { label: "Sell the old trees (+120 coins, 5 forest tiles cut)", effect: { clearForest: 5, resources: { currency: 120 } } },
+      { label: "Keep the forest (no coins)", effect: { happiness: 2 } },
+    ],
+    realWorld: "Shipbuilding cleared many forests around the ancient Mediterranean, and timber is still traded around the world today.",
+  },
+  {
+    id: "new-quarter",
+    title: "A new quarter",
+    icon: "insula",
+    body: "The town is full, and builders want to put up a new quarter. Rich families will pay well for fine houses; everyone else needs a roof too.",
+    era: 2,
+    choices: [
+      { label: "Fine houses for the rich (+80 coins, −10 happiness)", effect: { resources: { currency: 80 }, happiness: -10 } },
+      { label: "Simple homes for everyone (−30 stone, +10 happiness)", effect: { resources: { stone: -30 }, happiness: 10 } },
+    ],
+    realWorld: "Towns that grow without homes for everyone end up with crowded slums. SDG 11.1 asks for safe, affordable housing for all.",
+  },
 ];
 
 // Each step unlocks the buildings/tools it introduces. Until the tutorial ends
@@ -826,6 +1095,8 @@ export const LAND = {
   // Below this Sustainability the land starts to wear out; fully exhausted after `strainTicks`.
   strainLevel: 40,
   strainTicks: 60,
+  // How far below strainLevel it must fall before the land is fully worn out.
+  strainDepth: 20,
 };
 
 // Wildfire odds: a little from lightning, more for every campfire near trees.
@@ -862,6 +1133,8 @@ export const DISEASE = {
   // Each hunt (per animal brought back) and each fishing spot.
   hunt: 0.02,
   fishing: 0.0006,
+  // Each market (traders from far away).
+  market: 0.0005,
   // Welcomed wanderers bring it with them this often (per event).
   wanderers: 0.4,
   // Each sick person infects this many healthy people per second (× healthy share).
@@ -1002,7 +1275,108 @@ export const LESSONS: { id: string; title: string; text: string; sdg: string }[]
     text: "These saplings won't give us wood for a long time, but our grandchildren will walk in a forest because of them.",
     sdg: "SDG 15.2: restore forests",
   },
+  {
+    id: "water",
+    title: "Water for everyone",
+    text: "Clean water from a well means fewer people drink from dirty streams and fall sick. It is one of the simplest ways to keep a town healthy.",
+    sdg: "SDG 6.1: safe drinking water for all",
+  },
+  {
+    id: "sanitation",
+    title: "Where the waste goes",
+    text: "Our town is packed, and the waste runs in the streets. In crowded towns, sickness spreads through dirty water. Drains and latrines stop it.",
+    sdg: "SDG 6.2: sanitation for all",
+  },
+  {
+    id: "river",
+    title: "The river is not endless",
+    text: "Every aqueduct and mill takes something from the river. Fish can't swim past the dams, and the marshes downstream dry out. A river shared too many ways runs thin.",
+    sdg: "SDG 6.6: protect rivers, wetlands and the life in them",
+  },
+  {
+    id: "towns",
+    title: "Planning the town",
+    text: "Tall houses fit more people on less land, which leaves more land for fields and forest. But a town also needs water, drains and room to breathe.",
+    sdg: "SDG 11.3: plan towns and cities that can last",
+  },
+  {
+    id: "trade",
+    title: "Trade brings more than coins",
+    text: "Caravans bring silver, spices and new ideas from far away. Sickness travels the same roads, so a trading town has to keep itself clean.",
+    sdg: "SDG 3.3: stop the spread of infectious diseases",
+  },
+  {
+    id: "disasters",
+    title: "Ready for the next storm",
+    text: "Storms, floods and earthquakes will always come. What we build, and where, decides how much they take from us. Forests break the wind and soak up the rain.",
+    sdg: "SDG 11.5: fewer people harmed by disasters",
+  },
+  {
+    id: "slopes",
+    title: "Roots hold the hills",
+    text: "The trees on the hillside held the soil in place with their roots. We cut them, and the hill came down. Keep the forest on the slopes.",
+    sdg: "SDG 15.3: restore degraded land and soil",
+  },
+  {
+    id: "drought",
+    title: "Ready for dry years",
+    text: "Droughts come to every land sooner or later. Towns that store grain, save water and keep their forests standing get through them. Those that don't, suffer.",
+    sdg: "SDG 13.1: help communities cope with climate hazards",
+  },
 ];
+
+// Elder Ama's welcome when the tribe enters a new era (shown like a lesson).
+export const ERA_INTROS: Record<number, { id: string; title: string; text: string; sdg: string }> = {
+  2: {
+    id: "era-2",
+    title: "Welcome to the Classical era",
+    text: "We beat Rome, and our coins travel far. Our village is becoming a town, and towns need clean water, drains and roads. Traders will come from across the sea. But the old stories warn of a great drought that comes once in a lifetime. Dig wells, store grain and keep the forests standing.",
+    sdg: "SDG 11.3: plan towns and cities that can last",
+  },
+};
+
+// Discovery scenes: when an advancement (or a secret) is found, a short pixel
+// scene shows the moment people worked it out. `bg` sets the sky, `actors` walk
+// in, `item` is what they discover, and the three lines play one by one.
+// Keep them short, in the tribe's own voice, and modest about history.
+export type SceneSky = "dawn" | "day" | "dusk" | "night" | "sea";
+export interface DiscoveryScene {
+  bg: SceneSky;
+  actors: IconId[];
+  item: IconId;
+  lines: [string, string, string];
+}
+export const DISCOVERIES: Record<string, DiscoveryScene> = {
+  storytelling: { bg: "night", actors: ["elder", "person"], item: "feather", lines: ["Night after night, the old ones talked by the fire.", "The children began to repeat the stories, word for word.", "What one person knew, now everyone could remember."] },
+  toolmaking: { bg: "day", actors: ["person"], item: "pickaxe", lines: ["A stone struck another and a sharp flake broke off.", "It cut hide better than teeth, and wood better than hands.", "Soon every hunter carried a blade of stone."] },
+  firekeeping: { bg: "night", actors: ["elder"], item: "campfire", lines: ["The fire kept dying before dawn.", "Buried under ash, the embers stayed warm until morning.", "Now a fire can be kept alive with half the wood."] },
+  fishing: { bg: "sea", actors: ["person", "person"], item: "boat", lines: ["Logs drifted past the shore, carrying birds on their backs.", "Tied together with vines, they carried people too.", "Out on the water, the fish could not hide."] },
+  "early-farming": { bg: "dawn", actors: ["person", "elder"], item: "wheat", lines: ["Grain dropped by the camp last year had sprouted.", "What if we put the seeds in the ground ourselves?", "A handful of seeds became a field."] },
+  spears: { bg: "day", actors: ["person", "person"], item: "sword", lines: ["A sharp stone, tied to a long stick.", "Now the hunter can strike from further away.", "The herds are easier to hunt, and the camp is easier to guard."] },
+  herbalism: { bg: "day", actors: ["elder"], item: "herb", lines: ["The sick woman chewed a bitter leaf and slept.", "In the morning her fever was gone.", "We began to remember which plants heal."] },
+  herding: { bg: "day", actors: ["person"], item: "sheep", lines: ["A lost lamb followed the children home.", "It grew, and more wild goats came to its call.", "Now the herd walks with us, and we don't have to chase it."] },
+  "hide-clothing": { bg: "dusk", actors: ["person", "person"], item: "sheep", lines: ["A sharp bone, a thread of sinew, two hides.", "Sewn together, they keep the wind out.", "Warm without a fire: less wood, less smoke."] },
+  "cave-paintings": { bg: "night", actors: ["elder", "person"], item: "mammoth", lines: ["By torchlight, a hand pressed red earth to the rock.", "A mammoth appeared on the cave wall.", "Our stories will be here long after we are gone."] },
+  agriculture: { bg: "dawn", actors: ["person", "person", "elder"], item: "wheat", lines: ["The fields fed us all winter.", "No more walking after the herds: we will stay.", "Here we build a village that will last."] },
+  writing: { bg: "day", actors: ["elder", "person"], item: "book", lines: ["A reed pressed into wet clay leaves a mark.", "One mark for a sheep, another for a sack of grain.", "Now words last longer than the one who spoke them."] },
+  pottery: { bg: "day", actors: ["person"], item: "amphora", lines: ["Clay left near the fire turned hard as stone.", "Shaped into jars, it kept the grain dry and the mice out.", "Food no longer rots before we can eat it."] },
+  bronze: { bg: "night", actors: ["person", "person"], item: "hammer", lines: ["Green stones melted in the hottest fire.", "Mixed with a little tin, the metal came out hard and bright.", "Bronze tools: stronger, and they can be mended."] },
+  irrigation: { bg: "day", actors: ["person", "person"], item: "drop", lines: ["The river flooded the low field, and the crop grew tall.", "We dug a ditch to bring the water to the others.", "Every field near a canal grows more. But the water leaves salt behind."] },
+  forestry: { bg: "day", actors: ["elder", "person"], item: "sapling", lines: ["Where the woodcutters worked, only stumps were left.", "An old woman planted acorns in the bare ground.", "Cut one tree, plant another: the forest can last."] },
+  "bronze-arms": { bg: "dusk", actors: ["person", "person"], item: "shield", lines: ["The smiths hammered bronze into spear points and shield rims.", "A bronze spear does not break against a wooden shield.", "Our warriors fight twice as hard."] },
+  coinage: { bg: "day", actors: ["person", "elder"], item: "coin", lines: ["Traders argued: how many sheep is a jar of oil worth?", "Small silver pieces, all the same weight, settled it.", "Now anything can be traded for coins."] },
+  hydraulics: { bg: "day", actors: ["person", "person"], item: "well", lines: ["The stream dried up, but the ground was still damp.", "We dug deeper and deeper, and water rose from below.", "A well: water close to home, even when the rain fails."] },
+  watermill: { bg: "day", actors: ["person"], item: "mill", lines: ["The river pushed a floating log round and round.", "Fixed to a wheel, the river turned a millstone.", "Grain ground by water, not by hand."] },
+  concrete: { bg: "day", actors: ["person", "person"], item: "aqueduct", lines: ["Lime, ash and water, mixed and left to dry.", "It set as hard as rock, even under water.", "Now we can build arches to carry a whole river."] },
+  planning: { bg: "day", actors: ["elder", "person"], item: "insula", lines: ["The town had grown into a tangle of huts and paths.", "The builders drew straight streets in the dust.", "Tall houses, side by side: more people on less land."] },
+  sanitation: { bg: "day", actors: ["person", "elder"], item: "drop", lines: ["Where the waste ran in the street, the fevers came.", "Channels of running water carried it away.", "A clean town is a healthy town."] },
+  wheel: { bg: "day", actors: ["person", "sheep"], item: "market", lines: ["A round log rolled a heavy stone down the hill.", "Cut into discs and fixed to a cart, it carried more than ten people could.", "Carts bring goods to market."] },
+  "barter-roads": { bg: "sea", actors: ["person", "person"], item: "boat", lines: ["A strange ship came from the steppe across the water.", "They brought silk and spices, and wanted our grain and wood.", "Our caravans can sail to them now."] },
+  roads: { bg: "day", actors: ["person", "person"], item: "rock", lines: ["Carts sank in the mud every spring.", "Flat stones laid side by side made a road that never floods.", "Goods and news travel faster than ever."] },
+  philosophy: { bg: "dusk", actors: ["elder", "person", "person"], item: "column", lines: ["In the shade of the columns, a teacher asked: why?", "The students argued until the sun went down.", "Asking questions is how new knowledge begins."] },
+  legions: { bg: "night", actors: ["person", "person"], item: "sword", lines: ["A new ore, heated hotter than bronze ever needed.", "Hammered while glowing, it became iron.", "Iron swords are harder still. But they eat charcoal."] },
+  "silk-secret": { bg: "sea", actors: ["person"], item: "coin", lines: ["Our fifth caravan came back with a strange green stone.", "Jade, they called it, from lands far to the east.", "The world is bigger than any of us thought."] },
+};
 
 // Ticks between two lessons, so they never pile up.
 export const LESSON_GAP = 40;
@@ -1028,6 +1402,7 @@ export const PEOPLE_NAMES = ["Aru", "Mira", "Tok", "Ena", "Bram", "Kaya", "Oro",
 // Chief level: XP only ever goes up, so progress is always easy to see. Each
 // level gives a title and a little Knowledge.
 export const XP = {
+  drought: 60,
   build: 5,
   firstBuild: 10,
   person: 2,
@@ -1096,6 +1471,10 @@ export const FAMINE = {
   pen: { food: 30 },
   // Eat the grain saved for sowing: fields grow half as much for a while.
   seed: { food: 25, farmLoss: 0.5, ticks: 80 },
+  // In the great drought the famine clock runs this fast (people ration).
+  droughtClock: 0.5,
+  // Each tick, this share of the people the town can't feed leave to look for food.
+  leaveShare: 0.02,
 };
 // Land collapse: if Sustainability stays below `level` for `ticks` (80 ticks = 2 min
 // at 1x), the land can no longer feed the tribe and the game is lost. A countdown
@@ -1138,7 +1517,7 @@ export const KNOWLEDGE_MILESTONES = {
 // at least `bigTrip` new land tiles, +1 otherwise. Later trips teach nothing new.
 // Teaching buildings: the first of each kind teaches fully; every extra one
 // adds only `extra` of its Knowledge (there are only so many elders to teach).
-export const TEACHING = { extra: 0.5, buildings: ["elder", "school"] };
+export const TEACHING = { extra: 0.5, buildings: ["elder", "school", "academy"] };
 // The secret found by building 2 Elder's Huts.
 export const CAVE_PAINTINGS_KNOWLEDGE = 8;
 export const SCOUT_KNOWLEDGE = { bigTrip: 20, trips: 5 };
@@ -1171,6 +1550,101 @@ export const WALL_DEFENSE = 4;
 // reaches warningYear; it lands warningTicks later. Each legionary fights like
 // two of your warriors. Size: (base + population / perPeople) × difficulty.
 export const ROMAN_LEGION = { warningYear: -1600, warningTicks: 90, strengthEach: 2, base: 8, perPeople: 5 };
+
+// Leaving the Ancient era: beat the Roman legion, research Coinage and grow to
+// this many people.
+export const CLASSICAL_POPULATION = 40;
+// After the legion is beaten the Ancient-era clock starts: reach the Classical
+// era within this many ticks or be left behind (40 ticks = a minute at 1x).
+export const ANCIENT_DEADLINE: Record<string, number> = { first: 30 * 40, easy: 25 * 40, normal: 20 * 40, hard: 15 * 40 };
+
+// Water in the Classical era. In a normal year rain and the river are plenty; in
+// the drought only springs (`base`), wells and aqueducts keep water flowing, each
+// for this many people. Past `wellsFree` wells the ground dries out (−`wellSustain`
+// Sustainability each). Aqueducts water fields within `aqueductReach` (+`aqueductFarm`);
+// watermills grind for fields within `millReach` (+`millFarm`).
+export const WATER = { base: 10, well: 12, aqueduct: 40, wellsFree: 4, wellSustain: 2, aqueductReach: 3, aqueductFarm: 0.2, millReach: 2, millFarm: 0.25 };
+
+// Towns: each Public Latrine keeps the streets clean for `latrine` people and each
+// Bathhouse for `baths`. With Town Houses standing, the share of people without
+// clean streets makes sickness start and spread up to `dirty` times more. Baths
+// add happiness and help the sick recover.
+// Town Houses share walls and hearths: each keeps `warmth` people warm without a campfire.
+export const TOWN = { latrine: 25, baths: 10, dirty: 1, bathsMood: 8, bathsRecover: 0.02, warmth: 24 };
+
+// The great drought ends the Classical era. The elders see it coming at `warnYear`;
+// it starts `warnTicks` later (3 min at 1x) and lasts `ticks` (3 min). Rain falls to
+// `rain`, plus up to `forestRain` more with all the forest standing. Fields an
+// aqueduct waters keep at least `aqueductFarm` of their harvest; gatherers and pens
+// get `wild`. People without water are miserable (up to −`thirstMood` happiness).
+export const DROUGHT = { warnYear: 100, warnTicks: 120, ticks: 120, rain: 0.1, forestRain: 0.3, aqueductFarm: 0.7, wild: 0.5, thirstMood: 20 };
+
+// A caravan to the Silk Steppe leaves from a Market (one per Market at a time) and
+// comes back `ticks` later with coins and Knowledge. Sometimes it brings sickness.
+export const CARAVAN = { cost: { food: 20, wood: 10 }, ticks: 40, coins: 60, knowledge: 4, sickness: 0.2 };
+// Paved roads: trade brings this much more.
+export const ROADS_COINS = 1.25;
+// Iron weapons: each warrior fights this many times as hard (bronze: 2), and
+// every smithy burns this much more charcoal.
+export const IRON_STRENGTH = 3;
+export const IRON_CHARCOAL = 1.5;
+// The Jade Road secret: this many caravans.
+export const JADE_ROAD = { caravans: 5, knowledge: 10, happiness: 10 };
+
+// Hard mode: buildings wear out. Each tick a building wears by `perTick` (fully
+// worn in about 22 minutes), `busy` times faster for hard-worked ones and
+// `sturdy` times as fast for brick and stone. Past `slows` it makes less, down to
+// nothing when broken (worn 1); a broken home holds half its people. Repairing
+// costs `repairShare` of what it cost to build.
+export const WEAR = {
+  perTick: 1 / 900,
+  busy: 1.5,
+  sturdy: 0.6,
+  slows: 0.5,
+  repairShare: 0.15,
+  warnAt: 0.7,
+  busyBuildings: ["smithy", "quarry", "woodcutter", "watermill", "baths"],
+  sturdyBuildings: ["house", "townhouse", "walls", "granary", "school", "academy", "aqueduct", "well", "latrine", "elder", "healer"],
+};
+// Natural disasters. The first comes `firstAfter` ticks after the tutorial
+// (about 10 minutes), then one every `gap` + up to `spread` ticks. Each is warned
+// of `warn` ticks ahead and lasts `ticks`. `weight` is how often each comes up
+// (a landslide only where slopes have been stripped, a flood only by water).
+export const DISASTERS: {
+  firstAfter: number;
+  gap: number;
+  spread: number;
+  kinds: Record<DisasterKind, { name: string; icon: IconId; warn: number; ticks: number; weight: number; warning: string }>;
+} = {
+  firstAfter: 400,
+  gap: 400,
+  spread: 280,
+  kinds: {
+    storm: { name: "A storm", icon: "storm", warn: 15, ticks: 25, weight: 3, warning: "Dark clouds are rolling in from the sea. A storm is coming!" },
+    flood: { name: "A flood", icon: "flood", warn: 20, ticks: 40, weight: 2, warning: "The water is rising after days of rain. A flood is coming!" },
+    earthquake: { name: "An earthquake", icon: "quake", warn: 5, ticks: 6, weight: 1.5, warning: "The animals are restless and the birds have gone quiet..." },
+    landslide: { name: "A landslide", icon: "landslide", warn: 10, ticks: 8, weight: 0, warning: "Stones are tumbling down the bare hillside!" },
+  },
+};
+// How hard each one hits. Storm: every campfire goes out, and each wooden
+// building has `storm.wreck` chance to be wrecked (at most `storm.max`), unless
+// `storm.shelter` forest tiles next to it break the wind. Flood: up to
+// `flood.tiles` low tiles by the river or sea go under (fewer with more forest
+// standing); their buildings stop working, then fields there grow +`flood.silt`
+// for `flood.siltTicks`. Earthquake: buildings within `quake.radius` fall with
+// `quake.stone` (brick and stone) or `quake.wood` chance, at most `quake.max`.
+// Landslide: a hill with `slide.bare` or more bare neighbours buries what is
+// below it.
+export const DISASTER_HITS = {
+  storm: { wreck: 0.3, max: 2, shelter: 2 },
+  flood: { tiles: 8, radius: 6, silt: 0.4, siltTicks: 160, sickness: 2 },
+  quake: { radius: 4, stone: 0.25, wood: 0.08, max: 3, deaths: 1 },
+  slide: { bare: 3, radius: 7 },
+};
+// Buildings of brick and stone (they crack in an earthquake) and of wood
+// (a storm can wreck them).
+export const STONE_BUILDINGS = ["house", "school", "smithy", "granary", "walls", "quarry", "elder", "healer", "well", "aqueduct", "townhouse", "latrine", "baths", "academy"];
+export const WOOD_BUILDINGS = ["hut", "gatherer", "woodcutter", "fishing", "pen", "warcamp", "watchfire", "forester", "market", "watermill"];
 
 // Buying something that leaves less wood than this shows a "save up" warning.
 export const LOW_WOOD_AFTER_BUY = 10;
