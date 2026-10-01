@@ -2174,7 +2174,7 @@ export const GRIEF = { happiness: 35, ticks: 120, max: 100 };
 // for): each costs `mood` happiness (up to `maxMood`), and each adds `outbreak`
 // to the chance of sickness breaking out every tick, on top of the crowding
 // that already spreads it faster.
-export const HOMELESS = { mood: 4, maxMood: 30, outbreak: 0.004 };
+export const HOMELESS = { mood: 2, maxMood: 15, outbreak: 0.004 };
 export const PEOPLE_NAMES = ["Aru", "Mira", "Tok", "Ena", "Bram", "Kaya", "Oro", "Lin", "Senu", "Tavi", "Ilo", "Deka", "Runa", "Pim"];
 
 // Chief level: XP only ever goes up, so progress is always easy to see. Each

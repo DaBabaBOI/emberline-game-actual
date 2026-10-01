@@ -177,7 +177,8 @@ These were decided with the project owner. Do not change them without being aske
   the deadline-driven calendars the year slows over the last `YEAR_EASE` (50)
   years and settles one year before the next era's first year.
 - **No roof hurts** (`HOMELESS`, `homelessCount()` / `homelessMood()`): each
-  person over the housing room costs 4 happiness (up to 30) after the
+  person over the housing room costs 2 happiness (up to 15; 4/30 tipped bot
+  towns into unrest, since towns grow up to 15% past their housing) after the
   tutorial, and adds 0.4% a tick to the chance of an outbreak ("People
   sleeping out in the cold fell sick"; not in the calm start or the plague;
   the player's doing, so it doesn't wait for a quiet moment). The roof warning
