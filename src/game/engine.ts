@@ -389,14 +389,16 @@ export function loggingMode(state: GameState, tile: Tile) {
 }
 
 // 0–1: how much of its full output a woodcutter makes. Clear-cutting takes every
-// tree; selective logging only thins mature trees, for half the wood.
+// tree; selective logging only thins the bigger trees, for exactly half the wood
+// clear-cutting would get from the same forest. The forest grows back faster
+// than that, so it lasts. With no tree above SELECTIVE_FLOOR it waits for them.
 export function woodcutterYield(state: GameState, tile: Tile) {
+  const trees = treesNear(state, tile);
+  const clear = Math.min(1, trees.reduce((sum, t) => sum + t.growth, 0) / 2);
   if (loggingMode(state, tile) === "selective") {
-    const mature = treesNear(state, tile).reduce((sum, t) => sum + Math.max(0, t.growth - SELECTIVE_FLOOR), 0);
-    return Math.min(1, mature) * 0.5;
+    return trees.some((t) => t.growth > SELECTIVE_FLOOR + 0.02) ? clear * 0.5 : 0;
   }
-  const standing = treesNear(state, tile).reduce((sum, t) => sum + t.growth, 0);
-  return Math.min(1, standing / 2);
+  return clear;
 }
 
 export const PLANT_TOOL = "__plant";

@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-30",
     items: [
+      "Selective logging now really gives half the wood of clear-cutting. It used to drop to a fifth or less once the trees had been thinned. If no tree is big enough to thin yet, the woodcutter waits for them to grow and its panel says so.",
       "Picking people up is easier: click near someone (you no longer have to hit them exactly) and they stay in your hand; click again or press Enter to put them down. Move them with the arrow keys (or WASD), press Esc to put them back, or press P to pick up whoever is nearest the middle of the screen.",
       "Hard mode: buildings wear out. Worn buildings make less and a hammer appears over them; broken ones make nothing and a broken home holds only half its people. Click a building to repair it for a small part of its cost.",
       "Natural disasters, with a warning before each one. Storms blow out every fire and can wreck wooden buildings (forest around them breaks the wind). Floods cover the land by the river and the sea and stop the buildings there, then leave rich silt that makes those fields grow more. Earthquakes shake the camera, crack the ground and bring down buildings, brick and stone more than wood. Landslides only happen where the trees on a hillside were cut or the hill was quarried.",
