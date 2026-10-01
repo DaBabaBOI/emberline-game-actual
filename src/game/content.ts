@@ -2299,6 +2299,9 @@ export const TEACHING = { extra: 0.5, buildings: ["elder", "school", "academy"] 
 // The secret found by building 2 Elder's Huts.
 export const CAVE_PAINTINGS_KNOWLEDGE = 8;
 export const SCOUT_KNOWLEDGE = { bigTrip: 20, trips: 5 };
+// A scouting trip takes this long (18 s at normal speed) before the new land
+// is mapped. During the tutorial it is instant (the clock stands still there).
+export const SCOUT_TRIP = { ticks: 12 };
 
 // Gatherers live off the wild, and the wild only has so much. The first camp
 // makes full food; each extra camp adds only `extraCamp` of a camp's food. Every

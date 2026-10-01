@@ -36,6 +36,7 @@ import type { IconId } from "@/game/sprites";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { cn } from "@/lib/utils";
+import { Countdown } from "./countdown";
 
 const COST_ICONS: Record<keyof Resources, IconId> = {
   wood: "log",
@@ -311,11 +312,17 @@ export function BottomBar() {
             icon="spyglass"
             label="Scout"
             onClick={() => dispatch({ type: "scout" })}
-            disabled={!canAfford(state, scoutCost(state))}
-            title="Send scouts to reveal new land. Each trip costs more than the last."
+            disabled={!!state.scouting || !canAfford(state, scoutCost(state))}
+            title={state.scouting ? "The scouts are out exploring" : "Send scouts to reveal new land. A trip takes a little while, and each costs more than the last."}
             tone="bg-[#4a3b2e] hover:bg-[#5c4a3a]"
           >
-            <Cost cost={scoutCost(state)} bad={!canAfford(state, scoutCost(state))} tight={tight(scoutCost(state))} />
+            {state.scouting ? (
+              <span className="text-[10px] text-amber-200" data-testid="scouts-out">
+                Back in <Countdown ticks={Math.max(0, state.scouting.back - state.tick)} />s
+              </span>
+            ) : (
+              <Cost cost={scoutCost(state)} bad={!canAfford(state, scoutCost(state))} tight={tight(scoutCost(state))} />
+            )}
           </ToolButton>
           <ToolButton
             guide="tool-advancements"

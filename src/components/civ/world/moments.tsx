@@ -249,3 +249,20 @@ export function SmallMoment({ state }: { state: GameState }) {
     </group>
   );
 }
+
+
+// While scouts are out: a marker over the land they are exploring.
+export function ScoutMarker({ state }: { state: GameState }) {
+  const tile = state.scouting ? state.tiles[state.scouting.tile] : null;
+  if (!tile) return null;
+  return (
+    <group position={[tile.x, tileTop(tile), tile.z]}>
+      <Html zIndexRange={[13, 0]} center position={[0, 1.4, 0]} style={{ pointerEvents: "none" }}>
+        <div className="pixel-panel font-pixel flex items-center gap-1 whitespace-nowrap px-2 py-0.5 text-xs" data-testid="scout-marker">
+          <PixelIcon name="spyglass" size={16} />
+          Scouts exploring
+        </div>
+      </Html>
+    </group>
+  );
+}
