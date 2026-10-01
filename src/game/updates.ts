@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "People with no roof over their heads now suffer for it: −4 happiness each (up to −30), and they fall sick much more often. The warning and the Happiness tip say so.",
       "With Advancements open, Elder Ama's box no longer covers the Research button: she sits just above the bottom bar, or under the header if what she points at is down there.",
       "The Watch Fire now comes with Firekeeping (keeping a fire alive) instead of Hunting Spears.",
       "The project page is now plain HTML and CSS, so the whole team can read and edit it. It looks the same, except that its pictures are no longer squashed and its footer can be read in dark mode.",

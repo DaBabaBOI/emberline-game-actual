@@ -171,6 +171,12 @@ These were decided with the project owner. Do not change them without being aske
   someone into a fire or the open sea by click or Enter needs a second click on
   the same spot within `CONFIRM_MS` ("Click again to really drop them there");
   a drag there is deliberate and drops at once.
+- **No roof hurts** (`HOMELESS`, `homelessCount()` / `homelessMood()`): each
+  person over the housing room costs 4 happiness (up to 30) after the
+  tutorial, and adds 0.4% a tick to the chance of an outbreak ("People
+  sleeping out in the cold fell sick"; not in the calm start or the plague;
+  the player's doing, so it doesn't wait for a quiet moment). The roof warning
+  and the Happiness tip say what it costs.
 - **Small moments** (`SMALL_MOMENTS`, `MOMENTS` / `smallMoment()` in engine.ts):
   every 20-40 ticks (30-60 s) after the tutorial, one little thing happens,
   picked from those that fit the island right now (a deer herd if the forest

@@ -3,6 +3,7 @@ import {
   RAW_FOOD,
   DROP,
   GRIEF,
+  HOMELESS,
   PEOPLE_NAMES,
   formatYear,
   XP,
@@ -599,6 +600,15 @@ export function residents(state: GameState, tile: Tile): { living: number; room:
     }
   }
   return { living: homes.find((h) => h.id === tile.id)?.living ?? 0, room };
+}
+
+// How many people have no roof over their heads, and what it costs in happiness.
+export function homelessCount(state: GameState) {
+  return Math.max(0, Math.floor(state.population) - housingCapacity(state));
+}
+export function homelessMood(state: GameState) {
+  if (state.tutorialStep < TUTORIAL.length) return 0;
+  return Math.min(HOMELESS.maxMood, homelessCount(state) * HOMELESS.mood);
 }
 
 export function housingCapacity(state: GameState) {
@@ -1528,13 +1538,13 @@ export function warnings(state: GameState): Warning[] {
   }
 
   // People with no roof over their heads: say why, if a home was just lost.
-  const homeless = Math.floor(state.population) - housingCapacity(state);
+  const homeless = homelessCount(state);
   if (homeless > 0) {
     const lost = state.homeLost && state.tick - state.homeLost.tick < 120 ? state.homeLost : null;
     out.push({
       id: "roof",
       icon: "hut",
-      text: `${lost ? `We lost a ${lost.name}. ` : ""}${homeless} ${homeless === 1 ? "person has" : "people have"} no roof over their heads: build homes.`,
+      text: `${lost ? `We lost a ${lost.name}. ` : ""}${homeless} ${homeless === 1 ? "person has" : "people have"} no roof over their heads: build homes. Sleeping out in the cold makes people unhappy (−${homelessMood(state)} happiness) and sick.`,
       severe: !!lost || state.meters.shelter < 30,
     });
   }
@@ -2010,6 +2020,7 @@ export function computeMeters(state: GameState): Meters {
     (100 - clamp(sustainability)) * 0.15 -
     sickShare(state) * 30 -
     (state.famineTicks > 0 ? FAMINE.happiness : 0) -
+    homelessMood(state) -
     thirst * DROUGHT.thirstMood +
     Math.min(2, counts.baths ?? 0) * TOWN.bathsMood +
     (landmarkWorking(state, "cathedral") ? LANDMARK.cathedralMood : 0) -
@@ -2596,6 +2607,13 @@ function tickOnce(state: GameState): GameState {
   // Crowded towns without latrines, and people drinking dirty water in the
   // drought, spread sickness faster.
   const dirt = 1 + TOWN.dirty * (1 - sanitation(next)) + thirstShare(next);
+  // People sleeping out in the cold fall sick. The player's doing, so it
+  // doesn't wait for a quiet moment (only for the calm start).
+  const homeless = homelessCount(next);
+  if (homeless > 0 && !inPlague(next) && !isCalm(next) && !(next.sick ?? 0)) {
+    const sickened = maybeOutbreak(next, homeless * HOMELESS.outbreak, mulberry32(next.seed + next.tick * 37)(), "People sleeping out in the cold fell sick.");
+    if (sickened !== next) next = { ...sickened, lastBigTick: next.tick };
+  }
   if (!inPlague(next)) next = stepDisease(next, housingCapacity(next), mulberry32(next.seed + next.tick * 31), dirt, bathsRecover(next));
   next = bumpStats(next, (st) => {
     st.peakPopulation = Math.max(st.peakPopulation, next.population);
