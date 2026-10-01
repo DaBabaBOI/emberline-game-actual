@@ -3,30 +3,68 @@
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Group } from "three";
-import { TICK_SECONDS } from "@/game/content";
+import { Html } from "@react-three/drei";
+import { DIPLOMACY, KINGDOMS, TICK_SECONDS } from "@/game/content";
+import { moodOf, nextVoyage } from "@/game/engine";
 import { ISLANDS, isLand } from "@/game/map";
-import type { Tile } from "@/game/types";
+import type { GameState, KingdomId, Tile } from "@/game/types";
 
-// Where trade ships sail: from the home island's coast to the Silk Steppe's,
-// between the two points of open water that face each other.
-function tradeRoute(tiles: Tile[], home: Tile) {
-  const steppe = ISLANDS[1];
-  const coast = (island: number) =>
-    tiles.filter((t) => !isLand(t.terrain) && t.terrain !== "river" && tiles.some((n) => n.island === island && Math.hypot(n.x - t.x, n.z - t.z) < 1.8));
-  const from = coast(home.island).sort((a, b) => Math.hypot(a.x - steppe.x, a.z - steppe.z) - Math.hypot(b.x - steppe.x, b.z - steppe.z))[0];
-  const to = coast(1).sort((a, b) => Math.hypot(a.x - home.x, a.z - home.z) - Math.hypot(b.x - home.x, b.z - home.z))[0];
+type Point = { x: number; z: number };
+type Route = { from: Point; to: Point };
+
+// Open water next to an island.
+const coastOf = (tiles: Tile[], island: number) =>
+  tiles.filter((t) => !isLand(t.terrain) && t.terrain !== "river" && tiles.some((n) => n.island === island && Math.hypot(n.x - t.x, n.z - t.z) < 1.8));
+
+// A sea route from the home island's coast to another island's, between the
+// two points of open water that face each other.
+function seaRoute(tiles: Tile[], home: Tile, island: number): Route | null {
+  const there = ISLANDS[island];
+  if (!there) return null;
+  const from = coastOf(tiles, home.island).sort((a, b) => Math.hypot(a.x - there.x, a.z - there.z) - Math.hypot(b.x - there.x, b.z - there.z))[0];
+  const to = coastOf(tiles, island).sort((a, b) => Math.hypot(a.x - home.x, a.z - home.z) - Math.hypot(b.x - home.x, b.z - home.z))[0];
   return from && to ? { from, to } : null;
 }
 
-// The sea doesn't move, so the route is worked out once per home island.
-const routes = new Map<number, ReturnType<typeof tradeRoute>>();
-function routeFor(tiles: Tile[], home: Tile) {
-  if (!routes.has(home.id)) routes.set(home.id, tradeRoute(tiles, home));
-  return routes.get(home.id) ?? null;
+// The sea doesn't move, so each route is worked out once.
+const routes = new Map<string, Route | null>();
+function routeFor(tiles: Tile[], home: Tile, island = 1) {
+  const key = `${home.id}-${island}`;
+  if (!routes.has(key)) routes.set(key, seaRoute(tiles, home, island));
+  return routes.get(key) ?? null;
 }
 
-// One small trading ship: a hull, a mast and a striped sail.
-function Ship({ route, start, back, tick, speed }: { route: { from: Tile; to: Tile }; start: number; back: number; tick: number; speed: number }) {
+// From an island's coast to a point on the water (where an army lands).
+function landingRoute(tiles: Tile[], island: number, at: Tile): Route | null {
+  const from = coastOf(tiles, island).sort((a, b) => Math.hypot(a.x - at.x, a.z - at.z) - Math.hypot(b.x - at.x, b.z - at.z))[0];
+  return from ? { from, to: at } : null;
+}
+
+// One small ship: a hull, a mast and a striped sail. A round trip goes out for
+// the first half and comes home for the second; a one-way trip (an army) sails
+// in over `arrive` of the time and then lies at anchor. `side` spreads a
+// fleet out sideways.
+function Ship({
+  route,
+  start,
+  back,
+  tick,
+  speed,
+  sail = "#f1e6cf",
+  stripe = "#b3261e",
+  oneWay,
+  side = 0,
+}: {
+  route: Route;
+  start: number;
+  back: number;
+  tick: number;
+  speed: number;
+  sail?: string;
+  stripe?: string;
+  oneWay?: { arrive: number };
+  side?: number;
+}) {
   const ref = useRef<Group>(null);
   const progress = useRef(-1);
   useFrame(({ clock }, delta) => {
@@ -39,11 +77,15 @@ function Ship({ route, start, back, tick, speed }: { route: { from: Tile; to: Ti
     if (progress.current < 0) progress.current = goal;
     progress.current = Math.min(goal + oneTick, Math.max(goal - oneTick, progress.current + (speed / TICK_SECONDS / span) * Math.min(delta, 0.1)));
     const p = progress.current;
-    // Out to the steppe for the first half, home again for the second.
-    const leg = p < 0.5 ? p * 2 : 2 - p * 2;
+    // Out for the first half, home again for the second (or in, and stay).
+    const leg = oneWay ? Math.min(1, p / oneWay.arrive) : p < 0.5 ? p * 2 : 2 - p * 2;
     const { from, to } = route;
-    g.position.set(from.x + (to.x - from.x) * leg, 0.2 + Math.sin(clock.elapsedTime * 2) * 0.03, from.z + (to.z - from.z) * leg);
-    g.rotation.y = Math.atan2(to.x - from.x, to.z - from.z) + (p < 0.5 ? 0 : Math.PI);
+    const heading = Math.atan2(to.x - from.x, to.z - from.z);
+    // Fleets sail side by side, across the way they head.
+    const sx = Math.cos(heading) * side;
+    const sz = -Math.sin(heading) * side;
+    g.position.set(from.x + (to.x - from.x) * leg + sx, 0.2 + Math.sin(clock.elapsedTime * 2 + side) * 0.03, from.z + (to.z - from.z) * leg + sz);
+    g.rotation.y = heading + (oneWay || p < 0.5 ? 0 : Math.PI);
     g.rotation.z = Math.sin(clock.elapsedTime * 1.5) * 0.05;
   });
   return (
@@ -62,11 +104,11 @@ function Ship({ route, start, back, tick, speed }: { route: { from: Tile; to: Ti
       </mesh>
       <mesh castShadow position={[0, 0.5, 0.02]}>
         <boxGeometry args={[0.5, 0.4, 0.02]} />
-        <meshStandardMaterial color="#f1e6cf" />
+        <meshStandardMaterial color={sail} />
       </mesh>
       <mesh position={[0, 0.5, 0.032]}>
         <boxGeometry args={[0.5, 0.08, 0.005]} />
-        <meshStandardMaterial color="#b3261e" />
+        <meshStandardMaterial color={stripe} />
       </mesh>
       {/* Goods stacked on deck. */}
       <mesh position={[0.05, 0.15, -0.2]}>
@@ -99,6 +141,91 @@ export function TradeShips({
       {caravans.map((c, i) => (
         <Ship key={`${c.start}-${i}`} route={route} start={c.start} back={c.back} tick={tick} speed={speed} />
       ))}
+    </group>
+  );
+}
+
+// Each kingdom's island, and its colours (sails, and its soldiers' tunics).
+export const KINGDOM_LOOK: Record<KingdomId, { island: number; sail: string; stripe: string; tunic: string }> = {
+  steppe: { island: 1, sail: "#2a9d8f", stripe: "#e9c46a", tunic: "#2a7d73" },
+  reach: { island: 2, sail: "#5b2a86", stripe: "#c9a227", tunic: "#4b2470" },
+};
+
+// How long our raiding fleet is away (there and back).
+const RAID_VOYAGE = 40;
+
+// Medieval era at sea: our ships exploring and trading, envoys carrying gifts,
+// our raiding fleet, a kingdom's army sailing in, and a label over each
+// kingdom's island saying how it feels about us.
+export function SeaTraffic({ state, home }: { state: GameState; home: Tile }) {
+  if (state.era < 3 && !state.ships?.length) return null;
+  const { tick, speed, tiles } = state;
+  const voyage = nextVoyage(state);
+  const raided = state.revenge && state.raidedTick !== undefined && tick - state.raidedTick < RAID_VOYAGE ? state.revenge.kingdom : null;
+  const army = state.raid?.kingdom ?? null;
+  const armyRoute = army && state.raid ? landingRoute(tiles, KINGDOM_LOOK[army].island, tiles[state.raid.fromTile]) : null;
+  return (
+    <group>
+      {/* Our ships: out to find land or a coast, or to trade with a kingdom. */}
+      {(state.ships ?? []).map((ship, i) => {
+        const island = voyage?.island ?? (i % 2 ? 2 : 1);
+        const route = routeFor(tiles, home, island);
+        return route ? (
+          <Ship key={`ship-${ship.start}-${i}`} route={route} start={ship.start} back={ship.back} tick={tick} speed={speed} sail="#f1e6cf" stripe="#1e4f9c" />
+        ) : null;
+      })}
+      {/* Envoys with gifts: a gold sail, there and back while the envoy is away. */}
+      {(Object.keys(state.kingdoms ?? {}) as KingdomId[]).map((id) => {
+        const k = state.kingdoms![id];
+        if (k.giftTick === undefined || tick - k.giftTick >= DIPLOMACY.gift.wait) return null;
+        const route = routeFor(tiles, home, KINGDOM_LOOK[id].island);
+        return route ? (
+          <Ship key={`envoy-${id}-${k.giftTick}`} route={route} start={k.giftTick} back={k.giftTick + DIPLOMACY.gift.wait} tick={tick} speed={speed} sail="#e9c46a" stripe="#7a2e1f" />
+        ) : null;
+      })}
+      {/* Our raiding fleet: three red sails. */}
+      {raided &&
+        (() => {
+          const route = routeFor(tiles, home, KINGDOM_LOOK[raided].island);
+          return route
+            ? [-0.9, 0, 0.9].map((side) => (
+                <Ship key={`raid-${side}`} route={route} start={state.raidedTick!} back={state.raidedTick! + RAID_VOYAGE} tick={tick} speed={speed} sail="#9b1c1c" stripe="#140e0a" side={side} />
+              ))
+            : null;
+        })()}
+      {/* A kingdom's army: its ships sail in and lie off the shore while they fight. */}
+      {army && armyRoute && state.raid && (
+        <>
+          {[-1, 0, 1].map((side) => (
+            <Ship
+              key={`army-${side}`}
+              route={armyRoute}
+              start={state.raid!.startTick}
+              back={state.raid!.arriveTick}
+              tick={tick}
+              speed={speed}
+              sail={KINGDOM_LOOK[army].sail}
+              stripe={KINGDOM_LOOK[army].stripe}
+              oneWay={{ arrive: 0.35 }}
+              side={side}
+            />
+          ))}
+        </>
+      )}
+      {/* Who lives over there, and how they feel about us. */}
+      {(Object.keys(state.kingdoms ?? {}) as KingdomId[]).map((id) => {
+        const isle = ISLANDS[KINGDOM_LOOK[id].island];
+        const mood = moodOf(state.kingdoms![id].mood);
+        return (
+          <Html key={`label-${id}`} zIndexRange={[12, 0]} center position={[isle.x, 2.4, isle.z]} style={{ pointerEvents: "none" }}>
+            <div className="pixel-panel font-pixel flex items-center gap-1 whitespace-nowrap px-1.5 py-0.5 text-[11px]" data-testid={`kingdom-label-${id}`}>
+              <span className="capitalize">{KINGDOMS[id].name.replace(/^the /, "")}</span>
+              <span className={mood === "friendly" ? "text-emerald-700" : mood === "hostile" ? "text-red-700" : "text-amber-700"}>· {mood}</span>
+              {state.kingdoms![id].treaty && <span className="text-emerald-700">· treaty</span>}
+            </div>
+          </Html>
+        );
+      })}
     </group>
   );
 }

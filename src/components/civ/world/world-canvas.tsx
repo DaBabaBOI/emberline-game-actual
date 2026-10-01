@@ -41,7 +41,7 @@ import { BiomeDetails, Deposits, Forests, HexTerrain, Mountains, tileTop, treeSp
 import { MODELS } from "./building-models";
 import { BattleScene, FireVictims, Raiders, Villagers, Warriors } from "./villagers";
 import { PickUp } from "./pick-up";
-import { TradeShips } from "./trade";
+import { SeaTraffic, TradeShips } from "./trade";
 import { Cracks, DisasterDust, disasterView, FloodWater, QuakeShake, Rubble, StormRain } from "./disasters";
 import { Wildlife } from "./wildlife";
 import { CampfireSmoke, Haze, Wildfire } from "./atmosphere";
@@ -346,6 +346,7 @@ export function WorldCanvas() {
       <BattleScene tiles={state.tiles} battle={battleShowing ? state.battle ?? null : null} homeTile={home} />
       <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} speed={state.speed} />
       <TradeShips tiles={state.tiles} home={home} caravans={state.caravans ?? []} tick={state.tick} speed={state.speed} />
+      <SeaTraffic state={state} home={home} />
       <QuakeShake active={disaster.kind === "earthquake" && disaster.active} />
       {disaster.kind === "flood" && disaster.active && <FloodWater tiles={state.tiles} ids={disaster.tiles} progress={disaster.progress} />}
       {storm > 0 && <StormRain centre={home} heavy={disaster.active} />}

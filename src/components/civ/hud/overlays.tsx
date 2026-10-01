@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AFTER_STEPS, DISASTERS, DISCOVERIES, DROUGHT, ERA_INTROS, ERAS, EVENTS, LESSONS, RAID_KINDS, RAID_RESPONSE, TREE_BY_ID, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
+import { AFTER_STEPS, DISASTERS, DISCOVERIES, DROUGHT, ERA_INTROS, ERAS, EVENTS, KINGDOMS, LESSONS, RAID_KINDS, RAID_RESPONSE, TREE_BY_ID, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
 import {
   canAfford,
   countBuildings,
@@ -390,7 +390,8 @@ export function RaidBanner() {
           <div className="flex items-center gap-2 font-semibold">
             <PixelIcon name="warning" size={18} />
             <span>
-              {kind.name} of {raid.strength} raiders! {kind.wants} They arrive in <Countdown ticks={eta} />s.
+              {raid.kingdom ? `An army of ${KINGDOMS[raid.kingdom].name} (${raid.strength})!` : `${kind.name} of ${raid.strength} raiders! ${kind.wants}`} They
+              arrive in <Countdown ticks={eta} />s.
             </span>
           </div>
           <div className="mt-2 grid grid-cols-3 gap-1.5">

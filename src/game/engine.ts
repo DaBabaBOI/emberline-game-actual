@@ -3417,7 +3417,12 @@ function updateRaids(state: GameState): GameState {
       return d >= 7 && d <= 11;
     });
     if (shores.length === 0) return { ...state, nextRaidTick: state.tick + 60 };
-    const from = shores[Math.floor(rand() * shores.length)];
+    // A kingdom's army lands on the shore that faces its island.
+    const isle = from_ ? ISLANDS[from_ === "steppe" ? 1 : 2] : null;
+    const landing = isle
+      ? [...shores].sort((a, b) => Math.hypot(a.x - isle.x, a.z - isle.z) - Math.hypot(b.x - isle.x, b.z - isle.z)).slice(0, 4)
+      : shores;
+    const from = landing[Math.floor(rand() * landing.length)];
     // The warriors meet them most of the way to the village, on open ground.
     const mx = from.x + (home.x - from.x) * 0.7;
     const mz = from.z + (home.z - from.z) * 0.7;
