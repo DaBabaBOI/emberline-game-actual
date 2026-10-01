@@ -269,7 +269,7 @@ export function Wildlife({
       {animals.map((a) => (
         <AnimalView key={a.id} animal={a} motion={motion} />
       ))}
-      <Figures agents={hunter} max={1} weapon="spear" />
+      <Figures agents={hunter} max={1} weapon="spear" group="people" />
     </group>
   );
 }

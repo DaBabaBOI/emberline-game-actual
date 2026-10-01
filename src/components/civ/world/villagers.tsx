@@ -8,6 +8,7 @@ import { isLand } from "@/game/map";
 import type { Battle, Raid, Tile } from "@/game/types";
 import { Figures, HAIRS, SKINS, type Agent } from "./figures";
 import { makeGround, type Ground } from "./ground";
+import { MAX_FIGURES, figureCounts } from "./crowd";
 import { tileTop } from "./hex-terrain";
 
 // Stone Age: hides and furs. Ancient era: dyed linen and wool.
@@ -149,23 +150,7 @@ function stepWalker(w: Walker, dt: number, ground: Ground, pickTarget: () => Til
   w.y += (floor - w.y) * Math.min(1, dt * 12);
 }
 
-// People on the map stand for groups, not individuals: never more than
-// MAX_FIGURES at once, counting the one hunter who can be out in the woods.
-export const MAX_FIGURES = 20;
-
-export function figureCounts(population: number, soldiers: number) {
-  const budget = MAX_FIGURES - 1;
-  let villagers = Math.max(2, Math.ceil(population / 3));
-  // Warriors never take more than 40% of the figures, so the village never looks
-  // like it's only guards.
-  let warriors = soldiers > 0 ? Math.min(Math.ceil(soldiers / 2), Math.floor(budget * 0.4)) : 0;
-  const total = villagers + warriors;
-  if (total > budget) {
-    warriors = soldiers > 0 ? Math.max(1, Math.round((budget * warriors) / total)) : 0;
-    villagers = budget - warriors;
-  }
-  return { villagers, warriors };
-}
+export { MAX_FIGURES, figureCounts } from "./crowd";
 
 const pick = (list: Tile[]) => list[Math.floor(Math.random() * list.length)];
 
@@ -257,7 +242,7 @@ export function Villagers({
     grabStore.walkers = shown.current;
   });
 
-  return <Figures agents={shown} max={MAX_FIGURES} colorKey={`${sickFigures}|${era}`} />;
+  return <Figures agents={shown} max={MAX_FIGURES} colorKey={`${sickFigures}|${era}`} group="people" />;
 }
 
 export function Warriors({
@@ -340,8 +325,8 @@ export function Warriors({
   if (hidden) return null;
   return (
     <>
-      <Figures agents={spearFigs} max={MAX_FIGURES} weapon="spear" colorKey={era} />
-      <Figures agents={clubFigs} max={MAX_FIGURES} weapon="club" colorKey={era} />
+      <Figures agents={spearFigs} max={MAX_FIGURES} weapon="spear" colorKey={era} group="warriors" />
+      <Figures agents={clubFigs} max={MAX_FIGURES} weapon="club" colorKey={era} group="warriors" />
     </>
   );
 }

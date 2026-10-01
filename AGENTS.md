@@ -138,6 +138,11 @@ These were decided with the project owner. Do not change them without being aske
   no disease out of nowhere for 200); then events come every `EVENT_GAP`
   (100-160 ticks) and raids every `RAID_GAP` (170-250). Pressure builds as the
   tribe grows. Playtesters called the old, longer gaps "a snoozefest".
+- **Figures stand for groups** (`world/crowd.ts`: `MAX_FIGURES`, `figureCounts`):
+  hovering or tapping the population or warriors counter lights those figures
+  up in yellow with a marker overhead (`highlight.group`, `Figures group=`) and
+  says how many people each figure stands for. New crowds of people on the
+  map must pass a `group` so they light up too.
 - **Small moments** (`SMALL_MOMENTS`, `MOMENTS` / `smallMoment()` in engine.ts):
   every 20-40 ticks (30-60 s) after the tutorial, one little thing happens,
   picked from those that fit the island right now (a deer herd if the forest
