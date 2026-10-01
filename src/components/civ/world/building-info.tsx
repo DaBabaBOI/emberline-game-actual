@@ -14,7 +14,10 @@ import {
   isLit,
   loggingMode,
   perSecond,
+  repairCost,
   upgradeFor,
+  wearFactor,
+  wearsOut,
   woodcutterYield,
 } from "@/game/engine";
 import type { GameState } from "@/game/types";
@@ -67,6 +70,36 @@ export function BuildingInfo({
         {def.landCost}
       </p>
 
+      {/* Hard mode: how worn it is, and a repair. */}
+      {wearsOut(state) && def.id !== "campfire" && (
+        <div className="mt-2 border-t-2 border-stone-300 pt-1.5" data-testid="wear">
+          <div className="flex justify-between">
+            <span>{(tile.worn ?? 0) >= 1 ? "Broken down: making nothing" : `Condition ${Math.round((1 - (tile.worn ?? 0)) * 100)}%`}</span>
+            {(tile.worn ?? 0) > 0.5 && (tile.worn ?? 0) < 1 && <span className="text-amber-800">making {Math.round(wearFactor(tile) * 100)}%</span>}
+          </div>
+          <div className="my-1 h-1.5 bg-stone-300">
+            <div
+              className={cn("h-full", (tile.worn ?? 0) >= 0.7 ? "bg-red-600" : (tile.worn ?? 0) >= 0.3 ? "bg-amber-500" : "bg-emerald-600")}
+              style={{ width: `${(1 - (tile.worn ?? 0)) * 100}%` }}
+            />
+          </div>
+          {(tile.worn ?? 0) > 0.05 && (
+            <button
+              type="button"
+              disabled={!canAfford(state, repairCost(state, tile))}
+              onClick={() => dispatch({ type: "repair", tileId })}
+              className="pixel-btn flex w-full items-center justify-center gap-1 bg-amber-400 px-2 py-1 text-[#2b2119] disabled:opacity-40"
+            >
+              <PixelIcon name="hammer" size={12} />
+              Repair ·{" "}
+              {Object.entries(repairCost(state, tile))
+                .map(([k, v]) => `${v} ${k === "currency" ? "coins" : k}`)
+                .join(", ")}
+            </button>
+          )}
+        </div>
+      )}
+
       {def.id === "gatherer" && gathererShare(state) < 1 && (
         <p className="mt-2 border-t-2 border-stone-300 pt-1.5 text-amber-800">
           {countBuildings(state).gatherer} camps share what the wild can give: each makes{" "}
@@ -107,9 +140,12 @@ export function BuildingInfo({
       {def.id === "woodcutter" && (
         <div className="mt-2 border-t-2 border-stone-300 pt-1.5">
           <p className="mb-1">
-            Making <span className="font-num">{perSecond((def.produces?.wood ?? 0) * woodcutterYield(state, tile)).toFixed(2)}</span>{" "}
+            Making <span className="font-num">{perSecond((def.produces?.wood ?? 0) * woodcutterYield(state, tile) * wearFactor(tile)).toFixed(2)}</span>{" "}
             wood/s. How should they cut?
           </p>
+          {mode === "selective" && woodcutterYield(state, tile) === 0 && (
+            <p className="mb-1 text-amber-800">No trees are big enough to thin yet. They will start again as the forest grows back.</p>
+          )}
           <div className="flex flex-col gap-1">
             {(
               [

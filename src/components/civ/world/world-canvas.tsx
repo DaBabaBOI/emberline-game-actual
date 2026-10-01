@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Vector3 } from "three";
 import { Html, MapControls } from "@react-three/drei";
-import { BUILDINGS_BY_ID, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL } from "@/game/content";
+import { BUILDINGS_BY_ID, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL, WEAR } from "@/game/content";
 import {
   buildingCost,
   DEMOLISH_TOOL,
@@ -16,6 +16,7 @@ import {
   residents,
   fireScareNote,
   gatherNote,
+  inDrought,
   isLit,
   landStrain,
   litFires,
@@ -24,6 +25,7 @@ import {
   PLANT_TOOL,
   plantError,
   placementError,
+  townNote,
 } from "@/game/engine";
 import { BuildingInfo } from "./building-info";
 import { useGame } from "@/components/civ/game-provider";
@@ -36,6 +38,8 @@ import { BiomeDetails, Deposits, Forests, HexTerrain, Mountains, tileTop } from 
 import { MODELS } from "./building-models";
 import { BattleScene, FireVictims, Raiders, Villagers, Warriors } from "./villagers";
 import { PickUp } from "./pick-up";
+import { TradeShips } from "./trade";
+import { Cracks, DisasterDust, disasterView, FloodWater, QuakeShake, Rubble, StormRain } from "./disasters";
 import { Wildlife } from "./wildlife";
 import { CampfireSmoke, Haze, Wildfire } from "./atmosphere";
 
@@ -162,11 +166,17 @@ export function WorldCanvas() {
       : null;
   const dust = def && !error && hoverTile ? dustNote(state, hoverTile, def.id) : null;
   const gather = def?.id === "gatherer" && !error && hoverTile && !inTutorialNow ? gatherNote(state) : null;
+  const town = def && !error && hoverTile ? townNote(state, hoverTile, def.id) : null;
 
   const burning = useMemo(() => litFires(state), [state]);
   // A battle is played out for a few ticks after it happens.
   const battleShowing = !!state.battle && state.tick - state.battle.tick < 7;
   const burningIds = burning.map((t) => t.id);
+  // The great drought: warned of (a little dry), then on (parched land, hazy sky).
+  const dry = inDrought(state) ? 1 : state.drought ? 0.2 : 0;
+  // A storm, flood, earthquake or landslide: warned of, then striking.
+  const disaster = disasterView(state);
+  const storm = disaster.kind === "storm" ? (disaster.active ? 1 : 0.5) : 0;
   const outFires = buildings.filter((t) => t.building === "campfire" && !isLit(state, t));
 
   // On a phone there is no hover: the first tap previews, the second tap builds.
@@ -214,9 +224,9 @@ export function WorldCanvas() {
       }}
     >
       <color attach="background" args={["#a8dcf5"]} />
-      <Haze fires={burning.length + 2 * buildings.filter((t) => t.building === "smithy").length} />
+      <Haze fires={burning.length + 2 * buildings.filter((t) => t.building === "smithy").length} dust={dry >= 1 ? 1 : 0} storm={storm} />
       {/* The Ancient era is a touch warmer and more golden, so the change of era shows. */}
-      <hemisphereLight args={[state.era >= 1 ? "#ffeccc" : "#d6f1ff", "#6f8f4e", 0.75]} />
+      <hemisphereLight args={[dry >= 1 ? "#ffe2a8" : state.era >= 1 ? "#ffeccc" : "#d6f1ff", "#6f8f4e", 0.75 - storm * 0.3]} />
       <directionalLight
         position={[home.x + 25, 40, home.z + 15]}
         intensity={1.5}
@@ -238,7 +248,16 @@ export function WorldCanvas() {
         <meshStandardMaterial color="#1a5f93" roughness={0.3} />
       </mesh>
 
-      <HexTerrain tiles={state.tiles} home={home} wear={landStrain(state)} era={state.era} onHover={setHovered} onPick={pick} />
+      <HexTerrain
+        tiles={state.tiles}
+        home={home}
+        wear={landStrain(state)}
+        era={state.era}
+        roads={state.researched.includes("roads")}
+        dry={dry}
+        onHover={setHovered}
+        onPick={pick}
+      />
       <Forests tiles={state.tiles} />
       <OldGrove tiles={state.tiles} ids={state.protectedTiles ?? []} />
       <Mountains tiles={state.tiles} onHover={setHovered} onPick={pick} />
@@ -247,12 +266,32 @@ export function WorldCanvas() {
 
       {buildings.map((t) => {
         const Model = MODELS[t.building!];
+        const broken = (t.worn ?? 0) >= 1;
         return (
-          <group key={t.id} position={[t.x, t.height, t.z]} rotation={[0, (t.id % 6) * (Math.PI / 3), 0]} scale={1.55}>
+          // Hard mode: a broken-down building sags to one side.
+          <group
+            key={t.id}
+            position={[t.x, t.height, t.z]}
+            rotation={[broken ? 0.12 : 0, (t.id % 6) * (Math.PI / 3), broken ? 0.1 : 0]}
+            scale={1.55}
+          >
             <Model opacity={1} lit={t.building !== "campfire" || burningIds.includes(t.id)} />
           </group>
         );
       })}
+      {/* Hard mode: a hammer over buildings that need repair (red when broken). */}
+      {buildings
+        .filter((t) => (t.worn ?? 0) >= WEAR.warnAt)
+        .map((t) => (
+          <Html zIndexRange={[14, 0]} key={`wear-${t.id}`} center position={[t.x, tileTop(t) + 1.5, t.z]} style={{ pointerEvents: "none" }}>
+            <span
+              className={"block border-2 border-[#140e0a] p-0.5 " + ((t.worn ?? 0) >= 1 ? "bg-red-500" : "bg-amber-300")}
+              title="Needs repair"
+            >
+              <PixelIcon name="hammer" size={14} />
+            </span>
+          </Html>
+        ))}
 
       {/* Small moments play out where they happen. */}
       <SmallMoment state={state} />
@@ -278,6 +317,13 @@ export function WorldCanvas() {
       />
       <BattleScene tiles={state.tiles} battle={battleShowing ? state.battle ?? null : null} homeTile={home} />
       <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} speed={state.speed} />
+      <TradeShips tiles={state.tiles} home={home} caravans={state.caravans ?? []} tick={state.tick} speed={state.speed} />
+      <QuakeShake active={disaster.kind === "earthquake" && disaster.active} />
+      {disaster.kind === "flood" && disaster.active && <FloodWater tiles={state.tiles} ids={disaster.tiles} progress={disaster.progress} />}
+      {storm > 0 && <StormRain centre={home} heavy={disaster.active} />}
+      {(disaster.kind === "earthquake" || disaster.kind === "landslide") && disaster.active && <DisasterDust tiles={state.tiles} ids={disaster.tiles} />}
+      <Cracks tiles={state.tiles} />
+      <Rubble tiles={state.tiles} />
       <Wildlife
         tiles={state.tiles}
         homeTile={home}
@@ -392,6 +438,12 @@ export function WorldCanvas() {
                   <span className="flex items-start gap-1.5 text-amber-200">
                     <PixelIcon name="warning" size={12} />
                     {dust}
+                  </span>
+                )}
+                {town && (
+                  <span className="flex items-start gap-1.5 text-amber-200">
+                    <PixelIcon name="warning" size={12} />
+                    {town}
                   </span>
                 )}
                 {lowWood && (
