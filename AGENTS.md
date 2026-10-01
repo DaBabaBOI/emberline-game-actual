@@ -149,6 +149,10 @@ These were decided with the project owner. Do not change them without being aske
   growth, first raid won, first saplings, scouting trips left, chief levels)
   and what teaches every day, with live rates. A "+N" floats up whenever
   Knowledge jumps. A new source of Knowledge must be added to that list.
+- **The build works offline.** Fonts are files in `src/app/fonts` (Pixelify
+  Sans and VT323, SIL Open Font License, licence texts beside them), loaded
+  with `next/font/local`. Don't use `next/font/google` or anything else the
+  build has to download: judges may build it without internet.
 - **Small moments** (`SMALL_MOMENTS`, `MOMENTS` / `smallMoment()` in engine.ts):
   every 20-40 ticks (30-60 s) after the tutorial, one little thing happens,
   picked from those that fit the island right now (a deer herd if the forest
