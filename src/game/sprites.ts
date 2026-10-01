@@ -1173,6 +1173,21 @@ export const SPRITES = {
     ".dddddbdddd.",
     "...dddddd...",
   ],
+  // A floating needle in a bowl of water: the first compasses. Red end north.
+  compass: [
+    "............",
+    "....bbbb....",
+    "..bbuuuubb..",
+    ".buuuuruuub.",
+    ".buuuurruub.",
+    "buuuuurruuub",
+    "buuuuSSuuuub",
+    ".buuuSSuuub.",
+    ".buuuuSuuub.",
+    "..bbuuuubb..",
+    "....bbbb....",
+    "............",
+  ],
 } satisfies Record<string, string[]>;
 
 export type IconId = keyof typeof SPRITES;
