@@ -278,7 +278,11 @@ These were decided with the project owner. Do not change them without being aske
   grab a villager and drop them anywhere. A ring and label under them say what
   will happen. Open ground: nothing. A working building: they help (+50% output
   for 20 ticks). A cold campfire: they relight it. A lit fire or the open sea:
-  they die (-1 person, happiness -6, counted as fire / accident in the debrief).
+  they die (-1 person, counted as fire / accident in the debrief) and the
+  tribe grieves (`GRIEF`, `state.grief`): -35 happiness each, taken off
+  *after* the 0-100 cap so it always shows, adding up to -100 and fading over
+  3 minutes. Two in a row tip an ordinary tribe into unrest: killing people to
+  save food must never pay. The happiness tip says "Grieving". Dev: "Grief".
   Shallow water or a mountain: they get sick. Cloud (unexplored land): they
   vanish and come back only 5% of the time, with a little new map; this must
   stay rare so scouting is still worth buying. Dev: "Back from fog".
