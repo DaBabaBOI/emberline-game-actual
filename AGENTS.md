@@ -185,7 +185,7 @@ These were decided with the project owner. Do not change them without being aske
   and the Happiness tip say what it costs.
 - **Small moments** (`SMALL_MOMENTS`, `MOMENTS` / `smallMoment()` in engine.ts):
   every 20-40 ticks (30-60 s) after the tutorial, one little thing happens,
-  picked from those that fit the island right now (a deer herd if the forest
+  picked from those that fit the island right now (birds if the forest
   stands, dust if it's gone, mice in a big store without a granary, wind blowing
   out one of several fires, a baby when there's food and room...). Each is a
   log line (toast) with a small effect; never over an event, raid or the legion,
@@ -196,8 +196,8 @@ These were decided with the project owner. Do not change them without being aske
   `where`, a scene and a label. Dev: "Moment", or pick one in "Moment...".
   A scene must stay on its own tile, as seen from the camera: anything flying
   goes just above what's on the tile (birds at ~1.1, over treetops at ~0.85),
-  since height pushes it up the screen over the tile behind. No rain moment
-  (the owner found it random): good rainfall shows as the "grow" moment, the
+  since height pushes it up the screen over the tile behind. No rain or deer moment
+  (the owner found them random / useless): good rainfall shows as the "grow" moment, the
   field's own wheat shooting up. Birds circle a tile deep in the forest
   (`deepForest()`).
 - **Phones are supported.** Layouts use `md:` breakpoints (bars stack and

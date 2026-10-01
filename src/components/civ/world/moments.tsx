@@ -11,12 +11,11 @@ import { Plume } from "./atmosphere";
 import { tileTop } from "./hex-terrain";
 import { BUILDING_SCALE, buildingTurn } from "./building-models";
 
-// Small moments (a herd passing, a tree blown down, birds coming back) play out
+// Small moments (berries found, birds coming back, a gust of wind) play out
 // on the map where they happen, for MOMENT_TICKS, with a short label above.
 export const MOMENT_TICKS = 8;
 
 const LABELS: Record<string, { icon: IconId; text: string }> = {
-  herd: { icon: "meat", text: "Deer at the forest edge" },
   berries: { icon: "basket", text: "Berries found" },
   baby: { icon: "smile", text: "A baby was born" },
   gust: { icon: "flame", text: "The wind blew a fire out" },
@@ -35,43 +34,6 @@ function useAge() {
     if (start.current === null) start.current = t;
     return t - start.current;
   };
-}
-
-// A few deer bounding past, from one side of the tile to the other.
-function Herd() {
-  const deer = useRef<(Group | null)[]>([]);
-  const age = useAge();
-  useFrame(({ clock }) => {
-    const a = age(clock.elapsedTime);
-    deer.current.forEach((g, i) => {
-      if (!g) return;
-      const k = Math.min(1, Math.max(0, (a - i * 0.4) / 7));
-      g.position.set(-2.4 + k * 4.8, Math.abs(Math.sin(a * 7 + i)) * 0.12, (i - 1.5) * 0.35);
-      g.visible = k > 0 && k < 1;
-    });
-  });
-  return (
-    <group>
-      {[0, 1, 2, 3].map((i) => (
-        <group key={i} ref={(el) => void (deer.current[i] = el)} rotation={[0, Math.PI / 2, 0]} scale={1.4}>
-          <mesh castShadow position={[0, 0.2, 0]}>
-            <boxGeometry args={[0.12, 0.12, 0.28]} />
-            <meshStandardMaterial color="#9c6a3c" />
-          </mesh>
-          <mesh castShadow position={[0, 0.34, 0.16]}>
-            <boxGeometry args={[0.07, 0.1, 0.1]} />
-            <meshStandardMaterial color="#8a5c33" />
-          </mesh>
-          {[[-0.04, 0.1], [0.04, 0.1], [-0.04, -0.1], [0.04, -0.1]].map(([x, z]) => (
-            <mesh key={`${x}${z}`} position={[x, 0.08, z]}>
-              <cylinderGeometry args={[0.012, 0.01, 0.16, 5]} />
-              <meshStandardMaterial color="#6b4a2b" />
-            </mesh>
-          ))}
-        </group>
-      ))}
-    </group>
-  );
 }
 
 // Things that rise and fade: berries, hearts, sparks by the fire.
@@ -242,8 +204,6 @@ export function Mice() {
 
 function Scene({ id, tile }: { id: string; tile: Tile }) {
   switch (id) {
-    case "herd":
-      return <Herd />;
     case "berries":
       return <Berries />;
     case "baby":

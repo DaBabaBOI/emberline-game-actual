@@ -2662,7 +2662,6 @@ const nearHome = (s: GameState, ok: (t: Tile) => boolean) => {
 // One of the nearest few, so it isn't always the same spot.
 const pick = (s: GameState, list: Tile[]) => list[Math.floor(s.tick / 3) % Math.min(4, list.length)];
 const isTrees = (t: Tile) => t.terrain === "forest" && !t.building && t.growth > 0.5;
-const forestEdge = (s: GameState) => pick(s, nearHome(s, isTrees));
 // The middle of the forest: the tile with the most trees round it (nearest the
 // village among those), so birds circling it stay over the forest.
 const deepForest = (s: GameState) => {
@@ -2682,7 +2681,6 @@ const addMood = (s: GameState, n: number) => ({ ...s, modifiers: { ...s.modifier
 const untendedFires = (s: GameState) => litFires(s).filter((t) => !tended(s, t));
 
 const MOMENTS: Moment[] = [
-  { id: "herd", when: (s) => forestCover(s) >= 0.5, apply: (s) => addFood(s, 8), text: "A herd of deer passed the forest edge. The hunters brought back meat (+8 food).", where: forestEdge },
   {
     id: "berries",
     when: () => true,
