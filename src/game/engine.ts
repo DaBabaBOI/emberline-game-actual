@@ -151,7 +151,8 @@ export type Action =
   | { type: "devXp" }
   | { type: "raidResponse"; choice: RaidResponse }
   | { type: "devRaidKind"; kind: RaidKind }
-  | { type: "devMoment" }
+  | { type: "setKeeper"; tileId: number; on: boolean }
+  | { type: "devMoment"; id?: string }
   | { type: "devStarve" }
   | { type: "famineRelief"; kind: FamineRelief }
   | { type: "devCollapse" }
@@ -432,14 +433,16 @@ export function loggingMode(state: GameState, tile: Tile) {
 }
 
 // 0–1: how much of its full output a woodcutter makes. Clear-cutting takes every
-// tree; selective logging only thins mature trees, for half the wood.
+// tree; selective logging only thins the bigger trees, for exactly half the wood
+// clear-cutting would get from the same forest. The forest grows back faster
+// than that, so it lasts. With no tree above SELECTIVE_FLOOR it waits for them.
 export function woodcutterYield(state: GameState, tile: Tile) {
+  const trees = treesNear(state, tile);
+  const clear = Math.min(1, trees.reduce((sum, t) => sum + t.growth, 0) / 2);
   if (loggingMode(state, tile) === "selective") {
-    const mature = treesNear(state, tile).reduce((sum, t) => sum + Math.max(0, t.growth - SELECTIVE_FLOOR), 0);
-    return Math.min(1, mature) * 0.5;
+    return trees.some((t) => t.growth > SELECTIVE_FLOOR + 0.02) ? clear * 0.5 : 0;
   }
-  const standing = treesNear(state, tile).reduce((sum, t) => sum + t.growth, 0);
-  return Math.min(1, standing / 2);
+  return clear;
 }
 
 export const PLANT_TOOL = "__plant";
@@ -1337,7 +1340,7 @@ function gapFactor(state: GameState) {
 }
 
 export interface Warning {
-  id: "fire" | "food" | "wood" | "famine" | "unrest" | "collapse" | "behind" | "land" | "sick" | "rain" | "wear" | "hostile-steppe" | "hostile-reach";
+  id: "fire" | "food" | "wood" | "famine" | "unrest" | "collapse" | "behind" | "land" | "sick" | "rain" | "wear" | "roof" | "hostile-steppe" | "hostile-reach";
   icon: IconId;
   text: string;
   // Ticks left on the countdown in the text; "{secs}" in the text is where it goes.
@@ -1414,6 +1417,18 @@ export function warnings(state: GameState): Warning[] {
       text: "Food is running low: about {secs}s left. Build gatherers or farms.",
       countdown: state.resources.food / -netFood,
       severe: state.resources.food / -netFood < 20,
+    });
+  }
+
+  // People with no roof over their heads: say why, if a home was just lost.
+  const homeless = Math.floor(state.population) - housingCapacity(state);
+  if (homeless > 0) {
+    const lost = state.homeLost && state.tick - state.homeLost.tick < 120 ? state.homeLost : null;
+    out.push({
+      id: "roof",
+      icon: "hut",
+      text: `${lost ? `We lost a ${lost.name}. ` : ""}${homeless} ${homeless === 1 ? "person has" : "people have"} no roof over their heads: build homes.`,
+      severe: !!lost || state.meters.shelter < 30,
     });
   }
 
@@ -1691,6 +1706,33 @@ export function foodSpoiling(state: GameState) {
 
 export function isLit(state: GameState, tile: Tile) {
   return tile.building === "campfire" && (state.fires?.[tile.id] ?? 0) > 0;
+}
+
+// Does someone tend this campfire (add wood when it burns out)? Yes unless
+// the player sent the keeper away.
+export function tended(state: GameState, tile: Tile) {
+  return tile.building === "campfire" && !(state.untended ?? []).includes(tile.id);
+}
+
+// Keepers add wood to their fires as they burn out (1 wood each, like
+// relighting), as long as there is wood and no storm is putting them out.
+function keepFires(state: GameState): GameState {
+  if (state.tutorialStep < TUTORIAL.length) return state;
+  if (state.disaster?.kind === "storm" && disasterActive(state)) return state;
+  let next = state;
+  for (const t of state.tiles) {
+    if (!tended(next, t) || isLit(next, t) || next.resources.wood < RELIGHT_WOOD) continue;
+    next = addTally(
+      {
+        ...next,
+        fires: { ...next.fires, [t.id]: burnTicks(next) },
+        resources: { ...next.resources, wood: next.resources.wood - RELIGHT_WOOD },
+      },
+      "relights",
+      1,
+    );
+  }
+  return next;
 }
 
 export function litFires(state: GameState) {
@@ -1993,6 +2035,39 @@ function milestonesReached(state: GameState): [string, string, number][] {
   return out;
 }
 
+// Where Knowledge comes from, for the "How to get Knowledge" panel: what
+// teaches every day (per tick), and the one-time firsts still to come.
+export function knowledgeSources(state: GameState) {
+  const counts = countBuildings(state);
+  const bonus = state.culture === "scholars" ? 1.5 : 1;
+  const daily: { label: string; perTick: number }[] = [];
+  for (const [id, n] of Object.entries(counts)) {
+    const k = BUILDINGS_BY_ID[id]?.produces?.knowledge ?? 0;
+    if (k > 0 && n > 0)
+      daily.push({ label: `${n} ${BUILDINGS_BY_ID[id].name}${n > 1 ? "s" : ""}`, perTick: k * n * teachingShare(state, id) * bonus });
+  }
+  daily.push({ label: `Literacy ${state.meters.literacy}`, perTick: state.meters.literacy * 0.001 * bonus });
+  const M = KNOWLEDGE_MILESTONES;
+  const done = state.milestones ?? [];
+  // Milestones get the Scholars bonus; scouting, caravans and levels don't.
+  const firsts: { label: string; gain: number }[] = [];
+  const milestone = (label: string, gain: number) => firsts.push({ label, gain: Math.round(gain * bonus) });
+  const unbuilt = Object.values(BUILDINGS_BY_ID).filter(
+    (d) => isUnlocked(state, d) && !counts[d.id] && !done.includes(`build-${d.id}`),
+  );
+  if (unbuilt.length)
+    milestone(`Build your first ${unbuilt.slice(0, 3).map((d) => d.name).join(", ")}${unbuilt.length > 3 ? "..." : ""} (each new kind)`, M.firstBuilding);
+  for (const p of M.population) if (!done.includes(`pop-${p}`)) milestone(`Grow to ${p} people`, M.populationReward);
+  if (!done.includes("raid")) milestone("Drive off raiders for the first time", M.firstRaidWon);
+  if (!done.includes("plant") && state.researched.includes("early-farming")) milestone("Plant your first saplings", M.firstPlanted);
+  const trips = Math.max(0, SCOUT_KNOWLEDGE.trips - state.scoutsSent);
+  if (trips) firsts.push({ label: `Send scouts (${trips} more trip${trips === 1 ? "" : "s"} teach us; big ones +2)`, gain: 1 });
+  // Caravans to the Silk Steppe bring new ideas home (Classical era).
+  if (state.researched.includes("barter-roads")) firsts.push({ label: "Each caravan that comes home", gain: CARAVAN.knowledge });
+  firsts.push({ label: "Each new chief level", gain: XP.levelKnowledge });
+  return { daily, firsts };
+}
+
 // Pay out Knowledge for new milestones, once each.
 function knowledgeMilestones(state: GameState): GameState {
   const done = state.milestones ?? [];
@@ -2249,6 +2324,22 @@ function startGrace(state: GameState): GameState {
 
 function tick(state: GameState): GameState {
   if (state.phase !== "playing" || state.event) return state;
+  return noteLostHomes(state, tickOnce(state));
+}
+
+// A home burned, wrecked or broken down this tick: remember which, so the
+// warning about people with no roof can say what happened.
+function noteLostHomes(before: GameState, after: GameState): GameState {
+  if (housingCapacity(after) >= housingCapacity(before)) return after;
+  const gone = before.tiles.find((t, i) => {
+    const room = t.building ? BUILDINGS_BY_ID[t.building]?.housing ?? 0 : 0;
+    const now = after.tiles[i];
+    return room > 0 && (now.building !== t.building || (now.worn ?? 0) >= 1) ;
+  });
+  return gone ? { ...after, homeLost: { name: BUILDINGS_BY_ID[gone.building!].name, tick: after.tick } } : after;
+}
+
+function tickOnce(state: GameState): GameState {
   const prod = production(state);
   const cons = consumption(state);
 
@@ -2349,6 +2440,10 @@ function tick(state: GameState): GameState {
     modifiers,
   };
 
+  next = keepFires(next);
+  // "A campfire burned out" only if one is still out after the keepers' turn.
+  const justOut = state.tiles.filter((t) => t.building === "campfire" && state.fires?.[t.id] === 1);
+  if (burnedOut && justOut.every((t) => isLit(next, t))) next = { ...next, log: next.log.slice(1) };
   if (next.tick % 3 === 0) next = growForests(next);
   next = wearBuildings(next);
   next = cutHills(next);
@@ -2419,71 +2514,105 @@ interface Moment {
   when: (s: GameState) => boolean;
   apply: (s: GameState) => GameState;
   text: string;
+  // Where on the map it happens (shown there for a few seconds).
+  where: (s: GameState) => Tile | undefined;
 }
+
+// Places for a moment to happen, nearest the village first.
+const nearHome = (s: GameState, ok: (t: Tile) => boolean) => {
+  const home = s.tiles[s.startTile];
+  return s.tiles.filter((t) => t.revealed && ok(t)).sort((a, b) => hexDistance(a, home) - hexDistance(b, home));
+};
+// One of the nearest few, so it isn't always the same spot.
+const pick = (s: GameState, list: Tile[]) => list[Math.floor(s.tick / 3) % Math.min(4, list.length)];
+const forestEdge = (s: GameState) =>
+  pick(s, nearHome(s, (t) => t.terrain === "forest" && !t.building && t.growth > 0.5));
+const bareLand = (s: GameState) => pick(s, nearHome(s, (t) => (t.terrain === "grass" || t.terrain === "steppe") && !t.building && hexDistance(t, s.tiles[s.startTile]) >= 2));
+const aBuilding = (s: GameState, ids: string[]) => pick(s, nearHome(s, (t) => !!t.building && ids.includes(t.building)));
 
 const addFood = (s: GameState, n: number) => ({ ...s, resources: { ...s.resources, food: Math.max(0, s.resources.food + n) } });
 const addMood = (s: GameState, n: number) => ({ ...s, modifiers: { ...s.modifiers, happiness: s.modifiers.happiness + n } });
 
+const untendedFires = (s: GameState) => litFires(s).filter((t) => !tended(s, t));
+
 const MOMENTS: Moment[] = [
-  { id: "herd", when: (s) => forestCover(s) >= 0.5, apply: (s) => addFood(s, 8), text: "A herd of deer passed the forest edge. The hunters brought back meat (+8 food)." },
-  { id: "berries", when: () => true, apply: (s) => addFood(s, 5), text: "The children found a patch of berries (+5 food)." },
+  { id: "herd", when: (s) => forestCover(s) >= 0.5, apply: (s) => addFood(s, 8), text: "A herd of deer passed the forest edge. The hunters brought back meat (+8 food).", where: forestEdge },
+  {
+    id: "berries",
+    when: () => true,
+    apply: (s) => addFood(s, 5),
+    text: "The children found a patch of berries (+5 food).",
+    where: (s) => pick(s, nearHome(s, (t) => !t.building && (t.deposit === "berries" || t.terrain === "grass" || t.terrain === "forest"))),
+  },
   {
     id: "baby",
     when: (s) => s.meters.food >= 45 && s.population < housingCapacity(s),
     apply: (s) => ({ ...s, population: s.population + 1 }),
     text: "A baby was born by the fire (+1 person).",
-  },
-  {
-    id: "windfall",
-    when: (s) => forestCover(s) >= 0.3,
-    apply: (s) => ({ ...s, resources: { ...s.resources, wood: s.resources.wood + 4 } }),
-    text: "The wind brought down an old tree: free firewood (+4 wood).",
+    where: (s) => aBuilding(s, ["hut", "house", "townhouse"]) ?? s.tiles[s.startTile],
   },
   {
     id: "gust",
-    when: (s) => litFires(s).length >= 2,
+    // Only a fire nobody tends: a keeper would just relight it.
+    when: (s) => litFires(s).length >= 2 && untendedFires(s).length > 0,
     apply: (s) => {
-      const fire = litFires(s)[Math.floor(s.tick / 7) % litFires(s).length];
+      const fire = untendedFires(s)[Math.floor(s.tick / 7) % untendedFires(s).length];
       return { ...s, fires: { ...s.fires, [fire.id]: 0 } };
     },
     text: "A gust of wind blew out a campfire. Click it to relight it.",
+    // The fire that went out (the same one apply() picks).
+    where: (s) => untendedFires(s)[Math.floor(s.tick / 7) % untendedFires(s).length],
   },
   {
     id: "rain",
     when: (s) => (countBuildings(s).farm ?? 0) > 0 && rainfall(s) >= 0.8,
     apply: (s) => addFood(s, 2 * (countBuildings(s).farm ?? 0)),
     text: "A good rain fell, and the fields drank it up. Forests help bring the rain.",
+    where: (s) => aBuilding(s, ["farm"]),
   },
-  { id: "story", when: (s) => litFires(s).length > 0, apply: (s) => addMood(s, 5), text: "A storyteller kept everyone up late by the fire. Spirits are high." },
-  { id: "smoke", when: (s) => litFires(s).length >= 3, apply: (s) => addMood(s, -4), text: "Smoke hung over the village all day. People are coughing." },
+  { id: "story", when: (s) => litFires(s).length > 0, apply: (s) => addMood(s, 5), text: "A storyteller kept everyone up late by the fire. Spirits are high.", where: (s) => litFires(s)[0] },
+  { id: "smoke", when: (s) => litFires(s).length >= 3, apply: (s) => addMood(s, -4), text: "Smoke hung over the village all day. People are coughing.", where: (s) => s.tiles[s.startTile] },
   {
     id: "birds",
     when: (s) => forestCover(s) >= 0.8,
     apply: (s) => ({ ...s, modifiers: { ...s.modifiers, sustainability: s.modifiers.sustainability + 2 } }),
     text: "Birds are nesting in the old forest again (+2 Sustainability for a while).",
+    where: forestEdge,
   },
   {
     id: "mice",
     when: (s) => s.resources.food > 60 && !countBuildings(s).granary,
     apply: (s) => addFood(s, -Math.round(s.resources.food * 0.1)),
     text: "Mice got into the food stores and spoiled some of it. A granary would keep it safe.",
+    where: (s) => aBuilding(s, ["hut", "house", "gatherer", "farm"]) ?? s.tiles[s.startTile],
   },
-  { id: "dust", when: (s) => forestCover(s) < 0.5, apply: (s) => addMood(s, -3), text: "Wind blew dust off the bare land where the forest used to be." },
+  { id: "dust", when: (s) => forestCover(s) < 0.5, apply: (s) => addMood(s, -3), text: "Wind blew dust off the bare land where the forest used to be.", where: bareLand },
 ];
 
-export function smallMoment(state: GameState): GameState {
+// Dev: `force` picks which moment (if it can happen right now).
+export const MOMENT_IDS = () => MOMENTS.map((m) => m.id);
+
+export function smallMoment(state: GameState, force?: string): GameState {
   const due = state.nextMomentTick ?? state.tick + SMALL_MOMENTS.firstAfter;
   if (state.tick < due) return state.nextMomentTick === undefined ? { ...state, nextMomentTick: due } : state;
   // Never over an event card, a raid or the legion: try again a little later.
   if (state.event || state.raid || state.legion) return { ...state, nextMomentTick: state.tick + 5 };
   const rand = mulberry32(state.seed + state.tick * 61);
   const last = state.lastMoment;
-  const options = MOMENTS.filter((m) => m.id !== last && m.when(state));
+  const options = MOMENTS.filter((m) => (force ? m.id === force : m.id !== last) && m.when(state));
   const next = state.tick + SMALL_MOMENTS.base + Math.floor(rand() * SMALL_MOMENTS.spread);
   if (!options.length) return { ...state, nextMomentTick: next };
   const moment = options[Math.floor(rand() * options.length)];
+  // Where it happens is worked out before it happens (a gust picks a lit fire).
+  const spot = moment.where(state) ?? state.tiles[state.startTile];
   const after = moment.apply(state);
-  return { ...after, nextMomentTick: next, lastMoment: moment.id, log: [moment.text, ...after.log].slice(0, 30) };
+  return {
+    ...after,
+    nextMomentTick: next,
+    lastMoment: moment.id,
+    moment: { id: moment.id, tick: state.tick, tile: spot.id },
+    log: [moment.text, ...after.log].slice(0, 30),
+  };
 }
 
 // The height of a tile once a quarry has cut part of it away.
@@ -3310,8 +3439,18 @@ export function currentGoal(state: GameState): string | null {
       const parts = [open ? `${open.label} (${Math.floor(open.have)}/${open.need})` : null, k < cost ? `${k}/${cost} Knowledge` : null]
         .filter(Boolean)
         .join(", ");
+      // Short of Knowledge: point to what teaches every day (players get stuck here).
+      const huts = countBuildings(state).elder ?? 0;
+      const tip =
+        k >= cost
+          ? ""
+          : !state.researched.includes("storytelling")
+            ? " Tip: learn Storytelling, then build an Elder's Hut: it teaches every day."
+            : huts < 2
+              ? ` Tip: ${huts ? "another" : "an"} Elder's Hut teaches every day.`
+              : "";
       return parts
-        ? `Goal: learn Agriculture to reach the Ancient era. Still needed: ${parts}.`
+        ? `Goal: learn Agriculture to reach the Ancient era. Still needed: ${parts}.${tip}`
         : "Goal: Agriculture is ready. Open Advancements and research it.";
     }
     if (pop < NEXT_ERA_POPULATION) return `Goal: grow to ${NEXT_ERA_POPULATION} people to enter the Ancient era (${pop}/${NEXT_ERA_POPULATION}).`;
@@ -3382,7 +3521,10 @@ function step(state: GameState, action: Action): GameState {
     case "place": {
       const def = BUILDINGS_BY_ID[action.buildingId];
       const tile = state.tiles[action.tileId];
-      if (!def || !tile || !isUnlocked(state, def) || placementError(state, tile, def)) return state;
+      if (!def || !tile || !isUnlocked(state, def)) return state;
+      const why = placementError(state, tile, def);
+      // A click that can't build says why.
+      if (why) return { ...state, log: [`Can't build a ${def.name} there: ${why}.`, ...state.log].slice(0, 30) };
       // A new field clears the nearest patch of forest for good.
       const cleared = def.id === "farm" ? forestToClear(state, tile) : null;
       const ploughed = def.id === "farm" && tile.terrain === "forest";
@@ -3538,18 +3680,18 @@ function step(state: GameState, action: Action): GameState {
     }
 
     case "skipTutorial": {
-      // Skipping players still get the basics the tutorial would have built:
-      // a woodcutter, a lit campfire, a gatherer and a war camp with a warrior.
-      // The tutorial's buildings are handed over, so its budget isn't: only the
-      // after-tutorial reserve is left (plus the Knowledge for Early Farming).
+      // Skipping players still get everything the tutorial would have given:
+      // a woodcutter, a lit campfire, a Wooden House, a gatherer, a war camp
+      // with a warrior, Early Farming and a field. The tutorial's buildings are
+      // handed over, so its budget isn't: only the after-tutorial reserve is left.
       const skipped = startGrace({
         ...state,
         tutorialStep: TUTORIAL.length,
+        researched: state.researched.includes("early-farming") ? state.researched : [...state.researched, "early-farming"],
         resources: {
           ...state.resources,
           food: AFTER_TUTORIAL_RESERVE.food ?? 0,
           wood: AFTER_TUTORIAL_RESERVE.wood ?? 0,
-          knowledge: Math.max(state.resources.knowledge, TREE_BY_ID["early-farming"].cost),
         },
       });
       const counts = countBuildings(state);
@@ -3579,6 +3721,19 @@ function step(state: GameState, action: Action): GameState {
           soldiers = Math.max(soldiers, 1);
         }
       }
+      // A Wooden House (not beside the fire: sparks) and a field on open grass.
+      const home = tiles[state.startTile];
+      const free = (t: Tile, terrain: string[]) => t.revealed && terrain.includes(t.terrain) && !t.building;
+      const byHome = (a: Tile, b: Tile) => hexDistance(a, home) - hexDistance(b, home);
+      const clearOfFire = (t: Tile) => !tiles.some((f) => f.building === "campfire" && hexDistance(f, t) <= 1);
+      if (!counts.hut) {
+        const spot = tiles.filter((t) => free(t, BUILDINGS_BY_ID.hut.terrain) && clearOfFire(t)).sort(byHome)[0];
+        if (spot) spot.building = "hut";
+      }
+      if (!counts.farm) {
+        const spot = tiles.filter((t) => free(t, ["grass"]) && clearOfFire(t)).sort(byHome)[0];
+        if (spot) spot.building = "farm";
+      }
       const fires = pit !== null ? { ...state.fires, [pit]: burnTicks(state) } : state.fires;
       return withMeters({ ...skipped, tiles, fires, soldiers });
     }
@@ -3607,6 +3762,17 @@ function step(state: GameState, action: Action): GameState {
         tiles: state.tiles.map((t) => (t.id === tile.id ? { ...t, building: null } : t)),
         resources,
         log: [`Sold a ${def.name}.`, ...state.log].slice(0, 30),
+      });
+    }
+
+    case "setKeeper": {
+      const tile = state.tiles[action.tileId];
+      if (!tile || tile.building !== "campfire") return state;
+      const rest = (state.untended ?? []).filter((id) => id !== tile.id);
+      return withMeters({
+        ...state,
+        untended: action.on ? rest : [...rest, tile.id],
+        log: [action.on ? "Someone will keep this fire lit." : "Nobody tends this fire now: relight it yourself.", ...state.log].slice(0, 30),
       });
     }
 
@@ -3653,7 +3819,10 @@ function step(state: GameState, action: Action): GameState {
 
     case "plant": {
       const tile = state.tiles[action.tileId];
-      if (!tile || plantError(state, tile)) return state;
+      if (!tile) return state;
+      const why = plantError(state, tile);
+      // A click that can't plant says why (it used to do nothing).
+      if (why) return { ...state, log: [`Can't plant there: ${why}.`, ...state.log].slice(0, 30) };
       const young = tile.terrain !== "forest";
       return withMeters({
         ...state,
@@ -3998,7 +4167,7 @@ function step(state: GameState, action: Action): GameState {
 
     case "devMoment":
       if (!state.dev) return state;
-      return withMeters(smallMoment({ ...state, event: null, nextMomentTick: state.tick }));
+      return withMeters(smallMoment({ ...state, event: null, nextMomentTick: state.tick }, action.id));
 
     case "famineRelief": {
       if (state.famineTicks <= 0 || state.phase !== "playing") return state;

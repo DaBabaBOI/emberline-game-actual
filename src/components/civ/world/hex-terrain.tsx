@@ -154,26 +154,28 @@ export function HexTerrain({
   );
 }
 
+// Where the trees on a tile stand, and how big they are (shared with the old
+// grove, which ties ribbons round these same trunks).
+export function treeSpots(t: Tile) {
+  const out: { x: number; y: number; z: number; s: number; tone: number }[] = [];
+  if (!t.revealed || t.building) return out;
+  const trees = t.terrain === "forest" ? 3 : t.terrain === "grass" && jitter(t.id, 9) < 0.12 ? 1 : 0;
+  for (let i = 0; i < trees; i++) {
+    out.push({
+      x: t.x + (jitter(t.id, i * 3 + 1) - 0.5) * 1.1,
+      z: t.z + (jitter(t.id, i * 3 + 2) - 0.5) * 1.1,
+      y: t.height,
+      s: (0.75 + jitter(t.id, i * 3 + 3) * 0.5) * Math.max(0.2, t.terrain === "forest" ? t.growth : 1),
+      tone: jitter(t.id, i + 20),
+    });
+  }
+  return out;
+}
+
 export function Forests({ tiles }: { tiles: Tile[] }) {
   const trunks = useRef<InstancedMesh>(null);
   const crowns = useRef<InstancedMesh>(null);
-  const spots = useMemo(() => {
-    const out: { x: number; y: number; z: number; s: number; tone: number }[] = [];
-    for (const t of tiles) {
-      if (!t.revealed || t.building) continue;
-      const trees = t.terrain === "forest" ? 3 : t.terrain === "grass" && jitter(t.id, 9) < 0.12 ? 1 : 0;
-      for (let i = 0; i < trees; i++) {
-        out.push({
-          x: t.x + (jitter(t.id, i * 3 + 1) - 0.5) * 1.1,
-          z: t.z + (jitter(t.id, i * 3 + 2) - 0.5) * 1.1,
-          y: t.height,
-          s: (0.75 + jitter(t.id, i * 3 + 3) * 0.5) * Math.max(0.2, t.terrain === "forest" ? t.growth : 1),
-          tone: jitter(t.id, i + 20),
-        });
-      }
-    }
-    return out;
-  }, [tiles]);
+  const spots = useMemo(() => tiles.flatMap(treeSpots), [tiles]);
 
   useLayoutEffect(() => {
     const dummy = new Object3D();

@@ -365,6 +365,15 @@ html[data-in-game] .accessibility-floating {
   display: none;
 }
 
+/* "+N Knowledge" floating up beside the top-bar counter. */
+@keyframes knowledge-gain {
+  0% { transform: translateY(6px); opacity: 0; }
+  15% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-14px); opacity: 0; }
+}
+.knowledge-gain { animation: knowledge-gain 2.2s ease-out forwards; }
+@media (prefers-reduced-motion: reduce) { .knowledge-gain { animation: none; } }
+
 /* Discovery scenes (hud/discovery-scene.tsx): people walk in, bob as they
    walk, the discovery pops up with light around it, and each line fades in. */
 @keyframes scene-walk {

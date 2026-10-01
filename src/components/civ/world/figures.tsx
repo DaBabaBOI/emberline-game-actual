@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Color, InstancedMesh, Matrix4, Object3D } from "three";
+import { highlight } from "./crowd";
 
 export interface Agent {
   x: number;
@@ -16,6 +17,12 @@ export interface Agent {
   hair: string;
   phase: number;
   sitting?: boolean;
+  // Working at a building (dropped there to help): hoeing or chopping.
+  working?: boolean;
+  // What they work with: a hoe in the fields, an axe at the woodcutter...
+  workTool?: "hoe" | "axe" | "pick";
+  // Being carried by the player.
+  held?: boolean;
   // 0–1: how far the figure has toppled over (fire victims).
   fallen?: number;
 }
@@ -23,9 +30,56 @@ export interface Agent {
 export const SKINS = ["#f1c7a0", "#e0ac69", "#c68642", "#8d5524", "#f5d0b0"];
 export const HAIRS = ["#2b1b10", "#4a2f1b", "#1a1a1a", "#7a4a22", "#a0703c"];
 
+const HIGHLIGHT = "#ffd23f";
+
 const fig = new Object3D();
 const local = new Object3D();
 const out = new Matrix4();
+
+// Arms hang from shoulders at this height and are this long.
+const SHOULDER = 0.37;
+const HANDLE = 0.32;
+const ARM = 0.15;
+
+// Where a hand is (in the figure's own space, facing +z) for an arm swung
+// forward by `swing` (negative = forward/up) and tilted sideways by `tilt`.
+function handAt(side: number, swing: number, tilt: number, along = ARM) {
+  return {
+    x: 0.078 * side + along * Math.sin(tilt),
+    y: SHOULDER - along * Math.cos(tilt) * Math.cos(swing),
+    z: -along * Math.cos(tilt) * Math.sin(swing),
+  };
+}
+
+// A work stroke, 0–1 through the cycle: lift the tool slowly overhead, bring it
+// down fast, and leave it in the ground a moment. Returns the arms' swing angle
+// and how hard it just hit (for the puff of dirt).
+function workStroke(t: number, phase: number) {
+  const p = (t * 0.7 + phase / (Math.PI * 2)) % 1;
+  const LOW = -0.75; // arms forward and down: tool in the ground
+  const HIGH = -2.7; // arms up over the head
+  if (p < 0.55) {
+    const k = p / 0.55;
+    return { swing: LOW + (HIGH - LOW) * (k * k * (3 - 2 * k)), hit: 0 };
+  }
+  if (p < 0.68) {
+    const k = (p - 0.55) / 0.13;
+    return { swing: HIGH + (LOW - HIGH) * k * k, hit: 0 };
+  }
+  return { swing: LOW, hit: 1 - (p - 0.68) / 0.32 };
+}
+
+// Puts `obj` so a stick of `length` (built along y, like a cylinder) points
+// along `angle` in the figure's side plane, its grip (`grip` from the low end)
+// in the hand. `angle` uses the arms' convention: 0 = straight down,
+// -PI/2 = straight ahead, -PI = straight up.
+function holdStick(obj: Object3D, hand: { x: number; y: number; z: number }, angle: number, length: number, grip: number) {
+  const dy = -Math.cos(angle);
+  const dz = -Math.sin(angle);
+  const fromHand = length / 2 - grip;
+  obj.rotation.set(angle + Math.PI, 0, 0);
+  obj.position.set(hand.x, hand.y + dy * fromHand, hand.z + dz * fromHand);
+}
 
 // Renders a crowd of little people with a handful of instanced meshes: legs
 // and arms swing while walking. Agents are mutated in place by the owner.
@@ -35,6 +89,7 @@ export function Figures({
   weapon,
   gear,
   colorKey = "",
+  group,
 }: {
   agents: React.RefObject<Agent[]>;
   max: number;
@@ -43,6 +98,8 @@ export function Figures({
   gear?: "roman";
   // Change this when agents' colours change so they get repainted.
   colorKey?: string | number;
+  // Which top-bar counter these figures belong to (for the highlight).
+  group?: "people" | "warriors";
 }) {
   const torso = useRef<InstancedMesh>(null);
   const head = useRef<InstancedMesh>(null);
@@ -53,6 +110,13 @@ export function Figures({
   const helmet = useRef<InstancedMesh>(null);
   const crest = useRef<InstancedMesh>(null);
   const shield = useRef<InstancedMesh>(null);
+  const marker = useRef<InstancedMesh>(null);
+  // Workers' tools (handle and head) and the dirt or chips their strokes kick up.
+  const handle = useRef<InstancedMesh>(null);
+  const toolHead = useRef<InstancedMesh>(null);
+  const dust = useRef<InstancedMesh>(null);
+  // The stone point on a spear.
+  const tip = useRef<InstancedMesh>(null);
   const colored = useRef("");
 
   useLayoutEffect(() => {
@@ -64,11 +128,12 @@ export function Figures({
     const n = Math.min(list.length, max);
     const t = clock.elapsedTime;
 
-    const paintKey = `${n}|${colorKey}`;
+    const lit = !!group && highlight.group === group;
+    const paintKey = `${n}|${colorKey}|${lit}`;
     if (colored.current !== paintKey) {
       const c = new Color();
       list.slice(0, n).forEach((a, i) => {
-        torso.current?.setColorAt(i, c.set(a.tunic));
+        torso.current?.setColorAt(i, c.set(lit ? HIGHLIGHT : a.tunic));
         head.current?.setColorAt(i, c.set(a.skin));
         hair.current?.setColorAt(i, c.set(a.hair));
         arms.current?.setColorAt(i * 2, c.set(a.skin));
@@ -89,6 +154,8 @@ export function Figures({
     for (let i = 0; i < n; i++) {
       const a = list[i];
       const swing = a.moving ? Math.sin(t * 9 + a.phase) * 0.6 : 0;
+      // Working: both hands on the tool, lifting it overhead and bringing it down.
+      const work = a.working && !a.moving && !a.held ? workStroke(t, a.phase).swing : null;
       const bob = a.moving ? Math.abs(Math.sin(t * 9 + a.phase)) * 0.015 : 0;
       // Sitting: hips drop to the ground, legs point forward, hands reach out.
       fig.position.set(a.x, a.y + bob - (a.sitting ? 0.15 * a.scale : 0), a.z);
@@ -108,6 +175,8 @@ export function Figures({
       put(hair.current, i);
       local.scale.set(1, 1, 1);
 
+      // The weapon arm stays bent forward, gripping it, with only a small swing.
+      const weaponArm = weapon && work === null && !a.sitting ? -0.7 + swing * 0.15 : null;
       for (const side of [-1, 1]) {
         const k = side < 0 ? 0 : 1;
         const legAngle = a.sitting ? -Math.PI / 2 + 0.15 : swing * side;
@@ -115,16 +184,34 @@ export function Figures({
         local.position.set(0.035 * side, 0.19 - 0.09 * Math.cos(legAngle), -0.09 * Math.sin(legAngle));
         put(legs.current, i * 2 + k);
 
-        const armSwing = a.sitting ? -0.75 : -swing * side * 0.8;
-        local.rotation.set(armSwing, 0, side * 0.12);
-        local.position.set(0.078 * side, 0.37 - 0.075 * Math.cos(armSwing), -0.075 * Math.sin(armSwing));
+        const armSwing =
+          work !== null ? work : a.sitting ? -0.75 : side > 0 && weaponArm !== null ? weaponArm : -swing * side * 0.8;
+        // Both hands meet on the tool's handle while working.
+        const tilt = work !== null ? -side * 0.4 : side * 0.12;
+        const mid = handAt(side, armSwing, tilt, ARM / 2);
+        local.rotation.set(armSwing, 0, tilt);
+        local.position.set(mid.x, mid.y, mid.z);
         put(arms.current, i * 2 + k);
       }
 
       if (weapon && tool.current) {
-        local.rotation.set(weapon === "spear" ? 0.15 : weapon === "sword" ? -1.1 : -0.6, 0, 0);
-        local.position.set(0.1, weapon === "spear" ? 0.4 : weapon === "sword" ? 0.3 : 0.34, weapon === "sword" ? 0.08 : 0.04);
-        put(tool.current, i);
+        // Held in the right hand: a spear upright and tilted forward, a club or
+        // sword raised ready in front.
+        const hand = handAt(1, weaponArm ?? (a.sitting ? -0.75 : 0), 0.12);
+        if (weapon === "spear") {
+          holdStick(local, hand, -2.75, 0.6, 0.2);
+          put(tool.current, i);
+          // The stone point at the top end.
+          const d = { y: -Math.cos(-2.75), z: -Math.sin(-2.75) };
+          local.position.set(hand.x, hand.y + d.y * 0.42, hand.z + d.z * 0.42);
+          put(tip.current, i);
+        } else if (weapon === "sword") {
+          holdStick(local, hand, -2.55, 0.2, 0.0);
+          put(tool.current, i);
+        } else {
+          holdStick(local, hand, -2.6, 0.2, 0.02);
+          put(tool.current, i);
+        }
       }
       if (gear === "roman") {
         local.rotation.set(0, 0, 0);
@@ -139,9 +226,54 @@ export function Figures({
       }
     }
 
-    for (const m of [torso, head, hair, tool, helmet, crest, shield]) if (m.current) m.current.count = n;
+    // A yellow marker bobbing over each highlighted figure (hidden otherwise).
+    for (let i = 0; i < n; i++) {
+      const a = list[i];
+      fig.position.set(a.x, a.y + 0.75 * a.scale + Math.sin(t * 4 + i) * 0.04, a.z);
+      fig.rotation.set(0, t * 2, 0);
+      fig.scale.setScalar(lit ? a.scale : 0.0001);
+      fig.updateMatrix();
+      marker.current?.setMatrixAt(i, fig.matrix);
+    }
+
+    // Tools in hand while working (hidden, scaled to nothing, otherwise). The
+    // handle runs on from the hands, a little steeper than the arms, so the
+    // head ends up overhead on the lift and in the ground on the stroke.
+    for (let i = 0; i < n; i++) {
+      const a = list[i];
+      const busy = !!a.working && !a.moving && !a.held;
+      fig.position.set(a.x, a.y, a.z);
+      fig.rotation.set(0, a.heading, 0, "YXZ");
+      fig.scale.setScalar(busy ? a.scale : 0.0001);
+      fig.updateMatrix();
+      const { swing, hit } = workStroke(t, a.phase);
+      const hand = handAt(1, swing, -0.4);
+      hand.x = 0;
+      const angle = 1.6 * swing + 0.55;
+      local.scale.set(1, 1, 1);
+      holdStick(local, hand, angle, HANDLE, 0.04);
+      put(handle.current, i);
+      // The head at the far end, sticking out on the side it strikes with: a
+      // flat blade (hoe), a wedge (axe) or a point both ways (pick).
+      const d = { y: -Math.cos(angle), z: -Math.sin(angle) };
+      const lead = { y: Math.sin(angle), z: -Math.cos(angle) };
+      const end = HANDLE - 0.04;
+      const shape = a.workTool === "axe" ? { out: 0.03, w: 0.014, l: 0.05, t: 0.045 } : a.workTool === "pick" ? { out: 0, w: 0.016, l: 0.13, t: 0.016 } : { out: 0.03, w: 0.06, l: 0.06, t: 0.012 };
+      local.rotation.set(angle - Math.PI / 2, 0, 0);
+      local.scale.set(shape.w, shape.l, shape.t);
+      local.position.set(0, hand.y + d.y * end + lead.y * shape.out, hand.z + d.z * end + lead.z * shape.out);
+      put(toolHead.current, i);
+      // A puff of dirt (or wood chips) where the tool hits the ground.
+      const puff = busy ? hit * hit : 0;
+      local.rotation.set(0, 0, 0);
+      local.scale.setScalar(Math.max(0.0001, puff));
+      local.position.set(0, 0.03 + (1 - hit) * 0.05, hand.z + d.z * end);
+      put(dust.current, i);
+    }
+
+    for (const m of [torso, head, hair, tool, tip, helmet, crest, shield, marker, handle, toolHead, dust]) if (m.current) m.current.count = n;
     for (const m of [legs, arms]) if (m.current) m.current.count = n * 2;
-    for (const m of [torso, head, hair, legs, arms, tool, helmet, crest, shield]) {
+    for (const m of [torso, head, hair, legs, arms, tool, tip, helmet, crest, shield, marker, handle, toolHead, dust]) {
       if (m.current) m.current.instanceMatrix.needsUpdate = true;
     }
   });
@@ -161,6 +293,10 @@ export function Figures({
         <sphereGeometry args={[0.062, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
         <meshStandardMaterial />
       </instancedMesh>
+      <instancedMesh ref={marker} args={[undefined, undefined, max]} frustumCulled={false} raycast={() => null}>
+        <octahedronGeometry args={[0.06, 0]} />
+        <meshStandardMaterial color={HIGHLIGHT} emissive={HIGHLIGHT} emissiveIntensity={0.8} />
+      </instancedMesh>
       <instancedMesh ref={legs} args={[undefined, undefined, max * 2]} {...common}>
         <cylinderGeometry args={[0.024, 0.02, 0.18, 6]} />
         <meshStandardMaterial color="#4a3526" />
@@ -169,6 +305,18 @@ export function Figures({
         <cylinderGeometry args={[0.018, 0.016, 0.15, 6]} />
         <meshStandardMaterial />
       </instancedMesh>
+      <instancedMesh ref={handle} args={[undefined, undefined, max]} {...common}>
+        <cylinderGeometry args={[0.009, 0.009, HANDLE, 5]} />
+        <meshStandardMaterial color="#8a6a45" />
+      </instancedMesh>
+      <instancedMesh ref={toolHead} args={[undefined, undefined, max]} {...common}>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial color="#7d7f84" metalness={0.4} />
+      </instancedMesh>
+      <instancedMesh ref={dust} args={[undefined, undefined, max]} frustumCulled={false} raycast={() => null}>
+        <sphereGeometry args={[0.035, 6, 5]} />
+        <meshStandardMaterial color="#9b7a4e" transparent opacity={0.7} depthWrite={false} />
+      </instancedMesh>
       {weapon && (
         <instancedMesh ref={tool} args={[undefined, undefined, max]} {...common}>
           {weapon === "spear" ? (
@@ -176,12 +324,18 @@ export function Figures({
           ) : weapon === "sword" ? (
             <boxGeometry args={[0.015, 0.2, 0.03]} />
           ) : (
-            <cylinderGeometry args={[0.03, 0.014, 0.22, 6]} />
+            <cylinderGeometry args={[0.026, 0.012, 0.2, 6]} />
           )}
           <meshStandardMaterial
-            color={weapon === "spear" ? "#8a6a45" : weapon === "sword" ? "#c9ccd1" : "#5b3b22"}
+            color={weapon === "spear" ? "#8a6a45" : weapon === "sword" ? "#c9ccd1" : "#7a5230"}
             metalness={weapon === "sword" ? 0.7 : 0.1}
           />
+        </instancedMesh>
+      )}
+      {weapon === "spear" && (
+        <instancedMesh ref={tip} args={[undefined, undefined, max]} {...common}>
+          <coneGeometry args={[0.022, 0.07, 5]} />
+          <meshStandardMaterial color="#6e6a64" flatShading />
         </instancedMesh>
       )}
       {gear === "roman" && (

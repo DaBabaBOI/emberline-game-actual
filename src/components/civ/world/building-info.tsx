@@ -1,6 +1,6 @@
 "use client";
 
-import { BUILDINGS_BY_ID, FIRE_SCARE, QUARRY_DUST } from "@/game/content";
+import { BUILDINGS_BY_ID, FIRE_SCARE, QUARRY_DUST, WEAR } from "@/game/content";
 import {
   dusty,
   rainfall,
@@ -15,15 +15,29 @@ import {
   loggingMode,
   perSecond,
   repairCost,
+  tended,
   upgradeFor,
   wearFactor,
   wearsOut,
   woodcutterYield,
 } from "@/game/engine";
-import type { GameState } from "@/game/types";
+import type { GameState, Tile } from "@/game/types";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { CountdownFor } from "@/components/civ/hud/countdown";
 import { cn } from "@/lib/utils";
+
+// What wear means for this building, in one short line (Hard mode).
+function wearHelp(tile: Tile) {
+  const w = tile.worn ?? 0;
+  const pace = WEAR.busyBuildings.includes(tile.building ?? "")
+    ? " Busy buildings like this one wear out faster."
+    : WEAR.sturdyBuildings.includes(tile.building ?? "")
+      ? " Sturdy buildings like this one wear out slower."
+      : "";
+  if (w >= 1) return "Worn out completely: it makes nothing until you repair it.";
+  if (w > WEAR.slows) return "Below 50% it makes less, and at 0% it stops. Repairing puts it back to 100%.";
+  return `Buildings wear down with use. Below 50% they make less, and at 0% they stop. Repairing puts it back to 100%.${pace}`;
+}
 
 // The panel that opens when you click one of your buildings: its trade-off,
 // and for woodcutters the choice between clear-cutting and selective logging.
@@ -83,6 +97,9 @@ export function BuildingInfo({
               style={{ width: `${(1 - (tile.worn ?? 0)) * 100}%` }}
             />
           </div>
+          <p className="mb-1 text-[11px] leading-snug text-stone-600" data-testid="wear-help">
+            {wearHelp(tile)}
+          </p>
           {(tile.worn ?? 0) > 0.05 && (
             <button
               type="button"
@@ -91,7 +108,7 @@ export function BuildingInfo({
               className="pixel-btn flex w-full items-center justify-center gap-1 bg-amber-400 px-2 py-1 text-[#2b2119] disabled:opacity-40"
             >
               <PixelIcon name="hammer" size={12} />
-              Repair ·{" "}
+              Repair to 100% ·{" "}
               {Object.entries(repairCost(state, tile))
                 .map(([k, v]) => `${v} ${k === "currency" ? "coins" : k}`)
                 .join(", ")}
@@ -143,6 +160,9 @@ export function BuildingInfo({
             Making <span className="font-num">{perSecond((def.produces?.wood ?? 0) * woodcutterYield(state, tile) * wearFactor(tile)).toFixed(2)}</span>{" "}
             wood/s. How should they cut?
           </p>
+          {mode === "selective" && woodcutterYield(state, tile) === 0 && (
+            <p className="mb-1 text-amber-800">No trees are big enough to thin yet. They will start again as the forest grows back.</p>
+          )}
           <div className="flex flex-col gap-1">
             {(
               [
@@ -194,15 +214,29 @@ export function BuildingInfo({
       })()}
 
       {def.id === "campfire" && (
-        <p className="mt-2 border-t-2 border-stone-300 pt-1.5">
-          {isLit(state, tile) ? (
-            <>
-              Burning: about <CountdownFor ticks={state.fires?.[tile.id] ?? 0} state={state} />s of wood left.
-            </>
-          ) : (
-            "Burnt out. Click it to relight (1 wood)."
-          )}
-        </p>
+        <div className="mt-2 border-t-2 border-stone-300 pt-1.5">
+          <p>
+            {isLit(state, tile) ? (
+              <>
+                Burning: about <CountdownFor ticks={state.fires?.[tile.id] ?? 0} state={state} />s of wood left.
+              </>
+            ) : (
+              "Burnt out. Click it to relight (1 wood)."
+            )}
+          </p>
+          {/* The fire keeper: adds wood when it burns out, so you don't have to. */}
+          <label className="mt-1 flex cursor-pointer items-start gap-2" data-testid="keeper">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={tended(state, tile)}
+              onChange={(e) => dispatch({ type: "setKeeper", tileId: tile.id, on: e.target.checked })}
+            />
+            <span>
+              Keep it lit: someone adds wood each time it burns out (1 wood). Turn off to save wood.
+            </span>
+          </label>
+        </div>
       )}
     </div>
   );

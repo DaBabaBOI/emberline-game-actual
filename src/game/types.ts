@@ -342,6 +342,11 @@ export interface GameState {
   // When the next small moment happens (missing in older saves).
   nextMomentTick?: number;
   lastMoment?: string;
+  // The last home lost (burned, wrecked, broken down) and when, so the
+  // "no roof" warning can say what happened.
+  homeLost?: { name: string; tick: number } | null;
+  // The last small moment and where it happened, so the map can show it.
+  moment?: { id: string; tick: number; tile: number } | null;
   // Famine emergency measures (missing in older saves).
   forageReadyAt?: number;
   seedEatenUntil?: number;
@@ -356,6 +361,9 @@ export interface GameState {
   // Recently recovered people who can't catch it again for a while.
   immune?: number;
   outbreakDeaths?: number;
+  // Campfires whose keeper the player sent away (tile ids). Every other
+  // campfire has someone who adds wood when it burns out.
+  untended?: number[];
   // Seconds of fuel left in each campfire, by tile id. 0 or missing = out.
   fires?: Record<number, number>;
   // Elder lessons already shown, the one on screen, and when it appeared.

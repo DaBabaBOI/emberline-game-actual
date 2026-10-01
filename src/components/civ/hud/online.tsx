@@ -5,24 +5,57 @@ import { UPDATES } from "@/game/updates";
 import type { GameState } from "@/game/types";
 import { useGame } from "@/components/civ/game-provider";
 import { AccessibilityMenuSection } from "@/components/accessibility-settings";
-import { postScore, saveToCloud, scoreFor, sendFeedback, topScores, type ScoreRow } from "@/lib/online";
+import { FEEDBACK_LIMITS, postScore, saveToCloud, scoreFor, sendFeedback, topScores, type ScoreRow } from "@/lib/online";
 
 const VERSION = UPDATES[0]?.date ?? "dev";
 
-// A small form that sends a note to the team (playtest feedback).
+// A small form that sends a note to the team (playtest feedback). Spam guard:
+// a hidden "website" field only bots fill in, a form sent within a few seconds
+// of opening, and a minute's wait between notes (the database checks again).
+const LAST_SENT = "emberline-feedback-sent";
+
 export function FeedbackForm({ state, onDone }: { state: GameState | null; onDone?: () => void }) {
   const [text, setText] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "failed">("idle");
+  const [trap, setTrap] = useState("");
+  const [openedAt] = useState(() => Date.now());
+  const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
+  const [error, setError] = useState<string | null>(null);
   if (status === "sent") return <p className="text-xs text-emerald-300">Thank you! The team will read it.</p>;
   return (
     <form
       className="flex flex-col gap-1.5"
       onSubmit={async (e) => {
         e.preventDefault();
+        // A bot: say thanks and send nothing.
+        if (trap || Date.now() - openedAt < FEEDBACK_LIMITS.minOpenMs) {
+          setStatus("sent");
+          return;
+        }
+        let last = 0;
+        try {
+          last = Number(localStorage.getItem(LAST_SENT) ?? 0);
+        } catch {
+          // No storage: the database still limits it.
+        }
+        if (Date.now() - last < FEEDBACK_LIMITS.cooldownMs) {
+          setError("Please wait a minute before sending more.");
+          return;
+        }
         setStatus("sending");
-        const ok = await sendFeedback(state, text, VERSION);
-        setStatus(ok ? "sent" : "failed");
-        if (ok) onDone?.();
+        setError(null);
+        const why = await sendFeedback(state, text, VERSION);
+        if (why) {
+          setError(why);
+          setStatus("idle");
+          return;
+        }
+        try {
+          localStorage.setItem(LAST_SENT, String(Date.now()));
+        } catch {
+          // Fine without it.
+        }
+        setStatus("sent");
+        onDone?.();
       }}
     >
       <textarea
@@ -34,6 +67,17 @@ export function FeedbackForm({ state, onDone }: { state: GameState | null; onDon
         className="w-full resize-none border-2 border-[#140e0a] bg-[#fbf7ef] p-1.5 font-sans text-xs text-stone-900"
         data-testid="feedback-text"
       />
+      {/* Hidden from people (and screen readers); bots fill every field. */}
+      <input
+        type="text"
+        name="website"
+        value={trap}
+        onChange={(e) => setTrap(e.target.value)}
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        className="absolute -left-[9999px] h-0 w-0 opacity-0"
+      />
       <button
         type="submit"
         disabled={!text.trim() || status === "sending"}
@@ -41,7 +85,11 @@ export function FeedbackForm({ state, onDone }: { state: GameState | null; onDon
       >
         {status === "sending" ? "Sending..." : "Send feedback"}
       </button>
-      {status === "failed" && <p className="text-xs text-red-300">Couldn&apos;t send it (are you online?). Try again later.</p>}
+      {error && (
+        <p className="text-xs text-red-300" data-testid="feedback-error">
+          {error}
+        </p>
+      )}
     </form>
   );
 }

@@ -138,6 +138,39 @@ These were decided with the project owner. Do not change them without being aske
   no disease out of nowhere for 200); then events come every `EVENT_GAP`
   (100-160 ticks) and raids every `RAID_GAP` (170-250). Pressure builds as the
   tribe grows. Playtesters called the old, longer gaps "a snoozefest".
+- **Figures stand for groups** (`world/crowd.ts`: `MAX_FIGURES`, `figureCounts`):
+  hovering or tapping the population or warriors counter lights those figures
+  up in yellow with a marker overhead (`highlight.group`, `Figures group=`) and
+  says how many people each figure stands for. New crowds of people on the
+  map must pass a `group` so they light up too.
+- **How to get Knowledge is always one click away** (`knowledgeSources()` in
+  engine.ts, `hud/knowledge-help.tsx`): the bulb counter in the top bar opens a
+  panel listing the one-time firsts still to come (new kinds of building,
+  growth, first raid won, first saplings, scouting trips left, chief levels)
+  and what teaches every day, with live rates. A "+N" floats up whenever
+  Knowledge jumps. A new source of Knowledge must be added to that list.
+- **The build works offline.** Fonts are files in `src/app/fonts` (Pixelify
+  Sans and VT323, SIL Open Font License, licence texts beside them), loaded
+  with `next/font/local`. Don't use `next/font/google` or anything else the
+  build has to download: judges may build it without internet.
+- **Nothing fails silently.** A click that can't plant or build logs why
+  ("Can't plant there: ..."). Any home lost in a tick (raid, sparks,
+  disaster, wear) is remembered (`homeLost`, set by `noteLostHomes`), and the
+  "roof" warning says what was lost when people are left without homes. The
+  top bar and Elder Ama's panels sit above the guide's dimmed overlay, so the
+  game never looks frozen during a guided step.
+- **Fire keepers** (`tended`, `keepFires`, `state.untended`, action `setKeeper`):
+  every campfire has a keeper by default who relights it as it burns out for
+  `RELIGHT_WOOD`, if there is wood (counts as a relight for Firekeeping's
+  goal), never during a storm. The campfire panel has a "Keep it lit" switch.
+  "A campfire burned out" is only said when a fire stays out. The gust moment
+  only blows out untended fires.
+- **No accidental deaths by click** (`world/pick-up.tsx`): over a building,
+  a click only picks someone up if it is right on them (`TIGHT_GRAB` px), so
+  clicking a campfire opens it instead of grabbing whoever sits there. Putting
+  someone into a fire or the open sea by click or Enter needs a second click on
+  the same spot within `CONFIRM_MS` ("Click again to really drop them there");
+  a drag there is deliberate and drops at once.
 - **Small moments** (`SMALL_MOMENTS`, `MOMENTS` / `smallMoment()` in engine.ts):
   every 20-40 ticks (30-60 s) after the tutorial, one little thing happens,
   picked from those that fit the island right now (a deer herd if the forest
@@ -145,7 +178,10 @@ These were decided with the project owner. Do not change them without being aske
   out one of several fires, a baby when there's food and room...). Each is a
   log line (toast) with a small effect; never over an event, raid or the legion,
   never the same one twice in a row, and they don't count as big moments. Tie
-  new ones to the land where you can. Dev: "Moment".
+  new ones to the land where you can. Each also plays out on the map where it
+  happens (`where` picks the tile; `state.moment`; `world/moments.tsx`) for
+  `MOMENT_TICKS`, with a short label over the spot: a new moment needs a
+  `where`, a scene and a label. Dev: "Moment", or pick one in "Moment...".
 - **Phones are supported.** Layouts use `md:` breakpoints (bars stack and
   scroll on small screens). There is no hover on touch: the first tap on a tile
   previews (ghost + trade-off card), the second tap builds. Never rely on Esc or
@@ -184,6 +220,10 @@ These were decided with the project owner. Do not change them without being aske
   campfire makes 30% less food. The placement card warns for both buildings
   (`fireScareNote()`); the tutorial and skip-tutorial never put the gatherer next
   to the fire.
+- **Skipping the tutorial gives what the tutorial gives:** a woodcutter, a lit
+  campfire, a Wooden House, a gatherer, a war camp with a warrior, Early Farming
+  (researched) and a Farmland. Only the after-tutorial reserve of food and wood
+  is left. If the tutorial gains a step, skipping must hand that over too.
 - **Quarries cut the hill** (`QUARRY_CUT`): a working quarry cuts its tile down a
   little every tick (fully in ~600 ticks). The tile sinks by up to 45%, turns to
   bare rock, and a mountain loses its peak. The cut (`Tile.dug`) never grows back
@@ -242,6 +282,11 @@ These were decided with the project owner. Do not change them without being aske
   Shallow water or a mountain: they get sick. Cloud (unexplored land): they
   vanish and come back only 5% of the time, with a little new map; this must
   stay rare so scouting is still worth buying. Dev: "Back from fog".
+  Controls: a click within `GRAB_RADIUS` (44 px) of a person, or within
+  `GRAB_GROUND` of them on the ground, picks them up. A click (not a drag)
+  keeps them in hand until the next click or Enter; arrow keys / WASD walk
+  them (camera-relative), Esc puts them back, P picks up the person nearest
+  the middle of the screen. Dragging works as before.
 - **Chief level** (`XP`, `CHIEF_TITLES`, `xpToReach()`, `awardXp()` in the
   reducer): XP only goes up. It comes from what the player does (build +5, first
   of a kind +10, each new peak person +2, research +20, raid won +15, sapling +3,
@@ -377,17 +422,6 @@ These were decided with the project owner. Do not change them without being aske
   shows over buildings 70%+ worn (red when broken) and a warning counts them.
   Repair in the building panel: 15% of its cost, scaled by how worn it is
   (at least 30%). New and upgraded buildings start fresh. Dev: "Wear".
-- **Discovery scenes** (`DISCOVERIES` in content, `hud/discovery-scene.tsx`,
-  `state.cutscene`): researching an advancement or finding a secret plays a
-  short pixel scene (sky, people walking in, the discovery appearing, three
-  lines of story). The clock waits until it's closed; it can be skipped or
-  sped up. Every new advancement needs a scene (lines in the tribe's voice,
-  modest about history). Dev: pick one and press "Scene".
-- **Accessibility settings** (`accessibility-settings.tsx`, mounted in the root
-  layout): a floating Settings button on every page, except while a game is on
-  screen (`data-in-game` on `<html>`, set by `GameScreen`): there the same
-  options are in the game's Menu (`AccessibilityMenuSection`). Nothing may float
-  over the game's bottom bar.
 - **Natural disasters** (`DISASTERS`, `DISASTER_HITS`, `updateDisasters` /
   `strike` in the engine, `world/disasters.tsx`): the first about 10 minutes
   after the tutorial, then one every 10–17 minutes; never over a raid, the
@@ -402,6 +436,22 @@ These were decided with the project owner. Do not change them without being aske
   The last woodcutter is never destroyed. Deaths count as "disasters" in the
   debrief. Lessons: disasters (SDG 11.5), slopes (SDG 15.3). Dev: Storm,
   Flood, Earthquake, Landslide.
+- **Discovery scenes** (`DISCOVERIES` in content, `hud/discovery-scene.tsx`,
+  `state.cutscene`): researching an advancement or finding a secret plays a
+  short pixel scene (sky, people walking in, the discovery appearing, three
+  lines of story). The clock waits until it's closed; it can be skipped or
+  sped up. Every new advancement needs a scene (lines in the tribe's voice,
+  modest about history). Dev: pick one and press "Scene".
+  The picture must match the words, line by line: whatever a line mentions is
+  on stage from that line (`props` with `from`/`until`, `itemFrom`), people sit
+  when they sit (`*-sit` sprites, `flip` to face the fire), and the discovery
+  is the thing itself (a clay tablet for writing, not a book). Check every
+  scene you add or change at its first and last line before shipping.
+- **Accessibility settings** (`accessibility-settings.tsx`, mounted in the root
+  layout): a floating Settings button on every page, except while a game is on
+  screen (`data-in-game` on `<html>`, set by `GameScreen`): there the same
+  options are in the game's Menu (`AccessibilityMenuSection`). Nothing may float
+  over the game's bottom bar.
 - **Tutorial hand:** during the tutorial a pixel hand points at the next click
   and the rest of the screen is blocked (`guideFor()` in
   `src/components/civ/guide.ts`, drawn by `hud/guide-overlay.tsx`). Targets are
@@ -517,7 +567,22 @@ These were decided with the project owner. Do not change them without being aske
   read + insert only with range checks, and saves are reachable only through the
   `save_game` / `load_game` functions. Every call must fail quietly: the game
   has to work fully offline. Never put a secret (service_role) key in the code.
+- **Feedback spam guard:** the real limits live in the database trigger
+  (`supabase/feedback_spam_guard.sql`: 3 a minute and 20 a day per sender,
+  no repeats within a day, at most 2 links, 60 a 10 minutes overall). The form
+  only mirrors them (`FEEDBACK_LIMITS` in `online.ts`, a hidden honeypot field,
+  a 60 s cooldown) to save a round trip. If you change one, change the SQL file
+  and the live migration together.
+- **Things people hold** (`figures.tsx`): place them with `handAt` (where a hand
+  is for an arm angle) and `holdStick` (a stick gripped in that hand, pointing
+  along an angle). Angles use the arms' convention: 0 = straight down,
+  -PI/2 = straight ahead, -PI = straight up; figures face +z. Check new poses
+  side-on in a browser before shipping.
 - Keep the tutorial (`TUTORIAL` in `content.ts`) working when you change buildings.
+- During guided steps the camera may turn and zoom but not slide (`enablePan`
+  off), and the guide overlay forwards right-button presses, touches and the
+  wheel to the map's outer element (`[data-world-map]`), where drei's controls
+  listen. Clicks outside the highlighted spot must stay swallowed.
 - Before committing, run `npm run lint`, `npm run typecheck` and `npm run build`.
   All three must pass.
 - Don't rename the game, change the art style, or restructure folders unless asked.

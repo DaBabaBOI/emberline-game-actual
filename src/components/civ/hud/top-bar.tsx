@@ -9,6 +9,9 @@ import { cn } from "@/lib/utils";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import type { IconId } from "@/game/sprites";
 import { GameMenu } from "./online";
+import { useEffect, useState } from "react";
+import { figureCounts, highlight } from "@/components/civ/world/crowd";
+import { KnowledgeGain, KnowledgeHelp } from "./knowledge-help";
 
 const SPEEDS: { value: GameState["speed"]; label: string }[] = [
   { value: 0, label: "⏸" },
@@ -22,6 +25,52 @@ function Chip({ icon, value, title, low }: { icon: IconId; value: string; title:
     <span title={title} className={cn("flex items-center gap-1 whitespace-nowrap", low && "animate-pulse text-red-400")}>
       <PixelIcon name={icon} size={16} />
       <span className="font-num">{value}</span>
+    </span>
+  );
+}
+
+// Population or warriors: hovering (or tapping) lights up those people on the
+// map in yellow, and says how many people each figure stands for.
+function CrowdChip({ icon, count, figures, group, noun }: { icon: IconId; count: number; figures: number; group: "people" | "warriors"; noun: string }) {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    highlight.group = on ? group : highlight.group === group ? null : highlight.group;
+  }, [on, group]);
+  // A tap on a phone lights them up for a few seconds.
+  useEffect(() => {
+    if (!on) return;
+    const id = setTimeout(() => setOn(false), 4000);
+    return () => clearTimeout(id);
+  }, [on]);
+  useEffect(() => () => void (highlight.group = null), []);
+  const each = figures ? count / figures : 0;
+  return (
+    <span className="relative">
+      <button
+        type="button"
+        onMouseEnter={() => setOn(true)}
+        onMouseLeave={() => setOn(false)}
+        onFocus={() => setOn(true)}
+        onBlur={() => setOn(false)}
+        onClick={() => setOn(true)}
+        className={cn("flex items-center gap-1 whitespace-nowrap px-1", on && "bg-amber-400 text-[#2b2119]")}
+        data-testid={`crowd-${group}`}
+      >
+        <PixelIcon name={icon} size={16} />
+        <span className="font-num">{count.toLocaleString()}</span>
+      </button>
+      {on && (
+        <span className="pixel-panel-dark absolute left-1/2 top-full z-30 mt-2 w-56 -translate-x-1/2 p-2 text-left text-xs" data-testid={`crowd-tip-${group}`}>
+          {count.toLocaleString()} {noun}. {figures > 0 ? (
+            <>
+              They are lit up in yellow on the map: {figures} figure{figures === 1 ? "" : "s"}
+              {each > 1.05 ? `, each one about ${Math.round(each)} ${noun}` : ""}.
+            </>
+          ) : (
+            "None on the map yet."
+          )}
+        </span>
+      )}
     </span>
   );
 }
@@ -50,15 +99,19 @@ function ChiefXp({ state }: { state: GameState }) {
 }
 
 export function TopBar() {
-  const { state, dispatch } = useGame();
+  const { state, dispatch, panel } = useGame();
   const era = ERAS[state.era];
   const r = state.resources;
   const low = new Set(warnings(state).map((w) => w.id));
+  const [knowHelp, setKnowHelp] = useState(false);
 
   return (
-    <div className="pointer-events-auto absolute inset-x-0 top-2 flex justify-center px-2 md:top-3 md:px-3">
+    // Above the tutorial's dimmed overlay (z-25) so speed and Menu always work,
+    // but under the Advancements screen (z-20) while it is open. Only the bar
+    // itself takes clicks, not the full-width strip around it.
+    <div className={cn("pointer-events-none absolute inset-x-0 top-2 flex justify-center px-2 md:top-3 md:px-3", panel !== "tree" && "z-[26]")}>
       <div
-        className="pixel-panel-dark font-pixel flex max-w-full flex-wrap items-center justify-center gap-x-3 gap-y-1 px-2 py-1 text-xs md:flex-nowrap md:gap-4 md:px-4 md:py-1.5 md:text-sm"
+        className="pixel-panel-dark font-pixel pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-x-3 gap-y-1 px-2 py-1 text-xs md:flex-nowrap md:gap-4 md:px-4 md:py-1.5 md:text-sm"
         // A bronze trim from the Ancient era on.
         style={state.era >= 1 ? { borderColor: "#b0773a", boxShadow: "inset 0 -3px 0 #8a5a2b" } : undefined}
       >
@@ -76,14 +129,41 @@ export function TopBar() {
         </div>
         <ChiefXp state={state} />
         <span className="hidden h-6 w-px bg-white/20 md:block" />
-        <Chip icon="person" value={Math.floor(state.population).toLocaleString()} title="Population" />
+        <CrowdChip
+          icon="person"
+          count={Math.floor(state.population)}
+          figures={figureCounts(state.population, state.soldiers).villagers}
+          group="people"
+          noun="people"
+        />
         <Chip icon="coin" value={Math.floor(r.currency).toLocaleString()} title={era.currency} />
-        <Chip icon="sword" value={state.soldiers.toString()} title="Warriors" />
+        <CrowdChip
+          icon="sword"
+          count={state.soldiers}
+          figures={figureCounts(state.population, state.soldiers).warriors}
+          group="warriors"
+          noun="warriors"
+        />
         <span className="hidden h-6 w-px bg-white/20 md:block" />
         <Chip icon="meat" value={Math.floor(r.food).toString()} title="Stored food" low={low.has("food") || low.has("famine")} />
         <Chip icon="log" value={Math.floor(r.wood).toString()} title="Wood" low={low.has("wood")} />
         <Chip icon="rock" value={Math.floor(r.stone).toString()} title="Stone" />
-        <Chip icon="bulb" value={Math.floor(r.knowledge).toString()} title="Knowledge" />
+        {/* Knowledge: click to see how to get more. */}
+        <span className="relative">
+          <button
+            type="button"
+            onClick={() => setKnowHelp(!knowHelp)}
+            className={cn("flex items-center gap-1 whitespace-nowrap px-1", knowHelp ? "bg-amber-400 text-[#2b2119]" : "hover:bg-white/15")}
+            title="Knowledge: click to see how to get more"
+            data-testid="knowledge-chip"
+          >
+            <PixelIcon name="bulb" size={16} />
+            <span className="font-num">{Math.floor(r.knowledge)}</span>
+            <span className="text-[10px] text-amber-300">?</span>
+          </button>
+          <KnowledgeGain value={r.knowledge} />
+          {knowHelp && <KnowledgeHelp state={state} onClose={() => setKnowHelp(false)} />}
+        </span>
         <span className="hidden h-6 w-px bg-white/20 md:block" />
         <div className="flex gap-1">
           {SPEEDS.map((s) => (
