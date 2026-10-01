@@ -567,6 +567,12 @@ These were decided with the project owner. Do not change them without being aske
   read + insert only with range checks, and saves are reachable only through the
   `save_game` / `load_game` functions. Every call must fail quietly: the game
   has to work fully offline. Never put a secret (service_role) key in the code.
+- **Feedback spam guard:** the real limits live in the database trigger
+  (`supabase/feedback_spam_guard.sql`: 3 a minute and 20 a day per sender,
+  no repeats within a day, at most 2 links, 60 a 10 minutes overall). The form
+  only mirrors them (`FEEDBACK_LIMITS` in `online.ts`, a hidden honeypot field,
+  a 60 s cooldown) to save a round trip. If you change one, change the SQL file
+  and the live migration together.
 - Keep the tutorial (`TUTORIAL` in `content.ts`) working when you change buildings.
 - Before committing, run `npm run lint`, `npm run typecheck` and `npm run build`.
   All three must pass.
