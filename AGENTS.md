@@ -377,6 +377,31 @@ These were decided with the project owner. Do not change them without being aske
   shows over buildings 70%+ worn (red when broken) and a warning counts them.
   Repair in the building panel: 15% of its cost, scaled by how worn it is
   (at least 30%). New and upgraded buildings start fresh. Dev: "Wear".
+- **Natural disasters** (`DISASTERS`, `DISASTER_HITS`, `updateDisasters` /
+  `strike` in the engine, `world/disasters.tsx`): the first about 10 minutes
+  after the tutorial, then one every 10–17 minutes; never over a raid, the
+  legion, the drought or an event, one big moment at a time. Each is warned of
+  (banner with a countdown), then strikes. Storm: all fires out, wooden
+  buildings without 2 forest tiles beside them may be wrecked (rain,
+  lightning, dark sky). Flood: low tiles by the river or sea go under (fewer
+  with more forest standing); buildings there stop; afterwards fields there
+  get silt (+40%). Earthquake: camera shake, cracks, buildings near it fall
+  (brick/stone 25%, wood 8%, at most 3; lost homes kill). Landslide: only on
+  hills with stripped forest or quarry cuts around them and buildings below.
+  The last woodcutter is never destroyed. Deaths count as "disasters" in the
+  debrief. Lessons: disasters (SDG 11.5), slopes (SDG 15.3). Dev: Storm,
+  Flood, Earthquake, Landslide.
+- **Discovery scenes** (`DISCOVERIES` in content, `hud/discovery-scene.tsx`,
+  `state.cutscene`): researching an advancement or finding a secret plays a
+  short pixel scene (sky, people walking in, the discovery appearing, three
+  lines of story). The clock waits until it's closed; it can be skipped or
+  sped up. Every new advancement needs a scene (lines in the tribe's voice,
+  modest about history). Dev: pick one and press "Scene".
+- **Accessibility settings** (`accessibility-settings.tsx`, mounted in the root
+  layout): a floating Settings button on every page, except while a game is on
+  screen (`data-in-game` on `<html>`, set by `GameScreen`): there the same
+  options are in the game's Menu (`AccessibilityMenuSection`). Nothing may float
+  over the game's bottom bar.
 - **Tutorial hand:** during the tutorial a pixel hand points at the next click
   and the rest of the screen is blocked (`guideFor()` in
   `src/components/civ/guide.ts`, drawn by `hud/guide-overlay.tsx`). Targets are

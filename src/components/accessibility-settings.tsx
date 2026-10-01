@@ -52,9 +52,9 @@ function getInitialSettings(): AccessibilitySettings {
   }
 }
 
-export function AccessibilitySettings() {
-  const [open, setOpen] = useState(false);
-  const panelRef = useRef<HTMLDivElement | null>(null);
+// The saved settings, and a way to change one (applied and saved at once).
+// Used by the floating Settings button and by the Menu inside the game.
+function useAccessibilitySettings() {
   const [settings, setSettings] = useState<AccessibilitySettings>(() => {
     if (typeof window === "undefined") {
       return defaultSettings;
@@ -65,6 +65,26 @@ export function AccessibilitySettings() {
   useEffect(() => {
     applyAccessibilitySettings(settings);
   }, [settings]);
+
+  const updateSetting = <K extends keyof AccessibilitySettings>(
+    key: K,
+    value: AccessibilitySettings[K],
+  ) => {
+    const next = { ...settings, [key]: value };
+    setSettings(next);
+    applyAccessibilitySettings(next);
+  };
+
+  // Another copy (the game Menu) may have changed them: read them again.
+  const reload = () => setSettings(getInitialSettings());
+
+  return { settings, updateSetting, reload };
+}
+
+export function AccessibilitySettings() {
+  const [open, setOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const { settings, updateSetting, reload } = useAccessibilitySettings();
 
   useEffect(() => {
     if (!open) return;
@@ -92,23 +112,19 @@ export function AccessibilitySettings() {
     };
   }, [open]);
 
-  const updateSetting = <K extends keyof AccessibilitySettings>(
-    key: K,
-    value: AccessibilitySettings[K],
-  ) => {
-    const next = { ...settings, [key]: value };
-    setSettings(next);
-    applyAccessibilitySettings(next);
-  };
-
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">
+    // Hidden while a game is on screen (see globals.css): there the same options
+    // are in the game's Menu, so this button doesn't cover the game's controls.
+    <div className="accessibility-floating fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">
       <button
         type="button"
         aria-expanded={open}
         aria-controls="accessibility-settings-panel"
         aria-label={open ? "Close accessibility settings" : "Open accessibility settings"}
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => {
+          if (!open) reload();
+          setOpen((value) => !value);
+        }}
         className="pixel-btn font-pixel bg-[#f8e7bd] px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-[#f5d98b]"
       >
         {open ? "Close" : "Settings"}
@@ -134,63 +150,79 @@ export function AccessibilitySettings() {
             </button>
           </div>
 
-          <div className="space-y-3 text-sm">
-            <label className="flex items-center justify-between gap-3">
-              <span>Dark mode</span>
-              <input
-                aria-label="Toggle dark mode"
-                type="checkbox"
-                checked={settings.theme === "dark"}
-                onChange={(event) =>
-                  updateSetting("theme", event.target.checked ? "dark" : "light")
-                }
-                className="h-5 w-5 accent-emerald-600"
-              />
-            </label>
-
-            <div>
-              <div className="mb-1 font-medium">Font</div>
-              <div className="grid grid-cols-3 gap-2">
-                {(["pixel", "sans", "serif"] as FontMode[]).map((font) => (
-                  <button
-                    key={font}
-                    type="button"
-                    onClick={() => updateSetting("font", font)}
-                    className={
-                      "pixel-btn px-2 py-2 text-xs font-semibold " +
-                      (settings.font === font ? "bg-amber-200" : "bg-white hover:bg-amber-50")
-                    }
-                  >
-                    {font === "pixel" ? "Pixel" : font === "sans" ? "Sans" : "Serif"}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <label className="flex items-center justify-between gap-3">
-              <span>High contrast</span>
-              <input
-                aria-label="Toggle high contrast mode"
-                type="checkbox"
-                checked={settings.highContrast}
-                onChange={(event) => updateSetting("highContrast", event.target.checked)}
-                className="h-5 w-5 accent-emerald-600"
-              />
-            </label>
-
-            <label className="flex items-center justify-between gap-3">
-              <span>Larger text</span>
-              <input
-                aria-label="Toggle larger text"
-                type="checkbox"
-                checked={settings.largeText}
-                onChange={(event) => updateSetting("largeText", event.target.checked)}
-                className="h-5 w-5 accent-emerald-600"
-              />
-            </label>
-          </div>
+          <AccessibilityOptions settings={settings} updateSetting={updateSetting} />
         </div>
       )}
     </div>
   );
+}
+
+// The toggles: dark mode, font, high contrast, larger text.
+function AccessibilityOptions({
+  settings,
+  updateSetting,
+}: Pick<ReturnType<typeof useAccessibilitySettings>, "settings" | "updateSetting">) {
+  return (
+    <div className="space-y-3 text-sm">
+      <label className="flex items-center justify-between gap-3">
+        <span>Dark mode</span>
+        <input
+          aria-label="Toggle dark mode"
+          type="checkbox"
+          checked={settings.theme === "dark"}
+          onChange={(event) =>
+            updateSetting("theme", event.target.checked ? "dark" : "light")
+          }
+          className="h-5 w-5 accent-emerald-600"
+        />
+      </label>
+
+      <div>
+        <div className="mb-1 font-medium">Font</div>
+        <div className="grid grid-cols-3 gap-2">
+          {(["pixel", "sans", "serif"] as FontMode[]).map((font) => (
+            <button
+              key={font}
+              type="button"
+              onClick={() => updateSetting("font", font)}
+              className={
+                "pixel-btn px-2 py-2 text-xs font-semibold text-stone-900 " +
+                (settings.font === font ? "bg-amber-200" : "bg-white hover:bg-amber-50")
+              }
+            >
+              {font === "pixel" ? "Pixel" : font === "sans" ? "Sans" : "Serif"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <label className="flex items-center justify-between gap-3">
+        <span>High contrast</span>
+        <input
+          aria-label="Toggle high contrast mode"
+          type="checkbox"
+          checked={settings.highContrast}
+          onChange={(event) => updateSetting("highContrast", event.target.checked)}
+          className="h-5 w-5 accent-emerald-600"
+        />
+      </label>
+
+      <label className="flex items-center justify-between gap-3">
+        <span>Larger text</span>
+        <input
+          aria-label="Toggle larger text"
+          type="checkbox"
+          checked={settings.largeText}
+          onChange={(event) => updateSetting("largeText", event.target.checked)}
+          className="h-5 w-5 accent-emerald-600"
+        />
+      </label>
+    </div>
+  );
+}
+
+// The same options, for the Menu inside the game.
+export function AccessibilityMenuSection() {
+  const a11y = useAccessibilitySettings();
+  return <AccessibilityOptions {...a11y} />;
 }

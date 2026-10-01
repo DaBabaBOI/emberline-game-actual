@@ -37,9 +37,13 @@ export interface Tile {
   dug?: number;
   // 0–1: how worn out the building on this tile is (Hard only; 1 = broken).
   worn?: number;
+  // 0–1: cracks from an earthquake, and rubble from a landslide. Both fade.
+  cracked?: number;
+  rubble?: number;
 }
 
 export type RaidKind = "band" | "party" | "fire";
+export type DisasterKind = "storm" | "flood" | "earthquake" | "landslide";
 export type RaidResponse = "fight" | "hide" | "tribute";
 
 export interface Raid {
@@ -82,7 +86,7 @@ export interface Stats {
   // Seconds (ticks) the land spent below the best-ending Sustainability.
   lowLandTicks: number;
   // `accident`: people dropped into the sea or lost in the fog (missing in older saves).
-  deaths: { famine: number; disease: number; fire: number; battle: number; accident?: number };
+  deaths: { famine: number; disease: number; fire: number; battle: number; accident?: number; disaster?: number };
 }
 
 // What the debrief shows: frozen when the era ends (or the game does).
@@ -185,7 +189,9 @@ export type TallyKey =
   | "scouts"
   | "planted"
   | "raidsWon"
-  | "caravans";
+  | "caravans"
+  | "disasters"
+  | "landslides";
 
 // One thing to do before an advancement can be researched.
 export interface Goal {
@@ -268,6 +274,14 @@ export interface GameState {
   // when it starts and when the rains come back. Done once it is over.
   drought?: { warnTick: number; startTick: number; endTick: number } | null;
   droughtDone?: boolean;
+  // A natural disaster: warned of at warnTick, strikes at startTick, over at
+  // endTick. `tiles` are where it hits (flooded tiles, the quake's centre, the slope).
+  disaster?: { kind: DisasterKind; warnTick: number; startTick: number; endTick: number; tiles: number[] } | null;
+  nextDisasterTick?: number;
+  // Fields a flood left rich silt on, until this tick.
+  silt?: Record<number, number>;
+  // The discovery scene on screen (an advancement or secret just found), if any.
+  cutscene?: string | null;
   // Caravans out trading with the Silk Steppe: when each left and when it's back.
   caravans?: { start: number; back: number }[];
   // Running totals for the debrief, and the debrief on screen (if any).

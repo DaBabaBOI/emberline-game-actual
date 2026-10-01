@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AFTER_STEPS, DROUGHT, ERA_INTROS, ERAS, EVENTS, LESSONS, RAID_KINDS, RAID_RESPONSE, TREE_BY_ID, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
+import { AFTER_STEPS, DISASTERS, DISCOVERIES, DROUGHT, ERA_INTROS, ERAS, EVENTS, LESSONS, RAID_KINDS, RAID_RESPONSE, TREE_BY_ID, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
 import {
   canAfford,
   countBuildings,
@@ -278,8 +278,49 @@ function DroughtBanner() {
   );
 }
 
+// A storm, flood, earthquake or landslide: the warning with a countdown, then
+// what it is doing.
+function DisasterBanner() {
+  const { state } = useGame();
+  const d = state.disaster!;
+  const k = DISASTERS.kinds[d.kind];
+  const coming = state.tick < d.startTick;
+  const now: Record<string, string> = {
+    storm: "A storm is raging over the village. Every fire is out.",
+    flood: "The land by the water is flooded. Buildings under water have stopped working.",
+    earthquake: "The ground is shaking!",
+    landslide: "The hillside is sliding down!",
+  };
+  return (
+    <div className="pointer-events-none flex justify-center" data-testid="disaster-banner">
+      <div
+        className={
+          "font-pixel flex max-w-xl items-start gap-2 border-[3px] border-[#140e0a] px-4 py-2 text-xs font-semibold text-white md:text-sm " +
+          (coming ? "bg-slate-700/95" : "bg-slate-900/95")
+        }
+      >
+        <span className="shrink-0">
+          <PixelIcon name={k.icon} size={20} />
+        </span>
+        <span>
+          {coming ? (
+            <>
+              {k.warning} It strikes in <Countdown ticks={Math.max(0, d.startTick - state.tick)} />s.
+            </>
+          ) : (
+            <>
+              {now[d.kind]} Over in <Countdown ticks={Math.max(0, d.endTick - state.tick)} />s.
+            </>
+          )}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function RaidBanner() {
   const { state, dispatch } = useGame();
+  if (state.disaster && !state.raid) return <DisasterBanner />;
   if (state.drought && !state.raid) return <DroughtBanner />;
   if (state.legion && !state.raid) return <LegionWarning />;
   if (!state.raid) return null;
@@ -464,6 +505,7 @@ export function DevPanel() {
   const { state, dispatch } = useGame();
   const [eventId, setEventId] = useState(EVENTS[0].id);
   const [lessonId, setLessonId] = useState(LESSONS[0].id);
+  const [sceneId, setSceneId] = useState(Object.keys(DISCOVERIES)[0]);
   if (!state.dev) return null;
   return (
     <div className="pixel-panel-dark font-pixel pointer-events-auto flex w-full flex-col gap-1.5 p-2 text-xs">
@@ -559,6 +601,14 @@ export function DevPanel() {
           Wear
         </button>
       </div>
+      {/* Natural disasters: each is warned of, then strikes 3 ticks later. */}
+      <div className="flex max-w-xs flex-wrap gap-1">
+        {(["storm", "flood", "earthquake", "landslide"] as const).map((kind) => (
+          <button key={kind} type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devDisaster", kind })}>
+            {kind[0].toUpperCase() + kind.slice(1)}
+          </button>
+        ))}
+      </div>
       {/* Trigger any event card or elder lesson on demand. */}
       <div className="flex gap-1">
         <select
@@ -593,6 +643,23 @@ export function DevPanel() {
         </select>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devLesson", id: lessonId })}>
           Lesson
+        </button>
+      </div>
+      <div className="flex gap-1">
+        <select
+          value={sceneId}
+          onChange={(e) => setSceneId(e.target.value)}
+          className="min-w-0 flex-1 border-2 border-[#140e0a] bg-[#4a3b2e] px-1 py-0.5 text-white"
+          aria-label="Discovery scene to play"
+        >
+          {Object.keys(DISCOVERIES).map((id) => (
+            <option key={id} value={id}>
+              {TREE_BY_ID[id]?.name ?? id}
+            </option>
+          ))}
+        </select>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devCutscene", id: sceneId })}>
+          Scene
         </button>
       </div>
       <div className="flex flex-wrap gap-1">

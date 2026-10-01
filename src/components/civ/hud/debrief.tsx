@@ -52,7 +52,7 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
   // Older saves may have stored a land-only verdict on a loss.
   const tier = TIERS[d.kind === "loss" ? "lost" : d.tier];
   const deaths = d.stats.deaths;
-  const lost = Math.round(deaths.famine + deaths.disease + deaths.fire + deaths.battle + (deaths.accident ?? 0));
+  const lost = Math.round(deaths.famine + deaths.disease + deaths.fire + deaths.battle + (deaths.accident ?? 0) + (deaths.disaster ?? 0));
   const who = state.nation ?? "Your people";
   const heading =
     d.kind === "era"
@@ -146,6 +146,7 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
                 famine {Math.round(deaths.famine)} · sickness {Math.round(deaths.disease)} · fire {Math.round(deaths.fire)} ·
                 battle {Math.round(deaths.battle)}
                 {deaths.accident ? ` · accidents ${Math.round(deaths.accident)}` : ""}
+                {deaths.disaster ? ` · disasters ${Math.round(deaths.disaster)}` : ""}
               </li>
               <Row label="Raids lost" value={d.stats.raidsLost} bad={d.stats.raidsLost > 0} />
             </ul>

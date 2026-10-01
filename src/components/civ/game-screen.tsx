@@ -14,6 +14,7 @@ import { BottomBar } from "./hud/bottom-bar";
 import { TreeOverlay } from "./hud/tree-overlay";
 import { GuideOverlay } from "./hud/guide-overlay";
 import { Debrief, GoalLine, NextEraPrompt } from "./hud/debrief";
+import { DiscoveryScene } from "./hud/discovery-scene";
 import {
   DevPanel,
   ElderLesson,
@@ -83,6 +84,7 @@ function Hud({ onRestart }: { onRestart: () => void }) {
       {panel === "tree" && <TreeOverlay />}
       <GuideOverlay />
       <EventModal />
+      <DiscoveryScene />
       <Debrief onRestart={onRestart} />
     </div>
   );
@@ -93,6 +95,16 @@ export function GameScreen() {
   const [saved, setSaved] = useState<GameState | null>(() => loadGame());
   // A new game opens with a short story (not when continuing, and not in dev starts).
   const [intro, setIntro] = useState(false);
+  // Tell the page a game is on screen (hides the floating Settings button; the
+  // same options are in the game's Menu).
+  const playing = !!game && !intro;
+  useEffect(() => {
+    if (!playing) return;
+    document.documentElement.dataset.inGame = "1";
+    return () => {
+      delete document.documentElement.dataset.inGame;
+    };
+  }, [playing]);
 
   if (game && intro) {
     return <IntroStory nation={game.nation ?? "The Emberfolk"} onBegin={() => setIntro(false)} />;
