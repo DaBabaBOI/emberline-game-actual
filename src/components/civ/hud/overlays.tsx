@@ -1,8 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AFTER_STEPS, ERAS, EVENTS, LESSONS, RAID_KINDS, RAID_RESPONSE, TREE_BY_ID, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
-import { canAfford, defenseBreakdown, defenseStrength, famineOptions, tributeCost, warnings } from "@/game/engine";
+import { AFTER_STEPS, DISASTERS, DISCOVERIES, DROUGHT, ERA_INTROS, ERAS, EVENTS, LESSONS, RAID_KINDS, RAID_RESPONSE, TREE_BY_ID, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
+import {
+  canAfford,
+  countBuildings,
+  defenseBreakdown,
+  defenseStrength,
+  famineOptions,
+  inDrought,
+  rainfall,
+  secs,
+  tributeCost,
+  waterSupply,
+  warnings,
+} from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
 import { Countdown } from "./countdown";
 import { PixelIcon } from "@/components/civ/pixel-icon";
@@ -78,7 +90,9 @@ export function CoachPanel() {
 export function ElderLesson() {
   const { state, dispatch } = useGame();
   const farewell = state.lesson === TUTORIAL_FAREWELL.id;
-  const lesson = farewell ? TUTORIAL_FAREWELL : LESSONS.find((l) => l.id === state.lesson);
+  // A new era's welcome is shown the same way.
+  const intro = Object.values(ERA_INTROS).find((l) => l.id === state.lesson);
+  const lesson = farewell ? TUTORIAL_FAREWELL : intro ?? LESSONS.find((l) => l.id === state.lesson);
   if (!lesson) return null;
   return (
     <div
@@ -88,7 +102,7 @@ export function ElderLesson() {
       <div className="mb-1 flex items-center gap-2">
         <PixelIcon name="elder" size={28} />
         <span className="font-pixel flex flex-col leading-tight">
-          <span className="text-[11px] text-amber-800/80">{farewell ? "Elder Ama" : "Elder Ama\u2019s lesson"}</span>
+          <span className="text-[11px] text-amber-800/80">{farewell || intro ? "Elder Ama" : "Elder Ama\u2019s lesson"}</span>
           <span className="text-base font-semibold">{lesson.title}</span>
         </span>
       </div>
@@ -102,7 +116,7 @@ export function ElderLesson() {
         onClick={() => dispatch({ type: "dismissLesson" })}
         className="pixel-btn font-pixel mt-2 bg-amber-400 px-3 py-1 text-xs font-semibold text-[#2b2119]"
       >
-        {farewell ? "Let's go" : "Got it"}
+        {farewell || intro ? "Let's go" : "Got it"}
       </button>
     </div>
   );
@@ -224,8 +238,90 @@ function LegionWarning() {
   );
 }
 
+// The great drought: the elders' warning with a countdown, then how the town is
+// holding up (rain, water for how many people) until the rains return.
+function DroughtBanner() {
+  const { state } = useGame();
+  const d = state.drought!;
+  const on = inDrought(state);
+  const pop = Math.floor(state.population);
+  const water = waterSupply(state);
+  const short = water < pop;
+  const granaries = countBuildings(state).granary ?? 0;
+  return (
+    <div className="pointer-events-none flex justify-center" data-testid="drought-banner">
+      <div
+        className={
+          "font-pixel flex max-w-xl items-start gap-2 border-[3px] border-[#140e0a] px-4 py-2 text-xs font-semibold text-[#2b2119] md:text-sm " +
+          (on ? "bg-amber-500/95" : "bg-amber-200/95")
+        }
+      >
+        <span className="shrink-0">
+          <PixelIcon name="sun" size={20} />
+        </span>
+        <span>
+          {on ? (
+            <>
+              The great drought: rain is down to {Math.round(rainfall(state) * 100)}%. Water for {Math.min(water, pop)} of {pop} people
+              {short ? " (the rest are thirsty and unhappy)" : ""}. The rains return in <Countdown ticks={Math.max(0, d.endTick - state.tick)} />s.
+            </>
+          ) : (
+            <>
+              A great drought comes in <Countdown ticks={Math.max(0, d.startTick - state.tick)} />s and lasts {Math.round(secs(DROUGHT.ticks) / 60)}{" "}
+              minutes. Water for {Math.min(water, pop)} of {pop} people, {granaries} granar{granaries === 1 ? "y" : "ies"}. Dig wells, build
+              aqueducts, fill the granaries and keep the forest standing.
+            </>
+          )}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// A storm, flood, earthquake or landslide: the warning with a countdown, then
+// what it is doing.
+function DisasterBanner() {
+  const { state } = useGame();
+  const d = state.disaster!;
+  const k = DISASTERS.kinds[d.kind];
+  const coming = state.tick < d.startTick;
+  const now: Record<string, string> = {
+    storm: "A storm is raging over the village. Every fire is out.",
+    flood: "The land by the water is flooded. Buildings under water have stopped working.",
+    earthquake: "The ground is shaking!",
+    landslide: "The hillside is sliding down!",
+  };
+  return (
+    <div className="pointer-events-none flex justify-center" data-testid="disaster-banner">
+      <div
+        className={
+          "font-pixel flex max-w-xl items-start gap-2 border-[3px] border-[#140e0a] px-4 py-2 text-xs font-semibold text-white md:text-sm " +
+          (coming ? "bg-slate-700/95" : "bg-slate-900/95")
+        }
+      >
+        <span className="shrink-0">
+          <PixelIcon name={k.icon} size={20} />
+        </span>
+        <span>
+          {coming ? (
+            <>
+              {k.warning} It strikes in <Countdown ticks={Math.max(0, d.startTick - state.tick)} />s.
+            </>
+          ) : (
+            <>
+              {now[d.kind]} Over in <Countdown ticks={Math.max(0, d.endTick - state.tick)} />s.
+            </>
+          )}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function RaidBanner() {
   const { state, dispatch } = useGame();
+  if (state.disaster && !state.raid) return <DisasterBanner />;
+  if (state.drought && !state.raid) return <DroughtBanner />;
   if (state.legion && !state.raid) return <LegionWarning />;
   if (!state.raid) return null;
   const raid = state.raid;
@@ -409,6 +505,7 @@ export function DevPanel() {
   const { state, dispatch } = useGame();
   const [eventId, setEventId] = useState(EVENTS[0].id);
   const [lessonId, setLessonId] = useState(LESSONS[0].id);
+  const [sceneId, setSceneId] = useState(Object.keys(DISCOVERIES)[0]);
   if (!state.dev) return null;
   return (
     <div className="pixel-panel-dark font-pixel pointer-events-auto flex w-full flex-col gap-1.5 p-2 text-xs">
@@ -483,6 +580,35 @@ export function DevPanel() {
           Finish era
         </button>
       </div>
+      {/* Ancient and Classical era: skip the legion, the drought, caravans. */}
+      <div className="flex max-w-xs flex-wrap gap-1">
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devBeatLegion" })}>
+          Beat legion
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devDrought", when: "soon" })}>
+          Drought soon
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devDrought", when: "now" })}>
+          Drought now
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devDrought", when: "end" })}>
+          End drought
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devCaravanBack" })}>
+          Caravan back
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devWear" })} title="Hard mode: wear every building down">
+          Wear
+        </button>
+      </div>
+      {/* Natural disasters: each is warned of, then strikes 3 ticks later. */}
+      <div className="flex max-w-xs flex-wrap gap-1">
+        {(["storm", "flood", "earthquake", "landslide"] as const).map((kind) => (
+          <button key={kind} type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devDisaster", kind })}>
+            {kind[0].toUpperCase() + kind.slice(1)}
+          </button>
+        ))}
+      </div>
       {/* Trigger any event card or elder lesson on demand. */}
       <div className="flex gap-1">
         <select
@@ -517,6 +643,23 @@ export function DevPanel() {
         </select>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devLesson", id: lessonId })}>
           Lesson
+        </button>
+      </div>
+      <div className="flex gap-1">
+        <select
+          value={sceneId}
+          onChange={(e) => setSceneId(e.target.value)}
+          className="min-w-0 flex-1 border-2 border-[#140e0a] bg-[#4a3b2e] px-1 py-0.5 text-white"
+          aria-label="Discovery scene to play"
+        >
+          {Object.keys(DISCOVERIES).map((id) => (
+            <option key={id} value={id}>
+              {TREE_BY_ID[id]?.name ?? id}
+            </option>
+          ))}
+        </select>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devCutscene", id: sceneId })}>
+          Scene
         </button>
       </div>
       <div className="flex flex-wrap gap-1">

@@ -6,6 +6,9 @@ import {
   affordableResearch,
   buildingCost,
   canAfford,
+  caravanCost,
+  caravanError,
+  waterSupply,
   consumption,
   countBuildings,
   defenseBreakdown,
@@ -191,6 +194,11 @@ export function BottomBar() {
               rain {Math.round(rainfall(state) * 100)}%
             </span>
           )}
+          {state.era >= 2 && (
+            <Stat icon="drop" title="Water in a dry year: springs, wells and aqueducts, for this many people" bad={waterSupply(state) < state.population}>
+              {Math.min(waterSupply(state), Math.floor(state.population))}/{Math.floor(state.population)}
+            </Stat>
+          )}
           <Stat icon="log" title="Wood per second" bad={prod.wood < 0}>
             {rate(prod.wood)}/s
           </Stat>
@@ -280,6 +288,7 @@ export function BottomBar() {
               <Cost cost={SPEAR_COST} />
             </ToolButton>
           )}
+          {state.researched.includes("barter-roads") && <CaravanButton />}
           <ToolButton
             guide="tool-scout"
             locked={tutorialLocked(state, "scout")}
@@ -312,6 +321,27 @@ export function BottomBar() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Send a caravan from a Market to the Silk Steppe (one per Market at a time).
+function CaravanButton() {
+  const { state, dispatch } = useGame();
+  const markets = countBuildings(state).market ?? 0;
+  const out = (state.caravans ?? []).length;
+  const problem = caravanError(state);
+  return (
+    <ToolButton
+      guide="tool-caravan"
+      icon="market"
+      label={`Caravan ${out}/${markets}`}
+      onClick={() => dispatch({ type: "caravan" })}
+      disabled={!!problem}
+      title={problem ?? "Send a caravan to the Silk Steppe: it comes back with coins and new ideas, and sometimes sickness."}
+      tone="bg-teal-800 hover:bg-teal-700"
+    >
+      <Cost cost={caravanCost(state)} bad={!canAfford(state, caravanCost(state))} />
+    </ToolButton>
   );
 }
 
