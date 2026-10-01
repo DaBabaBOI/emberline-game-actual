@@ -85,6 +85,7 @@ export function PickUp({
       // Picked up from the fire or from work: they stop sitting or working.
       w.sitting = false;
       w.working = false;
+      w.workAt = null;
       w.sitAt = null;
       el.style.cursor = "grabbing";
       live.current.onHolding(true);
@@ -203,8 +204,11 @@ function land(w: Walker, outcome: DropOutcome, tile: Tile | null, tiles: Tile[],
       if (outcome === "help" && tile) {
         // Get to work for as long as the help lasts, facing the building.
         w.working = true;
+        w.workAt = tile;
+        w.workUntil = performance.now() + DROP.helpTicks * TICK_SECONDS * 1000;
+        w.workTool = tile.building === "woodcutter" ? "axe" : tile.building === "quarry" ? "pick" : "hoe";
         w.heading = Math.atan2(tile.x - w.x, tile.z - w.z);
-        w.wait = DROP.helpTicks * TICK_SECONDS;
+        w.wait = 3;
       } else w.wait = 1.5;
     }
   }

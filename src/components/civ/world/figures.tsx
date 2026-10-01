@@ -18,6 +18,10 @@ export interface Agent {
   sitting?: boolean;
   // Working at a building (dropped there to help): hoeing or chopping.
   working?: boolean;
+  // What they work with: a hoe in the fields, an axe at the woodcutter...
+  workTool?: "hoe" | "axe" | "pick";
+  // Being carried by the player.
+  held?: boolean;
   // 0–1: how far the figure has toppled over (fire victims).
   fallen?: number;
 }
@@ -55,6 +59,10 @@ export function Figures({
   const helmet = useRef<InstancedMesh>(null);
   const crest = useRef<InstancedMesh>(null);
   const shield = useRef<InstancedMesh>(null);
+  // Workers' tools (handle and head) and the dirt or chips their strokes kick up.
+  const handle = useRef<InstancedMesh>(null);
+  const toolHead = useRef<InstancedMesh>(null);
+  const dust = useRef<InstancedMesh>(null);
   const colored = useRef("");
 
   useLayoutEffect(() => {
@@ -92,7 +100,8 @@ export function Figures({
       const a = list[i];
       const swing = a.moving ? Math.sin(t * 9 + a.phase) * 0.6 : 0;
       // Working: both arms raise and bring a tool down, over and over.
-      const work = a.working && !a.moving ? -1.3 + Math.max(0, Math.sin(t * 5 + a.phase)) * 1.1 : null;
+      const stroke = Math.max(0, Math.sin(t * 5 + a.phase));
+      const work = a.working && !a.moving ? -1.3 + stroke * 1.1 : null;
       const bob = a.moving ? Math.abs(Math.sin(t * 9 + a.phase)) * 0.015 : 0;
       // Sitting: hips drop to the ground, legs point forward, hands reach out.
       fig.position.set(a.x, a.y + bob - (a.sitting ? 0.15 * a.scale : 0), a.z);
@@ -143,9 +152,37 @@ export function Figures({
       }
     }
 
-    for (const m of [torso, head, hair, tool, helmet, crest, shield]) if (m.current) m.current.count = n;
+    // Tools in hand while working (hidden, scaled to nothing, otherwise).
+    for (let i = 0; i < n; i++) {
+      const a = list[i];
+      const busy = !!a.working && !a.moving && !a.held;
+      fig.position.set(a.x, a.y, a.z);
+      fig.rotation.set(0, a.heading, 0, "YXZ");
+      fig.scale.setScalar(busy ? a.scale : 0.0001);
+      fig.updateMatrix();
+      const stroke = Math.max(0, Math.sin(t * 5 + a.phase));
+      // The tool swings with the arms: up behind the head, then down in front.
+      const swingAngle = -1.3 + stroke * 1.1;
+      local.scale.set(1, 1, 1);
+      local.rotation.set(swingAngle - 0.6, 0, 0);
+      local.position.set(0.0, 0.34 - 0.12 * Math.cos(swingAngle), -0.12 * Math.sin(swingAngle) + 0.04);
+      put(handle.current, i);
+      // The head sits at the far end of the handle, across it (hoe) or along it (axe).
+      const reach = 0.17;
+      local.position.set(0, 0.34 - (0.12 + reach) * Math.cos(swingAngle - 0.3), -(0.12 + reach) * Math.sin(swingAngle - 0.3) + 0.04);
+      local.rotation.set(swingAngle + (a.workTool === "axe" ? 0 : 0.9), a.workTool === "axe" ? Math.PI / 2 : 0, 0);
+      put(toolHead.current, i);
+      // A puff of dirt (or wood chips) as the tool hits the ground.
+      const puff = busy ? Math.max(0, 0.25 - stroke) * 4 : 0;
+      local.rotation.set(0, 0, 0);
+      local.scale.setScalar(Math.max(0.0001, puff));
+      local.position.set(0, 0.03 + puff * 0.04, 0.24);
+      put(dust.current, i);
+    }
+
+    for (const m of [torso, head, hair, tool, helmet, crest, shield, handle, toolHead, dust]) if (m.current) m.current.count = n;
     for (const m of [legs, arms]) if (m.current) m.current.count = n * 2;
-    for (const m of [torso, head, hair, legs, arms, tool, helmet, crest, shield]) {
+    for (const m of [torso, head, hair, legs, arms, tool, helmet, crest, shield, handle, toolHead, dust]) {
       if (m.current) m.current.instanceMatrix.needsUpdate = true;
     }
   });
@@ -172,6 +209,18 @@ export function Figures({
       <instancedMesh ref={arms} args={[undefined, undefined, max * 2]} {...common}>
         <cylinderGeometry args={[0.018, 0.016, 0.15, 6]} />
         <meshStandardMaterial />
+      </instancedMesh>
+      <instancedMesh ref={handle} args={[undefined, undefined, max]} {...common}>
+        <cylinderGeometry args={[0.009, 0.009, 0.32, 5]} />
+        <meshStandardMaterial color="#8a6a45" />
+      </instancedMesh>
+      <instancedMesh ref={toolHead} args={[undefined, undefined, max]} {...common}>
+        <boxGeometry args={[0.07, 0.025, 0.05]} />
+        <meshStandardMaterial color="#7d7f84" metalness={0.4} />
+      </instancedMesh>
+      <instancedMesh ref={dust} args={[undefined, undefined, max]} frustumCulled={false} raycast={() => null}>
+        <sphereGeometry args={[0.035, 6, 5]} />
+        <meshStandardMaterial color="#9b7a4e" transparent opacity={0.7} depthWrite={false} />
       </instancedMesh>
       {weapon && (
         <instancedMesh ref={tool} args={[undefined, undefined, max]} {...common}>
