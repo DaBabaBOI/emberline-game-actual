@@ -165,6 +165,12 @@ These were decided with the project owner. Do not change them without being aske
   goal), never during a storm. The campfire panel has a "Keep it lit" switch.
   "A campfire burned out" is only said when a fire stays out. The gust moment
   only blows out untended fires.
+- **No accidental deaths by click** (`world/pick-up.tsx`): over a building,
+  a click only picks someone up if it is right on them (`TIGHT_GRAB` px), so
+  clicking a campfire opens it instead of grabbing whoever sits there. Putting
+  someone into a fire or the open sea by click or Enter needs a second click on
+  the same spot within `CONFIRM_MS` ("Click again to really drop them there");
+  a drag there is deliberate and drops at once.
 - **Small moments** (`SMALL_MOMENTS`, `MOMENTS` / `smallMoment()` in engine.ts):
   every 20-40 ticks (30-60 s) after the tutorial, one little thing happens,
   picked from those that fit the island right now (a deer herd if the forest

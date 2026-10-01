@@ -16,6 +16,13 @@ import { grabStore, type Walker } from "./villagers";
 const GRAB_RADIUS = 44;
 // ...or how close on the ground (world units, about a hex) to where you clicked.
 const GRAB_GROUND = 0.9;
+// Over a building (people sit round a campfire), a click only picks someone up
+// if it is right on them (pixels); otherwise the click is for the building.
+const TIGHT_GRAB = 16;
+// Putting someone into a fire or the open sea with a click needs a second
+// click on the same spot within this long (ms). A drag there is deliberate.
+const CONFIRM_MS = 2500;
+const DEADLY: DropOutcome[] = ["fire", "deep"];
 // A press that moves less than this (pixels) is a click: the person stays in
 // your hand until the next click (or Enter). More is a drag, as before.
 const CLICK_SLOP = 6;
@@ -61,6 +68,9 @@ export function PickUp({
   // carried after a click), or walked with the arrow keys.
   const carry = useRef({ drag: false, keys: false, downX: 0, downY: 0, origin: { x: 0, z: 0 }, pressed: new Set<string>() });
   const [carrying, setCarrying] = useState(false);
+  // A deadly drop waiting for its second click: on which tile, until when.
+  const confirm = useRef<{ tile: number | null; until: number } | null>(null);
+  const [armed, setArmed] = useState(false);
 
   useEffect(() => {
     const el = gl.domElement;
@@ -71,10 +81,13 @@ export function PickUp({
     };
     // The person nearest a point on screen: close on screen, or standing close to
     // where that point meets the ground (easier when zoomed out).
-    const nearestTo = (px: number, py: number, w: number, h: number): Walker | null => {
+    const nearestTo = (px: number, py: number, w: number, h: number): Walker | null => nearestHit(px, py, w, h)?.walker ?? null;
+    // The same, with how far away on screen they are and the tile clicked on.
+    const nearestHit = (px: number, py: number, w: number, h: number): { walker: Walker; d: number; tile: Tile | null } | null => {
       pointer.current.set((px / w) * 2 - 1, -(py / h) * 2 + 1);
       tools.ray.setFromCamera(pointer.current, camera);
       const onGround = tools.ray.ray.intersectPlane(tools.plane, tools.hit);
+      const tile = onGround ? ground.tileAt(tools.hit.x, tools.hit.z) ?? null : null;
       let best: Walker | null = null;
       let bestD = Infinity;
       for (const walker of grabStore.walkers) {
@@ -88,11 +101,30 @@ export function PickUp({
           best = walker;
         }
       }
-      return best;
+      return best ? { walker: best, d: bestD, tile } : null;
     };
-    const nearest = (e: PointerEvent) => {
+    // Who a click here would pick up: anyone close, but over a building only
+    // someone right under the cursor (the click is meant for the building).
+    const nearest = (e: PointerEvent): Walker | null => {
       const p = read(e);
-      return nearestTo(p.px, p.py, p.w, p.h);
+      const hit = nearestHit(p.px, p.py, p.w, p.h);
+      if (!hit) return null;
+      if (hit.tile?.building && hit.d > TIGHT_GRAB) return null;
+      return hit.walker;
+    };
+    // Into a fire or the open sea with a click or Enter: only on a second
+    // click (or Enter) on the same spot. True when it can go ahead now.
+    const confirmed = (): boolean => {
+      const w = grabStore.held;
+      if (!w) return true;
+      const tile = ground.tileAt(w.x, w.z) ?? null;
+      if (!DEADLY.includes(dropOutcome(live.current.state, tile))) return true;
+      const c = confirm.current;
+      const id = tile ? tile.id : null;
+      if (c && c.tile === id && performance.now() < c.until) return true;
+      confirm.current = { tile: id, until: performance.now() + CONFIRM_MS };
+      setArmed(true);
+      return false;
     };
     const pickUp = (w: Walker) => {
       grabStore.held = w;
@@ -108,6 +140,8 @@ export function PickUp({
       setCarrying(true);
     };
     const release = () => {
+      confirm.current = null;
+      setArmed(false);
       grabStore.held = null;
       carry.current.drag = false;
       carry.current.keys = false;
@@ -146,7 +180,7 @@ export function PickUp({
         e.preventDefault();
         read(e);
         carry.current.keys = false;
-        drop();
+        if (confirmed()) drop();
         return;
       }
       const w = nearest(e);
@@ -187,7 +221,7 @@ export function PickUp({
           carry.current.pressed.add(dir);
         } else if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          drop();
+          if (confirmed()) drop();
         } else if (e.key === "Escape") {
           putBack();
         }
@@ -262,6 +296,11 @@ export function PickUp({
     const outcome = dropOutcome(live.current.state, tile);
     if (!target || target.tile?.id !== tile?.id || target.outcome !== outcome) {
       setTarget({ tile, outcome, x: tile ? tile.x : w.x, z: tile ? tile.z : w.z });
+      // Moved somewhere else: a pending "click again" no longer applies.
+      if (confirm.current && confirm.current.tile !== (tile ? tile.id : null)) {
+        confirm.current = null;
+        setArmed(false);
+      }
     }
   });
 
@@ -281,6 +320,11 @@ export function PickUp({
           data-testid="drop-hint"
         >
           {hint.text(target.tile)}
+          {armed && DEADLY.includes(target.outcome) && (
+            <span className="block text-[11px] font-bold text-amber-200" data-testid="drop-confirm">
+              Click again to really drop them there
+            </span>
+          )}
           {carrying && <span className="block text-[10px] text-white/80">Click or Enter: put down · Arrows: move · Esc: put back</span>}
         </span>
       </Html>
