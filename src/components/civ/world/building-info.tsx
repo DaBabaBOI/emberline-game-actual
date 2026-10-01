@@ -1,6 +1,6 @@
 "use client";
 
-import { BUILDINGS_BY_ID, FIRE_SCARE, QUARRY_DUST, WEAR } from "@/game/content";
+import { BUILDINGS_BY_ID, FIRE_SCARE, LANDMARKS, QUARRY_DUST, WEAR } from "@/game/content";
 import {
   dusty,
   rainfall,
@@ -12,6 +12,12 @@ import {
   buildingCost,
   canAfford,
   isLit,
+  landmarkDone,
+  nextStageCost,
+  outpostUpkeep,
+  outpostsUnpaid,
+  overseasBuildings,
+  stageError,
   loggingMode,
   perSecond,
   repairCost,
@@ -83,6 +89,61 @@ export function BuildingInfo({
         <PixelIcon name={def.landImpact ? "stump" : "leaf"} size={12} />
         {def.landCost}
       </p>
+
+      {/* Our landmark: its three stages, and the masons at work. */}
+      {state.landmark?.tile === tile.id && (
+        <div className="mt-2 border-t-2 border-stone-300 pt-1.5" data-testid="landmark-stages">
+          <div className="mb-1 flex gap-1">
+            {[1, 2, 3].map((n) => (
+              <span
+                key={n}
+                className={cn(
+                  "h-2 flex-1 border border-[#140e0a]",
+                  n < state.landmark!.stage || (n === state.landmark!.stage && state.tick >= state.landmark!.readyTick)
+                    ? "bg-emerald-600"
+                    : n === state.landmark!.stage
+                      ? "bg-amber-400"
+                      : "bg-stone-200",
+                )}
+              />
+            ))}
+          </div>
+          {landmarkDone(state) ? (
+            <p className="text-emerald-800">Finished. {LANDMARKS[state.landmark!.kind].bonus}</p>
+          ) : state.tick < state.landmark!.readyTick ? (
+            <p>
+              The masons are working on stage {state.landmark!.stage} of 3: done in{" "}
+              <CountdownFor ticks={state.landmark!.readyTick - state.tick} state={state} />s.
+            </p>
+          ) : (
+            <>
+              <p className="mb-1">Stage {state.landmark!.stage} of 3 is done. Its bonus starts when all three are.</p>
+              <button
+                type="button"
+                disabled={!!stageError(state)}
+                onClick={() => dispatch({ type: "buildStage" })}
+                className="pixel-btn flex w-full items-center justify-center gap-1 bg-amber-400 px-2 py-1 text-[#2b2119] disabled:opacity-40"
+                data-testid="build-stage"
+              >
+                <PixelIcon name="hammer" size={12} />
+                Build stage {state.landmark!.stage + 1} ·{" "}
+                {Object.entries(nextStageCost(state) ?? {})
+                  .map(([k, v]) => `${v} ${k === "currency" ? "coins" : k}`)
+                  .join(", ")}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* An outpost overseas: what it costs to keep supplied. */}
+      {tile.island !== state.tiles[state.startTile].island && tile.island >= 0 && (
+        <p className="mt-2 border-t-2 border-stone-300 pt-1.5" data-testid="outpost-upkeep">
+          {outpostsUnpaid(state)
+            ? "Out of coins: our outposts can't be supplied and stand idle."
+            : `Overseas: our ${overseasBuildings(state)} outpost buildings cost ${perSecond(outpostUpkeep(state)).toFixed(2)} coins/s to supply, each more than the last.`}
+        </p>
+      )}
 
       {/* Hard mode: how worn it is, and a repair. */}
       {wearsOut(state) && def.id !== "campfire" && (

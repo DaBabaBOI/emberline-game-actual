@@ -20,6 +20,7 @@ import { useGame } from "@/components/civ/game-provider";
 import { Countdown } from "./countdown";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { useGuide } from "./guide-overlay";
+import { PlagueBanner } from "./medieval";
 
 export function TutorialPanel() {
   const { state, dispatch } = useGame();
@@ -321,6 +322,7 @@ function DisasterBanner() {
 
 export function RaidBanner() {
   const { state, dispatch } = useGame();
+  if (state.plague && !state.raid) return <PlagueBanner />;
   if (state.disaster && !state.raid) return <DisasterBanner />;
   if (state.drought && !state.raid) return <DroughtBanner />;
   if (state.legion && !state.raid) return <LegionWarning />;
@@ -615,6 +617,28 @@ export function DevPanel() {
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devWear" })} title="Hard mode: wear every building down">
           Wear
         </button>
+      </div>
+      {/* Medieval era: finish the landmark, bring the plague, ships, kingdom moods. */}
+      <div className="flex max-w-xs flex-wrap gap-1">
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devLandmark" })}>
+          Landmark
+        </button>
+        {(["soon", "now", "end"] as const).map((when) => (
+          <button key={when} type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devPlague", when })}>
+            Plague {when}
+          </button>
+        ))}
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devShipBack" })}>
+          Ship back
+        </button>
+        {(["steppe", "reach"] as const).flatMap((kingdom) =>
+          [-40, 40].map((by) => (
+            <button key={kingdom + by} type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devMood", kingdom, by })}>
+              {kingdom} {by > 0 ? "+" : ""}
+              {by}
+            </button>
+          )),
+        )}
       </div>
       {/* Natural disasters: each is warned of, then strikes 3 ticks later. */}
       <div className="flex max-w-xs flex-wrap gap-1">

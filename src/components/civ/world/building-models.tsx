@@ -4,6 +4,7 @@ import { useRef, type JSX } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Mesh } from "three";
 import { Part } from "./part";
+import { MEDIEVAL_MODELS } from "./medieval-models";
 
 interface ModelProps {
   opacity: number;
@@ -987,4 +988,5 @@ export const MODELS: Record<string, (props: ModelProps) => JSX.Element> = {
   farm: FarmModel,
   warcamp: WarCampModel,
   watchfire: WatchFireModel,
+  ...MEDIEVAL_MODELS,
 };

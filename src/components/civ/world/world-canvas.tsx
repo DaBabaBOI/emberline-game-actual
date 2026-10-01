@@ -9,6 +9,9 @@ import {
   buildingCost,
   DEMOLISH_TOOL,
   dustNote,
+  landmarkDone,
+  nextOutpostUpkeep,
+  perSecond,
   sparkNote,
   forestToClear,
   rainfall,
@@ -42,6 +45,7 @@ import { TradeShips } from "./trade";
 import { Cracks, DisasterDust, disasterView, FloodWater, QuakeShake, Rubble, StormRain } from "./disasters";
 import { Wildlife } from "./wildlife";
 import { CampfireSmoke, Haze, Wildfire } from "./atmosphere";
+import { UnderConstruction } from "./medieval-models";
 
 function HexOutline({ x, y, z, color }: { x: number; y: number; z: number; color: string }) {
   return (
@@ -173,6 +177,11 @@ export function WorldCanvas() {
   const dust = def && !error && hoverTile ? dustNote(state, hoverTile, def.id) : null;
   const gather = def?.id === "gatherer" && !error && hoverTile && !inTutorialNow ? gatherNote(state) : null;
   const town = def && !error && hoverTile ? townNote(state, hoverTile, def.id) : null;
+  // Overseas: each building there costs more coins to keep supplied.
+  const overseas =
+    def && !error && hoverTile && hoverTile.island >= 0 && hoverTile.island !== state.tiles[state.startTile].island
+      ? `Overseas: costs ${perSecond(nextOutpostUpkeep(state)).toFixed(2)} more coins/s to keep supplied.`
+      : null;
 
   const burning = useMemo(() => litFires(state), [state]);
   // A battle is played out for a few ticks after it happens.
@@ -220,6 +229,10 @@ export function WorldCanvas() {
       // The tutorial overlay forwards camera turns and zooms here (guide-overlay.tsx).
       data-world-map=""
       shadows
+      // A landmark under construction is cut off at its current height.
+      onCreated={({ gl }) => {
+        gl.localClippingEnabled = true;
+      }}
       camera={{
         position: portrait ? [home.x, 30, home.z + 27] : [home.x, 18, home.z + 16],
         fov: 38,
@@ -283,7 +296,14 @@ export function WorldCanvas() {
             rotation={[broken ? 0.12 : 0, (t.id % 6) * (Math.PI / 3), broken ? 0.1 : 0]}
             scale={1.55}
           >
-            <Model opacity={1} lit={t.building !== "campfire" || burningIds.includes(t.id)} />
+            {state.landmark?.tile === t.id && !landmarkDone(state) ? (
+              // The landmark rises stage by stage inside its scaffolding.
+              <UnderConstruction done={state.landmark.stage - (state.tick < state.landmark.readyTick ? 1 : 0)}>
+                <Model opacity={1} />
+              </UnderConstruction>
+            ) : (
+              <Model opacity={1} lit={t.building !== "campfire" || burningIds.includes(t.id)} />
+            )}
           </group>
         );
       })}
@@ -440,6 +460,12 @@ export function WorldCanvas() {
                   <span className="flex items-start gap-1.5 text-amber-200">
                     <PixelIcon name="warning" size={12} />
                     {gather}
+                  </span>
+                )}
+                {overseas && (
+                  <span className="flex items-start gap-1.5 text-amber-200" data-testid="overseas-note">
+                    <PixelIcon name="coin" size={12} />
+                    {overseas}
                   </span>
                 )}
                 {dust && (

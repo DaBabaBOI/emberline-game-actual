@@ -8,6 +8,10 @@ import {
   canAfford,
   caravanCost,
   caravanError,
+  hostileKingdoms,
+  nextVoyage,
+  shipCost,
+  shipError,
   waterSupply,
   consumption,
   countBuildings,
@@ -289,6 +293,18 @@ export function BottomBar() {
             </ToolButton>
           )}
           {state.researched.includes("barter-roads") && <CaravanButton />}
+          {state.researched.includes("navigation") && <ShipButton />}
+          {state.kingdoms && (
+            <ToolButton
+              guide="tool-kingdoms"
+              icon="crown"
+              label="Kingdoms"
+              onClick={() => setPanel("kingdoms")}
+              badge={hostileKingdoms(state).length ? "!" : undefined}
+              title={hostileKingdoms(state).length ? "A kingdom is hostile: its armies will raid us" : "Gifts, treaties and raids with the two kingdoms"}
+              tone="bg-purple-800 hover:bg-purple-700"
+            />
+          )}
           <ToolButton
             guide="tool-scout"
             locked={tutorialLocked(state, "scout")}
@@ -321,6 +337,29 @@ export function BottomBar() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Send a ship from a Shipyard (or the Grand Harbour): first to find islands and
+// the kingdoms' coasts, then to trade.
+function ShipButton() {
+  const { state, dispatch } = useGame();
+  const out = (state.ships ?? []).length;
+  const problem = shipError(state);
+  const voyage = nextVoyage(state);
+  const goal = !voyage ? "to trade (coins and goodwill)" : voyage.kind === "outpost" ? "to find new land for an outpost" : "to find a kingdom's coast";
+  return (
+    <ToolButton
+      guide="tool-ship"
+      icon="boat"
+      label={`Ship ${out} at sea`}
+      onClick={() => dispatch({ type: "ship" })}
+      disabled={!!problem}
+      title={problem ?? `Send a ship ${goal}. Ships can also bring sickness home.`}
+      tone="bg-sky-800 hover:bg-sky-700"
+    >
+      <Cost cost={shipCost(state)} bad={!canAfford(state, shipCost(state))} />
+    </ToolButton>
   );
 }
 
