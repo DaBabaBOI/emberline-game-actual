@@ -1,0 +1,255 @@
+<!doctype html>
+<!--
+  Emberline: the project page (the first page visitors see).
+
+  This page is plain HTML. Its look is in site/style.css and the few parts that
+  need JavaScript (the "What's new" bar and the Settings button) are in
+  site/site.js. The game itself is a separate page, at play/.
+
+  Two things here come from the game's code, so they stay in step with it:
+    - site/icons/*.svg   the pixel pictures, drawn in src/game/sprites.ts
+    - site/updates.js    the "What's new" list, written in src/game/updates.ts
+  `npm run dev` and `npm run build` make both (scripts/export-site.mjs).
+  To see this page while developing, run `npm run dev` and open the address
+  it prints.
+
+  Links are relative (play/, not /play/) because the live site lives in a
+  folder: https://dabababoi.github.io/shistech-hackathon/
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Emberline</title>
+    <meta
+      name="description"
+      content="SHISTECH hackathon project: a civilization builder from the first fire to the stars, built around the UN Sustainable Development Goals."
+    />
+    <link rel="preload" href="site/fonts/PixelifySans-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="site/style.css" />
+    <script src="site/updates.js"></script>
+    <script src="site/site.js"></script>
+  </head>
+
+  <body>
+    <main>
+      <!-- "What's new": the newest change, and a button to see them all.
+           site/site.js fills it in from site/updates.js. -->
+      <div class="updates-bar" data-testid="updates-bar" hidden>
+        <div class="updates-row">
+          <span class="updates-tag">Update</span>
+          <span class="updates-date"></span>
+          <span class="updates-latest"></span>
+          <button type="button" class="pixel-btn updates-toggle" aria-expanded="false">What's new</button>
+        </div>
+        <div class="updates-list" hidden></div>
+      </div>
+
+      <!-- The top of the page: name, one-line pitch, and the Play button. -->
+      <section class="hero">
+        <div class="hero-inner">
+          <p class="eyebrow">SHISTECH · Hacktrack · SDG 11</p>
+          <h1>
+            <img src="site/icons/flame.svg" alt="" width="64" height="64" />
+            Emberline
+          </h1>
+          <p class="tagline">A sustainability trade-off game</p>
+          <p class="intro">
+            Grow a Stone Age tribe without destroying the land that feeds it. Every hut, fire and
+            woodcutter helps your people now and costs the land later. Can your village grow and
+            still last?
+          </p>
+          <a class="pixel-btn play-button" href="play/">Play now</a>
+          <p class="note">Runs in the browser, on a laptop or a phone.</p>
+        </div>
+      </section>
+
+      <!-- What each building gives you (green) and what the land pays (red).
+           The words are the game's own: `gain` and `landCost` in
+           src/game/content.ts. The build checks they still match. -->
+      <section class="block" id="tradeoffs">
+        <h2>Every choice is a trade-off</h2>
+        <p class="lead">Most builders reward you for building as much as you can. Emberline shows you the price.</p>
+        <div class="tradeoffs">
+          <div class="pixel-panel tradeoff">
+            <div class="building"><img src="site/icons/axe.svg" alt="" width="28" height="28" />Woodcutter</div>
+            <p class="gain"><span class="plus">+</span>Wood for fires and building</p>
+            <p class="cost"><img src="site/icons/stump.svg" alt="" width="16" height="16" />Fells the trees around it; the forest takes a long time to grow back</p>
+          </div>
+          <div class="pixel-panel tradeoff">
+            <div class="building"><img src="site/icons/campfire.svg" alt="" width="28" height="28" />Campfire</div>
+            <p class="gain"><span class="plus">+</span>Warmth for 10 people, light, cooked food</p>
+            <p class="cost"><img src="site/icons/stump.svg" alt="" width="16" height="16" />Burns wood, adds smoke, and can start a wildfire in nearby trees</p>
+          </div>
+          <div class="pixel-panel tradeoff">
+            <div class="building"><img src="site/icons/wheat.svg" alt="" width="28" height="28" />Farmland</div>
+            <p class="gain"><span class="plus">+</span>Lots of steady food</p>
+            <p class="cost"><img src="site/icons/stump.svg" alt="" width="16" height="16" />Clears the nearest patch of forest for good, and fewer trees means less rain for every field</p>
+          </div>
+          <div class="pixel-panel tradeoff">
+            <div class="building"><img src="site/icons/sheep.svg" alt="" width="28" height="28" />Livestock Pen</div>
+            <p class="gain"><span class="plus">+</span>A little food; with Warm Clothes researched, clothing for 6 people so fewer fires are needed</p>
+            <p class="cost"><img src="site/icons/stump.svg" alt="" width="16" height="16" />Grazing animals wear down the grass around them</p>
+          </div>
+          <div class="pixel-panel tradeoff">
+            <div class="building"><img src="site/icons/pickaxe.svg" alt="" width="28" height="28" />Stone Quarry</div>
+            <p class="gain"><span class="plus">+</span>Stone for better buildings</p>
+            <p class="cost"><img src="site/icons/stump.svg" alt="" width="16" height="16" />Cuts the hill down for good, and its dust covers crops and berries within 2 tiles (40% less food)</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="block" id="teaching">
+        <h2>How the game teaches</h2>
+        <div class="cards">
+          <div class="pixel-panel card">
+            <img src="site/icons/stump.svg" alt="" width="36" height="36" />
+            <div class="card-title">See the cost before you build</div>
+            <p>Every building shows what you get and what the land pays, right where you place it.</p>
+          </div>
+          <div class="pixel-panel card">
+            <img src="site/icons/leaf.svg" alt="" width="36" height="36" />
+            <div class="card-title">Watch the land change</div>
+            <p>Forests turn to stumps and bare earth, smoke rises over the fires, the deer disappear. Click the Sustainability meter to see exactly why.</p>
+          </div>
+          <div class="pixel-panel card">
+            <img src="site/icons/elder.svg" alt="" width="36" height="36" />
+            <div class="card-title">Learn what it means</div>
+            <p>Elder Ama explains each lesson as it happens, and every event card links your choice to the real world and a UN target.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SDG 11 is the core; the others are the goals the game's lessons and
+           events link to. Badge colours are the official UN SDG colours.
+           Two columns of three (one column on a phone). -->
+      <section class="block" id="sdgs">
+        <h2>How it connects to the UN SDGs</h2>
+        <div class="sdgs">
+          <div class="pixel-panel sdg">
+            <div class="badge" style="background: #fd9d24">11</div>
+            <div>
+              <div class="sdg-name">Sustainable Cities &amp; Communities<span class="core">(core)</span></div>
+              <p>The core of the game: grow a settlement that can last. Shelter, crowding, planning and pollution all matter.</p>
+            </div>
+          </div>
+          <div class="pixel-panel sdg">
+            <div class="badge" style="background: #56c02b">15</div>
+            <div>
+              <div class="sdg-name">Life on Land</div>
+              <p>Sustainability measures the forest left standing. Clear-cut it and the deer vanish and the land wears out; restore it by planting.</p>
+            </div>
+          </div>
+          <div class="pixel-panel sdg">
+            <div class="badge" style="background: #fcc30b">7</div>
+            <div>
+              <div class="sdg-name">Affordable &amp; Clean Energy</div>
+              <p>Warmth comes from fire, and fire costs wood and fills the air with smoke. Warm clothes are the efficient alternative.</p>
+            </div>
+          </div>
+          <div class="pixel-panel sdg">
+            <div class="badge" style="background: #bf8b2e">12</div>
+            <div>
+              <div class="sdg-name">Responsible Consumption</div>
+              <p>Take more food than you can keep and it rots. Hunt too hard and the herds disappear.</p>
+            </div>
+          </div>
+          <div class="pixel-panel sdg">
+            <div class="badge" style="background: #c5192d">4</div>
+            <div>
+              <div class="sdg-name">Quality Education</div>
+              <p>Literacy is one of the six meters, and knowledge unlocks every advancement.</p>
+            </div>
+          </div>
+          <div class="pixel-panel sdg">
+            <div class="badge" style="background: #fd6925">9</div>
+            <div>
+              <div class="sdg-name">Industry &amp; Innovation</div>
+              <p>Every new technology on the advancement tree opens new buildings, and new trade-offs.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="block" id="what-you-do">
+        <h2>What you do</h2>
+        <div class="features">
+          <div class="pixel-panel feature">
+            <img src="site/icons/axe.svg" alt="" width="28" height="28" />
+            <span>Clear-cut the forest for fast wood, or log selectively so it lasts</span>
+          </div>
+          <div class="pixel-panel feature">
+            <img src="site/icons/sapling.svg" alt="" width="28" height="28" />
+            <span>Plant saplings to restore the land you cut</span>
+          </div>
+          <div class="pixel-panel feature">
+            <img src="site/icons/sheep.svg" alt="" width="28" height="28" />
+            <span>Keep people warm with fires, or with clothes from your herds</span>
+          </div>
+          <div class="pixel-panel feature">
+            <img src="site/icons/wheat.svg" alt="" width="28" height="28" />
+            <span>Face real dilemmas: floods, overhunting, sacred groves</span>
+          </div>
+          <div class="pixel-panel feature">
+            <img src="site/icons/ill.svg" alt="" width="28" height="28" />
+            <span>Survive sickness and fend off raiders</span>
+          </div>
+          <div class="pixel-panel feature">
+            <img src="site/icons/person.svg" alt="" width="28" height="28" />
+            <span>Name your people and play on a laptop or a phone</span>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <div class="footer-row">
+          <span>Team: Prithu Sharma · Aarav Kumar · Vagisha Sinha · Aaradhya Verma</span>
+          <a href="https://github.com/DaBabaBOI/shistech-hackathon">Source on GitHub</a>
+        </div>
+      </footer>
+    </main>
+
+    <!-- Accessibility settings, in the bottom-right corner: the same options as
+         the Menu inside the game, saved in the same place, so a choice made
+         here carries into the game. site/site.js makes them work. -->
+    <div class="settings">
+      <button
+        type="button"
+        class="pixel-btn settings-toggle"
+        aria-expanded="false"
+        aria-controls="settings-panel"
+        aria-label="Open accessibility settings"
+      >
+        Settings
+      </button>
+      <div class="pixel-panel settings-panel" id="settings-panel" role="dialog" aria-label="Accessibility settings" hidden>
+        <div class="settings-head">
+          <div class="settings-title">Accessibility</div>
+          <button type="button" class="pixel-btn settings-close" aria-label="Close accessibility settings">X</button>
+        </div>
+        <div class="settings-options">
+          <label>
+            <span>Dark mode</span>
+            <input type="checkbox" name="dark" aria-label="Toggle dark mode" />
+          </label>
+          <div>
+            <div class="font-label">Font</div>
+            <div class="font-choices">
+              <button type="button" class="pixel-btn" value="pixel">Pixel</button>
+              <button type="button" class="pixel-btn" value="sans">Sans</button>
+              <button type="button" class="pixel-btn" value="serif">Serif</button>
+            </div>
+          </div>
+          <label>
+            <span>High contrast</span>
+            <input type="checkbox" name="highContrast" aria-label="Toggle high contrast mode" />
+          </label>
+          <label>
+            <span>Larger text</span>
+            <input type="checkbox" name="largeText" aria-label="Toggle larger text" />
+          </label>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

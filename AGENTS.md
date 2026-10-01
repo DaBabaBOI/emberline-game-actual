@@ -590,7 +590,19 @@ These were decided with the project owner. Do not change them without being aske
   numerous (tiles, trees, people). Moving instanced meshes need `frustumCulled={false}`.
 - The site is a **static export** (`output: "export"`) deployed to GitHub Pages
   under a base path. No API routes, no server code, no dynamic routes, no env
-  secrets. Use `next/link` for internal links so the base path is applied.
+  secrets. Use `next/link` for links between Next.js pages so the base path is
+  applied; link to the project page with `<a href={HOME}>` (`src/lib/home.ts`).
+- **The project page is plain HTML + CSS** (`public/index.html`,
+  `public/site/style.css`, `public/site/site.js`) so everyone on the team can
+  read and edit it. No React or Tailwind there, and keep its links relative
+  (`play/`, `site/...`) for the base path. Its icons (`site/icons/*.svg`) and
+  "What's new" list (`site/updates.js`) are made from `sprites.ts` and
+  `updates.ts` by `scripts/export-site.mjs` before every dev/build (they're
+  gitignored; never edit them). That script also stops the build if the page's
+  trade-off lines no longer match the buildings' `gain` / `landCost` text.
+  Colours for light, dark and high contrast are variables at the top and
+  bottom of `style.css`; the settings use the same storage key as the game
+  (`emberline-accessibility-settings`).
 - **Online features are optional** (`src/lib/online.ts`, Supabase project
   `shistech-hackathon`): playtest feedback (Menu > Feedback), the leaderboard
   (on the end-of-story debrief; lost games aren't listed) and cloud saves

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { HOME } from "@/lib/home";
 import { ERAS, XP, chiefTitle, formatYear, xpToReach } from "@/game/content";
 import { useGame } from "@/components/civ/game-provider";
 import { warnings } from "@/game/engine";
@@ -115,9 +115,9 @@ export function TopBar() {
         // A bronze trim from the Ancient era on.
         style={state.era >= 1 ? { borderColor: "#b0773a", boxShadow: "inset 0 -3px 0 #8a5a2b" } : undefined}
       >
-        <Link href="/" className="font-semibold text-amber-300" title="Back to the home page">
+        <a href={HOME} className="font-semibold text-amber-300" title="Back to the home page">
           ◀
-        </Link>
+        </a>
         <div className="flex flex-col leading-tight">
           <span className="max-w-40 truncate text-xs font-semibold text-white" title="Your people">
             {state.nation ?? "The Emberfolk"}
