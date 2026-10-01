@@ -1312,6 +1312,35 @@ function milestonesReached(state: GameState): [string, string, number][] {
   return out;
 }
 
+// Where Knowledge comes from, for the "How to get Knowledge" panel: what
+// teaches every day (per tick), and the one-time firsts still to come.
+export function knowledgeSources(state: GameState) {
+  const counts = countBuildings(state);
+  const bonus = state.culture === "scholars" ? 1.5 : 1;
+  const daily: { label: string; perTick: number }[] = [];
+  for (const [id, n] of Object.entries(counts)) {
+    const k = BUILDINGS_BY_ID[id]?.produces?.knowledge ?? 0;
+    if (k > 0 && n > 0)
+      daily.push({ label: `${n} ${BUILDINGS_BY_ID[id].name}${n > 1 ? "s" : ""}`, perTick: k * n * teachingShare(state, id) * bonus });
+  }
+  daily.push({ label: `Literacy ${state.meters.literacy}`, perTick: state.meters.literacy * 0.001 * bonus });
+  const M = KNOWLEDGE_MILESTONES;
+  const done = state.milestones ?? [];
+  const firsts: { label: string; gain: number }[] = [];
+  const unbuilt = Object.values(BUILDINGS_BY_ID).filter(
+    (d) => isUnlocked(state, d) && !counts[d.id] && !done.includes(`build-${d.id}`),
+  );
+  if (unbuilt.length)
+    firsts.push({ label: `Build your first ${unbuilt.slice(0, 3).map((d) => d.name).join(", ")}${unbuilt.length > 3 ? "..." : ""} (each new kind)`, gain: M.firstBuilding });
+  for (const p of M.population) if (!done.includes(`pop-${p}`)) firsts.push({ label: `Grow to ${p} people`, gain: M.populationReward });
+  if (!done.includes("raid")) firsts.push({ label: "Drive off raiders for the first time", gain: M.firstRaidWon });
+  if (!done.includes("plant") && state.researched.includes("early-farming")) firsts.push({ label: "Plant your first saplings", gain: M.firstPlanted });
+  const trips = Math.max(0, SCOUT_KNOWLEDGE.trips - state.scoutsSent);
+  if (trips) firsts.push({ label: `Send scouts (${trips} more trip${trips === 1 ? "" : "s"} teach us; big ones +2)`, gain: 1 });
+  firsts.push({ label: "Each new chief level", gain: XP.levelKnowledge });
+  return { daily, firsts: firsts.map((f) => ({ ...f, gain: Math.round(f.gain * bonus) })) };
+}
+
 // Pay out Knowledge for new milestones, once each.
 function knowledgeMilestones(state: GameState): GameState {
   const done = state.milestones ?? [];

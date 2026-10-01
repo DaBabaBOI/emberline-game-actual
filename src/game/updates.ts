@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-30",
     items: [
+      "Click the Knowledge counter (the bulb at the top) to see how to get more: the firsts still waiting for you and what teaches every day. A +N pops up whenever you learn something.",
       "In a game, the accessibility settings (dark mode, font, high contrast, larger text) are now in the Menu, so the Settings button no longer covers the Advancements button.",
     ],
   },
