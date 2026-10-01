@@ -18,6 +18,7 @@ const TERRAIN_COLORS: Record<Terrain, string> = {
   forest: "#5aa24a",
   hills: "#b3ab72",
   mountain: "#9c968f",
+  river: "#5bb8e3",
 };
 
 const FOG_HEIGHT = 0.62;
@@ -27,19 +28,27 @@ const BARE = new Color("#7a6443");
 const DRY = new Color("#b8a060");
 // Bare rock where a quarry has cut the hill away.
 const CUT = new Color("#8d8780");
-// From the Ancient era, open ground between buildings wears into dirt paths.
+// From the Ancient era, open ground between buildings wears into dirt paths;
+// with Paved Roads they become stone roads.
 const PATH = new Color("#b89a66");
+const ROAD = new Color("#a8a196");
+// In the drought the grass burns brown and the river runs low and muddy.
+const PARCHED = new Color("#c2a45e");
+const LOW_RIVER = new Color("#8fae9a");
 
 function jitter(id: number, salt: number) {
   const x = Math.sin(id * 127.1 + salt * 311.7) * 43758.5453;
   return x - Math.floor(x);
 }
 
-// Unexplored sea stays blue (just a little darker); unexplored land is hidden
-// under a layer of cloud.
+// Unexplored sea stays blue (just a little darker); unexplored land (and any
+// river running through it) is hidden under a layer of cloud.
+export function underCloud(tile: Tile) {
+  return !tile.revealed && (isLand(tile.terrain) || tile.terrain === "river");
+}
+
 export function tileTop(tile: Tile) {
-  if (tile.revealed || !isLand(tile.terrain)) return tile.height;
-  return FOG_HEIGHT;
+  return underCloud(tile) ? FOG_HEIGHT : tile.height;
 }
 
 export function HexTerrain({
@@ -47,12 +56,18 @@ export function HexTerrain({
   home,
   wear = 0,
   era = 0,
+  roads = false,
+  dry = 0,
   onHover,
   onPick,
 }: {
   tiles: Tile[];
   home?: Tile;
   era?: number;
+  // Paved Roads researched: paths are stone.
+  roads?: boolean;
+  // 0–1: how hard the drought has hit (browns the grass, lowers the river).
+  dry?: number;
   // 0–1: how worn out the land around home is (dries the grass).
   wear?: number;
   onHover: (id: number | null) => void;
@@ -92,9 +107,11 @@ export function HexTerrain({
         }
         if (tile.scorch > 0) color.lerp(CHARRED, Math.min(1, tile.scorch * 1.2));
         if (tile.dug) color.lerp(CUT, Math.min(1, tile.dug * 0.9));
-        if (paths.has(tile.id)) color.lerp(PATH, 0.45);
+        if (paths.has(tile.id)) color.lerp(roads ? ROAD : PATH, roads ? 0.7 : 0.45);
+        if (dry > 0 && (tile.terrain === "grass" || tile.terrain === "steppe" || tile.terrain === "marsh")) color.lerp(PARCHED, dry * 0.6);
+        if (dry > 0 && tile.terrain === "river") color.lerp(LOW_RIVER, dry * 0.7);
       } else {
-        if (isLand(tile.terrain)) {
+        if (underCloud(tile)) {
           color.set("#eef2f6");
           color.offsetHSL(0, 0, (jitter(tile.id, 2) - 0.5) * 0.05);
         } else {
@@ -107,7 +124,7 @@ export function HexTerrain({
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     mesh.computeBoundingSphere();
-  }, [tiles, wear, home, era]);
+  }, [tiles, wear, home, era, roads, dry]);
 
   return (
     <instancedMesh

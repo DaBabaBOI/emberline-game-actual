@@ -11,7 +11,9 @@ export type Terrain =
   | "marsh"
   | "forest"
   | "hills"
-  | "mountain";
+  | "mountain"
+  // Fresh water running from the hills to the sea (the home island has one).
+  | "river";
 
 export type Deposit = "berries" | "stone" | "fish" | "clay";
 
@@ -33,9 +35,15 @@ export interface Tile {
   scorch: number;
   // 0–1: how much of the hill a quarry has cut away. Never grows back.
   dug?: number;
+  // 0–1: how worn out the building on this tile is (Hard only; 1 = broken).
+  worn?: number;
+  // 0–1: cracks from an earthquake, and rubble from a landslide. Both fade.
+  cracked?: number;
+  rubble?: number;
 }
 
 export type RaidKind = "band" | "party" | "fire";
+export type DisasterKind = "storm" | "flood" | "earthquake" | "landslide";
 export type RaidResponse = "fight" | "hide" | "tribute";
 
 export interface Raid {
@@ -78,7 +86,7 @@ export interface Stats {
   // Seconds (ticks) the land spent below the best-ending Sustainability.
   lowLandTicks: number;
   // `accident`: people dropped into the sea or lost in the fog (missing in older saves).
-  deaths: { famine: number; disease: number; fire: number; battle: number; accident?: number };
+  deaths: { famine: number; disease: number; fire: number; battle: number; accident?: number; disaster?: number };
 }
 
 // What the debrief shows: frozen when the era ends (or the game does).
@@ -145,6 +153,8 @@ export interface BuildingDef {
   cost: Partial<Resources>;
   terrain: Terrain[];
   needsWaterNeighbor?: boolean;
+  // Must touch the river (fresh water), not just the sea.
+  needsRiver?: boolean;
   requires?: string;
   housing?: number;
   produces?: Partial<Resources>;
@@ -178,7 +188,10 @@ export type TallyKey =
   | "trained"
   | "scouts"
   | "planted"
-  | "raidsWon";
+  | "raidsWon"
+  | "caravans"
+  | "disasters"
+  | "landslides";
 
 // One thing to do before an advancement can be researched.
 export interface Goal {
@@ -190,7 +203,7 @@ export interface Goal {
   amount: number;
   key?: TallyKey;
   building?: string;
-  resource?: "food" | "currency";
+  resource?: "food" | "currency" | "knowledge";
 }
 
 // What Elder Ama walks you through right after an advancement: place a building
@@ -254,6 +267,23 @@ export interface GameState {
   // The Roman legion on its way (seen by scouts), and whether it has been fought.
   legion?: { size: number; arriveTick: number } | null;
   legionDone?: boolean;
+  // When the legion was beaten (tick and year): the Ancient era's clock runs from then.
+  legionBeatenTick?: number;
+  legionBeatenYear?: number;
+  // The great drought that ends the Classical era: when the elders warned of it,
+  // when it starts and when the rains come back. Done once it is over.
+  drought?: { warnTick: number; startTick: number; endTick: number } | null;
+  droughtDone?: boolean;
+  // A natural disaster: warned of at warnTick, strikes at startTick, over at
+  // endTick. `tiles` are where it hits (flooded tiles, the quake's centre, the slope).
+  disaster?: { kind: DisasterKind; warnTick: number; startTick: number; endTick: number; tiles: number[] } | null;
+  nextDisasterTick?: number;
+  // Fields a flood left rich silt on, until this tick.
+  silt?: Record<number, number>;
+  // The discovery scene on screen (an advancement or secret just found), if any.
+  cutscene?: string | null;
+  // Caravans out trading with the Silk Steppe: when each left and when it's back.
+  caravans?: { start: number; back: number }[];
   // Running totals for the debrief, and the debrief on screen (if any).
   stats?: Stats;
   debrief?: Debrief | null;
@@ -282,6 +312,8 @@ export interface GameState {
   // When the next small moment happens (missing in older saves).
   nextMomentTick?: number;
   lastMoment?: string;
+  // The last small moment and where it happened, so the map can show it.
+  moment?: { id: string; tick: number; tile: number } | null;
   // Famine emergency measures (missing in older saves).
   forageReadyAt?: number;
   seedEatenUntil?: number;
