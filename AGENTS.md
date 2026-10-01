@@ -159,6 +159,12 @@ These were decided with the project owner. Do not change them without being aske
   "roof" warning says what was lost when people are left without homes. The
   top bar and Elder Ama's panels sit above the guide's dimmed overlay, so the
   game never looks frozen during a guided step.
+- **Fire keepers** (`tended`, `keepFires`, `state.untended`, action `setKeeper`):
+  every campfire has a keeper by default who relights it as it burns out for
+  `RELIGHT_WOOD`, if there is wood (counts as a relight for Firekeeping's
+  goal), never during a storm. The campfire panel has a "Keep it lit" switch.
+  "A campfire burned out" is only said when a fire stays out. The gust moment
+  only blows out untended fires.
 - **Small moments** (`SMALL_MOMENTS`, `MOMENTS` / `smallMoment()` in engine.ts):
   every 20-40 ticks (30-60 s) after the tutorial, one little thing happens,
   picked from those that fit the island right now (a deer herd if the forest

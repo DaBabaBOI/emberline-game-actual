@@ -138,6 +138,7 @@ export type Action =
   | { type: "devXp" }
   | { type: "raidResponse"; choice: RaidResponse }
   | { type: "devRaidKind"; kind: RaidKind }
+  | { type: "setKeeper"; tileId: number; on: boolean }
   | { type: "devMoment"; id?: string }
   | { type: "devStarve" }
   | { type: "famineRelief"; kind: FamineRelief }
@@ -1361,6 +1362,33 @@ export function isLit(state: GameState, tile: Tile) {
   return tile.building === "campfire" && (state.fires?.[tile.id] ?? 0) > 0;
 }
 
+// Does someone tend this campfire (add wood when it burns out)? Yes unless
+// the player sent the keeper away.
+export function tended(state: GameState, tile: Tile) {
+  return tile.building === "campfire" && !(state.untended ?? []).includes(tile.id);
+}
+
+// Keepers add wood to their fires as they burn out (1 wood each, like
+// relighting), as long as there is wood and no storm is putting them out.
+function keepFires(state: GameState): GameState {
+  if (state.tutorialStep < TUTORIAL.length) return state;
+  if (state.disaster?.kind === "storm" && disasterActive(state)) return state;
+  let next = state;
+  for (const t of state.tiles) {
+    if (!tended(next, t) || isLit(next, t) || next.resources.wood < RELIGHT_WOOD) continue;
+    next = addTally(
+      {
+        ...next,
+        fires: { ...next.fires, [t.id]: burnTicks(next) },
+        resources: { ...next.resources, wood: next.resources.wood - RELIGHT_WOOD },
+      },
+      "relights",
+      1,
+    );
+  }
+  return next;
+}
+
 export function litFires(state: GameState) {
   return state.tiles.filter((t) => isLit(state, t));
 }
@@ -2029,6 +2057,10 @@ function tickOnce(state: GameState): GameState {
     modifiers,
   };
 
+  next = keepFires(next);
+  // "A campfire burned out" only if one is still out after the keepers' turn.
+  const justOut = state.tiles.filter((t) => t.building === "campfire" && state.fires?.[t.id] === 1);
+  if (burnedOut && justOut.every((t) => isLit(next, t))) next = { ...next, log: next.log.slice(1) };
   if (next.tick % 3 === 0) next = growForests(next);
   next = wearBuildings(next);
   next = cutHills(next);
@@ -2116,6 +2148,8 @@ const aBuilding = (s: GameState, ids: string[]) => pick(s, nearHome(s, (t) => !!
 const addFood = (s: GameState, n: number) => ({ ...s, resources: { ...s.resources, food: Math.max(0, s.resources.food + n) } });
 const addMood = (s: GameState, n: number) => ({ ...s, modifiers: { ...s.modifiers, happiness: s.modifiers.happiness + n } });
 
+const untendedFires = (s: GameState) => litFires(s).filter((t) => !tended(s, t));
+
 const MOMENTS: Moment[] = [
   { id: "herd", when: (s) => forestCover(s) >= 0.5, apply: (s) => addFood(s, 8), text: "A herd of deer passed the forest edge. The hunters brought back meat (+8 food).", where: forestEdge },
   {
@@ -2141,14 +2175,15 @@ const MOMENTS: Moment[] = [
   },
   {
     id: "gust",
-    when: (s) => litFires(s).length >= 2,
+    // Only a fire nobody tends: a keeper would just relight it.
+    when: (s) => litFires(s).length >= 2 && untendedFires(s).length > 0,
     apply: (s) => {
-      const fire = litFires(s)[Math.floor(s.tick / 7) % litFires(s).length];
+      const fire = untendedFires(s)[Math.floor(s.tick / 7) % untendedFires(s).length];
       return { ...s, fires: { ...s.fires, [fire.id]: 0 } };
     },
     text: "A gust of wind blew out a campfire. Click it to relight it.",
     // The fire that went out (the same one apply() picks).
-    where: (s) => litFires(s)[Math.floor(s.tick / 7) % litFires(s).length],
+    where: (s) => untendedFires(s)[Math.floor(s.tick / 7) % untendedFires(s).length],
   },
   {
     id: "rain",
@@ -3281,6 +3316,17 @@ function step(state: GameState, action: Action): GameState {
         tiles: state.tiles.map((t) => (t.id === tile.id ? { ...t, building: null } : t)),
         resources,
         log: [`Sold a ${def.name}.`, ...state.log].slice(0, 30),
+      });
+    }
+
+    case "setKeeper": {
+      const tile = state.tiles[action.tileId];
+      if (!tile || tile.building !== "campfire") return state;
+      const rest = (state.untended ?? []).filter((id) => id !== tile.id);
+      return withMeters({
+        ...state,
+        untended: action.on ? rest : [...rest, tile.id],
+        log: [action.on ? "Someone will keep this fire lit." : "Nobody tends this fire now: relight it yourself.", ...state.log].slice(0, 30),
       });
     }
 

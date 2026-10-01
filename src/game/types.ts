@@ -331,6 +331,9 @@ export interface GameState {
   // Recently recovered people who can't catch it again for a while.
   immune?: number;
   outbreakDeaths?: number;
+  // Campfires whose keeper the player sent away (tile ids). Every other
+  // campfire has someone who adds wood when it burns out.
+  untended?: number[];
   // Seconds of fuel left in each campfire, by tile id. 0 or missing = out.
   fires?: Record<number, number>;
   // Elder lessons already shown, the one on screen, and when it appeared.

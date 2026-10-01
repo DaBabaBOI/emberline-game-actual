@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Fire keepers: every campfire now has someone who adds wood when it burns out (1 wood each time, like relighting), so you no longer have to keep clicking. Click a fire to send its keeper away and save wood. Keepers can't relight in a storm.",
       "If people are left without a roof, a warning says so, and what was lost (a house burned by raiders or sparks, wrecked by a storm, or broken down).",
       "Clicking where you can't plant or build now tells you why, instead of doing nothing.",
       "Short of Knowledge for Agriculture? The goal line now points you to Storytelling and Elder's Huts, which teach every day.",
