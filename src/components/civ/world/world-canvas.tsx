@@ -34,7 +34,7 @@ import { SmallMoment } from "./moments";
 import { tileAnchor } from "@/components/civ/guide";
 import { useGuide } from "@/components/civ/hud/guide-overlay";
 import type { Tile } from "@/game/types";
-import { BiomeDetails, Deposits, Forests, HexTerrain, Mountains, tileTop } from "./hex-terrain";
+import { BiomeDetails, Deposits, Forests, HexTerrain, Mountains, tileTop, treeSpots } from "./hex-terrain";
 import { MODELS } from "./building-models";
 import { BattleScene, FireVictims, Raiders, Villagers, Warriors } from "./villagers";
 import { PickUp } from "./pick-up";
@@ -52,29 +52,35 @@ function HexOutline({ x, y, z, color }: { x: number; y: number; z: number; color
   );
 }
 
-// The old grove the tribe swore to protect: small standing stones on each of its
-// tiles and a label over the middle, so it's clear which trees are safe.
+// The old grove the tribe swore to protect: a red cloth tied round each of its
+// trees (as people do at real sacred groves) and a label over the
+// middle, so it's clear which trees are safe.
 function OldGrove({ tiles, ids }: { tiles: Tile[]; ids: number[] }) {
   const grove = ids.map((id) => tiles[id]).filter((t): t is Tile => !!t && t.revealed);
   if (!grove.length) return null;
   const cx = grove.reduce((sum, t) => sum + t.x, 0) / grove.length;
   const cz = grove.reduce((sum, t) => sum + t.z, 0) / grove.length;
   const centre = grove.reduce((best, t) => (Math.hypot(t.x - cx, t.z - cz) < Math.hypot(best.x - cx, best.z - cz) ? t : best));
+  const trees = grove.flatMap(treeSpots);
   return (
     <group>
-      {grove.map((t) =>
-        [0.3, 2.4, 4.5].map((a) => (
-          <mesh
-            key={`${t.id}-${a}`}
-            position={[t.x + Math.cos(a) * 0.78, t.height + 0.12, t.z + Math.sin(a) * 0.78]}
-            castShadow
-            raycast={() => null}
-          >
-            <boxGeometry args={[0.1, 0.26, 0.08]} />
-            <meshStandardMaterial color="#cfc8bb" flatShading />
+      {trees.map((p, i) => (
+        // Matches the tree in Forests: its crown is a cone from 0.17 to 0.67
+        // (times its size), so a ring of this radius sits snug on the branches.
+        <group key={i} position={[p.x, p.y + 0.28 * p.s, p.z]} scale={p.s} rotation={[0, i * 1.7, 0]}>
+          <mesh rotation={[Math.PI / 2, 0, 0]} raycast={() => null}>
+            <torusGeometry args={[0.158, 0.018, 6, 14]} />
+            <meshStandardMaterial color="#d0312d" />
           </mesh>
-        )),
-      )}
+          {/* The loose ends hanging down. */}
+          {[0, 0.5].map((a) => (
+            <mesh key={a} position={[Math.cos(a) * 0.165, -0.05, Math.sin(a) * 0.165]} rotation={[0, -a, 0.2]} raycast={() => null}>
+              <boxGeometry args={[0.012, 0.09, 0.03]} />
+              <meshStandardMaterial color="#d0312d" />
+            </mesh>
+          ))}
+        </group>
+      ))}
       <Html zIndexRange={[15, 0]} center position={[centre.x, centre.height + 1.9, centre.z]} style={{ pointerEvents: "none" }}>
         <div className="pixel-panel font-pixel whitespace-nowrap px-1.5 py-0.5 text-[11px]" data-testid="grove-label">
           Old grove (protected)

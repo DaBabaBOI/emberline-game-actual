@@ -573,6 +573,11 @@ These were decided with the project owner. Do not change them without being aske
   only mirrors them (`FEEDBACK_LIMITS` in `online.ts`, a hidden honeypot field,
   a 60 s cooldown) to save a round trip. If you change one, change the SQL file
   and the live migration together.
+- **Things people hold** (`figures.tsx`): place them with `handAt` (where a hand
+  is for an arm angle) and `holdStick` (a stick gripped in that hand, pointing
+  along an angle). Angles use the arms' convention: 0 = straight down,
+  -PI/2 = straight ahead, -PI = straight up; figures face +z. Check new poses
+  side-on in a browser before shipping.
 - Keep the tutorial (`TUTORIAL` in `content.ts`) working when you change buildings.
 - Before committing, run `npm run lint`, `npm run typecheck` and `npm run build`.
   All three must pass.

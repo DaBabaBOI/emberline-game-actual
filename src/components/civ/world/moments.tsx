@@ -18,7 +18,6 @@ const LABELS: Record<string, { icon: IconId; text: string }> = {
   herd: { icon: "meat", text: "Deer at the forest edge" },
   berries: { icon: "basket", text: "Berries found" },
   baby: { icon: "smile", text: "A baby was born" },
-  windfall: { icon: "log", text: "A tree blew down" },
   gust: { icon: "flame", text: "The wind blew a fire out" },
   rain: { icon: "wheat", text: "Rain on the fields" },
   story: { icon: "feather", text: "Stories by the fire" },
@@ -111,28 +110,6 @@ function Berries() {
   );
 }
 
-// An old tree tipping over, then lying there as firewood.
-function Windfall() {
-  const tree = useRef<Group>(null);
-  const age = useAge();
-  useFrame(({ clock }) => {
-    const a = age(clock.elapsedTime);
-    if (tree.current) tree.current.rotation.z = -Math.min(Math.PI / 2 - 0.1, Math.max(0, a - 0.8) ** 2 * 0.9);
-  });
-  return (
-    <group ref={tree} position={[0.3, 0, 0]}>
-      <mesh castShadow position={[0, 0.45, 0]}>
-        <cylinderGeometry args={[0.06, 0.08, 0.9, 6]} />
-        <meshStandardMaterial color="#6b4a2b" />
-      </mesh>
-      <mesh castShadow position={[0, 1.05, 0]}>
-        <coneGeometry args={[0.35, 0.8, 7]} />
-        <meshStandardMaterial color="#2d6e35" />
-      </mesh>
-    </group>
-  );
-}
-
 // Streaks of wind swirling round (a gust, or dust blowing off bare land).
 function Wind({ color, opacity }: { color: string; opacity: number }) {
   const streaks = useRef<(Mesh | null)[]>([]);
@@ -158,30 +135,64 @@ function Wind({ color, opacity }: { color: string; opacity: number }) {
   );
 }
 
-// A small dark cloud raining on the fields.
+// A rain cloud drifting in from upwind. Once it is over the field the rain
+// starts, falling from under the cloud, and the soil darkens as it gets wet.
+const RAIN_ARRIVES = 2.6; // seconds to drift in
+const RAIN_DROPS = 36;
+// Fixed spots under the cloud for each drop (spread evenly, not at random).
+const DROP_SPOTS = Array.from({ length: RAIN_DROPS }, (_, i) => ({
+  x: ((i % 6) / 5 - 0.5) * 1.3 + (Math.floor(i / 6) % 2) * 0.12,
+  z: (Math.floor(i / 6) / 5 - 0.5) * 0.9,
+  offset: ((i * 7) % RAIN_DROPS) / RAIN_DROPS,
+}));
+
 function Rain() {
+  const cloud = useRef<Group>(null);
   const drops = useRef<(Mesh | null)[]>([]);
+  const wet = useRef<Mesh>(null);
+  const age = useAge();
   useFrame(({ clock }) => {
+    const a = age(clock.elapsedTime);
+    const k = Math.min(1, a / RAIN_ARRIVES);
+    const ease = 1 - (1 - k) ** 3;
+    if (cloud.current) cloud.current.position.x = -5 * (1 - ease);
+    // Rain starts as the cloud arrives and gets heavier over a second.
+    const heavy = Math.min(1, Math.max(0, (a - RAIN_ARRIVES + 0.4) / 1));
     drops.current.forEach((m, i) => {
       if (!m) return;
-      const k = (clock.elapsedTime * 1.4 + (i * 0.37) % 1) % 1;
-      m.position.set(((i * 0.53) % 1.4) - 0.7, 2 - k * 1.9, ((i * 0.29) % 1) - 0.5);
+      const spot = DROP_SPOTS[i];
+      const fall = (a * 1.6 + spot.offset) % 1;
+      m.position.set(spot.x, 1.75 - fall * 1.75, spot.z);
+      m.visible = spot.offset < heavy;
     });
+    if (wet.current) (wet.current.material as { opacity: number }).opacity = Math.min(0.35, Math.max(0, a - RAIN_ARRIVES) * 0.08);
   });
   return (
     <group>
-      {[-0.4, 0, 0.4].map((x) => (
-        <mesh key={x} position={[x, 2.2, 0]}>
-          <sphereGeometry args={[0.45, 8, 6]} />
-          <meshStandardMaterial color="#8a93a0" />
-        </mesh>
-      ))}
-      {Array.from({ length: 18 }, (_, i) => (
-        <mesh key={i} ref={(el) => void (drops.current[i] = el)}>
-          <boxGeometry args={[0.02, 0.14, 0.02]} />
-          <meshStandardMaterial color="#4a90e2" />
-        </mesh>
-      ))}
+      <mesh ref={wet} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+        <circleGeometry args={[0.85, 6]} />
+        <meshBasicMaterial color="#2f2414" transparent opacity={0} depthWrite={false} />
+      </mesh>
+      <group ref={cloud} position={[-5, 0, 0]}>
+        {[
+          [-0.5, 2.05, 0, 0.38],
+          [0, 2.2, 0.05, 0.5],
+          [0.5, 2.05, -0.05, 0.4],
+          [-0.2, 2.0, -0.3, 0.35],
+          [0.25, 2.0, 0.3, 0.35],
+        ].map(([x, y, z, r]) => (
+          <mesh key={`${x}${z}`} position={[x, y, z]} scale={[1, 0.7, 1]} castShadow>
+            <sphereGeometry args={[r, 10, 8]} />
+            <meshStandardMaterial color="#7c8592" flatShading />
+          </mesh>
+        ))}
+        {DROP_SPOTS.map((_, i) => (
+          <mesh key={i} ref={(el) => void (drops.current[i] = el)} visible={false}>
+            <boxGeometry args={[0.03, 0.22, 0.03]} />
+            <meshStandardMaterial color="#a9d4f5" emissive="#4a90e2" emissiveIntensity={0.3} />
+          </mesh>
+        ))}
+      </group>
     </group>
   );
 }
@@ -251,8 +262,6 @@ function Scene({ id, tile }: { id: string; tile: Tile }) {
       return <Berries />;
     case "baby":
       return <Rising color="#f28cb1" count={6} spread={0.25} size={0.08} speed={0.4} />;
-    case "windfall":
-      return <Windfall />;
     case "gust":
       return <Wind color="#ffffff" opacity={0.8} />;
     case "rain":

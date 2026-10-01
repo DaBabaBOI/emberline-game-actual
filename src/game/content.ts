@@ -934,7 +934,7 @@ export const EVENTS: EventCard[] = [
         label: "Protect the grove forever (+8 happiness, woodcutters must leave it)",
         effect: { protectForest: 4, happiness: 8 },
       },
-      { label: "Cut it down (+40 wood, the grove is gone)", effect: { clearForest: 4, resources: { wood: 40 }, happiness: -4 } },
+      { label: "Cut it down (+40 wood, you lose the grove)", effect: { clearForest: 4, resources: { wood: 40 }, happiness: -4 } },
     ],
     realWorld: "Many cultures have protected sacred groves, and some of them still stand today as islands of old forest.",
   },

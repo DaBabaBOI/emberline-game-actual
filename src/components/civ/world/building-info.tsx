@@ -1,6 +1,6 @@
 "use client";
 
-import { BUILDINGS_BY_ID, FIRE_SCARE, QUARRY_DUST } from "@/game/content";
+import { BUILDINGS_BY_ID, FIRE_SCARE, QUARRY_DUST, WEAR } from "@/game/content";
 import {
   dusty,
   rainfall,
@@ -21,10 +21,23 @@ import {
   wearsOut,
   woodcutterYield,
 } from "@/game/engine";
-import type { GameState } from "@/game/types";
+import type { GameState, Tile } from "@/game/types";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { CountdownFor } from "@/components/civ/hud/countdown";
 import { cn } from "@/lib/utils";
+
+// What wear means for this building, in one short line (Hard mode).
+function wearHelp(tile: Tile) {
+  const w = tile.worn ?? 0;
+  const pace = WEAR.busyBuildings.includes(tile.building ?? "")
+    ? " Busy buildings like this one wear out faster."
+    : WEAR.sturdyBuildings.includes(tile.building ?? "")
+      ? " Sturdy buildings like this one wear out slower."
+      : "";
+  if (w >= 1) return "Worn out completely: it makes nothing until you repair it.";
+  if (w > WEAR.slows) return "Below 50% it makes less, and at 0% it stops. Repairing puts it back to 100%.";
+  return `Buildings wear down with use. Below 50% they make less, and at 0% they stop. Repairing puts it back to 100%.${pace}`;
+}
 
 // The panel that opens when you click one of your buildings: its trade-off,
 // and for woodcutters the choice between clear-cutting and selective logging.
@@ -84,6 +97,9 @@ export function BuildingInfo({
               style={{ width: `${(1 - (tile.worn ?? 0)) * 100}%` }}
             />
           </div>
+          <p className="mb-1 text-[11px] leading-snug text-stone-600" data-testid="wear-help">
+            {wearHelp(tile)}
+          </p>
           {(tile.worn ?? 0) > 0.05 && (
             <button
               type="button"
@@ -92,7 +108,7 @@ export function BuildingInfo({
               className="pixel-btn flex w-full items-center justify-center gap-1 bg-amber-400 px-2 py-1 text-[#2b2119] disabled:opacity-40"
             >
               <PixelIcon name="hammer" size={12} />
-              Repair ·{" "}
+              Repair to 100% ·{" "}
               {Object.entries(repairCost(state, tile))
                 .map(([k, v]) => `${v} ${k === "currency" ? "coins" : k}`)
                 .join(", ")}
