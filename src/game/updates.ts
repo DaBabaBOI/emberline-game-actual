@@ -9,6 +9,12 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "People helping at farms now hold the hoe in both hands, lift it overhead and bring it down into the soil (an axe at the woodcutter, a pick at the quarry). Warriors hold their club, spear (now with a stone point) or sword in the hand, ready.",
+      "Rain on the fields: the cloud now drifts in from the side, and the rain starts once it is over the field.",
+      "The protected old grove is marked with red cloth tied round its trees, instead of grey posts.",
+      "Hard mode: a building's panel now says what wear does (below 50% it makes less, at 0% it stops) and that repairing puts it back to 100%.",
+      "Removed the 'A tree blew down' moment.",
+      "The old grove's second choice now says plainly that you lose the grove.",
       "Feedback has a spam guard: very short messages, link spam, repeats and sending too often are refused with a short reason.",
       "Fixed: the Close button on the Advancements screen could not be clicked (the top bar was covering it).",
       "Clicking a campfire no longer picks up the people sitting round it by accident, and dropping someone into a fire or the open sea now takes a second click to confirm.",

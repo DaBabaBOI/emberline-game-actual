@@ -2167,13 +2167,6 @@ const MOMENTS: Moment[] = [
     where: (s) => aBuilding(s, ["hut", "house", "townhouse"]) ?? s.tiles[s.startTile],
   },
   {
-    id: "windfall",
-    when: (s) => forestCover(s) >= 0.3,
-    apply: (s) => ({ ...s, resources: { ...s.resources, wood: s.resources.wood + 4 } }),
-    text: "The wind brought down an old tree: free firewood (+4 wood).",
-    where: forestEdge,
-  },
-  {
     id: "gust",
     // Only a fire nobody tends: a keeper would just relight it.
     when: (s) => litFires(s).length >= 2 && untendedFires(s).length > 0,
