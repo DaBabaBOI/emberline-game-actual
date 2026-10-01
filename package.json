@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "site": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/export-site.mjs",
+    "predev": "npm run site",
     "dev": "next dev",
+    "prebuild": "npm run site",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",

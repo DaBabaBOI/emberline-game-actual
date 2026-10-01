@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { HOME } from "@/lib/home";
 import type { ReactNode } from "react";
 import { ERAS, formatYear, LESSONS, METERS, METER_SDG, MIN_SUSTAINABILITY_FOR_BEST_ENDING } from "@/game/content";
 import { clearSave, currentGoal, makeDebrief, readyForNextEra, secs } from "@/game/engine";
@@ -227,9 +227,9 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
               >
                 New game
               </button>
-              <Link href="/" className="pixel-btn font-pixel bg-white px-4 py-2">
+              <a href={HOME} className="pixel-btn font-pixel bg-white px-4 py-2">
                 Home
-              </Link>
+              </a>
             </>
           )}
         </div>

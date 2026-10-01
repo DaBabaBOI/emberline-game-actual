@@ -3,11 +3,12 @@ import localFont from "next/font/local";
 import { AccessibilitySettings } from "@/components/accessibility-settings";
 import "./globals.css";
 
-// The fonts live in the repo (src/app/fonts, SIL Open Font License), so the
-// site builds without an internet connection.
-const pixel = localFont({ src: "./fonts/PixelifySans-latin.woff2", weight: "400 700", variable: "--font-pixel", display: "swap" });
+// The fonts live in the repo (public/site/fonts, SIL Open Font License), so the
+// site builds without an internet connection. The project page
+// (public/index.html) uses the same two files.
+const pixel = localFont({ src: "../../public/site/fonts/PixelifySans-latin.woff2", weight: "400 700", variable: "--font-pixel", display: "swap" });
 // Pixelify's 2, 5 and 8 look alike, so numbers use VT323 instead.
-const digits = localFont({ src: "./fonts/VT323-latin.woff2", weight: "400", variable: "--font-num", display: "swap" });
+const digits = localFont({ src: "../../public/site/fonts/VT323-latin.woff2", weight: "400", variable: "--font-num", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Emberline",

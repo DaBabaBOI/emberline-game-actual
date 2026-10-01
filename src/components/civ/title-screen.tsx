@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { HOME } from "@/lib/home";
 import { UpdatesBar } from "@/components/updates-bar";
 import { CULTURES, DIFFICULTIES, ERAS } from "@/game/content";
 import { DEFAULT_NATION, type NewGameOptions } from "@/game/engine";
@@ -199,9 +199,9 @@ export function TitleScreen({
           </form>
 
           <p className="mt-6 text-center text-sm text-stone-500">
-            <Link href="/" className="underline">
+            <a href={HOME} className="underline">
               Back to the project page
-            </Link>
+            </a>
           </p>
         </div>
       </div>

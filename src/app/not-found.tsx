@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HOME } from "@/lib/home";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 
 export default function NotFound() {
@@ -24,12 +25,12 @@ export default function NotFound() {
             </div>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <Link
-                href="/"
+              <a
+                href={HOME}
                 className="pixel-btn font-pixel inline-flex items-center justify-center bg-emerald-600 px-4 py-3 text-lg font-semibold text-white hover:bg-emerald-500"
               >
                 Back to the landing page
-              </Link>
+              </a>
               <Link
                 href="/play"
                 className="pixel-btn font-pixel inline-flex items-center justify-center bg-amber-400 px-4 py-3 text-lg font-semibold text-stone-900 hover:bg-amber-300"
