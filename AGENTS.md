@@ -579,6 +579,10 @@ These were decided with the project owner. Do not change them without being aske
   -PI/2 = straight ahead, -PI = straight up; figures face +z. Check new poses
   side-on in a browser before shipping.
 - Keep the tutorial (`TUTORIAL` in `content.ts`) working when you change buildings.
+- During guided steps the camera may turn and zoom but not slide (`enablePan`
+  off), and the guide overlay forwards right-button presses, touches and the
+  wheel to the map's outer element (`[data-world-map]`), where drei's controls
+  listen. Clicks outside the highlighted spot must stay swallowed.
 - Before committing, run `npm run lint`, `npm run typecheck` and `npm run build`.
   All three must pass.
 - Don't rename the game, change the art style, or restructure folders unless asked.

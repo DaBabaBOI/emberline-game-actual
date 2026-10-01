@@ -217,6 +217,8 @@ export function WorldCanvas() {
 
   return (
     <Canvas
+      // The tutorial overlay forwards camera turns and zooms here (guide-overlay.tsx).
+      data-world-map=""
       shadows
       camera={{
         position: portrait ? [home.x, 30, home.z + 27] : [home.x, 18, home.z + 16],
@@ -487,7 +489,10 @@ export function WorldCanvas() {
       <GuideAnchor tile={guideTile === null ? null : state.tiles[guideTile]} />
 
       <MapControls
-        enabled={!guide.target && !holding}
+        // During guided steps the camera still turns and zooms, but doesn't
+        // slide, so a click on the highlighted spot can't turn into a drag.
+        enabled={!holding}
+        enablePan={!guide.target}
         target={target}
         enableDamping
         dampingFactor={0.12}
