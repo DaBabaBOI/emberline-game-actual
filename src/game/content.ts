@@ -197,7 +197,7 @@ export const BUILDINGS: BuildingDef[] = [
     cost: { wood: 12 },
     terrain: ["beach", "grass", "steppe"],
     needsWaterNeighbor: true,
-    requires: "spears",
+    requires: "firekeeping",
     produces: { wood: -0.03 },
   },
   {
@@ -692,6 +692,7 @@ export const TREE: TreeNode[] = [
     era: 0,
     cost: 6,
     requires: ["fire"],
+    unlocks: ["watchfire"],
   },
   {
     id: "fishing",
@@ -716,12 +717,11 @@ export const TREE: TreeNode[] = [
   {
     id: "spears",
     name: "Hunting Spears",
-    description: "+15% food. Warriors can carry spears: train new spearmen, or give your warriors spears, to fight 50% harder. Unlocks the Watch Fire.",
+    description: "+15% food. Warriors can carry spears: train new spearmen, or give your warriors spears, to fight 50% harder.",
     branch: "military",
     era: 0,
     cost: 6,
     requires: ["toolmaking"],
-    unlocks: ["watchfire"],
   },
   {
     id: "herbalism",
@@ -1139,7 +1139,7 @@ export const ADVANCEMENT_GOALS: Record<string, Goal[]> = {
 export const AFTER_STEPS: Record<string, AfterStep> = {
   storytelling: { build: "elder", text: "Now our elders can teach. Build an Elder's Hut: the children will learn from it, and we will gain Knowledge every day." },
   toolmaking: { build: "quarry", text: "Sharp stone tools! Place a Stone Quarry on the hills. Remember: it cuts the hill away for good, and its dust spoils crops nearby." },
-  firekeeping: { text: "We know how to bank a fire now: every campfire burns 1.5 times as long (50% longer) before it needs more wood. Less wood cut, less smoke." },
+  firekeeping: { text: "We know how to bank a fire now: every campfire burns 1.5 times as long (50% longer) before it needs more wood. Less wood cut, less smoke. We can also keep a Watch Fire burning on the shore, to see raiders coming sooner." },
   fishing: { build: "fishing", text: "Rafts! Place a Fishing Spot on the shore, next to the water. Fish near the coast give even more." },
   "early-farming": { build: "farm", text: "We can plant grain. Place Farmland on open grass: it feeds many, but it takes the land from the wild." },
   spears: { upgrade: true, text: "Stone-tipped spears! Our hunters bring back more food. Give a warrior a spear with the Spear button: in a fight, a spearman counts as 1.5 warriors (a warrior without one counts as 1). Every warrior you train from now on gets a spear." },

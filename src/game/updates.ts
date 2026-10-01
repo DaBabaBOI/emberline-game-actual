@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "The Watch Fire now comes with Firekeeping (keeping a fire alive) instead of Hunting Spears.",
       "The project page is now plain HTML and CSS, so the whole team can read and edit it. It looks the same, except that its pictures are no longer squashed and its footer can be read in dark mode.",
       "Dropping someone into a fire or the sea now really hurts: the tribe grieves, −35 happiness for each death (fading over 3 minutes), even when everyone was happy. Two in a row can make your people leave. Before, the loss hardly showed.",
       "The Medieval & Renaissance era! After the great drought, choose a landmark (Great Library, Cathedral or Grand Harbour) and build it in three stages to enter the Middle Ages.",
