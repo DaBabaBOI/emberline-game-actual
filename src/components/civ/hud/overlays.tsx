@@ -9,6 +9,7 @@ import {
   defenseStrength,
   famineOptions,
   inDrought,
+  MOMENT_IDS,
   rainfall,
   secs,
   tributeCost,
@@ -538,6 +539,20 @@ export function DevPanel() {
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devMoment" })}>
           Moment
         </button>
+        {/* One moment in particular (only if it can happen right now). */}
+        <select
+          aria-label="Pick a moment"
+          className="bg-[#4a3b2e] px-1 py-1"
+          value=""
+          onChange={(e) => e.target.value && dispatch({ type: "devMoment", id: e.target.value })}
+        >
+          <option value="">Moment...</option>
+          {MOMENT_IDS().map((id) => (
+            <option key={id} value={id}>
+              {id}
+            </option>
+          ))}
+        </select>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devStarve" })}>
           Starve
         </button>
