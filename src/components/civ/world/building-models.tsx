@@ -203,10 +203,27 @@ export function GathererModel({ opacity }: ModelProps) {
   );
 }
 
+// Buildings are drawn this much bigger on the map, and turned by a sixth of a
+// circle per tile id (world-canvas.tsx), so each one faces its own way.
+export const BUILDING_SCALE = 1.55;
+export const buildingTurn = (tileId: number) => (tileId % 6) * (Math.PI / 3);
+
+// Where a point in a building's model is on the map (y ignored).
+export function onBuilding(tile: { id: number; x: number; z: number }, x: number, z: number) {
+  const a = buildingTurn(tile.id);
+  return {
+    x: tile.x + (x * Math.cos(a) + z * Math.sin(a)) * BUILDING_SCALE,
+    z: tile.z + (-x * Math.sin(a) + z * Math.cos(a)) * BUILDING_SCALE,
+  };
+}
+
+// The woodcutter's chopping block (the stump with the axe in it), in the model.
+export const CHOPPING_BLOCK = { x: 0.25, z: 0.2, r: 0.13 };
+
 export function WoodcutterModel({ opacity }: ModelProps) {
   return (
     <group>
-      <Part color="#7d5a3c" opacity={opacity} position={[0.25, 0.07, 0.2]}>
+      <Part color="#7d5a3c" opacity={opacity} position={[CHOPPING_BLOCK.x, 0.07, CHOPPING_BLOCK.z]}>
         <cylinderGeometry args={[0.11, 0.13, 0.14, 10]} />
       </Part>
       <Part color="#c9a77a" opacity={opacity} position={[0.25, 0.145, 0.2]}>
