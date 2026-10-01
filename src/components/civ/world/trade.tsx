@@ -229,3 +229,21 @@ export function SeaTraffic({ state, home }: { state: GameState; home: Tile }) {
     </group>
   );
 }
+
+// The harbour closed against the plague: ships wait at anchor offshore, not
+// allowed to land.
+export function WaitingShips({ state, home }: { state: GameState; home: Tile }) {
+  if (!state.plague?.closed) return null;
+  const route = routeFor(state.tiles, home, 1);
+  if (!route) return null;
+  // Most of the way out from our coast, held there.
+  const at = { x: route.from.x + (route.to.x - route.from.x) * 0.25, z: route.from.z + (route.to.z - route.from.z) * 0.25 };
+  const held = { from: route.from, to: at };
+  return (
+    <group>
+      {[-1.2, 0, 1.2].map((side) => (
+        <Ship key={side} route={held} start={-100} back={0} tick={state.tick} speed={0} sail="#d8d0bd" stripe="#e6c229" oneWay={{ arrive: 0.01 }} side={side} />
+      ))}
+    </group>
+  );
+}

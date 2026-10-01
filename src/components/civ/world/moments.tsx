@@ -230,8 +230,8 @@ function Birds() {
   );
 }
 
-// Mice darting about.
-function Mice() {
+// Mice (or the plague's rats) darting about.
+export function Mice() {
   const mice = useRef<(Mesh | null)[]>([]);
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;

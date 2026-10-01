@@ -10,6 +10,7 @@ import {
   DEMOLISH_TOOL,
   dustNote,
   landmarkDone,
+  inPlague,
   nextOutpostUpkeep,
   perSecond,
   sparkNote,
@@ -41,11 +42,12 @@ import { BiomeDetails, Deposits, Forests, HexTerrain, Mountains, tileTop, treeSp
 import { MODELS } from "./building-models";
 import { BattleScene, FireVictims, Raiders, Villagers, Warriors } from "./villagers";
 import { PickUp } from "./pick-up";
-import { SeaTraffic, TradeShips } from "./trade";
+import { SeaTraffic, TradeShips, WaitingShips } from "./trade";
 import { Cracks, DisasterDust, disasterView, FloodWater, QuakeShake, Rubble, StormRain } from "./disasters";
 import { Wildlife } from "./wildlife";
 import { CampfireSmoke, Haze, Wildfire } from "./atmosphere";
 import { UnderConstruction } from "./medieval-models";
+import { Mice } from "./moments";
 
 function HexOutline({ x, y, z, color }: { x: number; y: number; z: number; color: string }) {
   return (
@@ -189,6 +191,7 @@ export function WorldCanvas() {
   const burningIds = burning.map((t) => t.id);
   // The great drought: warned of (a little dry), then on (parched land, hazy sky).
   const dry = inDrought(state) ? 1 : state.drought ? 0.2 : 0;
+  const plagueOn = inPlague(state);
   // A storm, flood, earthquake or landslide: warned of, then striking.
   const disaster = disasterView(state);
   const storm = disaster.kind === "storm" ? (disaster.active ? 1 : 0.5) : 0;
@@ -247,7 +250,10 @@ export function WorldCanvas() {
       <color attach="background" args={["#a8dcf5"]} />
       <Haze fires={burning.length + 2 * buildings.filter((t) => t.building === "smithy").length} dust={dry >= 1 ? 1 : 0} storm={storm} />
       {/* The Ancient era is a touch warmer and more golden, so the change of era shows. */}
-      <hemisphereLight args={[dry >= 1 ? "#ffe2a8" : state.era >= 1 ? "#ffeccc" : "#d6f1ff", "#6f8f4e", 0.75 - storm * 0.3]} />
+      {/* The plague's grey gloom, the drought's gold, or the era's own light. */}
+      <hemisphereLight
+        args={[plagueOn ? "#c9c3cf" : dry >= 1 ? "#ffe2a8" : state.era >= 1 ? "#ffeccc" : "#d6f1ff", "#6f8f4e", 0.75 - storm * 0.3 - (plagueOn ? 0.12 : 0)]}
+      />
       <directionalLight
         position={[home.x + 25, 40, home.z + 15]}
         intensity={1.5}
@@ -347,6 +353,18 @@ export function WorldCanvas() {
       <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} speed={state.speed} />
       <TradeShips tiles={state.tiles} home={home} caravans={state.caravans ?? []} tick={state.tick} speed={state.speed} />
       <SeaTraffic state={state} home={home} />
+      <WaitingShips state={state} home={home} />
+      {/* The plague: rats scurrying round a few homes. */}
+      {plagueOn &&
+        buildings
+          .filter((t) => t.building === "house" || t.building === "townhouse" || t.building === "hut")
+          .slice(0, 4)
+          .map((t) => (
+            // Bigger and further out than the mice moment, so they run round the house.
+            <group key={`rats-${t.id}`} position={[t.x, tileTop(t), t.z]} scale={1.9}>
+              <Mice />
+            </group>
+          ))}
       <QuakeShake active={disaster.kind === "earthquake" && disaster.active} />
       {disaster.kind === "flood" && disaster.active && <FloodWater tiles={state.tiles} ids={disaster.tiles} progress={disaster.progress} />}
       {storm > 0 && <StormRain centre={home} heavy={disaster.active} />}
