@@ -9,6 +9,11 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "The Medieval & Renaissance era! After the great drought, choose a landmark (Great Library, Cathedral or Grand Harbour) and build it in three stages to enter the Middle Ages.",
+      "Two kingdoms across the sea, the Silk Steppe and the Eastern Reach, each with a mood toward you. Send gifts, sign treaties, or raid them (they will come for revenge). Their ships and armies sail in their own colours.",
+      "Ships: explore new islands for outposts (each overseas building costs coins to keep supplied), meet the kingdoms and trade.",
+      "The era ends with the Black Death. Close the harbour, learn Quarantine, build latrines and healers: the more ready the town, the fewer it takes. How deadly it is depends on the difficulty.",
+      "New buildings: Castle, Windmill, Guild Hall, University, Shipyard, Trading Post, and the three landmarks, plus 12 new discovery scenes.",
       "Agriculture now costs 30 Knowledge instead of 80. In return it asks for two more things first: 2 Wooden Houses and an Elder's Hut (as well as 3 Farmland, 12 people and 50 food stored).",
       "During the tutorial you can now turn the camera (right-drag, or two fingers) and zoom (mouse wheel). The highlighted spot follows along.",
       "People helping at farms now hold the hoe in both hands, lift it overhead and bring it down into the soil (an axe at the woodcutter, a pick at the quarry). Warriors hold their club, spear (now with a stone point) or sword in the hand, ready.",

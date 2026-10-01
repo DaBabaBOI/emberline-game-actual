@@ -22,7 +22,7 @@ export const ERAS = [
   { name: "Ancient", startYear: -3000, yearsPerTick: 3, currency: "Bronze coins" },
   // Classical: a year a tick, so the great drought (DROUGHT.warnYear) comes about 15 minutes in.
   { name: "Classical", startYear: -500, yearsPerTick: 1, currency: "Silver coins" },
-  // Medieval: 0.6 years a tick, so the Black Death (PLAGUE.warnYear) comes about 14 minutes in.
+  // Medieval: 0.6 years a tick, so the Black Death (PLAGUE.arriveYear) arrives about 14.5 minutes in.
   { name: "Medieval & Renaissance", startYear: 1000, yearsPerTick: 0.6, currency: "Florins" },
   { name: "Industrial & Modern", startYear: 1750, yearsPerTick: 1, currency: "Banknotes" },
   { name: "Future & Space", startYear: 2050, yearsPerTick: 0.5, currency: "Credits" },
@@ -2476,7 +2476,10 @@ export const LEARNING = { universityLiteracy: 20, printingKnowledge: 1.3, printi
 // (`maxProtection`)]. Readiness in between scales it; an open harbour full of
 // ships (negative readiness) makes it worse still.
 export const PLAGUE = {
-  warnYear: 1340,
+  // It reached Europe's ports in 1347. The warning comes `warnTicks` before
+  // (90 ticks x 0.6 years = 54 years earlier on the in-game calendar).
+  arriveYear: 1347,
+  warnYear: 1347 - 90 * 0.6,
   warnTicks: 90,
   ticks: 180,
   deaths: { first: [0.2, 0.05], easy: [0.2, 0.05], normal: [0.3, 0.08], hard: [0.45, 0.1] } as Record<DifficultyId, [number, number]>,

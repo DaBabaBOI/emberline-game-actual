@@ -422,6 +422,35 @@ These were decided with the project owner. Do not change them without being aske
   shows over buildings 70%+ worn (red when broken) and a warning counts them.
   Repair in the building panel: 15% of its cost, scaled by how worn it is
   (at least 30%). New and upgraded buildings start fresh. Dev: "Wear".
+- **Into the Middle Ages** (`LANDMARKS`, `LANDMARK`, `state.landmark`,
+  `hud/medieval.tsx` `LandmarkPicker`, `medieval-models.tsx`): after the
+  drought a card offers the Great Library, the Cathedral or the Grand Harbour.
+  Placing it pays stage 1; each stage then takes `LANDMARK.stageTicks` and the
+  next is bought from its panel. It rises inside scaffolding, cut off at each
+  stage's height (clipping planes; the map canvas turns on
+  `localClippingEnabled`). Its bonus starts when all three are done, and that
+  opens the Medieval era. Dev: "Landmark".
+- **Medieval era** (`KINGDOMS`, `DIPLOMACY`, `KINGDOM_RAID`, `SHIP`, `OUTPOST`,
+  `PLAGUE` in content; `hud/medieval.tsx`, `world/trade.tsx` `SeaTraffic`):
+  - Two kingdoms with a mood (-100..100: friendly / wary / hostile). Gifts and
+    (after Diplomacy) treaties raise it; castles and closing the harbour lower
+    it; it drifts back toward 0. Only a hostile kingdom (or one we raided)
+    sends armies, in its own colours, landing on the shore facing its island.
+    The Kingdoms panel holds gifts, treaties and the Raid button: 60% of our
+    warriors, win or lose on strength x luck against the kingdom's defence;
+    either way it turns hostile and a bigger revenge army comes.
+  - Ships (after Ocean Ships, from a Shipyard or the Grand Harbour) find the
+    outpost islands, then the kingdoms' coasts, then trade. Outposts have no
+    building limit, but every overseas building costs coins each tick, each
+    more than the last (`outpostUpkeep`); unpaid outposts stand idle.
+  - The Black Death (the era's finale, about 14 minutes in): warned of, then
+    it arrives by ship. `PLAGUE.deaths` is the share of the town it takes
+    over its whole course, by difficulty, from nothing ready to fully ready
+    (first/easy 20% -> 5%, normal 30% -> 8%, hard 45% -> 10%); readiness in
+    between scales it (`plagueToll`). The banner shows each part of the
+    readiness and the harbour button. On the map: grey light, rats round
+    homes, ships held offshore while the harbour is closed.
+  - Dev: Plague soon/now/end, Ship back, kingdom moods +/-40.
 - **Natural disasters** (`DISASTERS`, `DISASTER_HITS`, `updateDisasters` /
   `strike` in the engine, `world/disasters.tsx`): the first about 10 minutes
   after the tutorial, then one every 10–17 minutes; never over a raid, the
@@ -605,9 +634,9 @@ These were decided with the project owner. Do not change them without being aske
      (historically accurate: Minoan/Phoenician/Greek colonies).
    - **Raiders:** bigger raids; unlock bronze spearmen, archers, and palisade/stone
      walls that protect nearby tiles.
-2. Classical: built (see above). Still open: a landmark project.
-3. Medieval & Renaissance, then Industrial & Modern (pollution gets serious),
-   then Future & Space (the space view, fusion, AI tech, interstellar).
+2. Classical and Medieval & Renaissance: built (see above).
+3. Industrial & Modern (pollution gets serious), then Future & Space (the space
+   view, fusion, AI tech, interstellar).
 4. Later: multiplayer, where human players replace AI nations.
 5. **Idea saved by the owner for later: the Kardashev scale.** It ranks a
    civilization by how much energy it can use (Type I: its planet's; Type II:

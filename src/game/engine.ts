@@ -3610,7 +3610,7 @@ export function currentGoal(state: GameState): string | null {
     const shield = Math.round(plagueShield(state) * 100);
     if (!state.plague) {
       const hostile = hostileKingdoms(state);
-      return `Goal: build a strong, healthy town before the great sickness comes (around ${formatYear(PLAGUE.warnYear)}). Readiness ${shield}%.${hostile.length ? ` ${KINGDOMS[hostile[0]].name[0].toUpperCase()}${KINGDOMS[hostile[0]].name.slice(1)} is hostile!` : ""}`;
+      return `Goal: build a strong, healthy town before the great sickness comes (around ${formatYear(PLAGUE.arriveYear)}). Readiness ${shield}%.${hostile.length ? ` ${KINGDOMS[hostile[0]].name[0].toUpperCase()}${KINGDOMS[hostile[0]].name.slice(1)} is hostile!` : ""}`;
     }
     if (!inPlague(state)) return `Goal: the Black Death is coming by ship! Readiness ${shield}%. Close the harbour? Learn Quarantine, build healers and latrines.`;
     return `Goal: hold on until the sickness passes. Readiness ${shield}%. Lives lost: ${Math.round(state.plague.deaths)}.`;
