@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Feedback has a spam guard: very short messages, link spam, repeats and sending too often are refused with a short reason.",
       "Fixed: the Close button on the Advancements screen could not be clicked (the top bar was covering it).",
       "Clicking a campfire no longer picks up the people sitting round it by accident, and dropping someone into a fire or the open sea now takes a second click to confirm.",
       "Fire keepers: every campfire now has someone who adds wood when it burns out (1 wood each time, like relighting), so you no longer have to keep clicking. Click a fire to send its keeper away and save wood. Keepers can't relight in a storm.",
