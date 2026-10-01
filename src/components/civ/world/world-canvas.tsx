@@ -16,6 +16,7 @@ import {
   residents,
   fireScareNote,
   gatherNote,
+  inDrought,
   isLit,
   landStrain,
   litFires,
@@ -24,6 +25,7 @@ import {
   PLANT_TOOL,
   plantError,
   placementError,
+  townNote,
 } from "@/game/engine";
 import { BuildingInfo } from "./building-info";
 import { useGame } from "@/components/civ/game-provider";
@@ -35,6 +37,7 @@ import { BiomeDetails, Deposits, Forests, HexTerrain, Mountains, tileTop } from 
 import { MODELS } from "./building-models";
 import { BattleScene, FireVictims, Raiders, Villagers, Warriors } from "./villagers";
 import { PickUp } from "./pick-up";
+import { TradeShips } from "./trade";
 import { Wildlife } from "./wildlife";
 import { CampfireSmoke, Haze, Wildfire } from "./atmosphere";
 
@@ -161,11 +164,14 @@ export function WorldCanvas() {
       : null;
   const dust = def && !error && hoverTile ? dustNote(state, hoverTile, def.id) : null;
   const gather = def?.id === "gatherer" && !error && hoverTile && !inTutorialNow ? gatherNote(state) : null;
+  const town = def && !error && hoverTile ? townNote(state, hoverTile, def.id) : null;
 
   const burning = useMemo(() => litFires(state), [state]);
   // A battle is played out for a few ticks after it happens.
   const battleShowing = !!state.battle && state.tick - state.battle.tick < 7;
   const burningIds = burning.map((t) => t.id);
+  // The great drought: warned of (a little dry), then on (parched land, hazy sky).
+  const dry = inDrought(state) ? 1 : state.drought ? 0.2 : 0;
   const outFires = buildings.filter((t) => t.building === "campfire" && !isLit(state, t));
 
   // On a phone there is no hover: the first tap previews, the second tap builds.
@@ -213,9 +219,9 @@ export function WorldCanvas() {
       }}
     >
       <color attach="background" args={["#a8dcf5"]} />
-      <Haze fires={burning.length + 2 * buildings.filter((t) => t.building === "smithy").length} />
+      <Haze fires={burning.length + 2 * buildings.filter((t) => t.building === "smithy").length} dust={dry >= 1 ? 1 : 0} />
       {/* The Ancient era is a touch warmer and more golden, so the change of era shows. */}
-      <hemisphereLight args={[state.era >= 1 ? "#ffeccc" : "#d6f1ff", "#6f8f4e", 0.75]} />
+      <hemisphereLight args={[dry >= 1 ? "#ffe2a8" : state.era >= 1 ? "#ffeccc" : "#d6f1ff", "#6f8f4e", 0.75]} />
       <directionalLight
         position={[home.x + 25, 40, home.z + 15]}
         intensity={1.5}
@@ -237,7 +243,16 @@ export function WorldCanvas() {
         <meshStandardMaterial color="#1a5f93" roughness={0.3} />
       </mesh>
 
-      <HexTerrain tiles={state.tiles} home={home} wear={landStrain(state)} era={state.era} onHover={setHovered} onPick={pick} />
+      <HexTerrain
+        tiles={state.tiles}
+        home={home}
+        wear={landStrain(state)}
+        era={state.era}
+        roads={state.researched.includes("roads")}
+        dry={dry}
+        onHover={setHovered}
+        onPick={pick}
+      />
       <Forests tiles={state.tiles} />
       <OldGrove tiles={state.tiles} ids={state.protectedTiles ?? []} />
       <Mountains tiles={state.tiles} onHover={setHovered} onPick={pick} />
@@ -275,6 +290,7 @@ export function WorldCanvas() {
       />
       <BattleScene tiles={state.tiles} battle={battleShowing ? state.battle ?? null : null} homeTile={home} />
       <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} speed={state.speed} />
+      <TradeShips tiles={state.tiles} home={home} caravans={state.caravans ?? []} tick={state.tick} speed={state.speed} />
       <Wildlife
         tiles={state.tiles}
         homeTile={home}
@@ -389,6 +405,12 @@ export function WorldCanvas() {
                   <span className="flex items-start gap-1.5 text-amber-200">
                     <PixelIcon name="warning" size={12} />
                     {dust}
+                  </span>
+                )}
+                {town && (
+                  <span className="flex items-start gap-1.5 text-amber-200">
+                    <PixelIcon name="warning" size={12} />
+                    {town}
                   </span>
                 )}
                 {lowWood && (

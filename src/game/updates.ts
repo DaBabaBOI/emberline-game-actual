@@ -9,6 +9,18 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-30",
     items: [
+      "New era: the Classical era! Beat the Roman legion, learn Coinage (new) and grow to 40 people to enter it.",
+      "Beating the legion no longer ends the story. After it, you have 20 minutes (15 on Hard) to reach the Classical era before the world moves on.",
+      "A river now runs from the hills south of the village down to the sea.",
+      "Ten new Classical advancements and eight new buildings: Well, Aqueduct, Watermill, Town House, Public Latrines, Bathhouse, Market and Academy. Each has its own trade-off.",
+      "Town Houses hold 24 people and keep them warm without a campfire, but packed towns spread sickness unless there are latrines.",
+      "Trade: build a Market, learn Silk Road Contact and send caravans across the sea to the Silk Steppe for silver and new ideas. Sickness travels the same roads.",
+      "Paved Roads turn the worn paths into stone roads and bring 25% more coins. Iron Weapons make warriors fight three times as hard.",
+      "The Classical era ends with a great drought. The elders warn you 3 minutes ahead; then for 3 minutes the rain almost stops. Wells, aqueducts, full granaries and standing forests get you through. Come through it and your story is complete.",
+      "A town only grows when it makes at least as much food as it eats (stored food alone no longer lets it grow into a famine), and never by more than about one person every 4 seconds.",
+      "In a famine, the people you can't feed at all leave to look for food elsewhere, so a big town shrinks instead of starving to the last person.",
+      "Worn-out land now hurts a little just under Sustainability 40 and more the lower it falls (it used to cut harvests by 40% straight away). The warning names what is costing the land the most.",
+      "The game now saves right after anything you do, not just every few seconds.",
       "In a game, the accessibility settings (dark mode, font, high contrast, larger text) are now in the Menu, so the Settings button no longer covers the Advancements button.",
     ],
   },
