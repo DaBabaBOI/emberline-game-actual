@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import { Pixelify_Sans, VT323 } from "next/font/google";
+import localFont from "next/font/local";
 import { AccessibilitySettings } from "@/components/accessibility-settings";
 import "./globals.css";
 
-const pixel = Pixelify_Sans({ subsets: ["latin"], variable: "--font-pixel" });
+// The fonts live in the repo (src/app/fonts, SIL Open Font License), so the
+// site builds without an internet connection.
+const pixel = localFont({ src: "./fonts/PixelifySans-latin.woff2", weight: "400 700", variable: "--font-pixel", display: "swap" });
 // Pixelify's 2, 5 and 8 look alike, so numbers use VT323 instead.
-const digits = VT323({ weight: "400", subsets: ["latin"], variable: "--font-num" });
+const digits = localFont({ src: "./fonts/VT323-latin.woff2", weight: "400", variable: "--font-num", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Emberline",
