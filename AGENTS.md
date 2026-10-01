@@ -25,6 +25,10 @@ These were decided with the project owner. Do not change them without being aske
 - Unexplored land is hidden under cloud tiles; **the sea is always blue**.
   Scouts reveal land, and only scouts: placing a building never uncovers the
   clouds next to it (it used to, which made scouting pointless).
+  A scouting trip takes `SCOUT_TRIP.ticks` (12, 18 s): paid when sent
+  (`state.scouting`), land mapped when they return (`scoutsReturn()`), a
+  "Scouts exploring" marker on the map and a countdown on the button. One trip
+  at a time. Instant during the tutorial, where the clock stands still.
 - Forests spread and regrow over time; woodcutters thin them out.
 
 **Time**

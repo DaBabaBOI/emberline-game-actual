@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Scouting takes time now: the scouts set out (a marker shows where), and the new land is mapped when they come back about 18 seconds later. The Scout button counts down meanwhile.",
       "Removed the 'Deer at the forest edge' moment: it was hard to see and did little.",
       "Someone you drop on a Woodcutter to help now walks out to a tree it is felling and chops at the trunk, instead of swinging at the air. With no trees left, they split logs at the chopping block.",
       "No more rain moment. Instead, when the land is well watered, a field's wheat visibly shoots up (+2 food for each field). The birds coming back now circle over the forest itself, just above the trees, not over the grass beside it.",

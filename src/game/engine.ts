@@ -92,6 +92,7 @@ import {
   CAVE_PAINTINGS_KNOWLEDGE,
   TEACHING,
   SCOUT_KNOWLEDGE,
+  SCOUT_TRIP,
   TUTORIAL,
   TUTORIAL_FAREWELL,
   WARRIORS_PER_CAMP,
@@ -2580,6 +2581,7 @@ function tickOnce(state: GameState): GameState {
   // No raids or events while a new player is still learning.
   if (!inTutorial) next = updatePlague(updateDisasters(updateDrought(updateLegion(updateRaids(next)))));
   next = returnCaravans(next);
+  next = returnScouts(next);
   next = returnShips(updateKingdoms(next));
   next = finishStage(next);
   // The final battle ends the story (won or lost): nothing else happens today.
@@ -3249,6 +3251,25 @@ function grieve(state: GameState): GameState {
   return { ...state, grief: Math.min(GRIEF.max, (state.grief ?? 0) + GRIEF.happiness) };
 }
 
+// Scouts back from a trip: the land around where they went is mapped.
+function scoutsReturn(state: GameState, tileId: number): GameState {
+  const tiles = state.tiles.map((t) => ({ ...t }));
+  revealAround(tiles, tiles[tileId], state.culture === "mariners" ? 5 : 4);
+  // A trip that maps a lot of new land teaches more than a short one.
+  const newLand = tiles.filter((t, i) => t.revealed && !state.tiles[i].revealed && isLand(t.terrain)).length;
+  // Only the first few trips teach much: after that the land nearby is known.
+  const learned = state.scoutsSent >= SCOUT_KNOWLEDGE.trips ? 0 : newLand >= SCOUT_KNOWLEDGE.bigTrip ? 2 : 1;
+  return {
+    ...state,
+    tiles,
+    scouting: undefined,
+    scoutsSent: state.scoutsSent + 1,
+    resources: { ...state.resources, knowledge: state.resources.knowledge + learned },
+    log: [`The scouts are back: they mapped ${newLand} tiles of new land${learned ? ` (+${learned} Knowledge)` : ""}.`, ...state.log].slice(0, 30),
+  };
+}
+const returnScouts = (state: GameState) => (state.scouting && state.tick >= state.scouting.back ? scoutsReturn(state, state.scouting.tile) : state);
+
 function dropPerson(state: GameState, tileId: number | null): GameState {
   if (state.phase !== "playing" || state.tutorialStep < TUTORIAL.length) return state;
   const tile = tileId === null ? null : state.tiles[tileId];
@@ -3724,7 +3745,7 @@ function step(state: GameState, action: Action): GameState {
 
     case "scout": {
       const cost = scoutCost(state);
-      if (tutorialLocked(state, "scout") || !canAfford(state, cost)) return state;
+      if (tutorialLocked(state, "scout") || !canAfford(state, cost) || state.scouting) return state;
       const frontier = state.tiles.filter(
         (t) =>
           !t.revealed &&
@@ -3733,20 +3754,13 @@ function step(state: GameState, action: Action): GameState {
       if (frontier.length === 0) return state;
       const rand = mulberry32(state.seed + state.tick * 7 + state.log.length);
       const target = frontier[Math.floor(rand() * frontier.length)];
-      const tiles = state.tiles.map((t) => ({ ...t }));
-      revealAround(tiles, tiles[target.id], state.culture === "mariners" ? 5 : 4);
-      // A trip that maps a lot of new land teaches more than a short one.
-      const newLand = tiles.filter((t, i) => t.revealed && !state.tiles[i].revealed && isLand(t.terrain)).length;
-      // Only the first few trips teach much: after that the land nearby is known.
-      const learned = state.scoutsSent >= SCOUT_KNOWLEDGE.trips ? 0 : newLand >= SCOUT_KNOWLEDGE.bigTrip ? 2 : 1;
-      const spent = spend(state.resources, cost);
+      const sent: GameState = { ...state, resources: spend(state.resources, cost), flags: { ...state.flags, scouted: true } };
+      // In the tutorial the clock is still, so the trip is over at once.
+      if (state.tutorialStep < TUTORIAL.length) return withMeters(scoutsReturn(sent, target.id));
       return withMeters({
-        ...state,
-        tiles,
-        flags: { ...state.flags, scouted: true },
-        scoutsSent: state.scoutsSent + 1,
-        resources: { ...spent, knowledge: spent.knowledge + learned },
-        log: [`Scouts mapped ${newLand} tiles of new land${learned ? ` (+${learned} Knowledge)` : ""}.`, ...state.log].slice(0, 30),
+        ...sent,
+        scouting: { tile: target.id, back: state.tick + SCOUT_TRIP.ticks },
+        log: [`Scouts set out to explore. They will be back in ${secs(SCOUT_TRIP.ticks)} s.`, ...state.log].slice(0, 30),
       });
     }
 

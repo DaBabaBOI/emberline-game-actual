@@ -34,7 +34,7 @@ import {
 import { BuildingInfo } from "./building-info";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
-import { SmallMoment } from "./moments";
+import { ScoutMarker, SmallMoment } from "./moments";
 import { tileAnchor } from "@/components/civ/guide";
 import { useGuide } from "@/components/civ/hud/guide-overlay";
 import type { Tile } from "@/game/types";
@@ -329,6 +329,7 @@ export function WorldCanvas() {
 
       {/* Small moments play out where they happen. */}
       <SmallMoment state={state} />
+      <ScoutMarker state={state} />
       <Villagers
         tiles={state.tiles}
         population={state.population}
