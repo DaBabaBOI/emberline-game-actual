@@ -99,17 +99,19 @@ function ChiefXp({ state }: { state: GameState }) {
 }
 
 export function TopBar() {
-  const { state, dispatch } = useGame();
+  const { state, dispatch, panel } = useGame();
   const era = ERAS[state.era];
   const r = state.resources;
   const low = new Set(warnings(state).map((w) => w.id));
   const [knowHelp, setKnowHelp] = useState(false);
 
   return (
-    // Above the tutorial's dimmed overlay (z-25): speed and Menu always work.
-    <div className="pointer-events-auto absolute inset-x-0 top-2 z-[26] flex justify-center px-2 md:top-3 md:px-3">
+    // Above the tutorial's dimmed overlay (z-25) so speed and Menu always work,
+    // but under the Advancements screen (z-20) while it is open. Only the bar
+    // itself takes clicks, not the full-width strip around it.
+    <div className={cn("pointer-events-none absolute inset-x-0 top-2 flex justify-center px-2 md:top-3 md:px-3", panel !== "tree" && "z-[26]")}>
       <div
-        className="pixel-panel-dark font-pixel flex max-w-full flex-wrap items-center justify-center gap-x-3 gap-y-1 px-2 py-1 text-xs md:flex-nowrap md:gap-4 md:px-4 md:py-1.5 md:text-sm"
+        className="pixel-panel-dark font-pixel pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-x-3 gap-y-1 px-2 py-1 text-xs md:flex-nowrap md:gap-4 md:px-4 md:py-1.5 md:text-sm"
         // A bronze trim from the Ancient era on.
         style={state.era >= 1 ? { borderColor: "#b0773a", boxShadow: "inset 0 -3px 0 #8a5a2b" } : undefined}
       >
