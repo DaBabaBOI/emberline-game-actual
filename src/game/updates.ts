@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "No more rain moment. Instead, when the land is well watered, a field's wheat visibly shoots up (+2 food for each field). The birds coming back now circle over the forest itself, just above the trees, not over the grass beside it.",
       "The year in the top bar now counts up smoothly instead of jumping every tick, and holds still while the game is paused. In later eras it no longer stops 100 years before the next era: it slows down and keeps going until the year before.",
       "People with no roof over their heads now suffer for it: −4 happiness each (up to −30), and they fall sick much more often. The warning and the Happiness tip say so.",
       "With Advancements open, Elder Ama's box no longer covers the Research button: she sits just above the bottom bar, or under the header if what she points at is down there.",

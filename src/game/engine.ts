@@ -2661,8 +2661,18 @@ const nearHome = (s: GameState, ok: (t: Tile) => boolean) => {
 };
 // One of the nearest few, so it isn't always the same spot.
 const pick = (s: GameState, list: Tile[]) => list[Math.floor(s.tick / 3) % Math.min(4, list.length)];
-const forestEdge = (s: GameState) =>
-  pick(s, nearHome(s, (t) => t.terrain === "forest" && !t.building && t.growth > 0.5));
+const isTrees = (t: Tile) => t.terrain === "forest" && !t.building && t.growth > 0.5;
+const forestEdge = (s: GameState) => pick(s, nearHome(s, isTrees));
+// The middle of the forest: the tile with the most trees round it (nearest the
+// village among those), so birds circling it stay over the forest.
+const deepForest = (s: GameState) => {
+  const trees = s.tiles.filter((t) => t.revealed && isTrees(t));
+  const home = s.tiles[s.startTile];
+  const around = (t: Tile) => trees.filter((u) => hexDistance(u, t) === 1).length;
+  return trees
+    .map((t) => ({ t, n: around(t), d: hexDistance(t, home) }))
+    .sort((a, b) => b.n - a.n || a.d - b.d)[0]?.t;
+};
 const bareLand = (s: GameState) => pick(s, nearHome(s, (t) => (t.terrain === "grass" || t.terrain === "steppe") && !t.building && hexDistance(t, s.tiles[s.startTile]) >= 2));
 const aBuilding = (s: GameState, ids: string[]) => pick(s, nearHome(s, (t) => !!t.building && ids.includes(t.building)));
 
@@ -2700,10 +2710,11 @@ const MOMENTS: Moment[] = [
     where: (s) => untendedFires(s)[Math.floor(s.tick / 7) % untendedFires(s).length],
   },
   {
-    id: "rain",
+    // Only when the land is well watered (rainfall comes from the forests).
+    id: "grow",
     when: (s) => (countBuildings(s).farm ?? 0) > 0 && rainfall(s) >= 0.8,
     apply: (s) => addFood(s, 2 * (countBuildings(s).farm ?? 0)),
-    text: "A good rain fell, and the fields drank it up. Forests help bring the rain.",
+    text: "Good growing weather: the crops shot up (+2 food for each field). The forests nearby help keep the land moist.",
     where: (s) => aBuilding(s, ["farm"]),
   },
   { id: "story", when: (s) => litFires(s).length > 0, apply: (s) => addMood(s, 5), text: "A storyteller kept everyone up late by the fire. Spirits are high.", where: (s) => litFires(s)[0] },
@@ -2713,7 +2724,7 @@ const MOMENTS: Moment[] = [
     when: (s) => forestCover(s) >= 0.8,
     apply: (s) => ({ ...s, modifiers: { ...s.modifiers, sustainability: s.modifiers.sustainability + 2 } }),
     text: "Birds are nesting in the old forest again (+2 Sustainability for a while).",
-    where: forestEdge,
+    where: deepForest,
   },
   {
     id: "mice",

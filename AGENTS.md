@@ -193,6 +193,12 @@ These were decided with the project owner. Do not change them without being aske
   happens (`where` picks the tile; `state.moment`; `world/moments.tsx`) for
   `MOMENT_TICKS`, with a short label over the spot: a new moment needs a
   `where`, a scene and a label. Dev: "Moment", or pick one in "Moment...".
+  A scene must stay on its own tile, as seen from the camera: anything flying
+  goes just above what's on the tile (birds at ~1.1, over treetops at ~0.85),
+  since height pushes it up the screen over the tile behind. No rain moment
+  (the owner found it random): good rainfall shows as the "grow" moment, the
+  field's own wheat shooting up. Birds circle a tile deep in the forest
+  (`deepForest()`).
 - **Phones are supported.** Layouts use `md:` breakpoints (bars stack and
   scroll on small screens). There is no hover on touch: the first tap on a tile
   previews (ghost + trade-off card), the second tap builds. Never rely on Esc or

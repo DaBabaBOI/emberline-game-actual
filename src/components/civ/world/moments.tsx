@@ -19,7 +19,7 @@ const LABELS: Record<string, { icon: IconId; text: string }> = {
   berries: { icon: "basket", text: "Berries found" },
   baby: { icon: "smile", text: "A baby was born" },
   gust: { icon: "flame", text: "The wind blew a fire out" },
-  rain: { icon: "wheat", text: "Rain on the fields" },
+  grow: { icon: "wheat", text: "The crops shot up" },
   story: { icon: "feather", text: "Stories by the fire" },
   smoke: { icon: "warning", text: "Smoke over the village" },
   birds: { icon: "leaf", text: "The birds are back" },
@@ -135,77 +135,62 @@ function Wind({ color, opacity }: { color: string; opacity: number }) {
   );
 }
 
-// A rain cloud drifting in from upwind. Once it is over the field the rain
-// starts, falling from under the cloud, and the soil darkens as it gets wet.
-const RAIN_ARRIVES = 2.6; // seconds to drift in
-const RAIN_DROPS = 36;
-// Fixed spots under the cloud for each drop (spread evenly, not at random).
-const DROP_SPOTS = Array.from({ length: RAIN_DROPS }, (_, i) => ({
-  x: ((i % 6) / 5 - 0.5) * 1.3 + (Math.floor(i / 6) % 2) * 0.12,
-  z: (Math.floor(i / 6) / 5 - 0.5) * 0.9,
-  offset: ((i * 7) % RAIN_DROPS) / RAIN_DROPS,
-}));
+// The field's wheat shooting up: the farm's own rows of stalks (the same
+// layout, turned and scaled like the building) grow tall, then settle back
+// before the moment ends. All of it stays on the field.
+const FARM_STALKS = [-0.36, -0.18, 0, 0.18, 0.36].flatMap((z) => {
+  const n = Math.round(7 - Math.abs(z) * 6);
+  const span = 0.8 - Math.abs(z) * 0.9;
+  return Array.from({ length: n }, (_, i) => ({ x: -span / 2 + (span / Math.max(1, n - 1)) * i, z }));
+});
 
-function Rain() {
-  const cloud = useRef<Group>(null);
-  const drops = useRef<(Mesh | null)[]>([]);
-  const wet = useRef<Mesh>(null);
+function Grow({ tile }: { tile: Tile }) {
+  const field = useRef<Group>(null);
   const age = useAge();
   useFrame(({ clock }) => {
     const a = age(clock.elapsedTime);
-    const k = Math.min(1, a / RAIN_ARRIVES);
-    const ease = 1 - (1 - k) ** 3;
-    if (cloud.current) cloud.current.position.x = -5 * (1 - ease);
-    // Rain starts as the cloud arrives and gets heavier over a second.
-    const heavy = Math.min(1, Math.max(0, (a - RAIN_ARRIVES + 0.4) / 1));
-    drops.current.forEach((m, i) => {
-      if (!m) return;
-      const spot = DROP_SPOTS[i];
-      const fall = (a * 1.6 + spot.offset) % 1;
-      m.position.set(spot.x, 1.75 - fall * 1.75, spot.z);
-      m.visible = spot.offset < heavy;
+    // Up over 2.5 s, back down from 8.5 s to 10 s.
+    const up = Math.min(1, a / 2.5) * (1 - Math.min(1, Math.max(0, (a - 8.5) / 1.5)));
+    const tall = 1 - (1 - up) ** 2;
+    field.current?.children.forEach((stalk, i) => {
+      stalk.scale.y = 1 + tall * 1.8;
+      stalk.rotation.z = Math.sin(clock.elapsedTime * 1.6 + i * 0.7) * 0.08 * tall;
     });
-    if (wet.current) (wet.current.material as { opacity: number }).opacity = Math.min(0.35, Math.max(0, a - RAIN_ARRIVES) * 0.08);
   });
   return (
-    <group>
-      <mesh ref={wet} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <circleGeometry args={[0.85, 6]} />
-        <meshBasicMaterial color="#2f2414" transparent opacity={0} depthWrite={false} />
-      </mesh>
-      <group ref={cloud} position={[-5, 0, 0]}>
-        {[
-          [-0.5, 2.05, 0, 0.38],
-          [0, 2.2, 0.05, 0.5],
-          [0.5, 2.05, -0.05, 0.4],
-          [-0.2, 2.0, -0.3, 0.35],
-          [0.25, 2.0, 0.3, 0.35],
-        ].map(([x, y, z, r]) => (
-          <mesh key={`${x}${z}`} position={[x, y, z]} scale={[1, 0.7, 1]} castShadow>
-            <sphereGeometry args={[r, 10, 8]} />
-            <meshStandardMaterial color="#7c8592" flatShading />
-          </mesh>
-        ))}
-        {DROP_SPOTS.map((_, i) => (
-          <mesh key={i} ref={(el) => void (drops.current[i] = el)} visible={false}>
-            <boxGeometry args={[0.03, 0.22, 0.03]} />
-            <meshStandardMaterial color="#a9d4f5" emissive="#4a90e2" emissiveIntensity={0.3} />
-          </mesh>
+    <group rotation={[0, (tile.id % 6) * (Math.PI / 3), 0]} scale={1.55}>
+      <group ref={field}>
+        {FARM_STALKS.map((s, i) => (
+          <group key={i} position={[s.x, 0.04, s.z]}>
+            <mesh position={[0, 0.07, 0]}>
+              <cylinderGeometry args={[0.011, 0.011, 0.14, 4]} />
+              <meshStandardMaterial color="#c9a63e" />
+            </mesh>
+            <mesh position={[0, 0.15, 0]} scale={[1, 2.2, 1]}>
+              <sphereGeometry args={[0.026, 6, 4]} />
+              <meshStandardMaterial color="#f0cf5e" />
+            </mesh>
+          </group>
         ))}
       </group>
+      <Rising color="#9fd356" count={8} spread={0.32} size={0.04} speed={0.45} />
     </group>
   );
 }
 
-// A flock circling over the forest, wings flapping.
+// A flock circling over the forest, wings flapping. The moment picks a tile
+// deep in the forest; the circles (0.3 to 0.6) stay inside that tile, just
+// above the treetops (they reach about 0.85), so seen from the camera they
+// stay over the trees rather than drifting over the tile behind.
 function Birds() {
   const birds = useRef<(Group | null)[]>([]);
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
     birds.current.forEach((g, i) => {
       if (!g) return;
-      const ang = t * 0.6 + i * 0.5;
-      g.position.set(Math.cos(ang) * (1 + (i % 3) * 0.3), 1.8 + Math.sin(t * 2 + i) * 0.15, Math.sin(ang) * (1 + (i % 3) * 0.3));
+      const ang = t * 0.8 + i * 0.9;
+      const r = 0.3 + (i % 3) * 0.15;
+      g.position.set(Math.cos(ang) * r, 1.1 + Math.sin(t * 2 + i) * 0.06, Math.sin(ang) * r);
       g.rotation.y = -ang;
       const flap = Math.sin(t * 12 + i) * 0.6;
       (g.children[0] as Mesh).rotation.x = flap;
@@ -215,7 +200,7 @@ function Birds() {
   return (
     <group>
       {Array.from({ length: 7 }, (_, i) => (
-        <group key={i} ref={(el) => void (birds.current[i] = el)} scale={2.2}>
+        <group key={i} ref={(el) => void (birds.current[i] = el)} scale={1.5}>
           <mesh position={[0, 0, 0.08]}>
             <boxGeometry args={[0.04, 0.01, 0.16]} />
             <meshStandardMaterial color="#2b2119" />
@@ -264,8 +249,8 @@ function Scene({ id, tile }: { id: string; tile: Tile }) {
       return <Rising color="#f28cb1" count={6} spread={0.25} size={0.08} speed={0.4} />;
     case "gust":
       return <Wind color="#ffffff" opacity={0.8} />;
-    case "rain":
-      return <Rain />;
+    case "grow":
+      return <Grow tile={tile} />;
     case "story":
       return <Rising color="#ffd23f" count={10} spread={0.5} size={0.05} speed={0.35} />;
     case "smoke":
