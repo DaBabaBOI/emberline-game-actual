@@ -14,6 +14,8 @@ const SKIES: Record<SceneSky, { sky: string; ground: string; hills: string; far:
   dusk: { sky: "linear-gradient(#6b4a8a, #e98b5a 80%)", ground: "#5f8a3e", hills: "#3f6a2e", far: "#8a5f6a" },
   night: { sky: "linear-gradient(#10183a, #2c3a6b 80%)", ground: "#344d2c", hills: "#24391f", far: "#2e3b52" },
   sea: { sky: "linear-gradient(#7cc4ee, #d6f0fb 70%)", ground: "#ead79c", hills: "#1f6fa8", far: "#43a9d6" },
+  // Inside a cave: dark rock all round, a flat wall to paint on.
+  cave: { sky: "linear-gradient(#3b2f28, #5a4637 80%)", ground: "#2e241e", hills: "#4a3a2e", far: "#6b5644" },
 };
 
 // A short pixel scene of the moment an advancement was discovered. It plays
@@ -60,6 +62,10 @@ export function DiscoveryScene() {
           className="scene-stage relative block aspect-[5/2] w-full overflow-hidden border-[3px] border-[#2b2119]"
           style={{ background: sky.sky }}
         >
+          {scene.bg === "cave" && (
+            // The rock wall, lit warm by the torch.
+            <span className="absolute inset-x-[10%] bottom-[28%] top-[12%] rounded-t-[40%]" style={{ background: "radial-gradient(circle at 30% 60%, #a5805a, #6b5644 70%)" }} />
+          )}
           {scene.bg === "night" &&
             [8, 21, 35, 52, 66, 79, 90, 14, 44, 72].map((x, i) => (
               <span
@@ -68,29 +74,66 @@ export function DiscoveryScene() {
                 style={{ left: `${x}%`, top: `${6 + ((i * 17) % 30)}%`, animationDelay: `${i * 0.3}s` }}
               />
             ))}
-          <span className="absolute right-[8%] top-[8%]">
-            <PixelIcon name={scene.bg === "night" ? "moon" : "sun"} size={34} />
-          </span>
-          <span className="absolute inset-x-[-5%] bottom-[28%] h-[30%] rounded-t-[50%]" style={{ background: sky.far }} />
-          <span className="absolute bottom-[26%] left-[-10%] h-[26%] w-[70%] rounded-t-[60%]" style={{ background: sky.hills }} />
-          <span className="absolute bottom-[26%] right-[-15%] h-[20%] w-[60%] rounded-t-[60%]" style={{ background: sky.hills }} />
+          {scene.bg !== "cave" && (
+            <>
+              <span className="absolute right-[8%] top-[8%]">
+                <PixelIcon name={scene.bg === "night" ? "moon" : "sun"} size={34} />
+              </span>
+              <span className="absolute inset-x-[-5%] bottom-[28%] h-[30%] rounded-t-[50%]" style={{ background: sky.far }} />
+              <span className="absolute bottom-[26%] left-[-10%] h-[26%] w-[70%] rounded-t-[60%]" style={{ background: sky.hills }} />
+              <span className="absolute bottom-[26%] right-[-15%] h-[20%] w-[60%] rounded-t-[60%]" style={{ background: sky.hills }} />
+            </>
+          )}
           {scene.bg === "sea" && <span className="scene-waves absolute inset-x-0 bottom-[26%] h-[6%] opacity-70" />}
           <span className="absolute inset-x-0 bottom-0 h-[28%]" style={{ background: sky.ground }} />
+          {scene.river === "dry" ? (
+            <span className="absolute inset-x-0 bottom-[6%] h-[9%] bg-[#b79b6c]" />
+          ) : (
+            scene.river && (
+              <span className="absolute inset-x-0 bottom-[6%] h-[9%] bg-[#4a90e2]">
+                <span className="scene-waves absolute inset-x-0 top-[30%] h-[40%] opacity-60" />
+              </span>
+            )
+          )}
 
-          {/* The people walk in from the left. */}
-          <span className="absolute bottom-[18%] left-[8%] flex items-end gap-1">
-            {scene.actors.map((a, i) => (
-              <span key={i} className="scene-walk block" style={{ animationDelay: `${i * 0.25}s` }}>
-                <span className="scene-bob block" style={{ animationDelay: `${i * 0.2}s` }}>
-                  <PixelIcon name={a} size={56} />
+          {/* What else is there: shown from its line, gone after its `until` line. */}
+          {(scene.props ?? [])
+            .filter((p) => lines - 1 >= (p.from ?? 0) && (p.until === undefined || lines - 1 < p.until))
+            .map((p, i) => (
+              <span
+                key={`${p.icon}-${i}`}
+                className={(p.from ?? 0) > 0 ? "scene-pop absolute" : "absolute"}
+                style={{ left: `${p.x}%`, bottom: `${p.y ?? 18}%`, transform: "translateX(-50%)" }}
+              >
+                <span className="block" style={p.flip ? { transform: "scaleX(-1)" } : undefined}>
+                  <PixelIcon name={p.icon} size={p.size ?? 52} />
                 </span>
               </span>
             ))}
+
+          {/* The people walk in from the left (those sitting are already there). */}
+          <span className="absolute bottom-[18%] left-[8%] flex items-end gap-1">
+            {scene.actors.map((a, i) =>
+              a.endsWith("-sit") ? (
+                <span key={i} className="scene-line block">
+                  <PixelIcon name={a} size={56} />
+                </span>
+              ) : (
+                <span key={i} className="scene-walk block" style={{ animationDelay: `${i * 0.25}s` }}>
+                  <span className="scene-bob block" style={{ animationDelay: `${i * 0.2}s` }}>
+                    <PixelIcon name={a} size={56} />
+                  </span>
+                </span>
+              ),
+            )}
           </span>
 
           {/* What they discovered appears with light around it. */}
-          {lines >= 2 && (
-            <span className="absolute bottom-[20%] right-[18%] flex items-center justify-center">
+          {lines - 1 >= (scene.itemFrom ?? 1) && (
+            <span
+              className="absolute flex -translate-x-1/2 items-center justify-center"
+              style={{ left: `${scene.itemX ?? 74}%`, bottom: scene.bg === "cave" ? "38%" : "20%" }}
+            >
               <span className="scene-rays absolute h-40 w-40 rounded-full" />
               <span className="scene-pop relative block">
                 <PixelIcon name={scene.item} size={72} />

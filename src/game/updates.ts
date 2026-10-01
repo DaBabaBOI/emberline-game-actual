@@ -7,6 +7,12 @@ export interface Update {
 
 export const UPDATES: Update[] = [
   {
+    date: "2026-10-01",
+    items: [
+      "Discovery scenes now show what their words say: Storytelling has people sitting round a fire, Writing a clay tablet, Spears a spear, Cave Paintings happen in a cave by torchlight, The Wheel a cart, and so on, with things appearing on the line that mentions them.",
+    ],
+  },
+  {
     date: "2026-09-30",
     items: [
       "Hover (or tap) the population or warriors counter at the top: those people light up in yellow on the map, and it tells you how many people each figure stands for.",

@@ -420,6 +420,11 @@ These were decided with the project owner. Do not change them without being aske
   lines of story). The clock waits until it's closed; it can be skipped or
   sped up. Every new advancement needs a scene (lines in the tribe's voice,
   modest about history). Dev: pick one and press "Scene".
+  The picture must match the words, line by line: whatever a line mentions is
+  on stage from that line (`props` with `from`/`until`, `itemFrom`), people sit
+  when they sit (`*-sit` sprites, `flip` to face the fire), and the discovery
+  is the thing itself (a clay tablet for writing, not a book). Check every
+  scene you add or change at its first and last line before shipping.
 - **Accessibility settings** (`accessibility-settings.tsx`, mounted in the root
   layout): a floating Settings button on every page, except while a game is on
   screen (`data-in-game` on `<html>`, set by `GameScreen`): there the same
