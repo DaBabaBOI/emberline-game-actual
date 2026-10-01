@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-30",
     items: [
+      "Hard mode: buildings wear out. Worn buildings make less and a hammer appears over them; broken ones make nothing and a broken home holds only half its people. Click a building to repair it for a small part of its cost.",
       "Natural disasters, with a warning before each one. Storms blow out every fire and can wreck wooden buildings (forest around them breaks the wind). Floods cover the land by the river and the sea and stop the buildings there, then leave rich silt that makes those fields grow more. Earthquakes shake the camera, crack the ground and bring down buildings, brick and stone more than wood. Landslides only happen where the trees on a hillside were cut or the hill was quarried.",
       "Discovery scenes: every time you research an advancement or find a secret, a short pixel scene shows the moment your people worked it out. Click to speed it up, or skip it.",
       "New era: the Classical era! Beat the Roman legion, learn Coinage (new) and grow to 40 people to enter it.",

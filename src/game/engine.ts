@@ -28,6 +28,7 @@ import {
   IRON_CHARCOAL,
   JADE_ROAD,
   ERA_INTROS,
+  WEAR,
   DISASTERS,
   DISASTER_HITS,
   STONE_BUILDINGS,
@@ -62,7 +63,6 @@ import {
   FIRE_RISK,
   LAND,
   GRACE_AFTER_TUTORIAL,
-  BUILDINGS,
   BUILDINGS_BY_ID,
   DIFFICULTIES,
   ERAS,
@@ -143,6 +143,8 @@ export type Action =
   | { type: "famineRelief"; kind: FamineRelief }
   | { type: "devCollapse" }
   | { type: "caravan" }
+  | { type: "repair"; tileId: number }
+  | { type: "devWear" }
   | { type: "devDisaster"; kind: DisasterKind }
   | { type: "dismissCutscene" }
   | { type: "devCutscene"; id: string }
@@ -533,8 +535,13 @@ export function residents(state: GameState, tile: Tile): { living: number; room:
 }
 
 export function housingCapacity(state: GameState) {
-  const counts = countBuildings(state);
-  return BUILDINGS.reduce((sum, b) => sum + (b.housing ?? 0) * (counts[b.id] ?? 0), BASE_HOUSING);
+  let room = BASE_HOUSING;
+  for (const t of state.tiles) {
+    const housing = t.building ? BUILDINGS_BY_ID[t.building]?.housing ?? 0 : 0;
+    // Hard mode: a broken-down home only holds half its people.
+    room += (t.worn ?? 0) >= 1 ? Math.floor(housing / 2) : housing;
+  }
+  return room;
 }
 
 // The wild only has so much to give. The first gatherer camp gets a full
@@ -727,6 +734,47 @@ export function townNote(state: GameState, tile: Tile, building: string): string
   }
 }
 
+// ---- Hard mode: wear and repairs ---------------------------------------------
+
+export function wearsOut(state: GameState) {
+  return state.difficulty === "hard";
+}
+
+// How much of its output a building still makes: full until it's `slows` worn,
+// then less and less, nothing once broken.
+export function wearFactor(tile: Tile) {
+  const w = tile.worn ?? 0;
+  if (w >= 1) return 0;
+  return w <= WEAR.slows ? 1 : 1 - (w - WEAR.slows) / (1 - WEAR.slows);
+}
+
+export function repairCost(state: GameState, tile: Tile): Partial<Resources> {
+  const def = BUILDINGS_BY_ID[tile.building ?? ""];
+  if (!def) return {};
+  const cost = buildingCost(state, def);
+  return Object.fromEntries(
+    Object.entries(cost).map(([k, v]) => [k, Math.max(1, Math.ceil((v ?? 0) * WEAR.repairShare * Math.max(0.3, tile.worn ?? 0)))]),
+  );
+}
+
+// Every building wears a little each tick (Hard only).
+function wearBuildings(state: GameState): GameState {
+  if (!wearsOut(state) || state.tutorialStep < TUTORIAL.length) return state;
+  let broke: string | null = null;
+  const tiles = state.tiles.map((t) => {
+    if (!t.building || t.building === "campfire") return t;
+    const rate = WEAR.perTick * (WEAR.busyBuildings.includes(t.building) ? WEAR.busy : WEAR.sturdyBuildings.includes(t.building) ? WEAR.sturdy : 1);
+    const worn = Math.min(1, (t.worn ?? 0) + rate);
+    if (worn >= 1 && (t.worn ?? 0) < 1) broke = BUILDINGS_BY_ID[t.building].name;
+    return { ...t, worn };
+  });
+  return {
+    ...state,
+    tiles,
+    log: broke ? [`A ${broke} has broken down. Click it to repair it.`, ...state.log].slice(0, 30) : state.log,
+  };
+}
+
 // Caravans can leave from each Market once Silk Road Contact is known.
 export function caravanCost(state: GameState): Partial<Resources> {
   const d = travelDiscount(state);
@@ -795,6 +843,9 @@ export function production(state: GameState): Resources {
     if (!tile.building) continue;
     // Under flood water nothing works until it goes down.
     if (isFlooded(state, tile)) continue;
+    // Hard mode: a worn building makes less, a broken one nothing.
+    const worn = wearFactor(tile);
+    if (worn <= 0) continue;
     const def = BUILDINGS_BY_ID[tile.building];
     const factor =
       tile.building === "woodcutter"
@@ -811,7 +862,8 @@ export function production(state: GameState): Resources {
       (tile.building === "gatherer" ? gathererShare(state) : teachingShare(state, tile.building)) *
       (state.tick < (state.helpers?.[tile.id] ?? 0) ? 1 + DROP.helpBoost : 1);
     for (const [k, v] of Object.entries(def.produces ?? {}))
-      out[k as keyof Resources] += (v ?? 0) * factor * share * (k === "food" ? dust : 1);
+      // Costs (a bathhouse burning wood) don't shrink as it wears; output does.
+      out[k as keyof Resources] += (v ?? 0) * factor * share * (k === "food" ? dust : 1) * ((v ?? 0) > 0 ? worn : 1);
     if (def.depositBonus && tile.deposit === def.depositBonus.deposit) {
       for (const [k, v] of Object.entries(def.depositBonus.amount))
         out[k as keyof Resources] += (v ?? 0) * share;
@@ -949,7 +1001,7 @@ function gapFactor(state: GameState) {
 }
 
 export interface Warning {
-  id: "fire" | "food" | "wood" | "famine" | "unrest" | "collapse" | "behind" | "land" | "sick" | "rain";
+  id: "fire" | "food" | "wood" | "famine" | "unrest" | "collapse" | "behind" | "land" | "sick" | "rain" | "wear";
   icon: IconId;
   text: string;
   // Ticks left on the countdown in the text; "{secs}" in the text is where it goes.
@@ -1102,6 +1154,19 @@ export function warnings(state: GameState): Warning[] {
           : "The land is wearing out: forests grow back slower and harvests shrink.") + cause,
       severe: landStrain(state) > 0.5,
     });
+  }
+
+  if (wearsOut(state)) {
+    const worn = state.tiles.filter((t) => t.building && (t.worn ?? 0) >= WEAR.warnAt);
+    const broken = worn.filter((t) => (t.worn ?? 0) >= 1).length;
+    if (worn.length) {
+      out.push({
+        id: "wear",
+        icon: "hammer",
+        text: `${worn.length} building${worn.length === 1 ? "" : "s"} need${worn.length === 1 ? "s" : ""} repair${broken ? ` (${broken} broken down and making nothing)` : ""}. Click one to repair it.`,
+        severe: broken > 0,
+      });
+    }
   }
 
   if (state.resources.wood < 8) {
@@ -1902,6 +1967,7 @@ function tick(state: GameState): GameState {
   };
 
   if (next.tick % 3 === 0) next = growForests(next);
+  next = wearBuildings(next);
   next = cutHills(next);
   next = sparks(next);
   // No raids or events while a new player is still learning.
@@ -2884,7 +2950,7 @@ function step(state: GameState, action: Action): GameState {
       const cleared = def.id === "farm" ? forestToClear(state, tile) : null;
       const tiles = state.tiles.map((t) =>
         t.id === tile.id
-          ? { ...t, building: def.id }
+          ? { ...t, building: def.id, worn: 0 }
           : t.id === cleared?.id
             ? { ...t, terrain: "grass" as const, height: terrainHeight("grass"), growth: 0 }
             : t,
@@ -3125,7 +3191,7 @@ function step(state: GameState, action: Action): GameState {
       if (!tile || !target || !canAfford(state, buildingCost(state, target))) return state;
       return withMeters({
         ...state,
-        tiles: state.tiles.map((t) => (t.id === tile.id ? { ...t, building: target.id } : t)),
+        tiles: state.tiles.map((t) => (t.id === tile.id ? { ...t, building: target.id, worn: 0 } : t)),
         resources: spend(state.resources, buildingCost(state, target)),
         log: [`Upgraded to a ${target.name}.`, ...state.log].slice(0, 30),
         stats: { ...(state.stats ?? emptyStats()), built: (state.stats?.built ?? 0) + 1 },
@@ -3223,6 +3289,28 @@ function step(state: GameState, action: Action): GameState {
         log: [`A caravan set off for the Silk Steppe. It will be back in ${secs(CARAVAN.ticks)} s.`, ...state.log].slice(0, 30),
       });
     }
+
+    case "repair": {
+      const tile = state.tiles[action.tileId];
+      if (!tile?.building || !(tile.worn ?? 0)) return state;
+      const cost = repairCost(state, tile);
+      if (!canAfford(state, cost)) return state;
+      return withMeters({
+        ...state,
+        tiles: state.tiles.map((t) => (t.id === tile.id ? { ...t, worn: 0 } : t)),
+        resources: spend(state.resources, cost),
+        log: [`Repaired the ${BUILDINGS_BY_ID[tile.building].name}.`, ...state.log].slice(0, 30),
+      });
+    }
+
+    case "devWear":
+      // Wear every building most of the way down, to test repairs.
+      if (!state.dev) return state;
+      return withMeters({
+        ...state,
+        tiles: state.tiles.map((t) => (t.building && t.building !== "campfire" ? { ...t, worn: Math.min(1, (t.worn ?? 0) + 0.8) } : t)),
+        log: ["Dev: every building is badly worn.", ...state.log].slice(0, 30),
+      });
 
     case "devDisaster": {
       // Warn now; it strikes 3 ticks later. A landslide needs a stripped slope.

@@ -369,6 +369,14 @@ These were decided with the project owner. Do not change them without being aske
   the fifth (**left behind**, see below). Everything else is a setback. Balance: the
   sensible bot never gets near 20; a reckless bot (clear-cutting, never
   replanting) collapses around 10 minutes. Dev: "Collapse".
+- **Hard mode: wear and repairs** (`WEAR`, `wearBuildings`, `wearFactor`,
+  `repairCost`, tile `worn`): in Hard only, every building but the campfire
+  wears by 1/900 a tick (busy ones 1.5x, brick and stone 0.6x). Past 50% worn
+  it makes less, down to nothing when broken (worn 1); a broken home holds
+  half its people; costs (like a bathhouse's wood) don't shrink. A hammer
+  shows over buildings 70%+ worn (red when broken) and a warning counts them.
+  Repair in the building panel: 15% of its cost, scaled by how worn it is
+  (at least 30%). New and upgraded buildings start fresh. Dev: "Wear".
 - **Natural disasters** (`DISASTERS`, `DISASTER_HITS`, `updateDisasters` /
   `strike` in the engine, `world/disasters.tsx`): the first about 10 minutes
   after the tutorial, then one every 10–17 minutes; never over a raid, the
