@@ -153,6 +153,12 @@ These were decided with the project owner. Do not change them without being aske
   Sans and VT323, SIL Open Font License, licence texts beside them), loaded
   with `next/font/local`. Don't use `next/font/google` or anything else the
   build has to download: judges may build it without internet.
+- **Nothing fails silently.** A click that can't plant or build logs why
+  ("Can't plant there: ..."). Any home lost in a tick (raid, sparks,
+  disaster, wear) is remembered (`homeLost`, set by `noteLostHomes`), and the
+  "roof" warning says what was lost when people are left without homes. The
+  top bar and Elder Ama's panels sit above the guide's dimmed overlay, so the
+  game never looks frozen during a guided step.
 - **Small moments** (`SMALL_MOMENTS`, `MOMENTS` / `smallMoment()` in engine.ts):
   every 20-40 ticks (30-60 s) after the tutorial, one little thing happens,
   picked from those that fit the island right now (a deer herd if the forest
