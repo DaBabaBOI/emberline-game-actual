@@ -2302,6 +2302,28 @@ export const SCOUT_KNOWLEDGE = { bigTrip: 20, trips: 5 };
 // A scouting trip takes this long (18 s at normal speed) before the new land
 // is mapped. During the tutorial it is instant (the clock stands still there).
 export const SCOUT_TRIP = { ticks: 12 };
+// Rebellions, from the Medieval era (`era`). If happiness is under `mood`,
+// unrest brews for `warnTicks` (90 s); if it climbs back over `mood` by then it
+// dies down. If not, a `share` of the people (at least `min`) take up arms.
+// Crush them with warriors (each rebel fights at `strength`; people die on both
+// sides and happiness drops `crushMood`), or meet their demands (`demand` per
+// rebel; they go home and happiness rises `demandMood`). Left alone for
+// `sackTicks` (2 minutes) they sack the stores (`sack` of food and coins) and
+// leave for good. None again for `cooldown` ticks after one ends.
+export const REBELLION = {
+  era: 3,
+  mood: 30,
+  warnTicks: 60,
+  share: 0.15,
+  min: 3,
+  strength: 1,
+  crushMood: 12,
+  demand: { currency: 15, food: 8 },
+  demandMood: 20,
+  sackTicks: 80,
+  sack: 0.3,
+  cooldown: 300,
+};
 
 // Gatherers live off the wild, and the wild only has so much. The first camp
 // makes full food; each extra camp adds only `extraCamp` of a camp's food. Every

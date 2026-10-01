@@ -479,7 +479,17 @@ These were decided with the project owner. Do not change them without being aske
     between scales it (`plagueToll`). The banner shows each part of the
     readiness and the harbour button. On the map: grey light, rats round
     homes, ships held offshore while the harbour is closed.
-  - Dev: Plague soon/now/end, Ship back, kingdom moods +/-40.
+  - Rebellions (`REBELLION`, `updateRebellion`, `state.rebellion`, from the
+    Medieval era): happiness under 30 (one big moment at a time) starts
+    unrest with a 90 s countdown; back over 30 and it dies down. Still under:
+    15% of the people (at least 3) take up arms round a building near the
+    middle (`world/rebels.tsx`). Crush them with warriors (`crushOdds`: our
+    defense against 1 per rebel; deaths both sides, -12 happiness; losing
+    means a sack) or meet their demands (15 coins + 8 food each; they come
+    home, +20 happiness). Left alone 2 minutes they sack 30% of food and
+    coins and leave. 5 minutes' calm after one ends. Below 15 happiness the
+    old unrest (people leave) still comes first: 15-30 is the rebellion band.
+  - Dev: Plague soon/now/end, Ship back, Unrest, Rebellion, kingdom moods +/-40.
 - **Natural disasters** (`DISASTERS`, `DISASTER_HITS`, `updateDisasters` /
   `strike` in the engine, `world/disasters.tsx`): the first about 10 minutes
   after the tutorial, then one every 10–17 minutes; never over a raid, the

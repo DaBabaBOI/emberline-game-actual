@@ -20,7 +20,7 @@ import { useGame } from "@/components/civ/game-provider";
 import { Countdown } from "./countdown";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { useGuide } from "./guide-overlay";
-import { PlagueBanner } from "./medieval";
+import { PlagueBanner, RebellionBanner } from "./medieval";
 
 export function TutorialPanel() {
   const { state, dispatch } = useGame();
@@ -322,6 +322,7 @@ function DisasterBanner() {
 
 export function RaidBanner() {
   const { state, dispatch } = useGame();
+  if (state.rebellion && !state.raid) return <RebellionBanner />;
   if (state.plague && !state.raid) return <PlagueBanner />;
   if (state.disaster && !state.raid) return <DisasterBanner />;
   if (state.drought && !state.raid) return <DroughtBanner />;
@@ -632,6 +633,12 @@ export function DevPanel() {
             Plague {when}
           </button>
         ))}
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devRebellion", when: "soon" })}>
+          Unrest
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devRebellion", when: "now" })}>
+          Rebellion
+        </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devShipBack" })}>
           Ship back
         </button>

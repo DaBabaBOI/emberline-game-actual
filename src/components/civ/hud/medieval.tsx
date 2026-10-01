@@ -3,8 +3,11 @@
 // The Medieval era's screens: choosing the landmark that carries the town into
 // the Middle Ages, the two kingdoms, ships, and the Black Death.
 
-import { KINGDOMS, KINGDOM_RAID, LANDMARKS, PLAGUE, DIPLOMACY } from "@/game/content";
+import { KINGDOMS, KINGDOM_RAID, LANDMARKS, PLAGUE, DIPLOMACY, REBELLION } from "@/game/content";
 import {
+  canAfford,
+  crushOdds,
+  rebelDemands,
   giftCost,
   giftError,
   inPlague,
@@ -236,6 +239,64 @@ export function KingdomsPanel() {
             );
           })}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Unrest, then rebels with arms: what is happening, and what we can do.
+export function RebellionBanner() {
+  const { state, dispatch } = useGame();
+  const r = state.rebellion;
+  if (!r) return null;
+  const risen = r.stage === "risen";
+  const demands = rebelDemands(state);
+  const odds = Math.round(crushOdds(state) * 100);
+  return (
+    <div className="pointer-events-none flex justify-center" data-testid="rebellion-banner">
+      <div className={cn("font-pixel flex w-[min(92vw,560px)] flex-col gap-1.5 border-[3px] border-[#140e0a] px-4 py-2 text-xs text-white md:text-sm", risen ? "bg-[#5a1414]/95" : "bg-[#4a3b2e]/95")}>
+        <span className="flex items-start gap-2 font-semibold">
+          <PixelIcon name={risen ? "sword" : "sad"} size={20} />
+          <span>
+            {risen ? (
+              <>
+                Rebellion! {r.rebels} of our people have taken up arms. If nothing is done they sack the stores in{" "}
+                <Countdown ticks={Math.max(0, r.sackTick - state.tick)} />s.
+              </>
+            ) : (
+              <>
+                Unrest in the streets. Happiness is {state.meters.happiness}: if it stays under {REBELLION.mood}, people rise up in{" "}
+                <Countdown ticks={Math.max(0, r.riseTick - state.tick)} />s.
+              </>
+            )}
+          </span>
+        </span>
+        {risen ? (
+          <span className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={state.soldiers < 1}
+              onClick={() => dispatch({ type: "crushRebels" })}
+              className="pixel-btn pointer-events-auto bg-red-800 px-2 py-1 text-xs hover:bg-red-700 disabled:opacity-40"
+              title={state.soldiers < 1 ? "We have no warriors" : `People die on both sides, and happiness drops ${REBELLION.crushMood}`}
+              data-testid="crush-rebels"
+            >
+              Crush them ({state.soldiers < 1 ? "no warriors" : `${odds}% chance`})
+            </button>
+            <button
+              type="button"
+              disabled={!canAfford(state, demands)}
+              onClick={() => dispatch({ type: "meetDemands" })}
+              className="pixel-btn pointer-events-auto flex items-center gap-1.5 bg-amber-300 px-2 py-1 text-xs text-[#2b2119] disabled:opacity-40"
+              title={`They go home, and happiness rises ${REBELLION.demandMood}`}
+              data-testid="meet-demands"
+            >
+              Meet their demands <CostLine cost={demands} />
+            </button>
+          </span>
+        ) : (
+          <span className="text-[11px] text-white/80">Raise happiness: food, homes, fires, a feast, healers. Happy people don&apos;t rebel.</span>
+        )}
       </div>
     </div>
   );

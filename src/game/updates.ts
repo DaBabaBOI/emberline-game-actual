@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Rebellions, from the Medieval era: if happiness stays under 30, unrest brews, and 90 seconds later some of your people take up arms. Crush them with your warriors (people die, and happiness drops), meet their demands (coins and food), or cheer the town up before they rise. Left alone, they sack the stores and leave.",
       "Scouting takes time now: the scouts set out (a marker shows where), and the new land is mapped when they come back about 18 seconds later. The Scout button counts down meanwhile.",
       "Removed the 'Deer at the forest edge' moment: it was hard to see and did little.",
       "Someone you drop on a Woodcutter to help now walks out to a tree it is felling and chops at the trunk, instead of swinging at the air. With no trees left, they split logs at the chopping block.",
