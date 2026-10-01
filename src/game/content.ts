@@ -597,7 +597,7 @@ export const TREE: TreeNode[] = [
     description: "Settle down to farm for good. With 15 people, your tribe can enter the Ancient era.",
     branch: "knowledge",
     era: 0,
-    cost: 80,
+    cost: 30,
     requires: ["early-farming", "toolmaking"],
   },
   // ---- Ancient era ---------------------------------------------------------
@@ -806,8 +806,12 @@ export const ADVANCEMENT_GOALS: Record<string, Goal[]> = {
   herbalism: [{ label: "Gather from berry bushes", kind: "berryCamp", amount: 1 }],
   herding: [{ label: "Hunt animals", kind: "tally", key: "hunts", amount: 3 }],
   "hide-clothing": [{ label: "Have Livestock Pens", kind: "have", building: "pen", amount: 2 }],
+  // Fewer Knowledge to save up (30, not 80), more things to do instead: settle
+  // down in houses and have elders teaching.
   agriculture: [
     { label: "Have Farmland", kind: "have", building: "farm", amount: 3 },
+    { label: "Have Wooden Houses", kind: "have", building: "hut", amount: 2 },
+    { label: "Have an Elder's Hut", kind: "have", building: "elder", amount: 1 },
     { label: "Grow your tribe", kind: "population", amount: 12 },
     { label: "Store food at once", kind: "stored", resource: "food", amount: 50 },
   ],
