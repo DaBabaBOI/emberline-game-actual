@@ -187,6 +187,10 @@ These were decided with the project owner. Do not change them without being aske
   campfire makes 30% less food. The placement card warns for both buildings
   (`fireScareNote()`); the tutorial and skip-tutorial never put the gatherer next
   to the fire.
+- **Skipping the tutorial gives what the tutorial gives:** a woodcutter, a lit
+  campfire, a Wooden House, a gatherer, a war camp with a warrior, Early Farming
+  (researched) and a Farmland. Only the after-tutorial reserve of food and wood
+  is left. If the tutorial gains a step, skipping must hand that over too.
 - **Quarries cut the hill** (`QUARRY_CUT`): a working quarry cuts its tile down a
   little every tick (fully in ~600 ticks). The tile sinks by up to 45%, turns to
   bare rock, and a mountain loses its peak. The cut (`Tile.dug`) never grows back
