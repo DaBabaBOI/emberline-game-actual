@@ -9,8 +9,9 @@ import { cn } from "@/lib/utils";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import type { IconId } from "@/game/sprites";
 import { GameMenu } from "./online";
+import { useEffect, useState } from "react";
+import { figureCounts, highlight } from "@/components/civ/world/crowd";
 import { KnowledgeGain, KnowledgeHelp } from "./knowledge-help";
-import { useState } from "react";
 
 const SPEEDS: { value: GameState["speed"]; label: string }[] = [
   { value: 0, label: "⏸" },
@@ -24,6 +25,52 @@ function Chip({ icon, value, title, low }: { icon: IconId; value: string; title:
     <span title={title} className={cn("flex items-center gap-1 whitespace-nowrap", low && "animate-pulse text-red-400")}>
       <PixelIcon name={icon} size={16} />
       <span className="font-num">{value}</span>
+    </span>
+  );
+}
+
+// Population or warriors: hovering (or tapping) lights up those people on the
+// map in yellow, and says how many people each figure stands for.
+function CrowdChip({ icon, count, figures, group, noun }: { icon: IconId; count: number; figures: number; group: "people" | "warriors"; noun: string }) {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    highlight.group = on ? group : highlight.group === group ? null : highlight.group;
+  }, [on, group]);
+  // A tap on a phone lights them up for a few seconds.
+  useEffect(() => {
+    if (!on) return;
+    const id = setTimeout(() => setOn(false), 4000);
+    return () => clearTimeout(id);
+  }, [on]);
+  useEffect(() => () => void (highlight.group = null), []);
+  const each = figures ? count / figures : 0;
+  return (
+    <span className="relative">
+      <button
+        type="button"
+        onMouseEnter={() => setOn(true)}
+        onMouseLeave={() => setOn(false)}
+        onFocus={() => setOn(true)}
+        onBlur={() => setOn(false)}
+        onClick={() => setOn(true)}
+        className={cn("flex items-center gap-1 whitespace-nowrap px-1", on && "bg-amber-400 text-[#2b2119]")}
+        data-testid={`crowd-${group}`}
+      >
+        <PixelIcon name={icon} size={16} />
+        <span className="font-num">{count.toLocaleString()}</span>
+      </button>
+      {on && (
+        <span className="pixel-panel-dark absolute left-1/2 top-full z-30 mt-2 w-56 -translate-x-1/2 p-2 text-left text-xs" data-testid={`crowd-tip-${group}`}>
+          {count.toLocaleString()} {noun}. {figures > 0 ? (
+            <>
+              They are lit up in yellow on the map: {figures} figure{figures === 1 ? "" : "s"}
+              {each > 1.05 ? `, each one about ${Math.round(each)} ${noun}` : ""}.
+            </>
+          ) : (
+            "None on the map yet."
+          )}
+        </span>
+      )}
     </span>
   );
 }
@@ -79,9 +126,21 @@ export function TopBar() {
         </div>
         <ChiefXp state={state} />
         <span className="hidden h-6 w-px bg-white/20 md:block" />
-        <Chip icon="person" value={Math.floor(state.population).toLocaleString()} title="Population" />
+        <CrowdChip
+          icon="person"
+          count={Math.floor(state.population)}
+          figures={figureCounts(state.population, state.soldiers).villagers}
+          group="people"
+          noun="people"
+        />
         <Chip icon="coin" value={Math.floor(r.currency).toLocaleString()} title={era.currency} />
-        <Chip icon="sword" value={state.soldiers.toString()} title="Warriors" />
+        <CrowdChip
+          icon="sword"
+          count={state.soldiers}
+          figures={figureCounts(state.population, state.soldiers).warriors}
+          group="warriors"
+          noun="warriors"
+        />
         <span className="hidden h-6 w-px bg-white/20 md:block" />
         <Chip icon="meat" value={Math.floor(r.food).toString()} title="Stored food" low={low.has("food") || low.has("famine")} />
         <Chip icon="log" value={Math.floor(r.wood).toString()} title="Wood" low={low.has("wood")} />

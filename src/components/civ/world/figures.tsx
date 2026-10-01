@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Color, InstancedMesh, Matrix4, Object3D } from "three";
+import { highlight } from "./crowd";
 
 export interface Agent {
   x: number;
@@ -29,6 +30,8 @@ export interface Agent {
 export const SKINS = ["#f1c7a0", "#e0ac69", "#c68642", "#8d5524", "#f5d0b0"];
 export const HAIRS = ["#2b1b10", "#4a2f1b", "#1a1a1a", "#7a4a22", "#a0703c"];
 
+const HIGHLIGHT = "#ffd23f";
+
 const fig = new Object3D();
 const local = new Object3D();
 const out = new Matrix4();
@@ -41,6 +44,7 @@ export function Figures({
   weapon,
   gear,
   colorKey = "",
+  group,
 }: {
   agents: React.RefObject<Agent[]>;
   max: number;
@@ -49,6 +53,8 @@ export function Figures({
   gear?: "roman";
   // Change this when agents' colours change so they get repainted.
   colorKey?: string | number;
+  // Which top-bar counter these figures belong to (for the highlight).
+  group?: "people" | "warriors";
 }) {
   const torso = useRef<InstancedMesh>(null);
   const head = useRef<InstancedMesh>(null);
@@ -59,6 +65,7 @@ export function Figures({
   const helmet = useRef<InstancedMesh>(null);
   const crest = useRef<InstancedMesh>(null);
   const shield = useRef<InstancedMesh>(null);
+  const marker = useRef<InstancedMesh>(null);
   // Workers' tools (handle and head) and the dirt or chips their strokes kick up.
   const handle = useRef<InstancedMesh>(null);
   const toolHead = useRef<InstancedMesh>(null);
@@ -74,11 +81,12 @@ export function Figures({
     const n = Math.min(list.length, max);
     const t = clock.elapsedTime;
 
-    const paintKey = `${n}|${colorKey}`;
+    const lit = !!group && highlight.group === group;
+    const paintKey = `${n}|${colorKey}|${lit}`;
     if (colored.current !== paintKey) {
       const c = new Color();
       list.slice(0, n).forEach((a, i) => {
-        torso.current?.setColorAt(i, c.set(a.tunic));
+        torso.current?.setColorAt(i, c.set(lit ? HIGHLIGHT : a.tunic));
         head.current?.setColorAt(i, c.set(a.skin));
         hair.current?.setColorAt(i, c.set(a.hair));
         arms.current?.setColorAt(i * 2, c.set(a.skin));
@@ -152,6 +160,16 @@ export function Figures({
       }
     }
 
+    // A yellow marker bobbing over each highlighted figure (hidden otherwise).
+    for (let i = 0; i < n; i++) {
+      const a = list[i];
+      fig.position.set(a.x, a.y + 0.75 * a.scale + Math.sin(t * 4 + i) * 0.04, a.z);
+      fig.rotation.set(0, t * 2, 0);
+      fig.scale.setScalar(lit ? a.scale : 0.0001);
+      fig.updateMatrix();
+      marker.current?.setMatrixAt(i, fig.matrix);
+    }
+
     // Tools in hand while working (hidden, scaled to nothing, otherwise).
     for (let i = 0; i < n; i++) {
       const a = list[i];
@@ -180,9 +198,9 @@ export function Figures({
       put(dust.current, i);
     }
 
-    for (const m of [torso, head, hair, tool, helmet, crest, shield, handle, toolHead, dust]) if (m.current) m.current.count = n;
+    for (const m of [torso, head, hair, tool, helmet, crest, shield, marker, handle, toolHead, dust]) if (m.current) m.current.count = n;
     for (const m of [legs, arms]) if (m.current) m.current.count = n * 2;
-    for (const m of [torso, head, hair, legs, arms, tool, helmet, crest, shield, handle, toolHead, dust]) {
+    for (const m of [torso, head, hair, legs, arms, tool, helmet, crest, shield, marker, handle, toolHead, dust]) {
       if (m.current) m.current.instanceMatrix.needsUpdate = true;
     }
   });
@@ -201,6 +219,10 @@ export function Figures({
       <instancedMesh ref={hair} args={[undefined, undefined, max]} {...common}>
         <sphereGeometry args={[0.062, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
         <meshStandardMaterial />
+      </instancedMesh>
+      <instancedMesh ref={marker} args={[undefined, undefined, max]} frustumCulled={false} raycast={() => null}>
+        <octahedronGeometry args={[0.06, 0]} />
+        <meshStandardMaterial color={HIGHLIGHT} emissive={HIGHLIGHT} emissiveIntensity={0.8} />
       </instancedMesh>
       <instancedMesh ref={legs} args={[undefined, undefined, max * 2]} {...common}>
         <cylinderGeometry args={[0.024, 0.02, 0.18, 6]} />

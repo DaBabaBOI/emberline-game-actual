@@ -138,6 +138,11 @@ These were decided with the project owner. Do not change them without being aske
   no disease out of nowhere for 200); then events come every `EVENT_GAP`
   (100-160 ticks) and raids every `RAID_GAP` (170-250). Pressure builds as the
   tribe grows. Playtesters called the old, longer gaps "a snoozefest".
+- **Figures stand for groups** (`world/crowd.ts`: `MAX_FIGURES`, `figureCounts`):
+  hovering or tapping the population or warriors counter lights those figures
+  up in yellow with a marker overhead (`highlight.group`, `Figures group=`) and
+  says how many people each figure stands for. New crowds of people on the
+  map must pass a `group` so they light up too.
 - **How to get Knowledge is always one click away** (`knowledgeSources()` in
   engine.ts, `hud/knowledge-help.tsx`): the bulb counter in the top bar opens a
   panel listing the one-time firsts still to come (new kinds of building,
