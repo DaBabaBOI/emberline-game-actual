@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Removed the 'Deer at the forest edge' moment: it was hard to see and did little.",
       "Someone you drop on a Woodcutter to help now walks out to a tree it is felling and chops at the trunk, instead of swinging at the air. With no trees left, they split logs at the chopping block.",
       "No more rain moment. Instead, when the land is well watered, a field's wheat visibly shoots up (+2 food for each field). The birds coming back now circle over the forest itself, just above the trees, not over the grass beside it.",
       "The year in the top bar now counts up smoothly instead of jumping every tick, and holds still while the game is paused. In later eras it no longer stops 100 years before the next era: it slows down and keeps going until the year before.",
