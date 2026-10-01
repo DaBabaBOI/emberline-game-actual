@@ -133,6 +133,7 @@ export function PickUp({
       w.sitting = false;
       w.working = false;
       w.workAt = null;
+      w.faceAt = null;
       w.sitAt = null;
       carry.current.origin = { x: w.x, z: w.z };
       el.style.cursor = "grabbing";
@@ -374,7 +375,13 @@ function land(w: Walker, outcome: DropOutcome, tile: Tile | null, tiles: Tile[],
         w.workAt = tile;
         w.workUntil = performance.now() + DROP.helpTicks * TICK_SECONDS * 1000;
         w.workTool = tile.building === "woodcutter" ? "axe" : tile.building === "quarry" ? "pick" : "hoe";
-        w.heading = Math.atan2(tile.x - w.x, tile.z - w.z);
+        // A woodcutter's helper walks out to a tree; the others work where
+        // they land, facing the building.
+        const spot = w.workTool === "axe" ? ground.workSpot(tile, "axe") : { x: w.x, z: w.z, face: { x: tile.x, z: tile.z } };
+        w.tx = spot.x;
+        w.tz = spot.z;
+        w.faceAt = spot.face;
+        w.heading = Math.atan2(spot.face.x - w.x, spot.face.z - w.z);
         w.wait = 3;
       } else w.wait = 1.5;
     }

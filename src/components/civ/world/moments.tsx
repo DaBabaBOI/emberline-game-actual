@@ -9,6 +9,7 @@ import type { IconId } from "@/game/sprites";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { Plume } from "./atmosphere";
 import { tileTop } from "./hex-terrain";
+import { BUILDING_SCALE, buildingTurn } from "./building-models";
 
 // Small moments (a herd passing, a tree blown down, birds coming back) play out
 // on the map where they happen, for MOMENT_TICKS, with a short label above.
@@ -158,7 +159,7 @@ function Grow({ tile }: { tile: Tile }) {
     });
   });
   return (
-    <group rotation={[0, (tile.id % 6) * (Math.PI / 3), 0]} scale={1.55}>
+    <group rotation={[0, buildingTurn(tile.id), 0]} scale={BUILDING_SCALE}>
       <group ref={field}>
         {FARM_STALKS.map((s, i) => (
           <group key={i} position={[s.x, 0.04, s.z]}>

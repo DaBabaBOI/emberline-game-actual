@@ -39,7 +39,7 @@ import { tileAnchor } from "@/components/civ/guide";
 import { useGuide } from "@/components/civ/hud/guide-overlay";
 import type { Tile } from "@/game/types";
 import { BiomeDetails, Deposits, Forests, HexTerrain, Mountains, tileTop, treeSpots } from "./hex-terrain";
-import { MODELS } from "./building-models";
+import { BUILDING_SCALE, MODELS, buildingTurn } from "./building-models";
 import { BattleScene, FireVictims, Raiders, Villagers, Warriors } from "./villagers";
 import { PickUp } from "./pick-up";
 import { SeaTraffic, TradeShips, WaitingShips } from "./trade";
@@ -299,8 +299,8 @@ export function WorldCanvas() {
           <group
             key={t.id}
             position={[t.x, t.height, t.z]}
-            rotation={[broken ? 0.12 : 0, (t.id % 6) * (Math.PI / 3), broken ? 0.1 : 0]}
-            scale={1.55}
+            rotation={[broken ? 0.12 : 0, buildingTurn(t.id), broken ? 0.1 : 0]}
+            scale={BUILDING_SCALE}
           >
             {state.landmark?.tile === t.id && !landmarkDone(state) ? (
               // The landmark rises stage by stage inside its scaffolding.
@@ -435,7 +435,7 @@ export function WorldCanvas() {
         </Html>
       )}
       {hoverTile && Ghost && (
-        <group position={[hoverTile.x, tileTop(hoverTile), hoverTile.z]} scale={1.55}>
+        <group position={[hoverTile.x, tileTop(hoverTile), hoverTile.z]} scale={BUILDING_SCALE}>
           <Ghost opacity={0.45} />
           <Html
             // In the tutorial the card sits above the dimming so it can be read.

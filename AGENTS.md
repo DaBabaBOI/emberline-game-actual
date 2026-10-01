@@ -294,7 +294,10 @@ These were decided with the project owner. Do not change them without being aske
   the engine, `DROP`): after the tutorial, with no tool selected, the player can
   grab a villager and drop them anywhere. A ring and label under them say what
   will happen. Open ground: nothing. A working building: they help (+50% output
-  for 20 ticks). A cold campfire: they relight it. A lit fire or the open sea:
+  for 20 ticks), working what the building works (`ground.workSpot()`): at a
+  woodcutter they walk out to a tree it is felling (in `LAND.woodcutterReach`,
+  biggest first) and chop at its trunk, or split logs at the chopping block if
+  no trees are left; elsewhere they work beside the building, facing it. A cold campfire: they relight it. A lit fire or the open sea:
   they die (-1 person, counted as fire / accident in the debrief) and the
   tribe grieves (`GRIEF`, `state.grief`): -35 happiness each, taken off
   *after* the 0-100 cap so it always shows, adding up to -100 and fading over
