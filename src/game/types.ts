@@ -278,6 +278,8 @@ export interface GameState {
   nextDisasterTick?: number;
   // Fields a flood left rich silt on, until this tick.
   silt?: Record<number, number>;
+  // The discovery scene on screen (an advancement or secret just found), if any.
+  cutscene?: string | null;
   // Caravans out trading with the Silk Steppe: when each left and when it's back.
   caravans?: { start: number; back: number }[];
   // Running totals for the debrief, and the debrief on screen (if any).

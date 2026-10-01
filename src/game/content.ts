@@ -1335,6 +1335,49 @@ export const ERA_INTROS: Record<number, { id: string; title: string; text: strin
   },
 };
 
+// Discovery scenes: when an advancement (or a secret) is found, a short pixel
+// scene shows the moment people worked it out. `bg` sets the sky, `actors` walk
+// in, `item` is what they discover, and the three lines play one by one.
+// Keep them short, in the tribe's own voice, and modest about history.
+export type SceneSky = "dawn" | "day" | "dusk" | "night" | "sea";
+export interface DiscoveryScene {
+  bg: SceneSky;
+  actors: IconId[];
+  item: IconId;
+  lines: [string, string, string];
+}
+export const DISCOVERIES: Record<string, DiscoveryScene> = {
+  storytelling: { bg: "night", actors: ["elder", "person"], item: "feather", lines: ["Night after night, the old ones talked by the fire.", "The children began to repeat the stories, word for word.", "What one person knew, now everyone could remember."] },
+  toolmaking: { bg: "day", actors: ["person"], item: "pickaxe", lines: ["A stone struck another and a sharp flake broke off.", "It cut hide better than teeth, and wood better than hands.", "Soon every hunter carried a blade of stone."] },
+  firekeeping: { bg: "night", actors: ["elder"], item: "campfire", lines: ["The fire kept dying before dawn.", "Buried under ash, the embers stayed warm until morning.", "Now a fire can be kept alive with half the wood."] },
+  fishing: { bg: "sea", actors: ["person", "person"], item: "boat", lines: ["Logs drifted past the shore, carrying birds on their backs.", "Tied together with vines, they carried people too.", "Out on the water, the fish could not hide."] },
+  "early-farming": { bg: "dawn", actors: ["person", "elder"], item: "wheat", lines: ["Grain dropped by the camp last year had sprouted.", "What if we put the seeds in the ground ourselves?", "A handful of seeds became a field."] },
+  spears: { bg: "day", actors: ["person", "person"], item: "sword", lines: ["A sharp stone, tied to a long stick.", "Now the hunter can strike from further away.", "The herds are easier to hunt, and the camp is easier to guard."] },
+  herbalism: { bg: "day", actors: ["elder"], item: "herb", lines: ["The sick woman chewed a bitter leaf and slept.", "In the morning her fever was gone.", "We began to remember which plants heal."] },
+  herding: { bg: "day", actors: ["person"], item: "sheep", lines: ["A lost lamb followed the children home.", "It grew, and more wild goats came to its call.", "Now the herd walks with us, and we don't have to chase it."] },
+  "hide-clothing": { bg: "dusk", actors: ["person", "person"], item: "sheep", lines: ["A sharp bone, a thread of sinew, two hides.", "Sewn together, they keep the wind out.", "Warm without a fire: less wood, less smoke."] },
+  "cave-paintings": { bg: "night", actors: ["elder", "person"], item: "mammoth", lines: ["By torchlight, a hand pressed red earth to the rock.", "A mammoth appeared on the cave wall.", "Our stories will be here long after we are gone."] },
+  agriculture: { bg: "dawn", actors: ["person", "person", "elder"], item: "wheat", lines: ["The fields fed us all winter.", "No more walking after the herds: we will stay.", "Here we build a village that will last."] },
+  writing: { bg: "day", actors: ["elder", "person"], item: "book", lines: ["A reed pressed into wet clay leaves a mark.", "One mark for a sheep, another for a sack of grain.", "Now words last longer than the one who spoke them."] },
+  pottery: { bg: "day", actors: ["person"], item: "amphora", lines: ["Clay left near the fire turned hard as stone.", "Shaped into jars, it kept the grain dry and the mice out.", "Food no longer rots before we can eat it."] },
+  bronze: { bg: "night", actors: ["person", "person"], item: "hammer", lines: ["Green stones melted in the hottest fire.", "Mixed with a little tin, the metal came out hard and bright.", "Bronze tools: stronger, and they can be mended."] },
+  irrigation: { bg: "day", actors: ["person", "person"], item: "drop", lines: ["The river flooded the low field, and the crop grew tall.", "We dug a ditch to bring the water to the others.", "Every field near a canal grows more. But the water leaves salt behind."] },
+  forestry: { bg: "day", actors: ["elder", "person"], item: "sapling", lines: ["Where the woodcutters worked, only stumps were left.", "An old woman planted acorns in the bare ground.", "Cut one tree, plant another: the forest can last."] },
+  "bronze-arms": { bg: "dusk", actors: ["person", "person"], item: "shield", lines: ["The smiths hammered bronze into spear points and shield rims.", "A bronze spear does not break against a wooden shield.", "Our warriors fight twice as hard."] },
+  coinage: { bg: "day", actors: ["person", "elder"], item: "coin", lines: ["Traders argued: how many sheep is a jar of oil worth?", "Small silver pieces, all the same weight, settled it.", "Now anything can be traded for coins."] },
+  hydraulics: { bg: "day", actors: ["person", "person"], item: "well", lines: ["The stream dried up, but the ground was still damp.", "We dug deeper and deeper, and water rose from below.", "A well: water close to home, even when the rain fails."] },
+  watermill: { bg: "day", actors: ["person"], item: "mill", lines: ["The river pushed a floating log round and round.", "Fixed to a wheel, the river turned a millstone.", "Grain ground by water, not by hand."] },
+  concrete: { bg: "day", actors: ["person", "person"], item: "aqueduct", lines: ["Lime, ash and water, mixed and left to dry.", "It set as hard as rock, even under water.", "Now we can build arches to carry a whole river."] },
+  planning: { bg: "day", actors: ["elder", "person"], item: "insula", lines: ["The town had grown into a tangle of huts and paths.", "The builders drew straight streets in the dust.", "Tall houses, side by side: more people on less land."] },
+  sanitation: { bg: "day", actors: ["person", "elder"], item: "drop", lines: ["Where the waste ran in the street, the fevers came.", "Channels of running water carried it away.", "A clean town is a healthy town."] },
+  wheel: { bg: "day", actors: ["person", "sheep"], item: "market", lines: ["A round log rolled a heavy stone down the hill.", "Cut into discs and fixed to a cart, it carried more than ten people could.", "Carts bring goods to market."] },
+  "barter-roads": { bg: "sea", actors: ["person", "person"], item: "boat", lines: ["A strange ship came from the steppe across the water.", "They brought silk and spices, and wanted our grain and wood.", "Our caravans can sail to them now."] },
+  roads: { bg: "day", actors: ["person", "person"], item: "rock", lines: ["Carts sank in the mud every spring.", "Flat stones laid side by side made a road that never floods.", "Goods and news travel faster than ever."] },
+  philosophy: { bg: "dusk", actors: ["elder", "person", "person"], item: "column", lines: ["In the shade of the columns, a teacher asked: why?", "The students argued until the sun went down.", "Asking questions is how new knowledge begins."] },
+  legions: { bg: "night", actors: ["person", "person"], item: "sword", lines: ["A new ore, heated hotter than bronze ever needed.", "Hammered while glowing, it became iron.", "Iron swords are harder still. But they eat charcoal."] },
+  "silk-secret": { bg: "sea", actors: ["person"], item: "coin", lines: ["Our fifth caravan came back with a strange green stone.", "Jade, they called it, from lands far to the east.", "The world is bigger than any of us thought."] },
+};
+
 // Ticks between two lessons, so they never pile up.
 export const LESSON_GAP = 40;
 // Big moments (an event card, a raid, an elder lesson, an outbreak out of

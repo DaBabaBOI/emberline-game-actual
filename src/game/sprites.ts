@@ -809,6 +809,20 @@ export const SPRITES = {
     "dddddddddddd",
     "............",
   ],
+  moon: [
+    "............",
+    "....cccc....",
+    "...cccc.....",
+    "..cccc......",
+    "..ccc.......",
+    "..ccc.......",
+    "..ccc.......",
+    "..cccc......",
+    "...cccc.....",
+    "....cccc....",
+    "............",
+    "............",
+  ],
 } satisfies Record<string, string[]>;
 
 export type IconId = keyof typeof SPRITES;
