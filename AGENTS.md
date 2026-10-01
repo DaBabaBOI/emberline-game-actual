@@ -369,6 +369,20 @@ These were decided with the project owner. Do not change them without being aske
   the fifth (**left behind**, see below). Everything else is a setback. Balance: the
   sensible bot never gets near 20; a reckless bot (clear-cutting, never
   replanting) collapses around 10 minutes. Dev: "Collapse".
+- **Natural disasters** (`DISASTERS`, `DISASTER_HITS`, `updateDisasters` /
+  `strike` in the engine, `world/disasters.tsx`): the first about 10 minutes
+  after the tutorial, then one every 10–17 minutes; never over a raid, the
+  legion, the drought or an event, one big moment at a time. Each is warned of
+  (banner with a countdown), then strikes. Storm: all fires out, wooden
+  buildings without 2 forest tiles beside them may be wrecked (rain,
+  lightning, dark sky). Flood: low tiles by the river or sea go under (fewer
+  with more forest standing); buildings there stop; afterwards fields there
+  get silt (+40%). Earthquake: camera shake, cracks, buildings near it fall
+  (brick/stone 25%, wood 8%, at most 3; lost homes kill). Landslide: only on
+  hills with stripped forest or quarry cuts around them and buildings below.
+  The last woodcutter is never destroyed. Deaths count as "disasters" in the
+  debrief. Lessons: disasters (SDG 11.5), slopes (SDG 15.3). Dev: Storm,
+  Flood, Earthquake, Landslide.
 - **Discovery scenes** (`DISCOVERIES` in content, `hud/discovery-scene.tsx`,
   `state.cutscene`): researching an advancement or finding a secret plays a
   short pixel scene (sky, people walking in, the discovery appearing, three

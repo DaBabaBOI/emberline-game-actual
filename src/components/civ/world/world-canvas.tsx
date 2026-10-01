@@ -38,6 +38,7 @@ import { MODELS } from "./building-models";
 import { BattleScene, FireVictims, Raiders, Villagers, Warriors } from "./villagers";
 import { PickUp } from "./pick-up";
 import { TradeShips } from "./trade";
+import { Cracks, DisasterDust, disasterView, FloodWater, QuakeShake, Rubble, StormRain } from "./disasters";
 import { Wildlife } from "./wildlife";
 import { CampfireSmoke, Haze, Wildfire } from "./atmosphere";
 
@@ -172,6 +173,9 @@ export function WorldCanvas() {
   const burningIds = burning.map((t) => t.id);
   // The great drought: warned of (a little dry), then on (parched land, hazy sky).
   const dry = inDrought(state) ? 1 : state.drought ? 0.2 : 0;
+  // A storm, flood, earthquake or landslide: warned of, then striking.
+  const disaster = disasterView(state);
+  const storm = disaster.kind === "storm" ? (disaster.active ? 1 : 0.5) : 0;
   const outFires = buildings.filter((t) => t.building === "campfire" && !isLit(state, t));
 
   // On a phone there is no hover: the first tap previews, the second tap builds.
@@ -219,9 +223,9 @@ export function WorldCanvas() {
       }}
     >
       <color attach="background" args={["#a8dcf5"]} />
-      <Haze fires={burning.length + 2 * buildings.filter((t) => t.building === "smithy").length} dust={dry >= 1 ? 1 : 0} />
+      <Haze fires={burning.length + 2 * buildings.filter((t) => t.building === "smithy").length} dust={dry >= 1 ? 1 : 0} storm={storm} />
       {/* The Ancient era is a touch warmer and more golden, so the change of era shows. */}
-      <hemisphereLight args={[dry >= 1 ? "#ffe2a8" : state.era >= 1 ? "#ffeccc" : "#d6f1ff", "#6f8f4e", 0.75]} />
+      <hemisphereLight args={[dry >= 1 ? "#ffe2a8" : state.era >= 1 ? "#ffeccc" : "#d6f1ff", "#6f8f4e", 0.75 - storm * 0.3]} />
       <directionalLight
         position={[home.x + 25, 40, home.z + 15]}
         intensity={1.5}
@@ -291,6 +295,12 @@ export function WorldCanvas() {
       <BattleScene tiles={state.tiles} battle={battleShowing ? state.battle ?? null : null} homeTile={home} />
       <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} speed={state.speed} />
       <TradeShips tiles={state.tiles} home={home} caravans={state.caravans ?? []} tick={state.tick} speed={state.speed} />
+      <QuakeShake active={disaster.kind === "earthquake" && disaster.active} />
+      {disaster.kind === "flood" && disaster.active && <FloodWater tiles={state.tiles} ids={disaster.tiles} progress={disaster.progress} />}
+      {storm > 0 && <StormRain centre={home} heavy={disaster.active} />}
+      {(disaster.kind === "earthquake" || disaster.kind === "landslide") && disaster.active && <DisasterDust tiles={state.tiles} ids={disaster.tiles} />}
+      <Cracks tiles={state.tiles} />
+      <Rubble tiles={state.tiles} />
       <Wildlife
         tiles={state.tiles}
         homeTile={home}
