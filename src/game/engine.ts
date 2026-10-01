@@ -1003,7 +1003,7 @@ function gapFactor(state: GameState) {
 }
 
 export interface Warning {
-  id: "fire" | "food" | "wood" | "famine" | "unrest" | "collapse" | "behind" | "land" | "sick" | "rain" | "wear";
+  id: "fire" | "food" | "wood" | "famine" | "unrest" | "collapse" | "behind" | "land" | "sick" | "rain" | "wear" | "roof";
   icon: IconId;
   text: string;
   // Ticks left on the countdown in the text; "{secs}" in the text is where it goes.
@@ -1080,6 +1080,18 @@ export function warnings(state: GameState): Warning[] {
       text: "Food is running low: about {secs}s left. Build gatherers or farms.",
       countdown: state.resources.food / -netFood,
       severe: state.resources.food / -netFood < 20,
+    });
+  }
+
+  // People with no roof over their heads: say why, if a home was just lost.
+  const homeless = Math.floor(state.population) - housingCapacity(state);
+  if (homeless > 0) {
+    const lost = state.homeLost && state.tick - state.homeLost.tick < 120 ? state.homeLost : null;
+    out.push({
+      id: "roof",
+      icon: "hut",
+      text: `${lost ? `We lost a ${lost.name}. ` : ""}${homeless} ${homeless === 1 ? "person has" : "people have"} no roof over their heads: build homes.`,
+      severe: !!lost || state.meters.shelter < 30,
     });
   }
 
@@ -1901,6 +1913,22 @@ function startGrace(state: GameState): GameState {
 
 function tick(state: GameState): GameState {
   if (state.phase !== "playing" || state.event) return state;
+  return noteLostHomes(state, tickOnce(state));
+}
+
+// A home burned, wrecked or broken down this tick: remember which, so the
+// warning about people with no roof can say what happened.
+function noteLostHomes(before: GameState, after: GameState): GameState {
+  if (housingCapacity(after) >= housingCapacity(before)) return after;
+  const gone = before.tiles.find((t, i) => {
+    const room = t.building ? BUILDINGS_BY_ID[t.building]?.housing ?? 0 : 0;
+    const now = after.tiles[i];
+    return room > 0 && (now.building !== t.building || (now.worn ?? 0) >= 1) ;
+  });
+  return gone ? { ...after, homeLost: { name: BUILDINGS_BY_ID[gone.building!].name, tick: after.tick } } : after;
+}
+
+function tickOnce(state: GameState): GameState {
   const prod = production(state);
   const cons = consumption(state);
 
@@ -2964,8 +2992,18 @@ export function currentGoal(state: GameState): string | null {
       const parts = [open ? `${open.label} (${Math.floor(open.have)}/${open.need})` : null, k < cost ? `${k}/${cost} Knowledge` : null]
         .filter(Boolean)
         .join(", ");
+      // Short of Knowledge: point to what teaches every day (players get stuck here).
+      const huts = countBuildings(state).elder ?? 0;
+      const tip =
+        k >= cost
+          ? ""
+          : !state.researched.includes("storytelling")
+            ? " Tip: learn Storytelling, then build an Elder's Hut: it teaches every day."
+            : huts < 2
+              ? ` Tip: ${huts ? "another" : "an"} Elder's Hut teaches every day.`
+              : "";
       return parts
-        ? `Goal: learn Agriculture to reach the Ancient era. Still needed: ${parts}.`
+        ? `Goal: learn Agriculture to reach the Ancient era. Still needed: ${parts}.${tip}`
         : "Goal: Agriculture is ready. Open Advancements and research it.";
     }
     if (pop < NEXT_ERA_POPULATION) return `Goal: grow to ${NEXT_ERA_POPULATION} people to enter the Ancient era (${pop}/${NEXT_ERA_POPULATION}).`;
@@ -3018,7 +3056,10 @@ function step(state: GameState, action: Action): GameState {
     case "place": {
       const def = BUILDINGS_BY_ID[action.buildingId];
       const tile = state.tiles[action.tileId];
-      if (!def || !tile || !isUnlocked(state, def) || placementError(state, tile, def)) return state;
+      if (!def || !tile || !isUnlocked(state, def)) return state;
+      const why = placementError(state, tile, def);
+      // A click that can't build says why.
+      if (why) return { ...state, log: [`Can't build a ${def.name} there: ${why}.`, ...state.log].slice(0, 30) };
       // A new field clears the nearest patch of forest for good.
       const cleared = def.id === "farm" ? forestToClear(state, tile) : null;
       const tiles = state.tiles.map((t) =>
@@ -3286,7 +3327,10 @@ function step(state: GameState, action: Action): GameState {
 
     case "plant": {
       const tile = state.tiles[action.tileId];
-      if (!tile || plantError(state, tile)) return state;
+      if (!tile) return state;
+      const why = plantError(state, tile);
+      // A click that can't plant says why (it used to do nothing).
+      if (why) return { ...state, log: [`Can't plant there: ${why}.`, ...state.log].slice(0, 30) };
       const young = tile.terrain !== "forest";
       return withMeters({
         ...state,

@@ -106,7 +106,8 @@ export function TopBar() {
   const [knowHelp, setKnowHelp] = useState(false);
 
   return (
-    <div className="pointer-events-auto absolute inset-x-0 top-2 flex justify-center px-2 md:top-3 md:px-3">
+    // Above the tutorial's dimmed overlay (z-25): speed and Menu always work.
+    <div className="pointer-events-auto absolute inset-x-0 top-2 z-[26] flex justify-center px-2 md:top-3 md:px-3">
       <div
         className="pixel-panel-dark font-pixel flex max-w-full flex-wrap items-center justify-center gap-x-3 gap-y-1 px-2 py-1 text-xs md:flex-nowrap md:gap-4 md:px-4 md:py-1.5 md:text-sm"
         // A bronze trim from the Ancient era on.

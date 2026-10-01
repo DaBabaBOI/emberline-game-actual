@@ -9,6 +9,10 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "If people are left without a roof, a warning says so, and what was lost (a house burned by raiders or sparks, wrecked by a storm, or broken down).",
+      "Clicking where you can't plant or build now tells you why, instead of doing nothing.",
+      "Short of Knowledge for Agriculture? The goal line now points you to Storytelling and Elder's Huts, which teach every day.",
+      "During the tutorial and Elder Ama's guided steps, the speed buttons and the Menu still work, and her instructions are no longer dimmed.",
       "Discovery scenes now show what their words say: Storytelling has people sitting round a fire, Writing a clay tablet, Spears a spear, Cave Paintings happen in a cave by torchlight, The Wheel a cart, and so on, with things appearing on the line that mentions them.",
     ],
   },

@@ -312,6 +312,9 @@ export interface GameState {
   // When the next small moment happens (missing in older saves).
   nextMomentTick?: number;
   lastMoment?: string;
+  // The last home lost (burned, wrecked, broken down) and when, so the
+  // "no roof" warning can say what happened.
+  homeLost?: { name: string; tick: number } | null;
   // The last small moment and where it happened, so the map can show it.
   moment?: { id: string; tick: number; tile: number } | null;
   // Famine emergency measures (missing in older saves).

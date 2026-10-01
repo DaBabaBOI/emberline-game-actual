@@ -64,9 +64,11 @@ function Hud({ onRestart }: { onRestart: () => void }) {
           <NextEraPrompt />
           <RaidBanner />
         </div>
+        {/* Elder Ama's panels stay above the tutorial's dimmed overlay, so what
+            she is waiting for can always be read. */}
         <div
           className={cn(
-            "flex flex-col gap-2 lg:absolute lg:left-16 lg:top-20 lg:max-h-[calc(100dvh-16rem)] lg:w-80 lg:overflow-y-auto",
+            "relative z-[26] flex flex-col gap-2 lg:absolute lg:left-16 lg:top-20 lg:max-h-[calc(100dvh-16rem)] lg:w-80 lg:overflow-y-auto",
             treeOpen && "lg:bottom-12 lg:left-auto lg:right-8 lg:top-auto",
           )}
         >
