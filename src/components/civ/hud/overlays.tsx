@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AFTER_STEPS, DROUGHT, ERA_INTROS, ERAS, EVENTS, LESSONS, RAID_KINDS, RAID_RESPONSE, TREE_BY_ID, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
+import { AFTER_STEPS, DISCOVERIES, DROUGHT, ERA_INTROS, ERAS, EVENTS, LESSONS, RAID_KINDS, RAID_RESPONSE, TREE_BY_ID, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
 import {
   canAfford,
   countBuildings,
@@ -464,6 +464,7 @@ export function DevPanel() {
   const { state, dispatch } = useGame();
   const [eventId, setEventId] = useState(EVENTS[0].id);
   const [lessonId, setLessonId] = useState(LESSONS[0].id);
+  const [sceneId, setSceneId] = useState(Object.keys(DISCOVERIES)[0]);
   if (!state.dev) return null;
   return (
     <div className="pixel-panel-dark font-pixel pointer-events-auto flex w-full flex-col gap-1.5 p-2 text-xs">
@@ -590,6 +591,23 @@ export function DevPanel() {
         </select>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devLesson", id: lessonId })}>
           Lesson
+        </button>
+      </div>
+      <div className="flex gap-1">
+        <select
+          value={sceneId}
+          onChange={(e) => setSceneId(e.target.value)}
+          className="min-w-0 flex-1 border-2 border-[#140e0a] bg-[#4a3b2e] px-1 py-0.5 text-white"
+          aria-label="Discovery scene to play"
+        >
+          {Object.keys(DISCOVERIES).map((id) => (
+            <option key={id} value={id}>
+              {TREE_BY_ID[id]?.name ?? id}
+            </option>
+          ))}
+        </select>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devCutscene", id: sceneId })}>
+          Scene
         </button>
       </div>
       <div className="flex flex-wrap gap-1">

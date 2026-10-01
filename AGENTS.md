@@ -369,6 +369,12 @@ These were decided with the project owner. Do not change them without being aske
   the fifth (**left behind**, see below). Everything else is a setback. Balance: the
   sensible bot never gets near 20; a reckless bot (clear-cutting, never
   replanting) collapses around 10 minutes. Dev: "Collapse".
+- **Discovery scenes** (`DISCOVERIES` in content, `hud/discovery-scene.tsx`,
+  `state.cutscene`): researching an advancement or finding a secret plays a
+  short pixel scene (sky, people walking in, the discovery appearing, three
+  lines of story). The clock waits until it's closed; it can be skipped or
+  sped up. Every new advancement needs a scene (lines in the tribe's voice,
+  modest about history). Dev: pick one and press "Scene".
 - **Accessibility settings** (`accessibility-settings.tsx`, mounted in the root
   layout): a floating Settings button on every page, except while a game is on
   screen (`data-in-game` on `<html>`, set by `GameScreen`): there the same
