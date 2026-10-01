@@ -27,6 +27,8 @@ const HEIGHTS: Record<Terrain, number> = {
   marsh: 0.4,
   forest: 0.55,
   hills: 0.85,
+  // Fresh water sits a little below the banks.
+  river: 0.3,
   // The base only; the peak on top is drawn as its own cone (see Mountains).
   mountain: 0.7,
 };
@@ -35,8 +37,9 @@ export function terrainHeight(terrain: Terrain) {
   return HEIGHTS[terrain];
 }
 
+// Rivers are water too: nothing is built on them and nobody walks through them.
 export function isLand(terrain: Terrain) {
-  return terrain !== "deep" && terrain !== "shallow";
+  return terrain !== "deep" && terrain !== "shallow" && terrain !== "river";
 }
 
 function landValue(x: number, z: number): { value: number; island: number } {
@@ -133,8 +136,59 @@ export function generateMap(seed: number): { tiles: Tile[]; startTile: number } 
         : best,
     );
 
+  for (const id of riverPath(tiles, startTile.id)) {
+    const t = tiles[id];
+    t.terrain = "river";
+    t.height = HEIGHTS.river;
+    t.island = -1;
+    t.deposit = null;
+    t.growth = 0;
+  }
+
   revealAround(tiles, startTile, 5);
   return { tiles, startTile: startTile.id };
+}
+
+// The home island's river: it rises in the hills near the village and runs
+// downhill (toward the coast) to the sea. The geography is fixed, so this is the
+// same river every game. Returns the tile ids that become river, source first.
+// Older saves get it added when they load (see loadGame).
+export function riverPath(tiles: Tile[], startTile: number): number[] {
+  const start = tiles[startTile];
+  const byKey = new Map(tiles.map((t) => [hexKey(t.q, t.r), t]));
+  const neighbors = (t: Tile) =>
+    NEIGHBOR_OFFSETS.map(([dq, dr]) => byKey.get(hexKey(t.q + dq, t.r + dr))).filter((n): n is Tile => Boolean(n));
+  const height = (t: Tile) => landValue(t.x, t.z).value;
+  let best: Tile[] = [];
+  let bestNear = Infinity;
+  const sources = tiles.filter((t) => t.island === HOME_ISLAND && (t.terrain === "hills" || t.terrain === "mountain"));
+  for (const source of sources) {
+    const path = [source];
+    let reachedSea = false;
+    for (let i = 0; i < 30 && !reachedSea; i++) {
+      const here = path[path.length - 1];
+      // Never through the village itself or right beside it, and never up a mountain.
+      const options = neighbors(here).filter(
+        (t) => !path.includes(t) && hexDistance(t, start) > 1 && t.terrain !== "mountain",
+      );
+      if (!options.length) break;
+      const next = options.reduce((a, b) => (height(a) < height(b) ? a : b));
+      if (height(next) > height(here) + 0.02) break;
+      path.push(next);
+      reachedSea = !isLand(next.terrain);
+    }
+    if (!reachedSea) continue;
+    // The spring stays a hill, and the sea stays sea: the river is what's between.
+    const river = path.slice(1, -1);
+    if (!river.length) continue;
+    const near = Math.min(...river.map((t) => hexDistance(t, start)));
+    // The river that passes closest to the village (the longest one if tied).
+    if (near < bestNear || (near === bestNear && river.length > best.length)) {
+      best = river;
+      bestNear = near;
+    }
+  }
+  return best.map((t) => t.id);
 }
 
 export function revealAround(tiles: Tile[], center: Tile, radius: number) {

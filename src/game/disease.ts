@@ -48,7 +48,10 @@ export function isCalm(state: GameState) {
 }
 
 // One tick of disease: new outbreaks, spread, recovery and deaths.
-export function stepDisease(state: GameState, housing: number, rand: () => number): GameState {
+// `dirt` (1 or more) makes sickness start and spread faster: crowded towns
+// without latrines, and people drinking dirty water in a drought. `extraRecover`
+// is the extra share of the sick who get better each tick (bathhouses).
+export function stepDisease(state: GameState, housing: number, rand: () => number, dirt = 1, extraRecover = 0): GameState {
   if (state.tutorialStep < TUTORIAL.length) return state;
   let next = state;
   const fishing = state.tiles.filter((t) => t.building === "fishing").length;
@@ -57,11 +60,14 @@ export function stepDisease(state: GameState, housing: number, rand: () => numbe
   if (!isCalm(state) && !busy) {
     next = maybeOutbreak(
       next,
-      DISEASE.perPerson * state.population * crowding(state, housing),
+      DISEASE.perPerson * state.population * crowding(state, housing) * dirt,
       rand(),
       "It spread through the crowded huts.",
     );
     if (fishing) next = maybeOutbreak(next, DISEASE.fishing * fishing, rand(), "It came with the fish.");
+    // Traders from far away bring sickness with them now and then.
+    const markets = state.tiles.filter((t) => t.building === "market").length;
+    if (markets) next = maybeOutbreak(next, DISEASE.market * markets, rand(), "Traders at the market brought it from far away.");
   }
 
   if (!(state.sick ?? 0) && (next.sick ?? 0) > 0) next = { ...next, lastBigTick: state.tick };
@@ -73,9 +79,9 @@ export function stepDisease(state: GameState, housing: number, rand: () => numbe
   const susceptible = Math.max(0, next.population - sick - immune);
   const infected = Math.min(
     susceptible,
-    sick * DISEASE.spread * cut * crowding(next, housing) * (susceptible / Math.max(1, next.population)),
+    sick * DISEASE.spread * cut * crowding(next, housing) * dirt * (susceptible / Math.max(1, next.population)),
   );
-  const recovered = sick * (DISEASE.recover + DISEASE.healerRecover * h);
+  const recovered = sick * (DISEASE.recover + DISEASE.healerRecover * h + extraRecover);
   const died = Math.min(sick, sick * DISEASE.death * cut, Math.max(0, next.population - 1));
   const nowSick = Math.max(0, Math.min(next.population - died, sick + infected - recovered - died));
   const nowImmune = Math.min(next.population - died - nowSick, immune + recovered);

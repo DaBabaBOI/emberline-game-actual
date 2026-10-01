@@ -32,6 +32,10 @@ export interface Walker extends Agent {
   era?: number;
   // Being carried by the player (the pick-up tool moves them).
   held?: boolean;
+  // Helping at a building: where, and until when (performance.now ms). They
+  // work a spot, then move to another on the same tile.
+  workAt?: Tile | null;
+  workUntil?: number;
   // Gone (dropped in a fire, the sea or the fog) until this time (performance.now ms).
   goneUntil?: number;
 }
@@ -123,8 +127,18 @@ function stepWalker(w: Walker, dt: number, ground: Ground, pickTarget: () => Til
       w.wait = 6 + Math.random() * 8;
     }
     w.wait -= dt;
+    if (w.wait <= 0 && w.workAt && performance.now() < (w.workUntil ?? 0)) {
+      // Done with this patch: on to the next one on the same field.
+      const spot = ground.spotOn(w.workAt);
+      w.tx = spot.x;
+      w.tz = spot.z;
+      w.wait = 2.5 + Math.random() * 2;
+      return;
+    }
     if (w.wait <= 0) {
       w.sitting = false;
+      w.working = false;
+      w.workAt = null;
       retarget(w, ground, pickTarget);
       w.wait = 1 + Math.random() * 3;
     }
@@ -285,8 +299,7 @@ export function Warriors({
         t.revealed &&
         !t.building &&
         t.terrain !== "mountain" &&
-        t.terrain !== "shallow" &&
-        t.terrain !== "deep" &&
+        isLand(t.terrain) &&
         posts.some((p) => hexDistance(p, t) <= 2),
     );
     return [...posts, ...ring];

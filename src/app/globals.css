@@ -364,3 +364,59 @@ body {
 html[data-in-game] .accessibility-floating {
   display: none;
 }
+
+/* "+N Knowledge" floating up beside the top-bar counter. */
+@keyframes knowledge-gain {
+  0% { transform: translateY(6px); opacity: 0; }
+  15% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-14px); opacity: 0; }
+}
+.knowledge-gain { animation: knowledge-gain 2.2s ease-out forwards; }
+@media (prefers-reduced-motion: reduce) { .knowledge-gain { animation: none; } }
+
+/* Discovery scenes (hud/discovery-scene.tsx): people walk in, bob as they
+   walk, the discovery pops up with light around it, and each line fades in. */
+@keyframes scene-walk {
+  from { transform: translateX(-180%); }
+  to { transform: translateX(0); }
+}
+@keyframes scene-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+@keyframes scene-pop {
+  0% { transform: scale(0) rotate(-20deg); }
+  70% { transform: scale(1.2) rotate(6deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+@keyframes scene-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes scene-fade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes scene-twinkle {
+  50% { opacity: 0.2; }
+}
+@keyframes scene-waves {
+  to { background-position: 24px 0; }
+}
+.scene-walk { animation: scene-walk 1.6s steps(8) both; }
+.scene-bob { animation: scene-bob 0.5s steps(2) 5; }
+.scene-pop { animation: scene-pop 0.7s ease-out both; }
+.scene-rays {
+  background: repeating-conic-gradient(rgba(255, 230, 140, 0.55) 0 15deg, transparent 15deg 30deg);
+  mask-image: radial-gradient(circle, black 30%, transparent 70%);
+  animation: scene-spin 8s linear infinite;
+}
+.scene-line { animation: scene-fade 0.6s ease-out both; }
+.scene-twinkle { animation: scene-twinkle 2s steps(2) infinite; }
+.scene-waves {
+  background: repeating-linear-gradient(90deg, #ffffff 0 6px, transparent 6px 24px);
+  animation: scene-waves 1.5s steps(6) infinite;
+}
+.scene-stage { cursor: pointer; }
+@media (prefers-reduced-motion: reduce) {
+  .scene-walk, .scene-bob, .scene-pop, .scene-rays, .scene-line, .scene-twinkle, .scene-waves { animation: none; }
+}

@@ -12,8 +12,15 @@ import { makeGround } from "./ground";
 import { tileTop } from "./hex-terrain";
 import { grabStore, type Walker } from "./villagers";
 
-// How close (in screen pixels) a click must be to a person to pick them up.
-const GRAB_RADIUS = 22;
+// How close (in screen pixels) a click must be to a person to pick them up...
+const GRAB_RADIUS = 44;
+// ...or how close on the ground (world units, about a hex) to where you clicked.
+const GRAB_GROUND = 0.9;
+// A press that moves less than this (pixels) is a click: the person stays in
+// your hand until the next click (or Enter). More is a drag, as before.
+const CLICK_SLOP = 6;
+// Carrying with the arrow keys: world units per second.
+const KEY_SPEED = 3.5;
 
 // What the ring under a carried person says, and its colour.
 const HINTS: Record<DropOutcome, { text: (t: Tile | null) => string; color: string }> = {
@@ -50,6 +57,11 @@ export function PickUp({
   const [target, setTarget] = useState<{ tile: Tile | null; outcome: DropOutcome; x: number; z: number } | null>(null);
   const tools = useMemo(() => ({ ray: new Raycaster(), plane: new Plane(new Vector3(0, 1, 0), -0.6), hit: new Vector3(), v: new Vector3() }), []);
 
+  // How the carried person is being moved: following the mouse (dragged, or
+  // carried after a click), or walked with the arrow keys.
+  const carry = useRef({ drag: false, keys: false, downX: 0, downY: 0, origin: { x: 0, z: 0 }, pressed: new Set<string>() });
+  const [carrying, setCarrying] = useState(false);
+
   useEffect(() => {
     const el = gl.domElement;
     const read = (e: PointerEvent) => {
@@ -57,76 +69,190 @@ export function PickUp({
       pointer.current.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
       return { px: e.clientX - r.left, py: e.clientY - r.top, w: r.width, h: r.height };
     };
-    // The person nearest the cursor on screen, if close enough.
-    const nearest = (e: PointerEvent): Walker | null => {
-      const p = read(e);
+    // The person nearest a point on screen: close on screen, or standing close to
+    // where that point meets the ground (easier when zoomed out).
+    const nearestTo = (px: number, py: number, w: number, h: number): Walker | null => {
+      pointer.current.set((px / w) * 2 - 1, -(py / h) * 2 + 1);
+      tools.ray.setFromCamera(pointer.current, camera);
+      const onGround = tools.ray.ray.intersectPlane(tools.plane, tools.hit);
       let best: Walker | null = null;
-      let bestD = GRAB_RADIUS;
-      for (const w of grabStore.walkers) {
-        tools.v.set(w.x, w.y + 0.25 * w.scale, w.z).project(camera);
+      let bestD = Infinity;
+      for (const walker of grabStore.walkers) {
+        if (walker.goneUntil) continue;
+        tools.v.set(walker.x, walker.y + 0.25 * walker.scale, walker.z).project(camera);
         if (tools.v.z > 1) continue;
-        const d = Math.hypot(((tools.v.x + 1) / 2) * p.w - p.px, ((1 - tools.v.y) / 2) * p.h - p.py);
-        if (d < bestD) {
+        const d = Math.hypot(((tools.v.x + 1) / 2) * w - px, ((1 - tools.v.y) / 2) * h - py);
+        const near = d < GRAB_RADIUS || (onGround && Math.hypot(walker.x - tools.hit.x, walker.z - tools.hit.z) < GRAB_GROUND);
+        if (near && d < bestD) {
           bestD = d;
-          best = w;
+          best = walker;
         }
       }
       return best;
     };
-    const down = (e: PointerEvent) => {
-      if (!live.current.enabled || e.button !== 0 || grabStore.held) return;
-      const w = nearest(e);
-      if (!w) return;
-      // Ours: don't let the camera or the map treat this as a drag or a click.
-      e.stopImmediatePropagation();
-      e.preventDefault();
+    const nearest = (e: PointerEvent) => {
+      const p = read(e);
+      return nearestTo(p.px, p.py, p.w, p.h);
+    };
+    const pickUp = (w: Walker) => {
       grabStore.held = w;
       w.held = true;
+      // Picked up from the fire or from work: they stop sitting or working.
+      w.sitting = false;
+      w.working = false;
+      w.workAt = null;
+      w.sitAt = null;
+      carry.current.origin = { x: w.x, z: w.z };
       el.style.cursor = "grabbing";
       live.current.onHolding(true);
+      setCarrying(true);
     };
-    const move = (e: PointerEvent) => {
-      if (grabStore.held) {
-        read(e);
-        return;
-      }
-      if (e.pointerType === "mouse") el.style.cursor = live.current.enabled && nearest(e) ? "grab" : "";
-    };
-    const up = () => {
-      const w = grabStore.held;
-      if (!w) return;
+    const release = () => {
       grabStore.held = null;
-      w.held = false;
+      carry.current.drag = false;
+      carry.current.keys = false;
+      carry.current.pressed.clear();
       el.style.cursor = "";
       live.current.onHolding(false);
       setTarget(null);
+      setCarrying(false);
+    };
+    // Put the person down where they are now; the engine decides what happens.
+    const drop = () => {
+      const w = grabStore.held;
+      if (!w) return;
+      w.held = false;
+      release();
       const { state: s, dispatch: send } = live.current;
       const tile = ground.tileAt(w.x, w.z) ?? null;
       const outcome = dropOutcome(s, tile);
       send({ type: "dropPerson", tileId: tile ? tile.id : null });
       land(w, outcome, tile, s.tiles, ground);
     };
+    // Esc: put them back where they were picked up, nothing happens.
+    const putBack = () => {
+      const w = grabStore.held;
+      if (!w) return;
+      Object.assign(w, { x: carry.current.origin.x, z: carry.current.origin.z, tx: carry.current.origin.x, tz: carry.current.origin.z, held: false, moving: false });
+      w.y = ground.heightAt(w.x, w.z);
+      release();
+    };
+
+    const down = (e: PointerEvent) => {
+      if (!live.current.enabled || e.button !== 0) return;
+      // Carrying after a click: this click puts them down.
+      if (grabStore.held) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        read(e);
+        carry.current.keys = false;
+        drop();
+        return;
+      }
+      const w = nearest(e);
+      if (!w) return;
+      // Ours: don't let the camera or the map treat this as a drag or a click.
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      carry.current.drag = true;
+      carry.current.downX = e.clientX;
+      carry.current.downY = e.clientY;
+      pickUp(w);
+    };
+    const move = (e: PointerEvent) => {
+      if (grabStore.held) {
+        read(e);
+        // The mouse takes over from the arrow keys once it moves.
+        if (!carry.current.drag && carry.current.keys && Math.abs(e.movementX) + Math.abs(e.movementY) > 2) carry.current.keys = false;
+        return;
+      }
+      if (e.pointerType === "mouse") el.style.cursor = live.current.enabled && nearest(e) ? "grab" : "";
+    };
+    const up = (e: PointerEvent) => {
+      if (!grabStore.held || !carry.current.drag) return;
+      carry.current.drag = false;
+      // Hardly moved: it was a click, so keep carrying until the next click.
+      if (Math.hypot(e.clientX - carry.current.downX, e.clientY - carry.current.downY) < CLICK_SLOP) return;
+      drop();
+    };
+    const ARROWS: Record<string, string> = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", w: "up", s: "down", a: "left", d: "right" };
+    const key = (e: KeyboardEvent) => {
+      // Never while typing (feedback box, name field).
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      const dir = ARROWS[e.key] ?? ARROWS[e.key.toLowerCase()];
+      if (grabStore.held) {
+        if (dir) {
+          e.preventDefault();
+          carry.current.keys = true;
+          carry.current.pressed.add(dir);
+        } else if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          drop();
+        } else if (e.key === "Escape") {
+          putBack();
+        }
+        return;
+      }
+      // P: pick up the person nearest the middle of the screen.
+      if ((e.key === "p" || e.key === "P") && live.current.enabled) {
+        const r = el.getBoundingClientRect();
+        const w = nearestTo(r.width / 2, r.height / 2, r.width, r.height) ?? nearestToCentre();
+        if (!w) return;
+        carry.current.keys = true;
+        pickUp(w);
+      }
+    };
+    const keyUp = (e: KeyboardEvent) => {
+      const dir = ARROWS[e.key] ?? ARROWS[e.key.toLowerCase()];
+      if (dir) carry.current.pressed.delete(dir);
+    };
+    // Nobody right in the middle: the closest person to it on the ground.
+    const nearestToCentre = (): Walker | null => {
+      pointer.current.set(0, 0);
+      tools.ray.setFromCamera(pointer.current, camera);
+      if (!tools.ray.ray.intersectPlane(tools.plane, tools.hit)) return null;
+      const list = grabStore.walkers.filter((w) => !w.goneUntil);
+      return list.sort((a, b) => Math.hypot(a.x - tools.hit.x, a.z - tools.hit.z) - Math.hypot(b.x - tools.hit.x, b.z - tools.hit.z))[0] ?? null;
+    };
     el.addEventListener("pointerdown", down, { capture: true });
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
     window.addEventListener("pointercancel", up);
+    window.addEventListener("keydown", key);
+    window.addEventListener("keyup", keyUp);
     return () => {
       el.removeEventListener("pointerdown", down, { capture: true });
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);
+      window.removeEventListener("keydown", key);
+      window.removeEventListener("keyup", keyUp);
     };
   }, [gl, camera, ground, tools]);
 
-  // The carried person dangles under the cursor, legs kicking.
-  useFrame(({ clock }) => {
+  // The carried person dangles under the cursor (or walks with the arrow keys), legs kicking.
+  useFrame(({ clock }, delta) => {
     const w = grabStore.held;
     if (!w) return;
-    tools.ray.setFromCamera(pointer.current, camera);
-    if (!tools.ray.ray.intersectPlane(tools.plane, tools.hit)) return;
-    const tile = ground.tileAt(tools.hit.x, tools.hit.z) ?? null;
-    w.x = tools.hit.x;
-    w.z = tools.hit.z;
+    const c = carry.current;
+    if (c.keys) {
+      // Up is away from the camera, left and right across the screen.
+      camera.getWorldDirection(tools.v);
+      const fx = tools.v.x;
+      const fz = tools.v.z;
+      const len = Math.hypot(fx, fz) || 1;
+      const step = KEY_SPEED * Math.min(delta, 0.3);
+      const f = (c.pressed.has("up") ? 1 : 0) - (c.pressed.has("down") ? 1 : 0);
+      const s = (c.pressed.has("right") ? 1 : 0) - (c.pressed.has("left") ? 1 : 0);
+      w.x += ((fx * f - fz * s) / len) * step;
+      w.z += ((fz * f + fx * s) / len) * step;
+    } else {
+      tools.ray.setFromCamera(pointer.current, camera);
+      if (!tools.ray.ray.intersectPlane(tools.plane, tools.hit)) return;
+      w.x = tools.hit.x;
+      w.z = tools.hit.z;
+    }
+    const tile = ground.tileAt(w.x, w.z) ?? null;
     w.tx = w.x;
     w.tz = w.z;
     w.y = (tile ? tileTop(tile) : 0.2) + 0.9 + Math.sin(clock.elapsedTime * 9) * 0.05;
@@ -150,11 +276,12 @@ export function PickUp({
       </mesh>
       <Html zIndexRange={[15, 0]} center position={[0, 1.6, 0]}>
         <span
-          className="font-pixel pointer-events-none whitespace-nowrap border-2 border-[#140e0a] px-2 py-0.5 text-xs text-white"
+          className="font-pixel pointer-events-none flex flex-col items-center whitespace-nowrap border-2 border-[#140e0a] px-2 py-0.5 text-xs text-white"
           style={{ background: hint.color === "#f4efe6" ? "#4a3b2e" : hint.color }}
           data-testid="drop-hint"
         >
           {hint.text(target.tile)}
+          {carrying && <span className="block text-[10px] text-white/80">Click or Enter: put down · Arrows: move · Esc: put back</span>}
         </span>
       </Html>
     </group>
@@ -194,7 +321,17 @@ function land(w: Walker, outcome: DropOutcome, tile: Tile | null, tiles: Tile[],
       }
       if (tile) w.y = tile.height;
       w.moving = false;
-      w.wait = outcome === "help" ? 6 : 1.5;
+      w.sitting = false;
+      w.sitAt = null;
+      if (outcome === "help" && tile) {
+        // Get to work for as long as the help lasts, facing the building.
+        w.working = true;
+        w.workAt = tile;
+        w.workUntil = performance.now() + DROP.helpTicks * TICK_SECONDS * 1000;
+        w.workTool = tile.building === "woodcutter" ? "axe" : tile.building === "quarry" ? "pick" : "hoe";
+        w.heading = Math.atan2(tile.x - w.x, tile.z - w.z);
+        w.wait = 3;
+      } else w.wait = 1.5;
     }
   }
 }

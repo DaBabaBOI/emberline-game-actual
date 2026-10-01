@@ -17,6 +17,23 @@ import {
   COLLAPSE,
   ERA_DEADLINE,
   LEFT_BEHIND_WARN,
+  ANCIENT_DEADLINE,
+  CLASSICAL_POPULATION,
+  WATER,
+  TOWN,
+  DROUGHT,
+  CARAVAN,
+  ROADS_COINS,
+  IRON_STRENGTH,
+  IRON_CHARCOAL,
+  JADE_ROAD,
+  ERA_INTROS,
+  WEAR,
+  DISASTERS,
+  DISASTER_HITS,
+  STONE_BUILDINGS,
+  WOOD_BUILDINGS,
+  DISCOVERIES,
   TUTORIAL_START_FOOD,
   ROMAN_LEGION,
   FORESTER_GROWTH,
@@ -46,7 +63,6 @@ import {
   FIRE_RISK,
   LAND,
   GRACE_AFTER_TUTORIAL,
-  BUILDINGS,
   BUILDINGS_BY_ID,
   DIFFICULTIES,
   ERAS,
@@ -68,7 +84,7 @@ import {
 } from "./content";
 import { diseaseName, isCalm, maybeOutbreak, sickShare, stepDisease } from "./disease";
 import { hexDistance } from "./hex";
-import { generateMap, isLand, revealAround, terrainHeight } from "./map";
+import { generateMap, isLand, revealAround, riverPath, terrainHeight } from "./map";
 import { mulberry32 } from "./noise";
 import type { IconId } from "./sprites";
 import type {
@@ -76,6 +92,7 @@ import type {
   TallyKey,
   TreeNode,
   Debrief,
+  DisasterKind,
   Stats,
   BuildingDef,
   CultureId,
@@ -96,6 +113,8 @@ export const FOOD_PER_PERSON = 0.15; // 1 food every 10 ticks
 export const FOOD_PER_WARRIOR = 0.12;
 // Food from each animal the hunters bring back.
 export const HUNT_FOOD = 4;
+// The most the tribe can grow in one tick (people).
+export const GROWTH_CAP = 0.35;
 // Raids grow by one raider every this many ticks (on top of the tribe's size).
 export const RAID_GROWTH_TICKS = 300;
 
@@ -119,10 +138,19 @@ export type Action =
   | { type: "devXp" }
   | { type: "raidResponse"; choice: RaidResponse }
   | { type: "devRaidKind"; kind: RaidKind }
-  | { type: "devMoment" }
+  | { type: "devMoment"; id?: string }
   | { type: "devStarve" }
   | { type: "famineRelief"; kind: FamineRelief }
   | { type: "devCollapse" }
+  | { type: "caravan" }
+  | { type: "repair"; tileId: number }
+  | { type: "devWear" }
+  | { type: "devDisaster"; kind: DisasterKind }
+  | { type: "dismissCutscene" }
+  | { type: "devCutscene"; id: string }
+  | { type: "devBeatLegion" }
+  | { type: "devDrought"; when: "soon" | "now" | "end" }
+  | { type: "devCaravanBack" }
   | { type: "devOutbreak" }
   | { type: "devRaid" }
   | { type: "devRomans" }
@@ -234,7 +262,8 @@ function applyDevStart(state: GameState, era: number): GameState {
 }
 
 function devJumpToEra(state: GameState, era: number): GameState {
-  return { ...state, era, year: ERAS[era].startYear };
+  // Past the Ancient era, the Roman legion is already beaten.
+  return { ...state, era, year: ERAS[era].startYear, eraStartTick: state.tick, legionDone: state.legionDone || era >= 2 };
 }
 
 // A wildfire burns the forest nearest the village: trees are lost, the ground
@@ -320,8 +349,12 @@ export function forestCover(state: GameState) {
 }
 
 // 0–1: how worn out the land is after staying unsustainable for a while.
+// It builds up over `strainTicks` below `strainLevel`, and bites harder the lower
+// Sustainability sinks: a little just under 40, fully by `strainLevel - strainDepth`.
 export function landStrain(state: GameState) {
-  return Math.min(1, state.strainTicks / LAND.strainTicks);
+  const time = Math.min(1, state.strainTicks / LAND.strainTicks);
+  const depth = Math.min(1, Math.max(0, (LAND.strainLevel - state.meters.sustainability) / LAND.strainDepth));
+  return time * depth;
 }
 
 const treesNear = (state: GameState, tile: Tile) =>
@@ -356,21 +389,23 @@ export function loggingMode(state: GameState, tile: Tile) {
 }
 
 // 0–1: how much of its full output a woodcutter makes. Clear-cutting takes every
-// tree; selective logging only thins mature trees, for half the wood.
+// tree; selective logging only thins the bigger trees, for exactly half the wood
+// clear-cutting would get from the same forest. The forest grows back faster
+// than that, so it lasts. With no tree above SELECTIVE_FLOOR it waits for them.
 export function woodcutterYield(state: GameState, tile: Tile) {
+  const trees = treesNear(state, tile);
+  const clear = Math.min(1, trees.reduce((sum, t) => sum + t.growth, 0) / 2);
   if (loggingMode(state, tile) === "selective") {
-    const mature = treesNear(state, tile).reduce((sum, t) => sum + Math.max(0, t.growth - SELECTIVE_FLOOR), 0);
-    return Math.min(1, mature) * 0.5;
+    return trees.some((t) => t.growth > SELECTIVE_FLOOR + 0.02) ? clear * 0.5 : 0;
   }
-  const standing = treesNear(state, tile).reduce((sum, t) => sum + t.growth, 0);
-  return Math.min(1, standing / 2);
+  return clear;
 }
 
 export const PLANT_TOOL = "__plant";
 
 // What a building can be upgraded into in the current era (e.g. Hut → House).
 export function upgradeFor(state: GameState, buildingId: string): BuildingDef | null {
-  const next = buildingId === "hut" ? BUILDINGS_BY_ID.house : null;
+  const next = buildingId === "hut" ? BUILDINGS_BY_ID.house : buildingId === "house" ? BUILDINGS_BY_ID.townhouse : null;
   return next && isUnlocked(state, next) ? next : null;
 }
 
@@ -422,10 +457,15 @@ function pickEvent(roll: number, state: GameState) {
 
 // Scouting is meant to be hard-won: each trip costs a lot more than the last.
 // Every Transport advancement makes it 20% cheaper.
+// Every Transport advancement makes travel 20% cheaper (scouts and caravans).
+function travelDiscount(state: GameState) {
+  const transport = state.researched.filter((id) => TREE_BY_ID[id]?.branch === "transport").length;
+  return Math.pow(0.8, transport);
+}
+
 export function scoutCost(state: GameState): Partial<Resources> {
   const n = state.scoutsSent;
-  const transport = state.researched.filter((id) => TREE_BY_ID[id]?.branch === "transport").length;
-  const discount = Math.pow(0.8, transport);
+  const discount = travelDiscount(state);
   return {
     food: Math.round((25 + n * 20) * discount),
     wood: Math.round((10 + n * 10) * discount),
@@ -470,6 +510,7 @@ export function placementError(state: GameState, tile: Tile, def: BuildingDef): 
     );
     if (!touchesWater) return "Must touch water";
   }
+  if (def.needsRiver && !touchesRiver(state, tile)) return "Must touch the river";
   if (!canAfford(state, buildingCost(state, def))) return "Not enough resources";
   return null;
 }
@@ -496,8 +537,13 @@ export function residents(state: GameState, tile: Tile): { living: number; room:
 }
 
 export function housingCapacity(state: GameState) {
-  const counts = countBuildings(state);
-  return BUILDINGS.reduce((sum, b) => sum + (b.housing ?? 0) * (counts[b.id] ?? 0), BASE_HOUSING);
+  let room = BASE_HOUSING;
+  for (const t of state.tiles) {
+    const housing = t.building ? BUILDINGS_BY_ID[t.building]?.housing ?? 0 : 0;
+    // Hard mode: a broken-down home only holds half its people.
+    room += (t.worn ?? 0) >= 1 ? Math.floor(housing / 2) : housing;
+  }
+  return room;
 }
 
 // The wild only has so much to give. The first gatherer camp gets a full
@@ -605,8 +651,145 @@ export function fireScareNote(state: GameState, tile: Tile, building: string): s
 }
 
 // How much rain falls, from forest cover: forests bring rain. Fields grow this share.
+// In the great drought it all but stops; standing forest still holds a little.
 export function rainfall(state: GameState): number {
+  if (inDrought(state)) return DROUGHT.rain + DROUGHT.forestRain * forestCover(state);
   return FARM_RAIN.minRain + (1 - FARM_RAIN.minRain) * forestCover(state);
+}
+
+// ---- Classical era: water, towns, trade, the drought -------------------------
+
+export function touchesRiver(state: GameState, tile: Tile) {
+  return state.tiles.some((t) => t.terrain === "river" && hexDistance(t, tile) === 1);
+}
+
+// The drought is on (after the warning, before the rains return).
+export function inDrought(state: GameState) {
+  const d = state.drought;
+  return !!d && state.tick >= d.startTick && state.tick < d.endTick;
+}
+
+// Is this tile within reach of a building of this kind?
+function near(state: GameState, tile: Tile, building: string, reach: number) {
+  return state.tiles.some((t) => t.building === building && hexDistance(t, tile) <= reach);
+}
+
+// How much a field grows: rain, canals, aqueducts and mills, and seed grain eaten in a famine.
+export function farmFactor(state: GameState, tile: Tile) {
+  const canal = state.tiles.some((t) => t.building === "canal" && hexDistance(t, tile) === 1) ? 1.5 : 1;
+  const watered = near(state, tile, "aqueduct", WATER.aqueductReach);
+  const mill = near(state, tile, "watermill", WATER.millReach) ? 1 + WATER.millFarm : 1;
+  // In the drought, a field an aqueduct waters still gets most of its water.
+  const water = watered && inDrought(state) ? Math.max(rainfall(state), DROUGHT.aqueductFarm) : rainfall(state);
+  // A flood leaves rich silt behind: the field grows more for a while.
+  const silt = state.tick < (state.silt?.[tile.id] ?? 0) ? 1 + DISASTER_HITS.flood.silt : 1;
+  return canal * mill * silt * (watered ? 1 + WATER.aqueductFarm : 1) * water * (seedEaten(state) ? 1 - FAMINE.seed.farmLoss : 1);
+}
+
+// How many people have water in the drought: springs, wells and aqueducts.
+export function waterSupply(state: GameState) {
+  const c = countBuildings(state);
+  return WATER.base + (c.well ?? 0) * WATER.well + (c.aqueduct ?? 0) * WATER.aqueduct;
+}
+
+// Share of the town with no water (only in the drought; rain and the river are enough otherwise).
+export function thirstShare(state: GameState) {
+  if (!inDrought(state) || state.population <= 0) return 0;
+  return Math.max(0, 1 - waterSupply(state) / state.population);
+}
+
+// Share of the town with clean streets (latrines and baths). Only matters once
+// there are Town Houses: that's when a village becomes a crowded town.
+export function sanitation(state: GameState) {
+  const c = countBuildings(state);
+  if (!c.townhouse) return 1;
+  return Math.min(1, ((c.latrine ?? 0) * TOWN.latrine + (c.baths ?? 0) * TOWN.baths) / Math.max(1, state.population));
+}
+
+// What a Classical water or town building placed here would do, for the placement card.
+export function townNote(state: GameState, tile: Tile, building: string): string | null {
+  const counts = countBuildings(state);
+  const fields = (reach: number) => state.tiles.filter((t) => t.building === "farm" && hexDistance(t, tile) <= reach).length;
+  switch (building) {
+    case "aqueduct": {
+      const n = fields(WATER.aqueductReach);
+      return n
+        ? `Waters ${n} field${n === 1 ? "" : "s"} within ${WATER.aqueductReach} tiles (+${WATER.aqueductFarm * 100}%, and they keep most of their harvest in a drought).`
+        : `No fields within ${WATER.aqueductReach} tiles to water. It still brings water to ${WATER.aqueduct} people.`;
+    }
+    case "watermill": {
+      const n = fields(WATER.millReach);
+      return `Grinds grain for ${n} field${n === 1 ? "" : "s"} within ${WATER.millReach} tiles.`;
+    }
+    case "farm":
+      return near(state, tile, "aqueduct", WATER.aqueductReach) ? "An aqueduct waters this field: +20%, and it keeps most of its harvest in a drought." : null;
+    case "well":
+      return (counts.well ?? 0) >= WATER.wellsFree
+        ? `Already ${counts.well} wells: each one past ${WATER.wellsFree} dries out the land (−${WATER.wellSustain} Sustainability).`
+        : null;
+    case "townhouse": {
+      const clean = (counts.latrine ?? 0) * TOWN.latrine + (counts.baths ?? 0) * TOWN.baths;
+      return clean < state.population ? "Not enough latrines for everyone: in a packed town sickness spreads faster." : null;
+    }
+    default:
+      return null;
+  }
+}
+
+// ---- Hard mode: wear and repairs ---------------------------------------------
+
+export function wearsOut(state: GameState) {
+  return state.difficulty === "hard";
+}
+
+// How much of its output a building still makes: full until it's `slows` worn,
+// then less and less, nothing once broken.
+export function wearFactor(tile: Tile) {
+  const w = tile.worn ?? 0;
+  if (w >= 1) return 0;
+  return w <= WEAR.slows ? 1 : 1 - (w - WEAR.slows) / (1 - WEAR.slows);
+}
+
+export function repairCost(state: GameState, tile: Tile): Partial<Resources> {
+  const def = BUILDINGS_BY_ID[tile.building ?? ""];
+  if (!def) return {};
+  const cost = buildingCost(state, def);
+  return Object.fromEntries(
+    Object.entries(cost).map(([k, v]) => [k, Math.max(1, Math.ceil((v ?? 0) * WEAR.repairShare * Math.max(0.3, tile.worn ?? 0)))]),
+  );
+}
+
+// Every building wears a little each tick (Hard only).
+function wearBuildings(state: GameState): GameState {
+  if (!wearsOut(state) || state.tutorialStep < TUTORIAL.length) return state;
+  let broke: string | null = null;
+  const tiles = state.tiles.map((t) => {
+    if (!t.building || t.building === "campfire") return t;
+    const rate = WEAR.perTick * (WEAR.busyBuildings.includes(t.building) ? WEAR.busy : WEAR.sturdyBuildings.includes(t.building) ? WEAR.sturdy : 1);
+    const worn = Math.min(1, (t.worn ?? 0) + rate);
+    if (worn >= 1 && (t.worn ?? 0) < 1) broke = BUILDINGS_BY_ID[t.building].name;
+    return { ...t, worn };
+  });
+  return {
+    ...state,
+    tiles,
+    log: broke ? [`A ${broke} has broken down. Click it to repair it.`, ...state.log].slice(0, 30) : state.log,
+  };
+}
+
+// Caravans can leave from each Market once Silk Road Contact is known.
+export function caravanCost(state: GameState): Partial<Resources> {
+  const d = travelDiscount(state);
+  return { food: Math.round((CARAVAN.cost.food ?? 0) * d), wood: Math.round((CARAVAN.cost.wood ?? 0) * d) };
+}
+
+export function caravanError(state: GameState): string | null {
+  if (!state.researched.includes("barter-roads")) return "Research Silk Road Contact first";
+  const markets = countBuildings(state).market ?? 0;
+  if (!markets) return "Build a Market first";
+  if ((state.caravans ?? []).length >= markets) return "Every Market's caravan is already out";
+  if (!canAfford(state, caravanCost(state))) return "Not enough food and wood";
+  return null;
 }
 
 // The forest a new field would clear: the nearest unbuilt, unprotected forest tile in reach.
@@ -660,22 +843,29 @@ export function production(state: GameState): Resources {
   const out: Resources = { food: 0, wood: 0, stone: 0, knowledge: 0, currency: 0 };
   for (const tile of state.tiles) {
     if (!tile.building) continue;
+    // Under flood water nothing works until it goes down.
+    if (isFlooded(state, tile)) continue;
+    // Hard mode: a worn building makes less, a broken one nothing.
+    const worn = wearFactor(tile);
+    if (worn <= 0) continue;
     const def = BUILDINGS_BY_ID[tile.building];
     const factor =
       tile.building === "woodcutter"
         ? woodcutterYield(state, tile)
         : tile.building === "farm"
-          ? (state.tiles.some((t) => t.building === "canal" && hexDistance(t, tile) === 1) ? 1.5 : 1) *
-            rainfall(state) *
-            (seedEaten(state) ? 1 - FAMINE.seed.farmLoss : 1)
-          : 1;
+          ? farmFactor(state, tile)
+          : // The drought dries up the wild plants and the grass for the herds.
+            (tile.building === "gatherer" || tile.building === "pen") && inDrought(state)
+            ? DROUGHT.wild
+            : 1;
     const dust = (dusty(state, tile) ? 1 - QUARRY_DUST.foodLoss : 1) * (scaredByFire(state, tile) ? 1 - FIRE_SCARE.foodLoss : 1);
     // Gatherer camps share what the wild can give.
     const share =
       (tile.building === "gatherer" ? gathererShare(state) : teachingShare(state, tile.building)) *
       (state.tick < (state.helpers?.[tile.id] ?? 0) ? 1 + DROP.helpBoost : 1);
     for (const [k, v] of Object.entries(def.produces ?? {}))
-      out[k as keyof Resources] += (v ?? 0) * factor * share * (k === "food" ? dust : 1);
+      // Costs (a bathhouse burning wood) don't shrink as it wears; output does.
+      out[k as keyof Resources] += (v ?? 0) * factor * share * (k === "food" ? dust : 1) * ((v ?? 0) > 0 ? worn : 1);
     if (def.depositBonus && tile.deposit === def.depositBonus.deposit) {
       for (const [k, v] of Object.entries(def.depositBonus.amount))
         out[k as keyof Resources] += (v ?? 0) * share;
@@ -692,8 +882,8 @@ export function production(state: GameState): Resources {
   const tools = 1 + 0.2 * Math.min(3, smithies);
   out.food *= tools;
   out.wood *= tools;
-  // ...but every smithy burns wood for charcoal, all the time.
-  out.wood -= smithies * SMITHY_CHARCOAL;
+  // ...but every smithy burns wood for charcoal, all the time (more for iron).
+  out.wood -= smithies * SMITHY_CHARCOAL * (state.researched.includes("legions") ? IRON_CHARCOAL : 1);
   // Worn-out land gives smaller harvests.
   out.food *= 1 - 0.4 * landStrain(state);
   // The sick can't work (but they still eat).
@@ -709,6 +899,7 @@ export function production(state: GameState): Resources {
   if (state.culture === "mariners") out.food += (counts.fishing ?? 0) * 0.45;
   if (state.culture === "scholars") out.knowledge *= 1.5;
   if (state.culture === "traders") out.currency *= 1.5;
+  if (state.researched.includes("roads")) out.currency *= ROADS_COINS;
   return out;
 }
 
@@ -812,7 +1003,7 @@ function gapFactor(state: GameState) {
 }
 
 export interface Warning {
-  id: "fire" | "food" | "wood" | "famine" | "unrest" | "collapse" | "behind" | "land" | "sick" | "rain";
+  id: "fire" | "food" | "wood" | "famine" | "unrest" | "collapse" | "behind" | "land" | "sick" | "rain" | "wear";
   icon: IconId;
   text: string;
   // Ticks left on the countdown in the text; "{secs}" in the text is where it goes.
@@ -821,12 +1012,21 @@ export interface Warning {
 }
 
 // Ticks left before the tribe falls behind the rest of the world (null when the
-// clock isn't running: not the Stone Age, the tutorial, or already ready to go).
+// clock isn't running: the tutorial, the Ancient era before the legion, the
+// Classical era, or already ready to go). The Stone Age clock starts when the
+// tutorial ends; the Ancient one when the Roman legion is beaten.
 export function behindTicksLeft(state: GameState): number | null {
-  if (state.era !== 0 || state.phase !== "playing" || state.debrief || state.tutorialStep < TUTORIAL.length) return null;
+  if (state.phase !== "playing" || state.debrief || state.tutorialStep < TUTORIAL.length) return null;
   if (readyForNextEra(state)) return null;
-  const deadline = ERA_DEADLINE[state.difficulty] ?? ERA_DEADLINE.normal;
-  return deadline - (state.tick - (state.eraStartTick ?? 0));
+  if (state.era === 0) {
+    const deadline = ERA_DEADLINE[state.difficulty] ?? ERA_DEADLINE.normal;
+    return deadline - (state.tick - (state.eraStartTick ?? 0));
+  }
+  if (state.era === 1 && state.legionBeatenTick !== undefined) {
+    const deadline = ANCIENT_DEADLINE[state.difficulty] ?? ANCIENT_DEADLINE.normal;
+    return deadline - (state.tick - state.legionBeatenTick);
+  }
+  return null;
 }
 
 // The Stone Age year at a given tick: from its start year to the Ancient era's
@@ -837,6 +1037,24 @@ export function stoneAgeYear(state: GameState, tick: number) {
   const deadline = ERA_DEADLINE[state.difficulty] ?? ERA_DEADLINE.normal;
   const progress = Math.min(1, Math.max(0, (tick - state.eraStartTick) / deadline));
   return ERAS[0].startYear + (ERAS[1].startYear - ERAS[0].startYear) * progress;
+}
+
+// The year at the next tick. The Stone Age follows its deadline; so does the
+// Ancient era once the legion is beaten (reaching the Classical era's first year
+// exactly as the world moves on). Otherwise a fixed number of years a tick, never
+// past the start of the next era.
+function nextYear(state: GameState): number {
+  const tick = state.tick + 1;
+  if (state.era === 0) return stoneAgeYear(state, tick);
+  if (state.era === 1 && state.legionBeatenTick !== undefined) {
+    const from = state.legionBeatenYear ?? state.year;
+    const deadline = ANCIENT_DEADLINE[state.difficulty] ?? ANCIENT_DEADLINE.normal;
+    const progress = Math.min(1, Math.max(0, (tick - state.legionBeatenTick) / deadline));
+    return from + (ERAS[2].startYear - from) * progress;
+  }
+  const next = ERAS[state.era + 1];
+  const year = state.year + ERAS[state.era].yearsPerTick;
+  return next ? Math.min(year, next.startYear - 100) : year;
 }
 
 export function warnings(state: GameState): Warning[] {
@@ -851,8 +1069,8 @@ export function warnings(state: GameState): Warning[] {
     out.push({
       id: "famine",
       icon: "skull",
-      text: "Your people are starving: about one dies every 10 s. The tribe is lost in {secs}s unless you find food.",
-      countdown: Math.max(0, famineLimit - state.famineTicks),
+      text: "Your people are starving: about one dies every 10 s, and those we can't feed leave. The tribe is lost in {secs}s unless you find food.",
+      countdown: Math.max(0, famineLimit - state.famineTicks) / (inDrought(state) ? FAMINE.droughtClock : 1),
       severe: true,
     });
   } else if (netFood < 0 && state.resources.food / -netFood < 45) {
@@ -881,7 +1099,10 @@ export function warnings(state: GameState): Warning[] {
     out.push({
       id: "behind",
       icon: "warning",
-      text: `The world is moving on: other peoples have learned to farm. Reach the Ancient era before ${formatYear(ERAS[1].startYear)} (in {secs}s) or be left behind.`,
+      text:
+        state.era === 0
+          ? `The world is moving on: other peoples have learned to farm. Reach the Ancient era before ${formatYear(ERAS[1].startYear)} (in {secs}s) or be left behind.`
+          : `The world is moving on: other peoples trade with coins and build towns. Reach the Classical era before ${formatYear(ERAS[2].startYear)} (in {secs}s) or be left behind.`,
       countdown: Math.max(0, behind),
       severe: true,
     });
@@ -920,16 +1141,34 @@ export function warnings(state: GameState): Warning[] {
     });
   }
 
-  if (state.strainTicks > 0) {
+  if (state.strainTicks > 0 && landStrain(state) > 0) {
+    // Name what is costing the land the most, so the fix is clear.
+    const worst = sustainabilityBreakdown(state)
+      .filter((p) => p.value < 0)
+      .sort((a, b) => a.value - b.value)[0];
+    const cause = worst ? ` The biggest cost: ${worst.label.toLowerCase()} (${Math.round(worst.value)}).` : "";
     out.push({
       id: "land",
       icon: "leaf",
       text:
-        landStrain(state) >= 1
-          ? "The land is exhausted: forests have stopped growing back and harvests are shrinking. Cut fewer trees."
-          : "The land is wearing out. Forests grow back slower and harvests shrink. Cut fewer trees.",
+        (landStrain(state) >= 1
+          ? "The land is exhausted: forests have stopped growing back and harvests are shrinking."
+          : "The land is wearing out: forests grow back slower and harvests shrink.") + cause,
       severe: landStrain(state) > 0.5,
     });
+  }
+
+  if (wearsOut(state)) {
+    const worn = state.tiles.filter((t) => t.building && (t.worn ?? 0) >= WEAR.warnAt);
+    const broken = worn.filter((t) => (t.worn ?? 0) >= 1).length;
+    if (worn.length) {
+      out.push({
+        id: "wear",
+        icon: "hammer",
+        text: `${worn.length} building${worn.length === 1 ? "" : "s"} need${worn.length === 1 ? "s" : ""} repair${broken ? ` (${broken} broken down and making nothing)` : ""}. Click one to repair it.`,
+        severe: broken > 0,
+      });
+    }
   }
 
   if (state.resources.wood < 8) {
@@ -944,7 +1183,8 @@ export function warnings(state: GameState): Warning[] {
     });
   }
 
-  if ((countBuildings(state).farm ?? 0) > 0 && rainfall(state) < FARM_RAIN.warnBelow) {
+  // (In the great drought its own banner says so.)
+  if ((countBuildings(state).farm ?? 0) > 0 && rainfall(state) < FARM_RAIN.warnBelow && !inDrought(state)) {
     out.push({
       id: "rain",
       icon: "wheat",
@@ -1048,6 +1288,26 @@ export function sustainabilityBreakdown(state: GameState): SustainPart[] {
       hint: "Bricks are fired in kilns that burn wood.",
     },
     {
+      label: `${counts.well ?? 0} wells drawing down the ground water`,
+      value: -Math.max(0, (counts.well ?? 0) - WATER.wellsFree) * WATER.wellSustain,
+      hint: `The ground can feed ${WATER.wellsFree} wells. Past that, the water under the ground sinks and the land around dries out.`,
+    },
+    {
+      label: `${(counts.aqueduct ?? 0) + (counts.watermill ?? 0)} aqueduct${(counts.aqueduct ?? 0) + (counts.watermill ?? 0) === 1 ? "" : "s"} and mills on the river`,
+      value: -((counts.aqueduct ?? 0) * 3 + (counts.watermill ?? 0) * 2),
+      hint: "Every aqueduct takes water from the river, and every mill dams it. Fish and marshes downstream suffer.",
+    },
+    {
+      label: `${counts.latrine ?? 0} latrine${counts.latrine === 1 ? "" : "s"} draining into the river`,
+      value: -(counts.latrine ?? 0) * 1,
+      hint: "The drains keep the streets clean, but the waste ends up downstream.",
+    },
+    {
+      label: `${counts.baths ?? 0} bathhouse${counts.baths === 1 ? "" : "s"} heating water`,
+      value: -(counts.baths ?? 0) * 2,
+      hint: "Bathhouses burn wood all day to heat their pools.",
+    },
+    {
       label: "Recent events",
       value: state.modifiers.sustainability,
       hint: "Fires and choices you made in events. This fades over time.",
@@ -1065,9 +1325,14 @@ export function sustainabilityTrend(state: GameState) {
 }
 
 // Share of the tribe with no fire to warm them (each fire warms peoplePerFire).
+// Warm clothes (pens) and Town Houses (shared walls and hearths) warm people too.
 export function coldShare(state: GameState) {
-  const pens = state.researched.includes("hide-clothing") ? countBuildings(state).pen ?? 0 : 0;
-  const warmed = litFires(state).length * GROWTH_PRESSURE.peoplePerFire + pens * GROWTH_PRESSURE.peoplePerPen;
+  const counts = countBuildings(state);
+  const pens = state.researched.includes("hide-clothing") ? counts.pen ?? 0 : 0;
+  const warmed =
+    litFires(state).length * GROWTH_PRESSURE.peoplePerFire +
+    pens * GROWTH_PRESSURE.peoplePerPen +
+    (counts.townhouse ?? 0) * TOWN.warmth;
   return state.population > 0 ? Math.max(0, 1 - warmed / state.population) : 0;
 }
 
@@ -1102,8 +1367,13 @@ export function spearmenOf(state: GameState): number {
   return Math.max(0, Math.min(state.soldiers, n));
 }
 
+// How hard each warrior fights: bronze doubles it, iron triples it.
+function armsFactor(state: GameState) {
+  return state.researched.includes("legions") ? IRON_STRENGTH : state.researched.includes("bronze-arms") ? 2 : 1;
+}
+
 export function defenseStrength(state: GameState) {
-  const bronze = state.researched.includes("bronze-arms") ? 2 : 1;
+  const bronze = armsFactor(state);
   const spears = spearmenOf(state);
   const counts = countBuildings(state);
   return (
@@ -1121,7 +1391,7 @@ export function watchDefense(state: GameState) {
 
 // Where the defense number comes from, in words: "4 warriors × 1.5 (spears) + 1 war camp".
 export function defenseBreakdown(state: GameState): string {
-  const bronze = state.researched.includes("bronze-arms");
+  const arms = armsFactor(state);
   const spears = spearmenOf(state);
   const plain = state.soldiers - spears;
   const counts = countBuildings(state);
@@ -1129,7 +1399,7 @@ export function defenseBreakdown(state: GameState): string {
   if (plain || !spears) parts.push(`${plain} warrior${plain === 1 ? "" : "s"}`);
   if (spears) parts.push(`${spears} spear${spears === 1 ? "man" : "men"} × ${SPEARMAN_STRENGTH}`);
   let text = parts.join(" + ");
-  if (bronze) text = `(${text}) × 2 bronze`;
+  if (arms > 1) text = `(${text}) × ${arms} ${arms === IRON_STRENGTH ? "iron" : "bronze"}`;
   if ((counts.warcamp ?? 0) > 0) text += " + 1 war camp";
   if (counts.walls) text += ` + ${counts.walls * WALL_DEFENSE} walls`;
   if (watchDefense(state)) text += ` + ${watchDefense(state)} watch fire${watchDefense(state) === 1 ? "" : "s"}`;
@@ -1206,20 +1476,26 @@ export function computeMeters(state: GameState): Meters {
   // 45 means "just enough"; you need about twice what you eat to reach 100.
   let food = (prod.food / Math.max(cons, 0.1)) * 45 + Math.min(10, stockDays / 4);
   if (state.resources.food <= 0) food = Math.min(food, 5);
+  // Food & Water: in the drought, people without water count too.
+  const thirst = thirstShare(state);
+  food *= 1 - 0.3 * thirst;
 
   const shelter =
     Math.min(1.1, housingCapacity(state) / Math.max(1, state.population)) * 70 +
-    (counts.healer ?? 0) * 12;
+    (counts.healer ?? 0) * 12 +
+    // Clean water keeps people healthy; dirty, crowded streets don't.
+    Math.min(15, (counts.well ?? 0) * 3 + (counts.aqueduct ?? 0) * 6) -
+    (1 - sanitation(state)) * 12;
 
   const fireBoost = state.researched.includes("firekeeping") ? 1.5 : 1;
   const lit = litFires(state).length;
-  const energy =
-    lit * 20 * fireBoost;
+  const energy = lit * 20 * fireBoost + (counts.townhouse ?? 0) * 10;
 
   // How healthy the land is (see sustainabilityBreakdown for the parts).
   const sustainability = 100 + sustainabilityBreakdown(state).reduce((sum, p) => sum + p.value, 0);
 
-  const literacy = (counts.elder ?? 0) * 12 + (counts.school ?? 0) * 15 + (state.researched.length - 1) * 2;
+  const literacy =
+    (counts.elder ?? 0) * 12 + (counts.school ?? 0) * 15 + (counts.academy ?? 0) * 15 + (state.researched.length - 1) * 2;
 
   const happiness =
     clamp(food) * 0.35 +
@@ -1230,7 +1506,9 @@ export function computeMeters(state: GameState): Meters {
     (state.tutorialStep < TUTORIAL.length ? 0 : NO_FIRE_PENALTY * coldShare(state)) -
     (100 - clamp(sustainability)) * 0.15 -
     sickShare(state) * 30 -
-    (state.famineTicks > 0 ? FAMINE.happiness : 0) +
+    (state.famineTicks > 0 ? FAMINE.happiness : 0) -
+    thirst * DROUGHT.thirstMood +
+    Math.min(2, counts.baths ?? 0) * TOWN.bathsMood +
     state.modifiers.happiness;
 
   return {
@@ -1245,10 +1523,22 @@ export function computeMeters(state: GameState): Meters {
 
 function checkSecrets(state: GameState): GameState {
   const counts = countBuildings(state);
+  if (!state.secretsFound.includes("silk-secret") && tallyOf(state, "caravans") >= JADE_ROAD.caravans) {
+    return {
+      ...state,
+      secretsFound: [...state.secretsFound, "silk-secret"],
+      cutscene: "silk-secret",
+      researched: [...state.researched, "silk-secret"],
+      resources: { ...state.resources, knowledge: state.resources.knowledge + JADE_ROAD.knowledge },
+      modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + JADE_ROAD.happiness },
+      log: ["Secret discovered: the Jade Road! Our caravans found the way to the far east.", ...state.log].slice(0, 30),
+    };
+  }
   if (!state.secretsFound.includes("cave-paintings") && (counts.elder ?? 0) >= 2) {
     return {
       ...state,
       secretsFound: [...state.secretsFound, "cave-paintings"],
+      cutscene: "cave-paintings",
       researched: [...state.researched, "cave-paintings"],
       resources: { ...state.resources, knowledge: state.resources.knowledge + CAVE_PAINTINGS_KNOWLEDGE },
       modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + 10 },
@@ -1294,6 +1584,22 @@ function lessonReady(id: string, state: GameState) {
       return state.researched.includes("hide-clothing");
     case "grazing":
       return (countBuildings(state).pen ?? 0) >= 3;
+    case "water":
+      return (countBuildings(state).well ?? 0) > 0;
+    case "sanitation":
+      return (countBuildings(state).townhouse ?? 0) > 0 && sanitation(state) < 0.5;
+    case "river":
+      return (countBuildings(state).aqueduct ?? 0) + (countBuildings(state).watermill ?? 0) > 0;
+    case "towns":
+      return (countBuildings(state).townhouse ?? 0) >= 2;
+    case "trade":
+      return tallyOf(state, "caravans") > 0 && !(state.caravans ?? []).length;
+    case "drought":
+      return !!state.drought;
+    case "disasters":
+      return tallyOf(state, "disasters") > 0 && !state.disaster;
+    case "slopes":
+      return tallyOf(state, "landslides") > 0 && !state.disaster;
     default:
       return false;
   }
@@ -1310,6 +1616,39 @@ function milestonesReached(state: GameState): [string, string, number][] {
   if ((state.stats?.raidsWon ?? 0) > 0) out.push(["raid", "we held off raiders", M.firstRaidWon]);
   if ((state.planted ?? 0) > 0) out.push(["plant", "we planted our first saplings", M.firstPlanted]);
   return out;
+}
+
+// Where Knowledge comes from, for the "How to get Knowledge" panel: what
+// teaches every day (per tick), and the one-time firsts still to come.
+export function knowledgeSources(state: GameState) {
+  const counts = countBuildings(state);
+  const bonus = state.culture === "scholars" ? 1.5 : 1;
+  const daily: { label: string; perTick: number }[] = [];
+  for (const [id, n] of Object.entries(counts)) {
+    const k = BUILDINGS_BY_ID[id]?.produces?.knowledge ?? 0;
+    if (k > 0 && n > 0)
+      daily.push({ label: `${n} ${BUILDINGS_BY_ID[id].name}${n > 1 ? "s" : ""}`, perTick: k * n * teachingShare(state, id) * bonus });
+  }
+  daily.push({ label: `Literacy ${state.meters.literacy}`, perTick: state.meters.literacy * 0.001 * bonus });
+  const M = KNOWLEDGE_MILESTONES;
+  const done = state.milestones ?? [];
+  // Milestones get the Scholars bonus; scouting, caravans and levels don't.
+  const firsts: { label: string; gain: number }[] = [];
+  const milestone = (label: string, gain: number) => firsts.push({ label, gain: Math.round(gain * bonus) });
+  const unbuilt = Object.values(BUILDINGS_BY_ID).filter(
+    (d) => isUnlocked(state, d) && !counts[d.id] && !done.includes(`build-${d.id}`),
+  );
+  if (unbuilt.length)
+    milestone(`Build your first ${unbuilt.slice(0, 3).map((d) => d.name).join(", ")}${unbuilt.length > 3 ? "..." : ""} (each new kind)`, M.firstBuilding);
+  for (const p of M.population) if (!done.includes(`pop-${p}`)) milestone(`Grow to ${p} people`, M.populationReward);
+  if (!done.includes("raid")) milestone("Drive off raiders for the first time", M.firstRaidWon);
+  if (!done.includes("plant") && state.researched.includes("early-farming")) milestone("Plant your first saplings", M.firstPlanted);
+  const trips = Math.max(0, SCOUT_KNOWLEDGE.trips - state.scoutsSent);
+  if (trips) firsts.push({ label: `Send scouts (${trips} more trip${trips === 1 ? "" : "s"} teach us; big ones +2)`, gain: 1 });
+  // Caravans to the Silk Steppe bring new ideas home (Classical era).
+  if (state.researched.includes("barter-roads")) firsts.push({ label: "Each caravan that comes home", gain: CARAVAN.knowledge });
+  firsts.push({ label: "Each new chief level", gain: XP.levelKnowledge });
+  return { daily, firsts };
 }
 
 // Pay out Knowledge for new milestones, once each.
@@ -1485,15 +1824,14 @@ function bumpStats(state: GameState, change: (st: Stats) => void): GameState {
   return { ...state, stats: st };
 }
 
-// Ready to leave this era: Agriculture researched and enough people (Stone Age).
+// Ready to leave this era. Stone Age: Agriculture and 15 people. Ancient era:
+// the Roman legion beaten, Coinage and 40 people.
 export function readyForNextEra(state: GameState) {
-  return (
-    state.era === 0 &&
-    state.phase === "playing" &&
-    !state.debrief &&
-    state.researched.includes("agriculture") &&
-    state.population >= NEXT_ERA_POPULATION
-  );
+  if (state.phase !== "playing" || state.debrief) return false;
+  if (state.era === 0) return state.researched.includes("agriculture") && state.population >= NEXT_ERA_POPULATION;
+  if (state.era === 1)
+    return !!state.legionDone && state.researched.includes("coinage") && state.population >= CLASSICAL_POPULATION;
+  return false;
 }
 
 // How the land came through: the best ending needs it to still be healthy.
@@ -1556,6 +1894,7 @@ function startGrace(state: GameState): GameState {
     nextRaidTick: Math.max(state.nextRaidTick, state.tick + GRACE_AFTER_TUTORIAL.raid * gapFactor(state)),
     calmUntil: state.tick + GRACE_AFTER_TUTORIAL.disease * gapFactor(state),
     nextMomentTick: state.tick + SMALL_MOMENTS.firstAfter,
+    nextDisasterTick: state.tick + Math.round(DISASTERS.firstAfter * gapFactor(state)),
     eraStartTick: state.tick,
   };
 }
@@ -1564,7 +1903,6 @@ function tick(state: GameState): GameState {
   if (state.phase !== "playing" || state.event) return state;
   const prod = production(state);
   const cons = consumption(state);
-  const era = ERAS[state.era];
 
   const rot = Math.min(foodSpoiling(state), Math.max(0, state.resources.food + prod.food - cons));
   state = addTally(state, "rotted", rot);
@@ -1590,12 +1928,21 @@ function tick(state: GameState): GameState {
     const before = population;
     population = Math.max(1, population - FAMINE.deathsPerTick);
     starved = before - population;
-    famineTicks += 1;
+    // Those the town can't feed at all leave to look for food elsewhere, so a big
+    // town shrinks to fit its food instead of starving to the last person.
+    const unfed = Math.max(0, (cons - prod.food) / (FOOD_PER_PERSON * DIFFICULTIES[state.difficulty].consumption));
+    population = Math.max(1, population - unfed * FAMINE.leaveShare);
+    // In the great drought people ration what little there is: the famine clock
+    // runs at half speed (they still die of hunger).
+    famineTicks += inDrought(state) ? FAMINE.droughtClock : 1;
   } else {
     // Once there is food again, the danger passes twice as fast as it came.
     famineTicks = Math.max(0, famineTicks - 2);
-    if (state.meters.food > 45 && state.meters.shelter > 40 && population < capacity * 1.15) {
-      population += Math.max(0.08, population * growth);
+    // The tribe only grows when it makes at least as much food as it eats: stored
+    // food alone would let it grow into a famine.
+    if (state.meters.food > 45 && prod.food >= cons && state.meters.shelter > 40 && population < capacity * 1.15) {
+      // Never more than GROWTH_CAP a tick: a big town doesn't double in two minutes.
+      population += Math.min(GROWTH_CAP, Math.max(0.08, population * growth));
     }
   }
 
@@ -1644,12 +1991,7 @@ function tick(state: GameState): GameState {
     // The Stone Age calendar runs at the pace of the "left behind" deadline, so it
     // never stalls and reaches 3,000 BCE just as the world moves on. Later eras:
     // time can't run past the start of the next era until the player gets there.
-    year:
-      state.era === 0
-        ? stoneAgeYear(state, state.tick + 1)
-        : ERAS[state.era + 1]
-          ? Math.min(state.year + era.yearsPerTick, ERAS[state.era + 1].startYear - 100)
-          : state.year + era.yearsPerTick,
+    year: nextYear(state),
     resources,
     population,
     famineTicks,
@@ -1660,10 +2002,12 @@ function tick(state: GameState): GameState {
   };
 
   if (next.tick % 3 === 0) next = growForests(next);
+  next = wearBuildings(next);
   next = cutHills(next);
   next = sparks(next);
   // No raids or events while a new player is still learning.
-  if (!inTutorial) next = updateLegion(updateRaids(next));
+  if (!inTutorial) next = updateDisasters(updateDrought(updateLegion(updateRaids(next))));
+  next = returnCaravans(next);
   // The final battle ends the story (won or lost): nothing else happens today.
   if (next.phase !== "playing" || next.debrief) return { ...next, meters: computeMeters(next) };
 
@@ -1694,7 +2038,10 @@ function tick(state: GameState): GameState {
   if (!inTutorial) next = smallMoment(next);
 
   const beforeDisease = next.population;
-  next = stepDisease(next, housingCapacity(next), mulberry32(next.seed + next.tick * 31));
+  // Crowded towns without latrines, and people drinking dirty water in the
+  // drought, spread sickness faster.
+  const dirt = 1 + TOWN.dirty * (1 - sanitation(next)) + thirstShare(next);
+  next = stepDisease(next, housingCapacity(next), mulberry32(next.seed + next.tick * 31), dirt, bathsRecover(next));
   next = bumpStats(next, (st) => {
     st.peakPopulation = Math.max(st.peakPopulation, next.population);
     st.deaths.famine += starved;
@@ -1722,25 +2069,47 @@ interface Moment {
   when: (s: GameState) => boolean;
   apply: (s: GameState) => GameState;
   text: string;
+  // Where on the map it happens (shown there for a few seconds).
+  where: (s: GameState) => Tile | undefined;
 }
+
+// Places for a moment to happen, nearest the village first.
+const nearHome = (s: GameState, ok: (t: Tile) => boolean) => {
+  const home = s.tiles[s.startTile];
+  return s.tiles.filter((t) => t.revealed && ok(t)).sort((a, b) => hexDistance(a, home) - hexDistance(b, home));
+};
+// One of the nearest few, so it isn't always the same spot.
+const pick = (s: GameState, list: Tile[]) => list[Math.floor(s.tick / 3) % Math.min(4, list.length)];
+const forestEdge = (s: GameState) =>
+  pick(s, nearHome(s, (t) => t.terrain === "forest" && !t.building && t.growth > 0.5));
+const bareLand = (s: GameState) => pick(s, nearHome(s, (t) => (t.terrain === "grass" || t.terrain === "steppe") && !t.building && hexDistance(t, s.tiles[s.startTile]) >= 2));
+const aBuilding = (s: GameState, ids: string[]) => pick(s, nearHome(s, (t) => !!t.building && ids.includes(t.building)));
 
 const addFood = (s: GameState, n: number) => ({ ...s, resources: { ...s.resources, food: Math.max(0, s.resources.food + n) } });
 const addMood = (s: GameState, n: number) => ({ ...s, modifiers: { ...s.modifiers, happiness: s.modifiers.happiness + n } });
 
 const MOMENTS: Moment[] = [
-  { id: "herd", when: (s) => forestCover(s) >= 0.5, apply: (s) => addFood(s, 8), text: "A herd of deer passed the forest edge. The hunters brought back meat (+8 food)." },
-  { id: "berries", when: () => true, apply: (s) => addFood(s, 5), text: "The children found a patch of berries (+5 food)." },
+  { id: "herd", when: (s) => forestCover(s) >= 0.5, apply: (s) => addFood(s, 8), text: "A herd of deer passed the forest edge. The hunters brought back meat (+8 food).", where: forestEdge },
+  {
+    id: "berries",
+    when: () => true,
+    apply: (s) => addFood(s, 5),
+    text: "The children found a patch of berries (+5 food).",
+    where: (s) => pick(s, nearHome(s, (t) => !t.building && (t.deposit === "berries" || t.terrain === "grass" || t.terrain === "forest"))),
+  },
   {
     id: "baby",
     when: (s) => s.meters.food >= 45 && s.population < housingCapacity(s),
     apply: (s) => ({ ...s, population: s.population + 1 }),
     text: "A baby was born by the fire (+1 person).",
+    where: (s) => aBuilding(s, ["hut", "house", "townhouse"]) ?? s.tiles[s.startTile],
   },
   {
     id: "windfall",
     when: (s) => forestCover(s) >= 0.3,
     apply: (s) => ({ ...s, resources: { ...s.resources, wood: s.resources.wood + 4 } }),
     text: "The wind brought down an old tree: free firewood (+4 wood).",
+    where: forestEdge,
   },
   {
     id: "gust",
@@ -1750,43 +2119,59 @@ const MOMENTS: Moment[] = [
       return { ...s, fires: { ...s.fires, [fire.id]: 0 } };
     },
     text: "A gust of wind blew out a campfire. Click it to relight it.",
+    // The fire that went out (the same one apply() picks).
+    where: (s) => litFires(s)[Math.floor(s.tick / 7) % litFires(s).length],
   },
   {
     id: "rain",
     when: (s) => (countBuildings(s).farm ?? 0) > 0 && rainfall(s) >= 0.8,
     apply: (s) => addFood(s, 2 * (countBuildings(s).farm ?? 0)),
     text: "A good rain fell, and the fields drank it up. Forests help bring the rain.",
+    where: (s) => aBuilding(s, ["farm"]),
   },
-  { id: "story", when: (s) => litFires(s).length > 0, apply: (s) => addMood(s, 5), text: "A storyteller kept everyone up late by the fire. Spirits are high." },
-  { id: "smoke", when: (s) => litFires(s).length >= 3, apply: (s) => addMood(s, -4), text: "Smoke hung over the village all day. People are coughing." },
+  { id: "story", when: (s) => litFires(s).length > 0, apply: (s) => addMood(s, 5), text: "A storyteller kept everyone up late by the fire. Spirits are high.", where: (s) => litFires(s)[0] },
+  { id: "smoke", when: (s) => litFires(s).length >= 3, apply: (s) => addMood(s, -4), text: "Smoke hung over the village all day. People are coughing.", where: (s) => s.tiles[s.startTile] },
   {
     id: "birds",
     when: (s) => forestCover(s) >= 0.8,
     apply: (s) => ({ ...s, modifiers: { ...s.modifiers, sustainability: s.modifiers.sustainability + 2 } }),
     text: "Birds are nesting in the old forest again (+2 Sustainability for a while).",
+    where: forestEdge,
   },
   {
     id: "mice",
     when: (s) => s.resources.food > 60 && !countBuildings(s).granary,
     apply: (s) => addFood(s, -Math.round(s.resources.food * 0.1)),
     text: "Mice got into the food stores and spoiled some of it. A granary would keep it safe.",
+    where: (s) => aBuilding(s, ["hut", "house", "gatherer", "farm"]) ?? s.tiles[s.startTile],
   },
-  { id: "dust", when: (s) => forestCover(s) < 0.5, apply: (s) => addMood(s, -3), text: "Wind blew dust off the bare land where the forest used to be." },
+  { id: "dust", when: (s) => forestCover(s) < 0.5, apply: (s) => addMood(s, -3), text: "Wind blew dust off the bare land where the forest used to be.", where: bareLand },
 ];
 
-export function smallMoment(state: GameState): GameState {
+// Dev: `force` picks which moment (if it can happen right now).
+export const MOMENT_IDS = () => MOMENTS.map((m) => m.id);
+
+export function smallMoment(state: GameState, force?: string): GameState {
   const due = state.nextMomentTick ?? state.tick + SMALL_MOMENTS.firstAfter;
   if (state.tick < due) return state.nextMomentTick === undefined ? { ...state, nextMomentTick: due } : state;
   // Never over an event card, a raid or the legion: try again a little later.
   if (state.event || state.raid || state.legion) return { ...state, nextMomentTick: state.tick + 5 };
   const rand = mulberry32(state.seed + state.tick * 61);
   const last = state.lastMoment;
-  const options = MOMENTS.filter((m) => m.id !== last && m.when(state));
+  const options = MOMENTS.filter((m) => (force ? m.id === force : m.id !== last) && m.when(state));
   const next = state.tick + SMALL_MOMENTS.base + Math.floor(rand() * SMALL_MOMENTS.spread);
   if (!options.length) return { ...state, nextMomentTick: next };
   const moment = options[Math.floor(rand() * options.length)];
+  // Where it happens is worked out before it happens (a gust picks a lit fire).
+  const spot = moment.where(state) ?? state.tiles[state.startTile];
   const after = moment.apply(state);
-  return { ...after, nextMomentTick: next, lastMoment: moment.id, log: [moment.text, ...after.log].slice(0, 30) };
+  return {
+    ...after,
+    nextMomentTick: next,
+    lastMoment: moment.id,
+    moment: { id: moment.id, tick: state.tick, tile: spot.id },
+    log: [moment.text, ...after.log].slice(0, 30),
+  };
 }
 
 // The height of a tile once a quarry has cut part of it away.
@@ -1817,6 +2202,9 @@ function growForests(state: GameState): GameState {
     if (t.scorch > 0) {
       changes.set(t.id, { scorch: Math.max(0, t.scorch - 0.01) });
     }
+    // Earthquake cracks and landslide rubble fade slowly (about 15 minutes).
+    if ((t.cracked ?? 0) > 0) changes.set(t.id, { ...changes.get(t.id), cracked: Math.max(0, (t.cracked ?? 0) - 0.005) });
+    if ((t.rubble ?? 0) > 0) changes.set(t.id, { ...changes.get(t.id), rubble: Math.max(0, (t.rubble ?? 0) - 0.005) });
     if (t.terrain === "forest" && t.growth < 1 && t.scorch < 0.4) {
       if (strain < 1) changes.set(t.id, { ...changes.get(t.id), growth: Math.min(1, t.growth + 0.06 * (1 - strain)) });
     }
@@ -1923,6 +2311,258 @@ function updateLegion(state: GameState): GameState {
   return state;
 }
 
+// ---- Natural disasters -------------------------------------------------------
+
+const hexNeighbors = (state: GameState, tile: Tile) => state.tiles.filter((t) => hexDistance(t, tile) === 1);
+
+// Under flood water right now.
+export function isFlooded(state: GameState, tile: Tile) {
+  const d = state.disaster;
+  return !!d && d.kind === "flood" && state.tick >= d.startTick && state.tick < d.endTick && d.tiles.includes(tile.id);
+}
+
+// The disaster is striking right now (after its warning, before it's over).
+export function disasterActive(state: GameState) {
+  const d = state.disaster;
+  return !!d && state.tick >= d.startTick && state.tick < d.endTick;
+}
+
+// Low land by the river or the sea near the village that a flood would cover.
+// Standing forest soaks up the rain: the more forest, the fewer tiles go under.
+function floodTiles(state: GameState): number[] {
+  const home = state.tiles[state.startTile];
+  const low = ["grass", "steppe", "beach", "marsh", "forest"];
+  const byWater = state.tiles.filter(
+    (t) =>
+      t.revealed &&
+      low.includes(t.terrain) &&
+      hexDistance(t, home) <= DISASTER_HITS.flood.radius &&
+      state.tiles.some((n) => (n.terrain === "river" || n.terrain === "shallow") && hexDistance(n, t) === 1),
+  );
+  const n = Math.max(3, Math.min(DISASTER_HITS.flood.tiles, Math.round(DISASTER_HITS.flood.tiles * (1.3 - forestCover(state)))));
+  return byWater.sort((a, b) => hexDistance(a, home) - hexDistance(b, home)).slice(0, n).map((t) => t.id);
+}
+
+// Hills whose trees have been cut (or that quarries have cut into), with
+// buildings below them: a landslide waiting to happen.
+export function riskySlopes(state: GameState): Tile[] {
+  const home = state.tiles[state.startTile];
+  const bare = (t: Tile) => (t.terrain === "forest" && t.growth < 0.3) || (t.dug ?? 0) > 0.3;
+  return state.tiles.filter((t) => {
+    if ((t.terrain !== "hills" && t.terrain !== "mountain") || !t.revealed || hexDistance(t, home) > DISASTER_HITS.slide.radius) return false;
+    const around = hexNeighbors(state, t);
+    const stripped = around.filter(bare).length + ((t.dug ?? 0) > 0.3 ? 2 : 0);
+    return stripped >= DISASTER_HITS.slide.bare && around.some((n) => n.building && n.terrain !== "hills" && n.terrain !== "mountain");
+  });
+}
+
+// Warn of a disaster now; it strikes after its warning.
+function startDisaster(state: GameState, kind: DisasterKind, rand: () => number, warn = DISASTERS.kinds[kind].warn): GameState {
+  const home = state.tiles[state.startTile];
+  let tiles: number[] = [];
+  if (kind === "flood") tiles = floodTiles(state);
+  if (kind === "landslide") {
+    const slopes = riskySlopes(state);
+    if (!slopes.length) return state;
+    tiles = [slopes[Math.floor(rand() * slopes.length)].id];
+  }
+  if (kind === "earthquake") {
+    const near = state.tiles.filter((t) => isLand(t.terrain) && hexDistance(t, home) <= 3);
+    tiles = [near[Math.floor(rand() * near.length)].id];
+  }
+  const k = DISASTERS.kinds[kind];
+  return {
+    ...state,
+    disaster: { kind, warnTick: state.tick, startTick: state.tick + warn, endTick: state.tick + warn + k.ticks, tiles },
+    lastBigTick: state.tick,
+    log: [k.warning, ...state.log].slice(0, 30),
+  };
+}
+
+// Take buildings down: returns the new tiles and what was lost.
+function wreck(state: GameState, ids: number[], mark: Partial<Tile>) {
+  const lost = ids.map((id) => BUILDINGS_BY_ID[state.tiles[id].building!].name);
+  const tiles = state.tiles.map((t) => (ids.includes(t.id) ? { ...t, building: null, ...mark } : t));
+  return { tiles, lost };
+}
+
+// The disaster strikes.
+function strike(state: GameState, rand: () => number): GameState {
+  const d = state.disaster!;
+  const H = DISASTER_HITS;
+  const say = (line: string, s: GameState) => ({ ...s, log: [line, ...s.log].slice(0, 30) });
+  const hurt = (s: GameState, n: number) =>
+    n <= 0
+      ? s
+      : bumpStats({ ...s, population: Math.max(1, s.population - n) }, (st) => {
+          st.deaths.disaster = (st.deaths.disaster ?? 0) + n;
+        });
+  let next = addTally(state, "disasters", 1);
+  const listOf = (lost: string[]) => (lost.length ? lost.join(", ") : "");
+
+  if (d.kind === "storm") {
+    // Every fire goes out; wooden buildings with no forest to break the wind may be wrecked.
+    const exposed = state.tiles.filter(
+      (t) =>
+        t.building &&
+        WOOD_BUILDINGS.includes(t.building) &&
+        !(t.building === "woodcutter" && (countBuildings(state).woodcutter ?? 0) <= 1) &&
+        hexNeighbors(state, t).filter((n) => n.terrain === "forest" && n.growth > 0.5).length < H.storm.shelter,
+    );
+    const hit = exposed.filter(() => rand() < H.storm.wreck).slice(0, H.storm.max).map((t) => t.id);
+    const { tiles, lost } = wreck(next, hit, { scorch: 0 });
+    next = { ...next, tiles, fires: Object.fromEntries(Object.keys(state.fires ?? {}).map((id) => [id, 0])) };
+    return say(
+      `The storm blew out every campfire${lost.length ? ` and wrecked: ${listOf(lost)}` : ", but the buildings held"}. Forest around a building shelters it from the wind.`,
+      next,
+    );
+  }
+  if (d.kind === "flood") {
+    const homes = d.tiles.filter((id) => BUILDINGS_BY_ID[state.tiles[id].building ?? ""]?.housing).length;
+    next = homes ? { ...next, sick: (next.sick ?? 0) + H.flood.sickness } : next;
+    return say(
+      `The flood covered ${d.tiles.length} tiles by the water. Buildings there have stopped working until it goes down${homes ? ", and the damp homes are making people sick" : ""}.`,
+      next,
+    );
+  }
+  if (d.kind === "earthquake") {
+    const centre = state.tiles[d.tiles[0]];
+    const shaken = state.tiles.filter(
+      (t) =>
+        t.building &&
+        hexDistance(t, centre) <= H.quake.radius &&
+        !(t.building === "woodcutter" && (countBuildings(state).woodcutter ?? 0) <= 1),
+    );
+    const hit = shaken.filter((t) => rand() < (STONE_BUILDINGS.includes(t.building!) ? H.quake.stone : H.quake.wood)).slice(0, H.quake.max).map((t) => t.id);
+    const homesLost = hit.filter((id) => BUILDINGS_BY_ID[state.tiles[id].building!].housing).length;
+    const { tiles, lost } = wreck(next, hit, { cracked: 1 });
+    const cracks = new Set(state.tiles.filter((t) => isLand(t.terrain) && hexDistance(t, centre) <= 2 && rand() < 0.5).map((t) => t.id));
+    next = { ...next, tiles: tiles.map((t) => (cracks.has(t.id) || t.id === centre.id ? { ...t, cracked: 1 } : t)) };
+    const deaths = Math.min(homesLost * H.quake.deaths, Math.floor(state.population) - 1);
+    next = hurt(next, deaths);
+    return say(
+      `The ground shook! ${lost.length ? `Collapsed: ${listOf(lost)}.` : "Everything is still standing."}${deaths ? ` ${deaths} ${deaths === 1 ? "person was" : "people were"} killed.` : ""} Brick and stone crack more easily than wood.`,
+      next,
+    );
+  }
+  // Landslide: the stripped hill comes down on what's below it.
+  const slope = state.tiles[d.tiles[0]];
+  const below = hexNeighbors(state, slope)
+    .filter((t) => t.building && t.terrain !== "hills" && t.terrain !== "mountain" && !(t.building === "woodcutter" && (countBuildings(state).woodcutter ?? 0) <= 1))
+    .slice(0, 2)
+    .map((t) => t.id);
+  const { tiles, lost } = wreck(next, below, { rubble: 1 });
+  next = addTally({ ...next, tiles: tiles.map((t) => (t.id === slope.id ? { ...t, rubble: 1 } : t)) }, "landslides", 1);
+  next = hurt(next, Math.min(below.length, Math.floor(state.population) - 1));
+  return say(
+    `The bare hillside gave way! ${lost.length ? `Buried: ${listOf(lost)}.` : ""} With no roots to hold it, the soil slid down.`,
+    next,
+  );
+}
+
+// Storms, floods, earthquakes and landslides: one now and then after the
+// tutorial, never over a raid, the legion or the drought.
+function updateDisasters(state: GameState): GameState {
+  if (state.phase !== "playing") return state;
+  const d = state.disaster;
+  const rand = mulberry32(state.seed + state.tick * 71);
+  if (!d) {
+    if (state.nextDisasterTick === undefined) return { ...state, nextDisasterTick: state.tick + DISASTERS.firstAfter };
+    if (state.tick < state.nextDisasterTick || state.raid || state.legion || state.drought || state.event || !quietEnough(state) || isCalm(state))
+      return state;
+    const weights: [DisasterKind, number][] = [
+      ["storm", DISASTERS.kinds.storm.weight],
+      ["flood", floodTiles(state).length ? DISASTERS.kinds.flood.weight : 0],
+      ["earthquake", DISASTERS.kinds.earthquake.weight],
+      ["landslide", Math.min(3, riskySlopes(state).length * 1.5)],
+    ];
+    let r = rand() * weights.reduce((s, [, w]) => s + w, 0);
+    const kind = weights.find(([, w]) => (r -= w) <= 0)?.[0] ?? "storm";
+    return startDisaster(state, kind, rand);
+  }
+  if (state.tick === d.startTick) return strike(state, rand);
+  if (state.tick >= d.endTick) {
+    // After a flood, the fields it covered grow more for a while.
+    const silt =
+      d.kind === "flood"
+        ? { ...state.silt, ...Object.fromEntries(d.tiles.map((id) => [id, state.tick + DISASTER_HITS.flood.siltTicks])) }
+        : state.silt;
+    return {
+      ...state,
+      disaster: null,
+      silt,
+      nextDisasterTick: state.tick + Math.round((DISASTERS.gap + rand() * DISASTERS.spread) * gapFactor(state)),
+      log: d.kind === "flood" ? ["The water has gone down, leaving rich silt on the fields.", ...state.log].slice(0, 30) : state.log,
+    };
+  }
+  return state;
+}
+
+// Bathhouses help the sick get better (extra share recovering each tick).
+function bathsRecover(state: GameState) {
+  return Math.min(2, countBuildings(state).baths ?? 0) * TOWN.bathsRecover;
+}
+
+// The great drought: the elders warn of it when the year comes, it starts a few
+// minutes later, and the town that holds on until the rains return has come
+// through the Classical era (the final debrief). No raids meanwhile: one big
+// thing at a time.
+function updateDrought(state: GameState): GameState {
+  if (state.era !== 2 || state.droughtDone || state.phase !== "playing") return state;
+  const d = state.drought;
+  if (!d) {
+    if (state.year < DROUGHT.warnYear || state.raid) return state;
+    const start = state.tick + DROUGHT.warnTicks;
+    return {
+      ...state,
+      drought: { warnTick: state.tick, startTick: start, endTick: start + DROUGHT.ticks },
+      nextRaidTick: Number.MAX_SAFE_INTEGER,
+      lastBigTick: state.tick,
+      log: [
+        "The elders read the signs: the springs are low and the winter was dry. A great drought is coming. Dig wells, fill the granaries, keep the forests standing!",
+        ...state.log,
+      ].slice(0, 30),
+    };
+  }
+  if (state.tick === d.startTick) {
+    return { ...state, log: ["The rains have failed. The great drought has begun.", ...state.log].slice(0, 30) };
+  }
+  if (state.tick >= d.endTick) {
+    const done: GameState = {
+      ...state,
+      drought: null,
+      droughtDone: true,
+      nextRaidTick: state.tick + RAID_GAP.base,
+      log: [`The rains have come back! ${state.nation ?? "Your people"} came through the great drought.`, ...state.log].slice(0, 30),
+    };
+    return { ...done, debrief: makeDebrief(done, "final") };
+  }
+  return state;
+}
+
+// Caravans come home from the Silk Steppe with coins and new ideas, and now and
+// then with sickness.
+function returnCaravans(state: GameState): GameState {
+  const due = (state.caravans ?? []).filter((c) => state.tick >= c.back);
+  if (!due.length) return state;
+  let next: GameState = {
+    ...state,
+    caravans: (state.caravans ?? []).filter((c) => state.tick < c.back),
+    resources: {
+      ...state.resources,
+      currency: state.resources.currency + due.length * CARAVAN.coins,
+      knowledge: state.resources.knowledge + due.length * CARAVAN.knowledge,
+    },
+    log: [
+      `A caravan came back from the Silk Steppe with silver and new ideas (+${CARAVAN.coins} coins, +${CARAVAN.knowledge} Knowledge).`,
+      ...state.log,
+    ].slice(0, 30),
+  };
+  const roll = mulberry32(state.seed + state.tick * 47)();
+  next = maybeOutbreak(next, isCalm(next) ? 0 : CARAVAN.sickness, roll, "The caravan brought it back from the steppe.");
+  return next;
+}
+
 // The final battle: hold and the story ends well; fall and the village is taken.
 function resolveLegion(state: GameState) {
   const raid = state.raid!;
@@ -1955,11 +2595,18 @@ function resolveLegion(state: GameState) {
     soldiers: state.soldiers - lostWarriors,
   };
   if (won) {
-    const done: GameState = {
+    // The Ancient era goes on: next comes Coinage, a bigger town and the Classical
+    // era, with the "left behind" clock running from now. Raids start again.
+    return {
       ...after,
-      log: [`The Roman legion is beaten! ${state.nation ?? "Your people"} stand free.`, ...state.log].slice(0, 30),
+      legionBeatenTick: state.tick,
+      legionBeatenYear: state.year,
+      nextRaidTick: state.tick + Math.round(RAID_GAP.base * gapFactor(state)),
+      log: [
+        `The Roman legion is beaten! ${state.nation ?? "Your people"} stand free. Next: learn Coinage and grow to ${CLASSICAL_POPULATION} people to enter the Classical era.`,
+        ...state.log,
+      ].slice(0, 30),
     };
-    return { ...done, debrief: makeDebrief(done, "final") };
   }
   const lost: GameState = {
     ...after,
@@ -1976,7 +2623,8 @@ export type DropOutcome = "land" | "help" | "relight" | "fire" | "shallow" | "de
 
 export function dropOutcome(state: GameState, tile: Tile | null | undefined): DropOutcome {
   if (!tile || tile.terrain === "deep") return "deep";
-  if (tile.terrain === "shallow") return "shallow";
+  // A river is a cold dunk too.
+  if (tile.terrain === "shallow" || tile.terrain === "river") return "shallow";
   if (!tile.revealed) return "fog";
   if (tile.building === "campfire") return isLit(state, tile) ? "fire" : "relight";
   if (tile.terrain === "mountain") return "mountain";
@@ -2012,7 +2660,11 @@ function dropPerson(state: GameState, tileId: number | null): GameState {
         log: say(`${name} wandered off into the unknown...`),
       });
     case "shallow":
-      return withMeters({ ...state, sick: (state.sick ?? 0) + 1, log: say(`${name} got soaked in the sea and caught a cold.`) });
+      return withMeters({
+        ...state,
+        sick: (state.sick ?? 0) + 1,
+        log: say(tile?.terrain === "river" ? `${name} fell in the river and caught a cold.` : `${name} got soaked in the sea and caught a cold.`),
+      });
     case "mountain":
       return withMeters({ ...state, sick: (state.sick ?? 0) + 1, log: say(`${name} tumbled down the mountain. Bruised, but alive.`) });
     case "relight":
@@ -2277,6 +2929,7 @@ function awardXp(prev: GameState, next: GameState): GameState {
   gain += Math.max(0, b.raidsWon - a.raidsWon) * XP.raidWon;
   gain += Math.max(0, (next.planted ?? 0) - (prev.planted ?? 0)) * XP.plant;
   gain += Math.max(0, next.era - prev.era) * XP.era;
+  if (next.droughtDone && !prev.droughtDone) gain += XP.drought;
   if (next.tick !== prev.tick && next.tick % XP.minuteTicks === 0 && next.tutorialStep >= TUTORIAL.length) {
     if (next.meters.food >= 45) gain += XP.fedMinute;
     if (next.meters.sustainability >= MIN_SUSTAINABILITY_FOR_BEST_ENDING) gain += XP.healthyMinute;
@@ -2322,7 +2975,30 @@ export function currentGoal(state: GameState): string | null {
     if (state.legion || state.raid?.roman) return "Goal: hold off the Roman legion!";
     return `Goal: get ready for Rome. Their legion lands around ${formatYear(ROMAN_LEGION.warningYear)}. Our defense: ${defenseStrength(state)}.`;
   }
-  return `Goal: keep the village thriving. Land health: ${state.meters.sustainability}.`;
+  if (state.era === 1) {
+    if (!state.researched.includes("coinage")) {
+      const cost = TREE_BY_ID.coinage.cost;
+      const open = goalProgress(state, "coinage").find((g) => g.have < g.need);
+      const k = Math.floor(state.resources.knowledge);
+      const parts = [open ? `${open.label} (${Math.floor(open.have)}/${open.need})` : null, k < cost ? `${k}/${cost} Knowledge` : null]
+        .filter(Boolean)
+        .join(", ");
+      return parts
+        ? `Goal: learn Coinage to reach the Classical era. Still needed: ${parts}.`
+        : "Goal: Coinage is ready. Open Advancements and research it.";
+    }
+    if (pop < CLASSICAL_POPULATION) return `Goal: grow to ${CLASSICAL_POPULATION} people to enter the Classical era (${pop}/${CLASSICAL_POPULATION}).`;
+    return null;
+  }
+  if (state.era === 2 && !state.droughtDone) {
+    const water = `Water for ${Math.min(pop, waterSupply(state))} of ${pop} people`;
+    const granaries = countBuildings(state).granary ?? 0;
+    if (!state.drought)
+      return `Goal: build a town that can last a drought. ${water} in a dry year, ${granaries} granar${granaries === 1 ? "y" : "ies"}.`;
+    if (!inDrought(state)) return `Goal: the drought is coming! ${water}. Dig wells and fill the granaries.`;
+    return `Goal: hold on until the rains come back. ${water}.`;
+  }
+  return `Goal: keep the town thriving. Land health: ${state.meters.sustainability}.`;
 }
 
 function reduce(state: GameState, action: Action): GameState {
@@ -2347,7 +3023,7 @@ function step(state: GameState, action: Action): GameState {
       const cleared = def.id === "farm" ? forestToClear(state, tile) : null;
       const tiles = state.tiles.map((t) =>
         t.id === tile.id
-          ? { ...t, building: def.id }
+          ? { ...t, building: def.id, worn: 0 }
           : t.id === cleared?.id
             ? { ...t, terrain: "grass" as const, height: terrainHeight("grass"), growth: 0 }
             : t,
@@ -2413,6 +3089,8 @@ function step(state: GameState, action: Action): GameState {
       return withMeters({
         ...snapshotGoals({ ...state, researched: [...state.researched, node.id] }),
         coach,
+        // A short scene of the moment it was discovered (see DISCOVERIES).
+        cutscene: DISCOVERIES[node.id] ? node.id : state.cutscene ?? null,
         researched: [...state.researched, node.id],
         flags: { ...state.flags, rocket: state.flags.rocket || node.id === "rocketry" },
         resources: { ...state.resources, knowledge: state.resources.knowledge - node.cost },
@@ -2480,18 +3158,18 @@ function step(state: GameState, action: Action): GameState {
     }
 
     case "skipTutorial": {
-      // Skipping players still get the basics the tutorial would have built:
-      // a woodcutter, a lit campfire, a gatherer and a war camp with a warrior.
-      // The tutorial's buildings are handed over, so its budget isn't: only the
-      // after-tutorial reserve is left (plus the Knowledge for Early Farming).
+      // Skipping players still get everything the tutorial would have given:
+      // a woodcutter, a lit campfire, a Wooden House, a gatherer, a war camp
+      // with a warrior, Early Farming and a field. The tutorial's buildings are
+      // handed over, so its budget isn't: only the after-tutorial reserve is left.
       const skipped = startGrace({
         ...state,
         tutorialStep: TUTORIAL.length,
+        researched: state.researched.includes("early-farming") ? state.researched : [...state.researched, "early-farming"],
         resources: {
           ...state.resources,
           food: AFTER_TUTORIAL_RESERVE.food ?? 0,
           wood: AFTER_TUTORIAL_RESERVE.wood ?? 0,
-          knowledge: Math.max(state.resources.knowledge, TREE_BY_ID["early-farming"].cost),
         },
       });
       const counts = countBuildings(state);
@@ -2520,6 +3198,19 @@ function step(state: GameState, action: Action): GameState {
           spot.building = "warcamp";
           soldiers = Math.max(soldiers, 1);
         }
+      }
+      // A Wooden House (not beside the fire: sparks) and a field on open grass.
+      const home = tiles[state.startTile];
+      const free = (t: Tile, terrain: string[]) => t.revealed && terrain.includes(t.terrain) && !t.building;
+      const byHome = (a: Tile, b: Tile) => hexDistance(a, home) - hexDistance(b, home);
+      const clearOfFire = (t: Tile) => !tiles.some((f) => f.building === "campfire" && hexDistance(f, t) <= 1);
+      if (!counts.hut) {
+        const spot = tiles.filter((t) => free(t, BUILDINGS_BY_ID.hut.terrain) && clearOfFire(t)).sort(byHome)[0];
+        if (spot) spot.building = "hut";
+      }
+      if (!counts.farm) {
+        const spot = tiles.filter((t) => free(t, ["grass"]) && clearOfFire(t)).sort(byHome)[0];
+        if (spot) spot.building = "farm";
       }
       const fires = pit !== null ? { ...state.fires, [pit]: burnTicks(state) } : state.fires;
       return withMeters({ ...skipped, tiles, fires, soldiers });
@@ -2586,7 +3277,7 @@ function step(state: GameState, action: Action): GameState {
       if (!tile || !target || !canAfford(state, buildingCost(state, target))) return state;
       return withMeters({
         ...state,
-        tiles: state.tiles.map((t) => (t.id === tile.id ? { ...t, building: target.id } : t)),
+        tiles: state.tiles.map((t) => (t.id === tile.id ? { ...t, building: target.id, worn: 0 } : t)),
         resources: spend(state.resources, buildingCost(state, target)),
         log: [`Upgraded to a ${target.name}.`, ...state.log].slice(0, 30),
         stats: { ...(state.stats ?? emptyStats()), built: (state.stats?.built ?? 0) + 1 },
@@ -2612,6 +3303,12 @@ function step(state: GameState, action: Action): GameState {
       });
     }
 
+    case "dismissCutscene":
+      return { ...state, cutscene: null };
+
+    case "devCutscene":
+      return state.dev && DISCOVERIES[action.id] ? { ...state, cutscene: action.id } : state;
+
     case "dismissLesson":
       return { ...state, lesson: null };
 
@@ -2635,24 +3332,112 @@ function step(state: GameState, action: Action): GameState {
     case "enterEra": {
       if (state.debrief?.kind !== "era" || !ERAS[state.era + 1]) return state;
       const era = state.era + 1;
+      const intro = ERA_INTROS[era];
       return withMeters({
         ...state,
         era,
         year: ERAS[era].startYear,
         eraStartTick: state.tick,
         debrief: null,
+        // Elder Ama welcomes the tribe to the new era (like a lesson).
+        ...(intro ? { lesson: intro.id, lessonTick: state.tick } : {}),
         log: [`${state.nation ?? "Your people"} enter the ${ERAS[era].name} era.`, ...state.log].slice(0, 30),
       });
     }
 
     case "devFinishEra": {
-      if (!state.dev) return state;
-      const ready: GameState = {
-        ...state,
-        researched: Array.from(new Set([...state.researched, "agriculture"])),
-        population: Math.max(state.population, NEXT_ERA_POPULATION),
-      };
+      // Stone Age: Agriculture and 15 people. Ancient: the legion beaten, Coinage and 40 people.
+      if (!state.dev || state.era > 1) return state;
+      const ready: GameState =
+        state.era === 0
+          ? {
+              ...state,
+              researched: Array.from(new Set([...state.researched, "agriculture"])),
+              population: Math.max(state.population, NEXT_ERA_POPULATION),
+            }
+          : {
+              ...state,
+              legion: null,
+              legionDone: true,
+              raid: state.raid?.roman ? null : state.raid,
+              researched: Array.from(new Set([...state.researched, "coinage"])),
+              population: Math.max(state.population, CLASSICAL_POPULATION),
+            };
       return { ...ready, debrief: makeDebrief(ready, "era") };
+    }
+
+    case "caravan": {
+      if (caravanError(state)) return state;
+      return withMeters({
+        ...addTally(state, "caravans", 1),
+        caravans: [...(state.caravans ?? []), { start: state.tick, back: state.tick + CARAVAN.ticks }],
+        resources: spend(state.resources, caravanCost(state)),
+        log: [`A caravan set off for the Silk Steppe. It will be back in ${secs(CARAVAN.ticks)} s.`, ...state.log].slice(0, 30),
+      });
+    }
+
+    case "repair": {
+      const tile = state.tiles[action.tileId];
+      if (!tile?.building || !(tile.worn ?? 0)) return state;
+      const cost = repairCost(state, tile);
+      if (!canAfford(state, cost)) return state;
+      return withMeters({
+        ...state,
+        tiles: state.tiles.map((t) => (t.id === tile.id ? { ...t, worn: 0 } : t)),
+        resources: spend(state.resources, cost),
+        log: [`Repaired the ${BUILDINGS_BY_ID[tile.building].name}.`, ...state.log].slice(0, 30),
+      });
+    }
+
+    case "devWear":
+      // Wear every building most of the way down, to test repairs.
+      if (!state.dev) return state;
+      return withMeters({
+        ...state,
+        tiles: state.tiles.map((t) => (t.building && t.building !== "campfire" ? { ...t, worn: Math.min(1, (t.worn ?? 0) + 0.8) } : t)),
+        log: ["Dev: every building is badly worn.", ...state.log].slice(0, 30),
+      });
+
+    case "devDisaster": {
+      // Warn now; it strikes 3 ticks later. A landslide needs a stripped slope.
+      if (!state.dev || state.disaster) return state;
+      const started = startDisaster(state, action.kind, mulberry32(state.seed + state.tick * 71), 3);
+      return started === state ? { ...state, log: ["Dev: no stripped slope with buildings below for a landslide.", ...state.log].slice(0, 30) } : started;
+    }
+
+    case "devCaravanBack":
+      if (!state.dev) return state;
+      return withMeters(returnCaravans({ ...state, caravans: (state.caravans ?? []).map((c) => ({ ...c, back: state.tick })) }));
+
+    case "devBeatLegion":
+      // Skip the Roman legion: as if it had just been beaten.
+      if (!state.dev || state.era !== 1 || state.legionDone) return state;
+      return withMeters({
+        ...state,
+        legion: null,
+        raid: state.raid?.roman ? null : state.raid,
+        legionDone: true,
+        legionBeatenTick: state.tick,
+        legionBeatenYear: state.year,
+        nextRaidTick: state.tick + RAID_GAP.base,
+        log: ["Dev: the Roman legion is beaten.", ...state.log].slice(0, 30),
+      });
+
+    case "devDrought": {
+      // soon: the elders warn now, 20 s to go. now: it starts now. end: the rains come next tick.
+      if (!state.dev || state.era !== 2 || state.droughtDone) return state;
+      const soon = state.tick + (action.when === "now" ? 0 : 13);
+      const d = state.drought ?? { warnTick: state.tick, startTick: soon, endTick: soon + DROUGHT.ticks };
+      const drought =
+        action.when === "end"
+          ? { ...d, startTick: Math.min(d.startTick, state.tick), endTick: state.tick + 1 }
+          : { warnTick: state.tick, startTick: soon, endTick: soon + DROUGHT.ticks };
+      return withMeters({
+        ...state,
+        drought,
+        nextRaidTick: Number.MAX_SAFE_INTEGER,
+        log: [`Dev: drought ${action.when}.`, ...state.log].slice(0, 30),
+      });
     }
 
     case "devRomans":
@@ -2722,7 +3507,7 @@ function step(state: GameState, action: Action): GameState {
 
     case "devMoment":
       if (!state.dev) return state;
-      return withMeters(smallMoment({ ...state, event: null, nextMomentTick: state.tick }));
+      return withMeters(smallMoment({ ...state, event: null, nextMomentTick: state.tick }, action.id));
 
     case "famineRelief": {
       if (state.famineTicks <= 0 || state.phase !== "playing") return state;
@@ -2890,6 +3675,14 @@ export function loadGame(): GameState | null {
     for (const t of parsed.tiles) if (t.terrain === "mountain") t.height = cutHeight(t);
     // Saves from before spearmen: Hunting Spears used to arm every warrior.
     if (parsed.spearmen === undefined) parsed.spearmen = parsed.researched.includes("spears") ? parsed.soldiers : 0;
+    // Saves from before the river: it runs where nothing has been built yet.
+    if (!parsed.tiles.some((t) => t.terrain === "river")) {
+      for (const id of riverPath(parsed.tiles, parsed.startTile)) {
+        const t = parsed.tiles[id];
+        if (t.building) continue;
+        Object.assign(t, { terrain: "river", height: terrainHeight("river"), island: -1, deposit: null, growth: 0 });
+      }
+    }
     return parsed;
   } catch {
     return null;
