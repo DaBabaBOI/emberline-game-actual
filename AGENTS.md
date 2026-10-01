@@ -635,10 +635,32 @@ These were decided with the project owner. Do not change them without being aske
    - **Raiders:** bigger raids; unlock bronze spearmen, archers, and palisade/stone
      walls that protect nearby tiles.
 2. Classical and Medieval & Renaissance: built (see above).
-3. Industrial & Modern (pollution gets serious), then Future & Space (the space
-   view, fusion, AI tech, interstellar).
-4. Later: multiplayer, where human players replace AI nations.
-5. **Idea saved by the owner for later: the Kardashev scale.** It ranks a
+3. **Industrial & Modern** (decided with the owner, 2026-10-01):
+   - **About:** coal, steam and factories; cities and railways; the switch from
+     coal to clean energy; climate change.
+   - **Entry:** come through the Black Death, research Steam & Coal, and reach a
+     population (like the earlier eras).
+   - **Energy is a power meter:** power plants make it; factories, trains and
+     cities use it. Coal is cheap and dirty; clean power costs more at first.
+   - **Pollution:** a global carbon meter that only goes up unless captured,
+     plus local smog near factories that clears when you clean up.
+   - **The kingdoms become nations:** trade, alliances, climate deals (a summit
+     you negotiate at) and possible wars.
+   - **Finale: a climate crisis.** Heatwaves, storms and coastal floods at once;
+     how much carbon you put out decides how bad. The floods recede afterwards.
+   - About 15 minutes.
+4. **Future & Space** (decided with the owner, 2026-10-01):
+   - **About:** space (a launch site on the map, then zoom out to a space view
+     for orbit and moon projects); fusion and the Kardashev scale; AI and
+     automation (more output, but jobs and purpose are the trade-off);
+     repairing the Earth (carbon capture, rewilding, ocean clean-up).
+   - **Big test: a climate tipping point:** the carbon from earlier eras comes
+     due; repair the Earth fast enough or it tips.
+   - **The game ends at Kardashev Type I:** planet-scale clean energy with the
+     land still healthy; the final debrief judges how you got there.
+   - About 15 minutes.
+5. Later: multiplayer, where human players replace AI nations.
+6. **The Kardashev scale** (now the game's ending, see 4). It ranks a
    civilization by how much energy it can use (Type I: its planet's; Type II:
    its star's; Type III: its galaxy's). A possible frame for the late eras and
    the space age, and a way to tie energy back to sustainability. Not designed yet.

@@ -24,8 +24,9 @@ export const ERAS = [
   { name: "Classical", startYear: -500, yearsPerTick: 1, currency: "Silver coins" },
   // Medieval: 0.6 years a tick, so the Black Death (PLAGUE.arriveYear) arrives about 14.5 minutes in.
   { name: "Medieval & Renaissance", startYear: 1000, yearsPerTick: 0.6, currency: "Florins" },
-  { name: "Industrial & Modern", startYear: 1750, yearsPerTick: 1, currency: "Banknotes" },
-  { name: "Future & Space", startYear: 2050, yearsPerTick: 0.5, currency: "Credits" },
+  // Industrial: 0.4 years a tick, so the climate crisis warning (CLIMATE.warnYear) comes about 15 minutes in.
+  { name: "Industrial & Modern", startYear: 1750, yearsPerTick: 0.4, currency: "Banknotes" },
+  { name: "Future & Space", startYear: 2080, yearsPerTick: 0.5, currency: "Credits" },
 ];
 
 export function formatYear(year: number) {
@@ -624,6 +625,156 @@ export const BUILDINGS: BuildingDef[] = [
     overseas: true,
     produces: { currency: 0.5 },
   },
+  // ---- Industrial & Modern era ----
+  {
+    id: "factory",
+    name: "Factory",
+    icon: "factory",
+    description: "Machines driven by a coal-fired steam engine turn out goods by the thousand.",
+    gain: "+1.2 coins, and better tools: food and wood +10% each (up to 3). With Electricity it needs 10 power and makes 50% more",
+    landCost: "Coal smoke over the homes nearby, and carbon that stays in the air for good",
+    landImpact: 2,
+    era: 4,
+    cost: { stone: 30, wood: 20, currency: 60 },
+    terrain: ["grass", "steppe", "hills"],
+    requires: "steam",
+    produces: { currency: 1.2 },
+    carbon: 0.03,
+    smog: 2,
+  },
+  {
+    id: "station",
+    name: "Railway Station",
+    icon: "train",
+    description: "Trains on iron rails carry people and goods across the island in hours, not days.",
+    gain: "Markets, factories and trading posts make 15% more coins each (up to 3 stations)",
+    landCost: "The line cuts across the land, and steam engines burn coal",
+    landImpact: 1,
+    era: 4,
+    cost: { stone: 30, wood: 30, currency: 50 },
+    terrain: ["grass", "steppe"],
+    requires: "railways",
+    produces: { currency: 0.3 },
+    carbon: 0.01,
+    smog: 1,
+  },
+  {
+    id: "coalplant",
+    name: "Coal Power Plant",
+    icon: "powerplant",
+    description: "Burns coal to boil water and spin the generators. Cheap power, day and night.",
+    gain: "+40 power for the grid",
+    landCost: "Thick smoke over the homes nearby, and the most carbon of anything",
+    landImpact: 3,
+    era: 4,
+    cost: { stone: 40, currency: 60 },
+    terrain: ["grass", "steppe", "hills"],
+    requires: "electricity",
+    power: 40,
+    carbon: 0.06,
+    smog: 3,
+  },
+  {
+    id: "apartments",
+    name: "Apartment Block",
+    icon: "insula",
+    description: "Steel frames and lifts: room for a whole street on one tile.",
+    gain: "Room for 40 people",
+    landCost: "Needs 4 power; dark, cold flats without it make people unhappy",
+    landImpact: 1,
+    era: 4,
+    cost: { stone: 40, wood: 10, currency: 40 },
+    terrain: ["grass", "steppe"],
+    requires: "steel",
+    housing: 40,
+    power: -4,
+  },
+  {
+    id: "hydrodam",
+    name: "Hydro Dam",
+    icon: "dam",
+    description: "A concrete wall across the river; the falling water spins the turbines.",
+    gain: "+30 clean power, no smoke",
+    landCost: "Floods the valley behind it and blocks the fish",
+    landImpact: 2,
+    era: 4,
+    cost: { stone: 60, currency: 80 },
+    terrain: ["grass", "steppe", "hills", "forest"],
+    needsRiver: true,
+    requires: "hydropower",
+    power: 30,
+    unique: true,
+  },
+  {
+    id: "windfarm",
+    name: "Wind Farm",
+    icon: "turbine",
+    description: "Tall white turbines that turn the wind into power.",
+    gain: "+12 clean power, no smoke",
+    landCost: "Takes a stretch of open land; costly to build",
+    landImpact: 0,
+    era: 4,
+    cost: { stone: 20, currency: 90 },
+    terrain: ["grass", "steppe", "hills", "beach"],
+    requires: "renewables",
+    power: 12,
+  },
+  {
+    id: "solarfarm",
+    name: "Solar Farm",
+    icon: "solar",
+    description: "Rows of panels that turn sunlight straight into power.",
+    gain: "+10 clean power, no smoke",
+    landCost: "Covers the ground it stands on; costly at first",
+    landImpact: 1,
+    era: 4,
+    cost: { stone: 10, currency: 100 },
+    terrain: ["grass", "steppe", "beach"],
+    requires: "solar",
+    power: 10,
+  },
+  {
+    id: "hospital",
+    name: "Hospital",
+    icon: "hospital",
+    description: "Doctors, nurses and clean wards, open to everyone.",
+    gain: "The sick get better much faster, and fewer die in heatwaves",
+    landCost: "Needs 5 power to run",
+    landImpact: 0,
+    era: 4,
+    cost: { stone: 40, wood: 10, currency: 60 },
+    terrain: ["grass", "steppe"],
+    requires: "publichealth",
+    power: -5,
+  },
+  {
+    id: "park",
+    name: "City Park",
+    icon: "park",
+    description: "Trees, grass and paths in the middle of town.",
+    gain: "Clears the smog over homes within 2 tiles, +happiness, and shade in a heatwave",
+    landCost: "None: it gives a little land back",
+    landImpact: 0,
+    era: 4,
+    cost: { wood: 10, currency: 30 },
+    terrain: ["grass", "steppe"],
+    requires: "publichealth",
+    clearsSmog: true,
+  },
+  {
+    id: "seawall",
+    name: "Sea Wall",
+    icon: "seawall",
+    description: "A long wall of concrete and stone along the shore.",
+    gain: "Keeps floods off the low land within 2 tiles",
+    landCost: "Changes the shore: the beach behind it narrows",
+    landImpact: 1,
+    era: 4,
+    cost: { stone: 50, currency: 40 },
+    terrain: ["beach", "grass", "steppe"],
+    needsWaterNeighbor: true,
+    requires: "seawalls",
+  },
 ];
 
 export const BUILDINGS_BY_ID = Object.fromEntries(BUILDINGS.map((b) => [b.id, b]));
@@ -640,12 +791,6 @@ export const BRANCHES: { id: Branch; name: string; color: string }[] = [
 type NodeSeed = [id: string, name: string, branch: Branch, era: number, cost: number, requires: string[], description: string];
 
 const LATER_NODES: NodeSeed[] = [
-  ["electricity", "Electricity", "knowledge", 4, 0, ["universities"], "Power lines and light bulbs."],
-  ["steel", "Steel Frames", "construction", 4, 0, ["castles"], "Skyscrapers and bridges."],
-  ["steam", "Steam & Coal", "energy", 4, 0, ["windmills"], "Factories boom. So does pollution."],
-  ["railways", "Railways", "transport", 4, 0, ["navigation"], "Trains link the whole island."],
-  ["tanks", "Mechanized Armies", "military", 4, 0, ["knights"], "Tanks, planes and radar."],
-  ["computers", "Computers", "culture", 4, 0, ["printing"], "The information age begins."],
   ["ai", "Artificial Intelligence", "knowledge", 5, 0, ["electricity", "computers"], "Data centers and automated labs."],
   ["arcology", "Arcologies", "construction", 5, 0, ["steel"], "Cities in a single tower."],
   ["fusion", "Fusion Power", "energy", 5, 0, ["steam"], "Near-limitless clean energy."],
@@ -1064,6 +1209,124 @@ export const TREE: TreeNode[] = [
     requires: ["navigation"],
     secret: true,
   },
+  // ---- Industrial & Modern era ----
+  {
+    id: "steam",
+    name: "Steam & Coal",
+    description: "Coal-fired steam engines drive machines. Unlocks the Factory. With 90 people, opens the Industrial era.",
+    branch: "energy",
+    era: 3,
+    cost: 80,
+    requires: ["guilds"],
+    unlocks: ["factory"],
+  },
+  {
+    id: "railways",
+    name: "Railways",
+    description: "Steam trains on iron rails. Unlocks the Railway Station.",
+    branch: "transport",
+    era: 4,
+    cost: 70,
+    requires: ["steam"],
+    unlocks: ["station"],
+  },
+  {
+    id: "electricity",
+    name: "Electricity",
+    description: "Power lines and light bulbs. Unlocks the Coal Power Plant; factories can use power for 50% more.",
+    branch: "energy",
+    era: 4,
+    cost: 80,
+    requires: ["steam"],
+    unlocks: ["coalplant"],
+  },
+  {
+    id: "steel",
+    name: "Steel Frames",
+    description: "Tall buildings on steel skeletons. Unlocks the Apartment Block.",
+    branch: "construction",
+    era: 4,
+    cost: 70,
+    requires: ["steam"],
+    unlocks: ["apartments"],
+  },
+  {
+    id: "hydropower",
+    name: "Hydropower",
+    description: "Falling water spins turbines. Unlocks the Hydro Dam.",
+    branch: "energy",
+    era: 4,
+    cost: 70,
+    requires: ["electricity"],
+    unlocks: ["hydrodam"],
+  },
+  {
+    id: "renewables",
+    name: "Wind Power",
+    description: "Turbines that turn the wind into power. Unlocks the Wind Farm.",
+    branch: "energy",
+    era: 4,
+    cost: 90,
+    requires: ["electricity"],
+    unlocks: ["windfarm"],
+  },
+  {
+    id: "solar",
+    name: "Solar Power",
+    description: "Panels that turn sunlight into power. Unlocks the Solar Farm.",
+    branch: "energy",
+    era: 4,
+    cost: 100,
+    requires: ["renewables", "computers"],
+    unlocks: ["solarfarm"],
+  },
+  {
+    id: "publichealth",
+    name: "Public Health",
+    description: "Clean wards and green spaces for everyone. Unlocks the Hospital and the City Park.",
+    branch: "culture",
+    era: 4,
+    cost: 70,
+    requires: ["quarantine"],
+    unlocks: ["hospital", "park"],
+  },
+  {
+    id: "cleanair",
+    name: "Clean Air Laws",
+    description: "Rules on smoke: every chimney makes half the smog.",
+    branch: "culture",
+    era: 4,
+    cost: 80,
+    requires: ["publichealth", "electricity"],
+  },
+  {
+    id: "seawalls",
+    name: "Coastal Defences",
+    description: "Concrete walls against the sea. Unlocks the Sea Wall.",
+    branch: "construction",
+    era: 4,
+    cost: 70,
+    requires: ["steel"],
+    unlocks: ["seawall"],
+  },
+  {
+    id: "computers",
+    name: "Computers",
+    description: "Machines that calculate: +30% Knowledge. With 150 people after the climate crisis, opens the Future.",
+    branch: "knowledge",
+    era: 4,
+    cost: 120,
+    requires: ["electricity", "printing"],
+  },
+  {
+    id: "tanks",
+    name: "Mechanized Armies",
+    description: "Engines go to war: every warrior fights five times as hard. Nations take note.",
+    branch: "military",
+    era: 4,
+    cost: 90,
+    requires: ["steam", "knights"],
+  },
   ...LATER_NODES.map(
     ([id, name, branch, era, cost, requires, description]): TreeNode => ({
       id,
@@ -1132,6 +1395,24 @@ export const ADVANCEMENT_GOALS: Record<string, Goal[]> = {
   printing: [{ label: "Have a University", kind: "have", building: "university", amount: 1 }],
   quarantine: [{ label: "Have Healer's Huts", kind: "have", building: "healer", amount: 2 }],
   navigation: [{ label: "Have Fishing Spots", kind: "have", building: "fishing", amount: 2 }],
+  steam: [
+    { label: "Have a Guild Hall", kind: "have", building: "guildhall", amount: 1 },
+    { label: "Grow your town", kind: "population", amount: 80 },
+  ],
+  railways: [{ label: "Have Factories", kind: "have", building: "factory", amount: 2 }],
+  electricity: [{ label: "Have Factories", kind: "have", building: "factory", amount: 3 }],
+  steel: [{ label: "Quarry stone", kind: "tally", key: "stone", amount: 150 }],
+  hydropower: [{ label: "Have a Watermill", kind: "have", building: "watermill", amount: 1 }],
+  renewables: [{ label: "Have Windmills", kind: "have", building: "windmill", amount: 2 }],
+  solar: [{ label: "Have Wind Farms", kind: "have", building: "windfarm", amount: 2 }],
+  publichealth: [{ label: "Have Healer's Huts", kind: "have", building: "healer", amount: 3 }],
+  cleanair: [{ label: "Have City Parks", kind: "have", building: "park", amount: 2 }],
+  seawalls: [{ label: "Have Apartment Blocks", kind: "have", building: "apartments", amount: 1 }],
+  computers: [{ label: "Have a University", kind: "have", building: "university", amount: 1 }],
+  tanks: [
+    { label: "Have a Castle", kind: "have", building: "castle", amount: 1 },
+    { label: "Have Factories", kind: "have", building: "factory", amount: 2 },
+  ],
 };
 
 // Elder Ama's guided step right after each advancement. With `build`, the hand
@@ -1175,6 +1456,18 @@ export const AFTER_STEPS: Record<string, AfterStep> = {
   printing: { text: "Books can be printed instead of copied by hand, hundreds at a time. +30% Knowledge and +15 literacy." },
   quarantine: { text: "Ships wait offshore before they land, and the sick are kept apart. Sickness from overseas will do far less harm." },
   navigation: { build: "shipyard", text: "Build a Shipyard on the coast, then press Ship below: our ships will find islands overseas, meet the kingdoms and bring back trade." },
+  steam: { text: "Steam engines! Once the plague has passed and we are 90 people, we can enter the Industrial era and build Factories. Watch the goal at the top of the screen." },
+  railways: { build: "station", text: "Build a Railway Station: trains carry goods across the island, and markets and factories make more coins." },
+  electricity: { build: "coalplant", text: "Power! Build a Coal Power Plant: +40 power for the grid. Watch the power meter. But coal puts carbon into the air, and it stays there for good." },
+  steel: { build: "apartments", text: "Steel frames! Build an Apartment Block: room for 40 people on one tile. It needs power to light and heat it." },
+  hydropower: { build: "hydrodam", text: "Build a Hydro Dam on the river: 30 clean power, no smoke. But the valley behind it floods, and the fish can't swim past." },
+  renewables: { build: "windfarm", text: "Build a Wind Farm: 12 clean power from the wind. Costly at first, but no smoke and no carbon." },
+  solar: { build: "solarfarm", text: "Build a Solar Farm: 10 clean power from the sun. Every one is a coal plant we don't need." },
+  publichealth: { build: "park", text: "Build a City Park near homes: it clears the smog. Hospitals heal the sick and help us through heatwaves." },
+  cleanair: { text: "Clean Air Laws: every chimney makes half the smog. The streets can breathe again." },
+  seawalls: { build: "seawall", text: "Build a Sea Wall on the shore: floods stay off the low land behind it. The sea is rising." },
+  computers: { text: "Computers! +30% Knowledge. After the climate crisis, with 150 people, we can enter the Future." },
+  tanks: { text: "Engines go to war: every warrior fights five times as hard. The other nations are watching." },
 };
 
 // Event cards are trade-offs: every choice gains something and costs something.
@@ -1704,6 +1997,12 @@ export const ERA_INTROS: Record<number, { id: string; title: string; text: strin
     title: "Welcome to the Classical era",
     text: "We beat Rome, and our coins travel far. Our village is becoming a town, and towns need clean water, drains and roads. Traders will come from across the sea. But the old stories warn of a great drought that comes once in a lifetime. Dig wells, store grain and keep the forests standing.",
     sdg: "SDG 11.3: plan towns and cities that can last",
+  },
+  4: {
+    id: "era-4",
+    title: "Welcome to the Industrial age",
+    text: "Steam, coal and iron! Our town is becoming a city: factories, railways, crowded streets. Coal gives cheap power, but its smoke chokes the streets and its carbon stays in the air for good, slowly warming the whole world. Clean power costs more at first. The kingdoms across the sea are nations now, and their scientists are as worried as ours about the weather to come.",
+    sdg: "SDG 7: clean energy, and SDG 13: climate action",
   },
   3: {
     id: "era-3",
@@ -2475,6 +2774,50 @@ export const LEARNING = { universityLiteracy: 20, printingKnowledge: 1.3, printi
 // takes over the whole time, by difficulty: [with nothing ready, fully ready
 // (`maxProtection`)]. Readiness in between scales it; an open harbour full of
 // ships (negative readiness) makes it worse still.
+// ---- Industrial & Modern era ----
+// Into the Industrial era: the plague over, Steam & Coal, and this many people.
+// Into the Future: the climate crisis over, Computers, and this many.
+export const INDUSTRIAL_POPULATION = 90;
+export const FUTURE_POPULATION = 150;
+// Carbon in the air, in parts per million: 280 before industry. Every chimney
+// adds its `carbon` each tick, for good; standing forest takes a little back
+// (`forestSink` a tick at full cover). Warming in degrees C rises with it,
+// about +1.2 at 420 ppm.
+export const CARBON = { start: 280, forestSink: 0.025, warmingPerPpm: 0.0085 };
+// The power grid: supply from plants, demand from what needs power. Short of
+// power, those buildings work only as well as the supply covers them. With
+// Electricity each factory needs `factoryNeed` and makes `factoryBoost` more.
+export const POWER = { factoryNeed: 10, factoryBoost: 0.5, darkFlatsMood: 6 };
+// Smog: each smoky building spreads its `smog` over the homes within `range`;
+// a park clears it within `parkRange`. Every point of smog over the town costs
+// `mood` happiness and makes sickness start and spread `sickness` faster.
+// Clean Air Laws halve it.
+export const SMOG = { range: 2, parkRange: 2, mood: 1, sickness: 0.05, cleanAir: 0.5, max: 12 };
+// Hospitals: each (up to `max`) helps this share of the sick recover a tick, as well as the power covers it.
+export const HOSPITAL = { recover: 0.03, max: 3 };
+// Railway stations: markets, factories and trading posts make `boost` more coins each (up to `max` stations).
+export const STATION = { boost: 0.15, max: 3 };
+// The climate crisis: warned of when the year comes, it strikes `warnTicks`
+// later and lasts `ticks`: heatwaves, storms and coastal floods together.
+// `deaths`: the share of the town it takes over its course, by how much warmer
+// the world is (degrees C, in between is interpolated), before readiness.
+// Crops fail by `cropLoss` per degree while it lasts.
+export const CLIMATE = {
+  warnYear: 1985,
+  warnTicks: 90,
+  ticks: 150,
+  deaths: [
+    [0.5, 0.02],
+    [1.0, 0.04],
+    [1.5, 0.08],
+    [2.0, 0.14],
+    [3.0, 0.24],
+  ] as [number, number][],
+  cropLoss: 0.12,
+  maxReady: 0.85,
+  ready: { seawall: 0.08, seawallsMax: 3, hospital: 0.07, hospitalsMax: 3, park: 0.04, parksMax: 3, cleanPower: 0.15, forest: 0.1 },
+};
+
 export const PLAGUE = {
   // It reached Europe's ports in 1347. The warning comes `warnTicks` before
   // (90 ticks x 0.6 years = 54 years earlier on the in-game calendar).

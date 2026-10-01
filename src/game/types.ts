@@ -92,7 +92,7 @@ export interface Stats {
   // Seconds (ticks) the land spent below the best-ending Sustainability.
   lowLandTicks: number;
   // `accident`: people dropped into the sea or lost in the fog (missing in older saves).
-  deaths: { famine: number; disease: number; fire: number; battle: number; accident?: number; disaster?: number; plague?: number };
+  deaths: { famine: number; disease: number; fire: number; battle: number; accident?: number; disaster?: number; plague?: number; climate?: number };
 }
 
 // What the debrief shows: frozen when the era ends (or the game does).
@@ -169,6 +169,13 @@ export interface BuildingDef {
   // Can be built on an overseas outpost island (Medieval era).
   overseas?: boolean;
   housing?: number;
+  // Industrial & Modern era. `power`: what it adds to the grid (+) or needs
+  // from it (-). `carbon`: ppm a tick it puts into the air, for good. `smog`:
+  // how much smoke it spreads over the homes near it. `clearsSmog`: a park.
+  power?: number;
+  carbon?: number;
+  smog?: number;
+  clearsSmog?: boolean;
   produces?: Partial<Resources>;
   depositBonus?: { deposit: Deposit; amount: Partial<Resources> };
   // No longer used: placing a building never reveals land (scouts do). Optional
@@ -308,6 +315,12 @@ export interface GameState {
   // was closed (and when), and how many it has killed.
   plague?: { warnTick: number; startTick: number; endTick: number; closed: boolean; closedTick?: number; deaths: number } | null;
   plagueDone?: boolean;
+  // Industrial & Modern era: carbon in the air (ppm, 280 before industry; it
+  // only goes up unless captured), and the climate crisis (warned of, then
+  // striking, then over) with how many it has killed.
+  carbon?: number;
+  climate?: { warnTick: number; startTick: number; endTick: number; deaths: number } | null;
+  climateDone?: boolean;
   // The discovery scene on screen (an advancement or secret just found), if any.
   cutscene?: string | null;
   // A natural disaster: warned of at warnTick, strikes at startTick, over at
