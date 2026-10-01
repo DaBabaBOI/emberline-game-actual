@@ -36,6 +36,7 @@ import {
   DIPLOMACY,
   SHIP,
   OUTPOST,
+  KINGDOM_RAID,
   CASTLE,
   KNIGHTS,
   FARMING,
@@ -166,6 +167,7 @@ export type Action =
   | { type: "buildStage" }
   | { type: "gift"; kingdom: KingdomId }
   | { type: "treaty"; kingdom: KingdomId }
+  | { type: "raidKingdom"; kingdom: KingdomId }
   | { type: "ship" }
   | { type: "harbour"; closed: boolean }
   | { type: "devLandmark" }
@@ -561,8 +563,6 @@ export function placementError(state: GameState, tile: Tile, def: BuildingDef): 
     if (kingdom) return `This land belongs to ${KINGDOMS[kingdom].name}`;
     if (!(state.outposts ?? []).includes(tile.island)) return "Our ships haven't claimed this island";
     if (!def.overseas) return "Too far from home: only farms, fishing, woodcutters, pens, gatherers and trading posts";
-    const here = state.tiles.filter((t) => t.island === tile.island && t.building).length;
-    if (here >= OUTPOST.buildings) return `Room for only ${OUTPOST.buildings} buildings on an outpost`;
   } else if (def.id === "tradingpost") return "Only on an island our ships have found";
   if (def.unique && (countBuildings(state)[def.id] ?? 0) >= 1) return "There is only one";
   const ploughed = def.id === "farm" && tile.terrain === "forest" && state.researched.includes("heavy-plough");
@@ -918,6 +918,75 @@ export function treatyError(state: GameState, kingdom: KingdomId): string | null
   return null;
 }
 
+// ---- Raiding a kingdom ----
+
+// How many warriors a raid sends, and how hard they fight together.
+export function raidParty(state: GameState) {
+  const sent = Math.floor(state.soldiers * KINGDOM_RAID.share);
+  const perWarrior = state.soldiers
+    ? (((state.soldiers - spearmenOf(state)) + spearmenOf(state) * SPEARMAN_STRENGTH) * armsFactor(state)) / state.soldiers
+    : 0;
+  return { sent, strength: sent * perWarrior };
+}
+
+// The chance (0-1) that a raid on this kingdom succeeds, given the luck roll.
+export function raidOdds(state: GameState, kingdom: KingdomId) {
+  const { strength } = raidParty(state);
+  if (!strength) return 0;
+  const need = (KINGDOM_RAID.defense[kingdom] * DIFFICULTIES[state.difficulty].raiders) / strength;
+  return Math.max(0, Math.min(1, (1.25 - need) / 0.5));
+}
+
+export function kingdomRaidError(state: GameState, kingdom: KingdomId): string | null {
+  const k = state.kingdoms?.[kingdom];
+  if (!k) return "Not yet";
+  if (state.plague) return "Not while the plague is coming";
+  if (state.raid || state.legion) return "We are under attack ourselves";
+  if (k.treaty) return "We have a treaty with them";
+  if (state.tick < (state.raidedTick ?? -Infinity) + KINGDOM_RAID.wait) return "Our warriors are still recovering";
+  if (raidParty(state).sent < KINGDOM_RAID.minWarriors) return `Need at least ${Math.ceil(KINGDOM_RAID.minWarriors / KINGDOM_RAID.share)} warriors`;
+  return null;
+}
+
+function raidKingdom(state: GameState, kingdom: KingdomId): GameState {
+  const { sent, strength } = raidParty(state);
+  const luck = 0.75 + mulberry32(state.seed + state.tick * 71)() * 0.5;
+  const won = strength * luck >= KINGDOM_RAID.defense[kingdom] * DIFFICULTIES[state.difficulty].raiders;
+  const fell = Math.min(state.soldiers, Math.max(1, Math.round(sent * (won ? KINGDOM_RAID.losses.won : KINGDOM_RAID.losses.lost))));
+  const loot = won ? KINGDOM_RAID.loot[kingdom] : {};
+  const name = KINGDOMS[kingdom].name;
+  const counted = bumpStats(state, (st) => {
+    st.deaths.battle += fell;
+  });
+  const k = state.kingdoms![kingdom];
+  const soldiers = state.soldiers - fell;
+  const next: GameState = {
+    ...counted,
+    soldiers,
+    spearmen: Math.min(spearmenOf(state), soldiers),
+    resources: Object.fromEntries(
+      Object.entries(state.resources).map(([r, v]) => [r, v + (loot[r as keyof Resources] ?? 0)]),
+    ) as unknown as Resources,
+    kingdoms: {
+      ...state.kingdoms!,
+      [kingdom]: { ...k, treaty: false, mood: Math.max(-100, Math.min(DIPLOMACY.hostile - 10, k.mood + KINGDOM_RAID.mood)) },
+    },
+    revenge: { kingdom, tick: state.tick + KINGDOM_RAID.revengeTicks },
+    nextRaidTick: Math.min(state.nextRaidTick, state.tick + KINGDOM_RAID.revengeTicks),
+    raidedTick: state.tick,
+    modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + (won ? 4 : -8) },
+    log: [
+      won
+        ? `Our warriors raided ${name} and came back with ${Object.entries(loot)
+            .map(([r, v]) => `${v} ${r === "currency" ? "coins" : r}`)
+            .join(" and ")}. ${fell} fell. ${name[0].toUpperCase() + name.slice(1)} will want revenge.`
+        : `Our raid on ${name} failed: ${fell} of ${sent} warriors fell. Now their army is coming for revenge.`,
+      ...state.log,
+    ].slice(0, 30),
+  };
+  return withMeters(next);
+}
+
 // Where ships sail from: a Shipyard, or the Grand Harbour once finished.
 export function hasPort(state: GameState) {
   return (countBuildings(state).shipyard ?? 0) > 0 || landmarkWorking(state, "harbour");
@@ -977,7 +1046,7 @@ function returnShips(state: GameState): GameState {
       next = { ...next, tiles };
       const name = ISLANDS[voyage.island]?.name ?? "an island";
       if (voyage.kind === "outpost") {
-        next = { ...say(`Our ship found ${name}! We can build up to ${OUTPOST.buildings} things there: farms, fishing, woodcutters and a Trading Post.`), outposts: [...(next.outposts ?? []), voyage.island] };
+        next = { ...say(`Our ship found ${name}! We can build farms, fishing, woodcutters, pens and a Trading Post there. Each costs coins to keep supplied.`), outposts: [...(next.outposts ?? []), voyage.island] };
       } else {
         const kingdom = kingdomOfIsland(voyage.island)!;
         next = changeMood(say(`Our ship reached the coast of ${KINGDOMS[kingdom].name}. They welcomed our sailors.`), { [kingdom]: SHIP.meetMood });
@@ -1043,8 +1112,17 @@ export function plagueProtection(state: GameState): { label: string; value: numb
   return parts;
 }
 
+// How ready the town is, all parts together. Below 0 when an open harbour
+// brings in more than the town has done to prepare.
 export function plagueShield(state: GameState) {
-  return Math.max(0, Math.min(PLAGUE.maxProtection, plagueProtection(state).reduce((s, p) => s + p.value, 0)));
+  return Math.max(-0.2, Math.min(PLAGUE.maxProtection, plagueProtection(state).reduce((s, p) => s + p.value, 0)));
+}
+
+// The share of the town the plague would take over its whole course, at this
+// level of readiness (PLAGUE.deaths: nothing ready -> fully ready).
+export function plagueToll(state: GameState) {
+  const [unready, ready] = PLAGUE.deaths[state.difficulty];
+  return Math.max(0, Math.min(0.9, unready + ((ready - unready) * plagueShield(state)) / PLAGUE.maxProtection));
 }
 
 // The Black Death: the elders hear of it when the year comes; it arrives by ship
@@ -1083,7 +1161,9 @@ function updatePlague(state: GameState): GameState {
     return { ...done, debrief: makeDebrief(done, "final") };
   }
   const shield = plagueShield(state);
-  const died = Math.min(state.population - 1, state.population * PLAGUE.rate * (1 - shield));
+  // A steady rate that adds up to plagueToll() by the end.
+  const rate = 1 - (1 - plagueToll(state)) ** (1 / PLAGUE.ticks);
+  const died = Math.min(state.population - 1, state.population * rate);
   const counted = bumpStats(state, (st) => {
     st.deaths.plague = (st.deaths.plague ?? 0) + died;
   });
@@ -1157,12 +1237,35 @@ export function placementHarm(state: GameState, tile: Tile, building: string): n
   return harm;
 }
 
+// Buildings on our overseas outposts.
+export function overseasBuildings(state: GameState) {
+  const home = state.tiles[state.startTile]?.island ?? 0;
+  return state.tiles.filter((t) => t.building && t.island >= 0 && t.island !== home).length;
+}
+
+// Coins a tick to keep `n` overseas buildings supplied (each costs more than the last).
+export function outpostUpkeep(state: GameState, n = overseasBuildings(state)) {
+  return OUTPOST.upkeep * (n + (OUTPOST.growth * n * (n - 1)) / 2);
+}
+
+// What one more overseas building would add to the upkeep.
+export function nextOutpostUpkeep(state: GameState) {
+  return outpostUpkeep(state, overseasBuildings(state) + 1) - outpostUpkeep(state);
+}
+
+// Out of coins: the outposts can't be supplied and make nothing.
+export function outpostsUnpaid(state: GameState) {
+  const cost = outpostUpkeep(state);
+  return cost > 0 && state.resources.currency < cost;
+}
+
 export function production(state: GameState): Resources {
   // No base Knowledge: it comes from milestones, teaching buildings and literacy.
   const out: Resources = { food: 0, wood: 0, stone: 0, knowledge: 0, currency: 0 };
   const home = state.tiles[state.startTile]?.island ?? 0;
   const port = hasPort(state);
   const closed = !!state.plague?.closed;
+  const unpaid = outpostsUnpaid(state);
   for (const tile of state.tiles) {
     if (!tile.building) continue;
     // Under flood water nothing works until it goes down.
@@ -1175,7 +1278,7 @@ export function production(state: GameState): Resources {
     if (def.landmark && !landmarkWorking(state, tile.building)) continue;
     // An outpost overseas only ships its goods home while a port links it, and
     // not while the harbour is closed.
-    if (tile.island >= 0 && tile.island !== home && (!port || closed)) continue;
+    if (tile.island >= 0 && tile.island !== home && (!port || closed || unpaid)) continue;
     // A closed harbour: no sea trade.
     if (closed && (tile.building === "harbour" || tile.building === "tradingpost")) continue;
     const factor =
@@ -1236,6 +1339,8 @@ export function production(state: GameState): Resources {
   if (!closed) for (const k of Object.values(state.kingdoms ?? {})) if (k.treaty) out.currency += DIPLOMACY.treaty.trade;
   if (state.researched.includes("printing")) out.knowledge *= LEARNING.printingKnowledge;
   if (state.researched.includes("roads")) out.currency *= ROADS_COINS;
+  // Keeping the outposts supplied (when we can pay; otherwise they stand idle).
+  if (!unpaid) out.currency -= outpostUpkeep(state);
   return out;
 }
 
@@ -2353,7 +2458,7 @@ function tickOnce(state: GameState): GameState {
     wood: Math.max(0, state.resources.wood + prod.wood),
     stone: state.resources.stone + prod.stone,
     knowledge: state.resources.knowledge + prod.knowledge,
-    currency: state.resources.currency + prod.currency,
+    currency: Math.max(0, state.resources.currency + prod.currency),
   };
 
   let population = state.population;
@@ -3299,8 +3404,10 @@ function updateRaids(state: GameState): GameState {
 
   if (!raid && state.tick >= state.nextRaidTick && quietEnough(state)) {
     const rand = mulberry32(state.seed + state.tick * 31);
-    // In the Middle Ages, only a hostile kingdom sends an army; at peace, nobody comes.
-    const enemies = state.era >= 3 ? hostileKingdoms(state) : [];
+    // In the Middle Ages, only a hostile kingdom sends an army; at peace, nobody
+    // comes. A kingdom we raided comes for revenge, hostile or not by now.
+    const revenge = state.revenge && state.tick >= state.revenge.tick ? state.revenge.kingdom : undefined;
+    const enemies = revenge ? [revenge] : state.era >= 3 ? hostileKingdoms(state) : [];
     if (state.era >= 3 && !enemies.length) return { ...state, nextRaidTick: state.tick + 60 };
     const from_ = enemies.length ? enemies[Math.floor(rand() * enemies.length)] : undefined;
     const home = state.tiles[state.startTile];
@@ -3336,7 +3443,8 @@ function updateRaids(state: GameState): GameState {
       Math.round(
         (2 + state.tick / RAID_GROWTH_TICKS + state.population / GROWTH_PRESSURE.raidersPerPeople) *
           DIFFICULTIES[state.difficulty].raiders *
-          RAID_KINDS[kind].size,
+          RAID_KINDS[kind].size *
+          (revenge ? KINGDOM_RAID.revengeSize : 1),
       ),
     );
     const early = (countBuildings(state).watchfire ?? 0) > 0 ? WATCH_FIRE.warnTicks : 0;
@@ -3354,11 +3462,12 @@ function updateRaids(state: GameState): GameState {
       },
       raidsSeen: (state.raidsSeen ?? 0) + 1,
       devNextRaid: undefined,
+      revenge: revenge ? null : state.revenge,
       nextRaidTick: state.tick + Math.round((RAID_GAP.base + Math.floor(rand() * RAID_GAP.spread)) * gapFactor(state)),
       lastBigTick: state.tick,
       log: [
         from_
-          ? `An army of ${KINGDOMS[from_].name} (${strength}) is landing on the shore! They are at war with us.${early ? " The watch fire saw them early." : ""}`
+          ? `An army of ${KINGDOMS[from_].name} (${strength}) is landing on the shore! ${revenge ? "They have come for revenge." : "They are at war with us."}${early ? " The watch fire saw them early." : ""}`
           : `${RAID_KINDS[kind].name} of ${strength} raiders is landing on the shore!${early ? " The watch fire saw them early." : ""}`,
         ...state.log,
       ].slice(0, 30),
@@ -3960,6 +4069,9 @@ function step(state: GameState, action: Action): GameState {
         log: [`A treaty with ${KINGDOMS[action.kingdom].name}! Trade every day, and no war while it holds.`, ...state.log].slice(0, 30),
       });
     }
+
+    case "raidKingdom":
+      return kingdomRaidError(state, action.kingdom) ? state : raidKingdom(state, action.kingdom);
 
     case "ship": {
       if (shipError(state)) return state;

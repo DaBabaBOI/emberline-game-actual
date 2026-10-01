@@ -2291,22 +2291,46 @@ export const DIPLOMACY = {
 // `ticks` later. The first finds an island to settle, then the kingdoms'
 // coasts, then more islands; after that each voyage brings trade.
 export const SHIP = { cost: { wood: 30, food: 20 }, ticks: 50, coins: 70, mood: 5, meetMood: 10, secret: 4, secretKnowledge: 12, secretHappiness: 10 };
-// Overseas outposts: at most `buildings` buildings on each island your ships
-// have found, and only while a Shipyard or the Grand Harbour links them home.
-export const OUTPOST = { buildings: 4 };
+// Overseas outposts: build as much as fits on the islands your ships have
+// found, but each building there costs coins every tick (sailors, supplies),
+// and each one more than the last: the nth costs upkeep * (1 + growth * (n-1)).
+// They only work while a Shipyard or the Grand Harbour links them home, and
+// stop when the upkeep can't be paid.
+export const OUTPOST = { upkeep: 0.05, growth: 0.15 };
+// Raiding a kingdom (Medieval era): `share` of our warriors sail over. They
+// win if their strength, with luck (x0.75 to x1.25), beats the kingdom's
+// `defense`. A win brings back `loot` and costs `losses.won` of those sent; a
+// loss costs `losses.lost` of them and brings nothing. Either way the kingdom
+// turns hostile (mood moves by `mood`, ending at least at hostile), and its
+// army comes for revenge within `revengeTicks`, `revengeSize` times bigger
+// than a normal army. Our warriors then need `wait` ticks before another raid.
+export const KINGDOM_RAID = {
+  minWarriors: 5,
+  share: 0.6,
+  defense: { steppe: 16, reach: 28 } as Record<KingdomId, number>,
+  loot: { steppe: { currency: 150, food: 40 }, reach: { currency: 90, food: 90 } } as Record<KingdomId, Partial<Resources>>,
+  losses: { won: 0.2, lost: 0.6 },
+  mood: -70,
+  revengeTicks: 50,
+  revengeSize: 1.5,
+  wait: 150,
+};
+
 // Castles and knights.
 export const CASTLE = { defense: 15, warriors: 10 };
 export const KNIGHTS = { strength: 4, food: 1.5 };
 export const FARMING = { plough: 1.25, rotation: 1.1, rotationStrain: 0.5, windmill: 0.2, windmillReach: 2, windmillEnergy: 10 };
 export const LEARNING = { universityLiteracy: 20, printingKnowledge: 1.3, printingLiteracy: 15, guildTools: 0.1, guildMood: 3 };
 // The Black Death: warned of when the year comes, it arrives by ship
-// `warnTicks` later and lasts `ticks`. Each tick it kills `rate` of the people,
-// cut by how ready the town is (`protection`, at most `maxProtection`).
+// `warnTicks` later and lasts `ticks`. `deaths` is the share of the town it
+// takes over the whole time, by difficulty: [with nothing ready, fully ready
+// (`maxProtection`)]. Readiness in between scales it; an open harbour full of
+// ships (negative readiness) makes it worse still.
 export const PLAGUE = {
   warnYear: 1340,
   warnTicks: 90,
   ticks: 180,
-  rate: 0.0033,
+  deaths: { first: [0.2, 0.05], easy: [0.2, 0.05], normal: [0.3, 0.08], hard: [0.45, 0.1] } as Record<DifficultyId, [number, number]>,
   sickShare: 0.25,
   maxProtection: 0.85,
   protection: { quarantine: 0.25, closedEarly: 0.3, closedLate: 0.12, sanitation: 0.15, healer: 0.05, healersMax: 3, cathedral: 0.05 },

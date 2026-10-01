@@ -300,6 +300,10 @@ export interface GameState {
   // overseas where we may build a few things.
   ships?: { start: number; back: number }[];
   outposts?: number[];
+  // We raided a kingdom: its revenge army lands by `tick`. And when we last
+  // raided (our warriors need time before the next).
+  revenge?: { kingdom: KingdomId; tick: number } | null;
+  raidedTick?: number;
   // The Black Death: warned of, arriving by ship, and over. Whether the harbour
   // was closed (and when), and how many it has killed.
   plague?: { warnTick: number; startTick: number; endTick: number; closed: boolean; closedTick?: number; deaths: number } | null;
