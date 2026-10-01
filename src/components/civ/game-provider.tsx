@@ -25,6 +25,8 @@ interface GameContextValue {
   setSelected: (id: string | null) => void;
   panel: Panel;
   setPanel: (panel: Panel) => void;
+  // Whether time is passing, and how long a tick takes now (ms).
+  clock: { running: boolean; msPerTick: number };
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -59,11 +61,15 @@ export function GameProvider({
 
   // First-time mode starts with a slower clock (tickSeconds).
   const perTick = tickSeconds(state);
+  const ticking = !(state.speed === 0 || state.phase !== "playing" || panel || held || paused);
+  const msPerTick = (perTick * 1000) / Math.max(1, state.speed);
   useEffect(() => {
-    if (state.speed === 0 || state.phase !== "playing" || panel || held || paused) return;
-    const id = setInterval(() => dispatch({ type: "tick" }), (perTick * 1000) / state.speed);
+    if (!ticking) return;
+    const id = setInterval(() => dispatch({ type: "tick" }), msPerTick);
     return () => clearInterval(id);
-  }, [state.speed, state.phase, panel, held, paused, perTick]);
+  }, [ticking, msPerTick]);
+  // An event card stops the clock too (the engine ignores ticks meanwhile).
+  const clock = { running: ticking && !state.event, msPerTick };
 
   const lastTick = useRef(state.tick);
   useEffect(() => {
@@ -76,7 +82,7 @@ export function GameProvider({
   }, [state, inTutorial]);
 
   return (
-    <GameContext.Provider value={{ state, dispatch, selected, setSelected, panel, setPanel }}>
+    <GameContext.Provider value={{ state, dispatch, selected, setSelected, panel, setPanel, clock }}>
       {children}
     </GameContext.Provider>
   );

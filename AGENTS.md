@@ -171,6 +171,11 @@ These were decided with the project owner. Do not change them without being aske
   someone into a fire or the open sea by click or Enter needs a second click on
   the same spot within `CONFIRM_MS` ("Click again to really drop them there");
   a drag there is deliberate and drops at once.
+- **The year rolls** (`RollingYear` in `top-bar.tsx`, `nextYear()`): between
+  ticks the top bar counts towards next tick's year using the provider's
+  `clock` ({ running, msPerTick }), and holds while time is stopped. Outside
+  the deadline-driven calendars the year slows over the last `YEAR_EASE` (50)
+  years and settles one year before the next era's first year.
 - **No roof hurts** (`HOMELESS`, `homelessCount()` / `homelessMood()`): each
   person over the housing room costs 4 happiness (up to 30) after the
   tutorial, and adds 0.4% a tick to the chance of an outbreak ("People

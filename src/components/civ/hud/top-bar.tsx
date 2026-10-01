@@ -3,13 +3,13 @@
 import { HOME } from "@/lib/home";
 import { ERAS, XP, chiefTitle, formatYear, xpToReach } from "@/game/content";
 import { useGame } from "@/components/civ/game-provider";
-import { warnings } from "@/game/engine";
+import { nextYear, warnings } from "@/game/engine";
 import type { GameState } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import type { IconId } from "@/game/sprites";
 import { GameMenu } from "./online";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { figureCounts, highlight } from "@/components/civ/world/crowd";
 import { KnowledgeGain, KnowledgeHelp } from "./knowledge-help";
 
@@ -125,7 +125,7 @@ export function TopBar() {
           <span className={"text-[11px] uppercase tracking-wide " + (state.era >= 1 ? "text-orange-300" : "text-amber-300")}>
             {era.name}
           </span>
-          <span className="font-num text-base">{formatYear(state.year)}</span>
+          <RollingYear />
         </div>
         <ChiefXp state={state} />
         <span className="hidden h-6 w-px bg-white/20 md:block" />
@@ -184,4 +184,38 @@ export function TopBar() {
       </div>
     </div>
   );
+}
+
+// The year counts up smoothly between ticks, towards next tick's year, instead
+// of jumping every 1.5 s. It holds still while time is stopped, and carries on
+// from what it shows when time starts again. The text is set here only (not by
+// React), so the two never fight over it.
+function RollingYear() {
+  const { state, clock } = useGame();
+  const span = useRef<HTMLSpanElement>(null);
+  const shown = useRef(state.year);
+  const from = state.year;
+  const to = nextYear(state);
+  const { running, msPerTick } = clock;
+  // A new tick (or a jump, like a new era): show its year straight away.
+  useLayoutEffect(() => {
+    shown.current = from;
+    if (span.current) span.current.textContent = formatYear(from);
+  }, [from]);
+  useEffect(() => {
+    const el = span.current;
+    if (!el || !running || to === from) return;
+    const begin = shown.current;
+    const start = performance.now();
+    let frame = 0;
+    const draw = (now: number) => {
+      const done = Math.min(1, (now - start) / msPerTick);
+      shown.current = begin + (to - begin) * done;
+      el.textContent = formatYear(shown.current);
+      if (done < 1) frame = requestAnimationFrame(draw);
+    };
+    frame = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(frame);
+  }, [from, to, running, msPerTick]);
+  return <span ref={span} className="font-num text-base" data-testid="year" />;
 }

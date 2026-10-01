@@ -1495,9 +1495,13 @@ export function stoneAgeYear(state: GameState, tick: number) {
 
 // The year at the next tick. The Stone Age follows its deadline; so does the
 // Ancient era once the legion is beaten (reaching the Classical era's first year
-// exactly as the world moves on). Otherwise a fixed number of years a tick, never
-// past the start of the next era.
-function nextYear(state: GameState): number {
+// exactly as the world moves on). Otherwise a fixed number of years a tick,
+// slowing down over the last YEAR_EASE years and settling one year before the
+// next era's first year (entering an era sets the year to its start, so going
+// past it would make the calendar jump back). The top bar rolls the year
+// towards this between ticks.
+const YEAR_EASE = 50;
+export function nextYear(state: GameState): number {
   const tick = state.tick + 1;
   if (state.era === 0) return stoneAgeYear(state, tick);
   if (state.era === 1 && state.legionBeatenTick !== undefined) {
@@ -1507,8 +1511,12 @@ function nextYear(state: GameState): number {
     return from + (ERAS[2].startYear - from) * progress;
   }
   const next = ERAS[state.era + 1];
-  const year = state.year + ERAS[state.era].yearsPerTick;
-  return next ? Math.min(year, next.startYear - 100) : year;
+  const perTick = ERAS[state.era].yearsPerTick;
+  if (!next) return state.year + perTick;
+  const last = next.startYear - 1;
+  const left = last - state.year;
+  if (left <= 0) return state.year;
+  return Math.min(last, state.year + perTick * Math.max(0.05, Math.min(1, left / YEAR_EASE)));
 }
 
 export function warnings(state: GameState): Warning[] {
