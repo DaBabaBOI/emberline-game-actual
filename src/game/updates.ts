@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-09-30",
     items: [
+      "Someone you drop on a field or workplace now gets to work there instead of sitting down: a hoe in the fields, an axe at the woodcutter, a pick at the quarry, moving from patch to patch.",
       "Skipping the tutorial now gives you everything it would have: Early Farming, a Farmland and a Wooden House as well.",
       "Small moments now happen on the map: deer run past, a tree blows down, birds circle the forest, rain falls on the fields, with a label over the spot.",
       "Selective logging now really gives half the wood of clear-cutting. It used to drop to a fifth or less once the trees had been thinned. If no tree is big enough to thin yet, the woodcutter waits for them to grow and its panel says so.",
