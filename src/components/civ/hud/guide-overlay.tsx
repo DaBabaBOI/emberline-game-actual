@@ -45,8 +45,26 @@ const same = (a: Hole | null, b: Hole | null) =>
   a === b ||
   (!!a && !!b && Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5 && Math.abs(a.w - b.w) < 0.5 && a.h === b.h);
 
+// The camera controls listen on the map's outer element. Passing them a
+// right-button press (or a finger, for two-finger turns) lets the player turn
+// the camera from anywhere; they follow the drag on the document from there.
+// A press alone never makes a click, and picking people up is off during
+// guided steps, so nothing on the map acts on it.
+const mapElement = () => document.querySelector("[data-world-map]");
+
+function forwardToMap(e: React.PointerEvent) {
+  if (e.button !== 2 && e.pointerType !== "touch") return;
+  mapElement()?.dispatchEvent(new PointerEvent("pointerdown", { ...pointerInit(e.nativeEvent), bubbles: false }));
+}
+
+function pointerInit(e: PointerEvent): PointerEventInit {
+  const { pointerId, pointerType, isPrimary, button, buttons, clientX, clientY, screenX, screenY, ctrlKey, shiftKey, altKey, metaKey } = e;
+  return { pointerId, pointerType, isPrimary, button, buttons, clientX, clientY, screenX, screenY, ctrlKey, shiftKey, altKey, metaKey };
+}
+
 // Dims the screen, cuts a hole around the next thing to click, and points a
-// hand at it. Clicks anywhere outside the hole are swallowed.
+// hand at it. Clicks anywhere outside the hole are swallowed, but the camera
+// can still be turned (right-drag, two fingers) and zoomed (wheel).
 export function GuideOverlay() {
   const { target } = useGuide();
   const key = target ? JSON.stringify(target) : "";
@@ -79,10 +97,14 @@ export function GuideOverlay() {
   const { x, y, w, h } = hole;
   const block = (style: CSSProperties) => (
     <div
-      className="pointer-events-auto absolute bg-[#140e0a]/50"
+      className="pointer-events-auto absolute touch-none bg-[#140e0a]/50"
       style={style}
       onContextMenu={(e) => e.preventDefault()}
-      onPointerDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        forwardToMap(e);
+      }}
+      onWheel={(e) => mapElement()?.dispatchEvent(new WheelEvent("wheel", { deltaX: e.deltaX, deltaY: e.deltaY, deltaMode: e.deltaMode, clientX: e.clientX, clientY: e.clientY, ctrlKey: e.ctrlKey, cancelable: true }))}
     />
   );
 

@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "During the tutorial you can now turn the camera (right-drag, or two fingers) and zoom (mouse wheel). The highlighted spot follows along.",
       "People helping at farms now hold the hoe in both hands, lift it overhead and bring it down into the soil (an axe at the woodcutter, a pick at the quarry). Warriors hold their club, spear (now with a stone point) or sword in the hand, ready.",
       "Rain on the fields: the cloud now drifts in from the side, and the rain starts once it is over the field.",
       "The protected old grove is marked with red cloth tied round its trees, instead of grey posts.",
