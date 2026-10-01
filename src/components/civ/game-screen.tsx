@@ -14,6 +14,7 @@ import { BottomBar } from "./hud/bottom-bar";
 import { TreeOverlay } from "./hud/tree-overlay";
 import { GuideOverlay } from "./hud/guide-overlay";
 import { Debrief, GoalLine, NextEraPrompt } from "./hud/debrief";
+import { DiscoveryScene } from "./hud/discovery-scene";
 import {
   DevPanel,
   ElderLesson,
@@ -83,6 +84,7 @@ function Hud({ onRestart }: { onRestart: () => void }) {
       {panel === "tree" && <TreeOverlay />}
       <GuideOverlay />
       <EventModal />
+      <DiscoveryScene />
       <Debrief onRestart={onRestart} />
     </div>
   );

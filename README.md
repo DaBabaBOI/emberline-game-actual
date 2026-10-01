@@ -1,7 +1,7 @@
 # Emberline
 
-**A sustainability trade-off game.** Grow a tribe from the Stone Age into the
-Ancient world without destroying the land that feeds it. Every house, fire,
+**A sustainability trade-off game.** Grow a tribe from the Stone Age into a
+Classical town without destroying the land that feeds it. Every house, fire,
 woodcutter and smithy helps your people now and costs the land later. Made for
 the SHISTECH Hacktrack hackathon (UN Sustainable Development Goals theme), built
 around **SDG 11: Sustainable Cities and Communities**.
@@ -141,7 +141,15 @@ and events also link to these goals:
 - **Reach the Ancient era** (research Agriculture, grow to 15 people): bronze,
   irrigation, writing, granaries, walls. You can see it: people wear dyed linen,
   paths wear into the ground between buildings, and the light turns warmer.
-- **Face the Roman legion** at the end of the Ancient era.
+- **Face the Roman legion** in the Ancient era, then learn Coinage and grow to
+  40 people.
+- **Build a Classical town** by the river: wells and aqueducts, tall Town
+  Houses (warm without campfires, but they need latrines or sickness spreads),
+  a market, caravans across the sea to the Silk Steppe, paved roads, an
+  academy. Each has its own cost to the land or the people.
+- **Survive the great drought** that ends the Classical era: the elders warn you
+  three minutes ahead, then the rain almost stops for three minutes. Water,
+  full granaries and standing forests get you through.
 - **Name your people**, pick a culture and a difficulty, and play on a laptop or
   a phone. A guided tutorial with a pointing hand teaches the basics. New
   players start in **First time** mode: a slower clock and a gentler start.
@@ -149,7 +157,7 @@ and events also link to these goals:
   says what to aim for next.
 - **Five ways to lose**: famine, unrest (people too unhappy for too long), land
   collapse (Sustainability too low for too long), conquest by the legion, or
-  being left behind (taking too long to leave the Stone Age). Every one gives
+  being left behind (taking too long to reach the next era). Every one gives
   you a countdown first.
 
 The game autosaves in your browser, and you can save to the cloud with a code to
@@ -159,13 +167,13 @@ new.
 
 ## Roadmap
 
-**The Stone Age and the Ancient era are complete and playable**, from the first
-campfire to the Roman legion and a final debrief. After the hackathon we plan to
-carry the same trade-offs further:
+**The Stone Age, the Ancient era and the Classical era are complete and
+playable**, from the first campfire through the Roman legion to the great
+drought and a final debrief. Next we plan to carry the same trade-offs further:
 
 | Next | What it adds to the trade-off |
 | --- | --- |
-| Classical era | Larger towns, roads and trade; the Silk Road |
+| Medieval & Renaissance | Being designed now |
 | Later eras | Industry and the choice between dirty and clean energy, up to a space age. One idea we want to explore: the Kardashev scale, which ranks a civilization by how much energy it can use |
 | Multiplayer | Neighbouring nations run by other players instead of the computer |
 

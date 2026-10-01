@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { knowledgeSources, perSecond } from "@/game/engine";
+import { knowledgeSources, perSecond, production } from "@/game/engine";
 import type { GameState } from "@/game/types";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 
@@ -9,7 +9,8 @@ import { PixelIcon } from "@/components/civ/pixel-icon";
 // come. Opened from the Knowledge counter in the top bar.
 export function KnowledgeHelp({ state, onClose }: { state: GameState; onClose: () => void }) {
   const { daily, firsts } = knowledgeSources(state);
-  const total = daily.reduce((s, d) => s + d.perTick, 0);
+  // The real total (wear, floods and the like included); the lines below show where it comes from.
+  const total = production(state).knowledge;
   return (
     <div className="pixel-panel-dark absolute left-1/2 top-full z-30 mt-2 w-[min(92vw,22rem)] -translate-x-1/2 p-3 text-left text-xs" data-testid="knowledge-help">
       <div className="mb-2 flex items-center justify-between gap-2">
