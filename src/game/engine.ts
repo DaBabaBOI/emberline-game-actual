@@ -117,6 +117,7 @@ import type {
   GameState,
   KingdomId,
   LandmarkId,
+  MeterKey,
   Meters,
   Raid,
   RaidKind,
@@ -1910,6 +1911,330 @@ export function sustainabilityBreakdown(state: GameState): SustainPart[] {
   ];
   // Only what is actually costing (or helping) the land right now.
   return parts.filter((p) => Math.abs(p.value) >= 0.5);
+}
+
+// Why every other meter is where it is: the parts computeMeters adds up, each
+// with a hint, and for those that are holding the meter back, what to do about
+// it (`fix`) and roughly how much that would add (`gain`). The meter panels
+// show these; "What should I fix?" lists the three biggest gains.
+export type MeterPart = SustainPart & { gain?: number };
+
+export function meterBreakdown(state: GameState, key: MeterKey): MeterPart[] {
+  if (key === "sustainability") {
+    return [
+      { label: "Untouched land", value: 100, hint: "Every island starts at 100." },
+      ...sustainabilityBreakdown(state).map((p) => ({ ...p, gain: p.fix && p.value < 0 ? -p.value : undefined })),
+    ];
+  }
+  const counts = countBuildings(state);
+  const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+  // "Build a School: …", or "Learn Writing, then build a School: …", or
+  // nothing when it doesn't exist in this era yet.
+  const a = (name: string) => (/land$/.test(name) ? name : `${/^[AEIOU]/.test(name) ? "an" : "a"} ${name}`);
+  const build = (id: string, why: string) => {
+    const def = BUILDINGS_BY_ID[id];
+    if (!def) return undefined;
+    if (isUnlocked(state, def)) return `Build ${a(def.name)}: ${why}`;
+    if (def.era <= state.era && def.requires && !state.researched.includes(def.requires)) {
+      return `Learn ${TREE_BY_ID[def.requires]?.name ?? def.requires} (Advancements), then build ${a(def.name)}: ${why}`;
+    }
+    return undefined;
+  };
+  // The first of these that can be built now; failing that, the first that
+  // can be learned.
+  const buildFirst = (options: [string, string][]) => {
+    const now = options.find(([id]) => BUILDINGS_BY_ID[id] && isUnlocked(state, BUILDINGS_BY_ID[id]));
+    if (now) return build(...now);
+    for (const o of options) {
+      const fix = build(...o);
+      if (fix) return fix;
+    }
+    return undefined;
+  };
+  const lit = litFires(state).length;
+  const fireBoost = state.researched.includes("firekeeping") ? 1.5 : 1;
+  let parts: MeterPart[] = [];
+
+  if (key === "food") {
+    const made = production(state).food;
+    const eaten = Math.max(consumption(state), 0.1);
+    const ratio = made / eaten;
+    const stockDays = state.resources.food / eaten;
+    const making = ratio * 45;
+    const stored = Math.min(10, stockDays / 4);
+    const foodFix = buildFirst([
+      ["fishing", "steady food that doesn't clear land."],
+      ["farm", "lots of food, but it clears forest."],
+      ...((counts.gatherer ?? 0) < GATHERING.freeCamps ? [["gatherer", "wild food near the forest."] as [string, string]] : []),
+    ]);
+    parts = [
+      {
+        label: `Making ${made.toFixed(1)} food for every ${eaten.toFixed(1)} eaten`,
+        value: making,
+        hint: "45 means just enough. Making twice what you eat gives about 90.",
+        fix: foodFix,
+        gain: foodFix ? Math.max(0, 90 - making) : undefined,
+      },
+      {
+        label: `${Math.floor(state.resources.food)} food in store`,
+        value: stored,
+        hint: "A full store adds a little (up to +10).",
+      },
+    ];
+    if (state.resources.food <= 0) {
+      parts.push({
+        label: "The stores are empty",
+        value: Math.min(0, 5 - (making + stored)),
+        hint: "With nothing stored, this meter can't go above 5.",
+        fix: "Get food in now: famine relief, or a Gatherer's Camp or Fishing Spot.",
+        gain: Math.max(0, making + stored - 5),
+      });
+    }
+    const thirst = thirstShare(state);
+    if (thirst > 0) {
+      const before = Math.min(making + stored, state.resources.food <= 0 ? Math.min(making + stored, 5) : making + stored);
+      parts.push({
+        label: `${Math.round(thirst * 100)}% without water in the drought`,
+        value: -before * 0.3 * thirst,
+        hint: "In the drought, only springs, wells and aqueducts keep water flowing.",
+        fix: buildFirst([
+          ["aqueduct", "water for the whole town."],
+          ["well", "water for more people."],
+        ]),
+        gain: before * 0.3 * thirst,
+      });
+    }
+  }
+
+  if (key === "shelter") {
+    const room = housingCapacity(state);
+    const homes = Math.min(1.1, room / Math.max(1, state.population)) * 70;
+    const homeless = homelessCount(state);
+    const healers = counts.healer ?? 0;
+    const water = Math.min(15, (counts.well ?? 0) * 3 + (counts.aqueduct ?? 0) * 6);
+    const clean = sanitation(state);
+    const homeFix = buildFirst([
+      ["townhouse", "room for many people."],
+      ["house", "room for more people."],
+      ["hut", "room for more people."],
+    ]);
+    parts = [
+      {
+        label: `Room for ${room} of ${state.population} people`,
+        value: homes,
+        hint: "Up to 77 when everyone has a roof and there is a little room to spare.",
+        fix: homeless > 0 ? homeFix?.replace(":", ` (${plural(homeless, "person", "people")} sleeping outside):`) : homes < 77 ? homeFix : undefined,
+        gain: homeFix ? 77 - homes : undefined,
+      },
+      {
+        label: plural(healers, "healer"),
+        value: healers * 12,
+        hint: "Each Healer's Hut adds 12.",
+        fix: healers === 0 ? build("healer", "+12, and the sick get better faster.") : undefined,
+        gain: healers === 0 ? 12 : undefined,
+      },
+      {
+        label: "Clean water",
+        value: water,
+        hint: "Wells (+3 each) and aqueducts (+6) keep people healthy, up to +15.",
+        fix: water < 15 ? build("well", `+3 (up to +15).`) : undefined,
+        gain: water < 15 ? Math.min(3, 15 - water) : undefined,
+      },
+    ];
+    if (clean < 1) {
+      const dirty = Math.ceil(state.population * (1 - clean));
+      const latrines = Math.ceil(dirty / TOWN.latrine);
+      parts.push({
+        label: `Dirty streets (${Math.round((1 - clean) * 100)}% of the town)`,
+        value: -(1 - clean) * 12,
+        hint: "A crowded town needs latrines and bathhouses.",
+        fix: build("latrine", `${plural(latrines, "more latrine")} would keep every street clean.`),
+        gain: (1 - clean) * 12,
+      });
+    }
+  }
+
+  if (key === "energy") {
+    const townhouses = counts.townhouse ?? 0;
+    const windmills = counts.windmill ?? 0;
+    parts = [
+      {
+        label: `${plural(lit, "fire")} burning${fireBoost > 1 ? " (Firekeeping: ×1.5)" : ""}`,
+        value: lit * 20 * fireBoost,
+        hint: "Every lit fire gives energy, but burns wood and adds smoke (−2 Sustainability).",
+        fix: "Light another fire, or relight one that went out (it costs wood and adds smoke).",
+        gain: 20 * fireBoost,
+      },
+      {
+        label: plural(townhouses, "town house"),
+        value: townhouses * 10,
+        hint: "Shared hearths: +10 each.",
+        fix: build("townhouse", "+10, and room for many people."),
+        gain: 10,
+      },
+      {
+        label: plural(windmills, "windmill"),
+        value: windmills * FARMING.windmillEnergy,
+        hint: `Wind power: +${FARMING.windmillEnergy} each, with no smoke.`,
+        fix: build("windmill", `+${FARMING.windmillEnergy} with no smoke.`),
+        gain: FARMING.windmillEnergy,
+      },
+    ];
+  }
+
+  if (key === "literacy") {
+    const each = (id: string, per: number, label: string, many?: string) => {
+      const n = counts[id] ?? 0;
+      const fix = build(id, `+${per}.`);
+      return { label: plural(n, label, many), value: n * per, hint: `+${per} each.`, fix, gain: fix ? per : undefined };
+    };
+    const learned = state.researched.length - 1;
+    parts = [
+      each("elder", 12, "elder"),
+      each("school", 15, "school"),
+      each("academy", 15, "academy", "academies"),
+      each("university", LEARNING.universityLiteracy, "university", "universities"),
+      {
+        label: "Great Library",
+        value: landmarkWorking(state, "library") ? LANDMARK.libraryLiteracy : 0,
+        hint: `The landmark adds ${LANDMARK.libraryLiteracy} once finished.`,
+      },
+      {
+        label: "Printing",
+        value: state.researched.includes("printing") ? LEARNING.printingLiteracy : 0,
+        hint: `Books for everyone: +${LEARNING.printingLiteracy}.`,
+      },
+      {
+        label: `${plural(learned, "advancement")} learned`,
+        value: learned * 2,
+        hint: "+2 for each advancement.",
+        fix: "Research another advancement: +2.",
+        gain: 2,
+      },
+    ];
+  }
+
+  if (key === "happiness") {
+    const m = computeMeters(state);
+    const cold = state.tutorialStep < TUTORIAL.length ? 0 : NO_FIRE_PENALTY * coldShare(state);
+    const sick = sickShare(state);
+    const thirst = thirstShare(state);
+    const roof = homelessMood(state);
+    const baths = Math.min(2, counts.baths ?? 0);
+    const guilds = Math.min(2, counts.guildhall ?? 0);
+    parts = [
+      {
+        label: `Food & Water (${m.food}) × 0.35`,
+        value: m.food * 0.35,
+        hint: "A well-fed tribe is a happy one.",
+        fix: m.food < 70 ? "Raise Food & Water: click that meter to see how." : undefined,
+        gain: m.food < 70 ? (100 - m.food) * 0.35 : undefined,
+      },
+      {
+        label: `Shelter & Health (${m.shelter}) × 0.35`,
+        value: m.shelter * 0.35,
+        hint: "Homes, healers and clean water.",
+        fix: m.shelter < 70 ? "Raise Shelter & Health: click that meter to see how." : undefined,
+        gain: m.shelter < 70 ? (100 - m.shelter) * 0.35 : undefined,
+      },
+      {
+        label: `${plural(lit, "fire")} to gather round`,
+        value: Math.min(3, lit) * 6,
+        hint: "+6 for each fire, up to 3 fires.",
+        fix: lit < 3 ? "Light another fire to gather round (+6; it adds smoke)." : undefined,
+        gain: lit < 3 ? 6 : undefined,
+      },
+      {
+        label: "An elder to tell the stories",
+        value: counts.elder ? 5 : 0,
+        hint: "+5 with an Elder's Hut.",
+        fix: counts.elder ? undefined : build("elder", "+5."),
+        gain: counts.elder ? undefined : 5,
+      },
+      {
+        label: `Cold: ${Math.round(coldShare(state) * 100)}% with no fire`,
+        value: -cold,
+        hint: `Each fire warms ${GROWTH_PRESSURE.peoplePerFire} people; pens (with Warm Clothes) and Town Houses warm people too.`,
+        fix: "Light another fire, or keep people warm with pens and Warm Clothes.",
+      },
+      {
+        label: `Land health (Sustainability ${m.sustainability})`,
+        value: -(100 - m.sustainability) * 0.15,
+        hint: "People notice when the forest and the animals disappear.",
+        fix: "Raise Sustainability: click that meter and press What should I fix?",
+      },
+      {
+        label: `${state.sick ?? 0} sick`,
+        value: -sick * 30,
+        hint: "Sickness spreads in crowded, dirty, roofless places.",
+        fix: build("healer", "the sick get better faster.") ?? "Keep people housed and the streets clean so it can't spread.",
+      },
+      {
+        label: "Famine",
+        value: state.famineTicks > 0 ? -FAMINE.happiness : 0,
+        hint: "Starving people are desperate.",
+        fix: "Get food in now: see the famine card.",
+      },
+      {
+        label: `${plural(homelessCount(state), "person", "people")} with no roof`,
+        value: -roof,
+        hint: "Sleeping outside makes people unhappy and sick.",
+        fix: buildFirst([
+          ["townhouse", "room for many people."],
+          ["house", "room for more people."],
+          ["hut", "room for more people."],
+        ]) ?? "Build more homes.",
+      },
+      {
+        label: `${Math.round(thirst * 100)}% thirsty`,
+        value: -thirst * DROUGHT.thirstMood,
+        hint: "In the drought, water is everything.",
+        fix: build("well", "water for more people."),
+      },
+      { label: plural(baths, "bathhouse"), value: baths * TOWN.bathsMood, hint: `+${TOWN.bathsMood} each, up to 2.` },
+      {
+        label: "The cathedral",
+        value: landmarkWorking(state, "cathedral") ? LANDMARK.cathedralMood : 0,
+        hint: `The finished landmark adds ${LANDMARK.cathedralMood}.`,
+      },
+      {
+        label: `${plural(guilds, "guildhall")} squeezing the workers`,
+        value: -guilds * LEARNING.guildMood,
+        hint: `Guilds make better tools but cost ${LEARNING.guildMood} happiness each (up to 2).`,
+        fix: "Demolish guildhalls you can do without.",
+      },
+      {
+        label: "Recent events",
+        value: state.modifiers.happiness,
+        hint: "Choices in events, discoveries and losses. This fades over time.",
+      },
+    ];
+    const grief = Math.round(state.grief ?? 0);
+    if (grief > 0) {
+      parts.push({
+        label: "Grieving",
+        value: -grief,
+        hint: "Someone was dropped into a fire or the sea. It fades slowly, and comes off even a full meter.",
+        fix: "Nothing to do but wait (and never do it again).",
+      });
+    }
+  }
+
+  // Only what counts right now; a cost always offers its fix.
+  return parts
+    .filter((p) => Math.abs(p.value) >= 0.5 || (p.gain ?? 0) >= 1)
+    .map((p) => (p.value <= -0.5 && p.fix && p.gain === undefined ? { ...p, gain: -p.value } : p));
+}
+
+// The three changes that would raise a meter most, each with what to do. A
+// meter can't go past 100, so neither can what a fix adds.
+export function meterFixes(state: GameState, key: MeterKey): (MeterPart & { gain: number })[] {
+  const room = 100 - computeMeters(state)[key];
+  return meterBreakdown(state, key)
+    .map((p) => ({ ...p, gain: Math.min(room, p.gain ?? 0) }))
+    .filter((p) => p.fix && p.gain >= 1)
+    .sort((a, b) => b.gain - a.gain)
+    .slice(0, 3);
 }
 
 // How much Sustainability changed over roughly the last minute of play.
