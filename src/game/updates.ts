@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Hunters are now your own people: someone from a gatherer's camp (or someone free) walks out, hunts, and walks back to where they set out. Nobody appears out of, or disappears into, the fire any more.",
       "Click the Sustainability meter, then \"What should I fix?\": it lists the three things costing the land the most, and exactly what to do about each.",
       "Fishing Spots can now go on the river bank as well as on beaches. Watch Fires can only go on beaches, where the lookouts can see boats coming.",
       "Canoes! After Rafts & Fishing, build a Canoe Dock on the beach. The first canoe finds the Southern Isles, where you can then build farms, fishing, woodcutters, pens and gatherers; later canoes fish the open sea. Every canoe is cut from one big tree, and buildings on small islands cost Sustainability.",

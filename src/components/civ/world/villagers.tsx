@@ -42,6 +42,9 @@ export interface Walker extends Agent {
   faceAt?: { x: number; z: number } | null;
   // Gone (dropped in a fire, the sea or the fog) until this time (performance.now ms).
   goneUntil?: number;
+  // Out hunting: the hunter (wildlife.tsx) walks in their place and hands them
+  // back where the hunt ends, so nobody appears or vanishes.
+  hunting?: boolean;
 }
 
 // Shared with the pick-up tool: the villagers on the map, and who is being carried.
@@ -231,6 +234,13 @@ export function Villagers({
         }),
       );
     }
+    // Fewer people: the last ones go, but never someone out hunting (they would
+    // vanish mid-walk). Swap them in front first.
+    for (let i = count; i < list.length; i++) {
+      if (!list[i].hunting) continue;
+      const stay = list.findIndex((w, j) => j < count && !w.hunting);
+      if (stay >= 0) [list[stay], list[i]] = [list[i], list[stay]];
+    }
     list.length = count;
     list.forEach((w, i) => {
       // New era, new clothes.
@@ -252,7 +262,7 @@ export function Villagers({
         const spot = ground.spotOn(pick(spots.all));
         Object.assign(w, { x: spot.x, z: spot.z, tx: spot.x, tz: spot.z, goneUntil: undefined });
       }
-      if (w.held || w.goneUntil) continue;
+      if (w.held || w.goneUntil || w.hunting) continue;
       stepWalker(w, dt, ground, () => {
         if (spots.fires.length && Math.random() < 0.45) return pick(spots.fires);
         if (w.child && spots.school.length && Math.random() < 0.6) return pick(spots.school);
@@ -260,7 +270,7 @@ export function Villagers({
         return Math.random() < 0.4 ? pick(spots.wander) : pick(spots.all);
       });
     }
-    shown.current = list.filter((w) => !w.goneUntil);
+    shown.current = list.filter((w) => !w.goneUntil && !w.hunting);
     grabStore.walkers = shown.current;
   });
 
