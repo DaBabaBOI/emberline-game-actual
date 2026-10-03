@@ -23,6 +23,7 @@ import {
   DevPanel,
   ElderLesson,
   EventModal,
+  KonamiFireworks,
   RaidBanner,
   Toasts,
   TutorialPanel,
@@ -111,6 +112,7 @@ function Hud({ onRestart }: { onRestart: () => void }) {
       </div>
       <Letterbox />
       <GameAudio />
+      <KonamiFireworks />
     </>
   );
 }

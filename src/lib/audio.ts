@@ -396,7 +396,7 @@ function crickets(at: number) {
 }
 
 // ---- Sound effects --------------------------------------------------------------------
-export type Sfx = "build" | "discover" | "era" | "raid" | "battle" | "event" | "click" | "step" | "win" | "lose" | "sell";
+export type Sfx = "build" | "discover" | "era" | "raid" | "battle" | "event" | "click" | "step" | "win" | "lose" | "sell" | "firework" | "ama";
 
 export function playSfx(kind: Sfx) {
   if (!engine) return;
@@ -458,6 +458,33 @@ export function playSfx(kind: Sfx) {
       break;
     case "lose":
       [57, 53, 50].forEach((n, i) => tone(out, midi(n), at + i * 0.45, 0.5, { type: "triangle", attack: 0.05, release: 1.8, gain: 0.06, reverb: 0.7 }));
+      break;
+    case "firework": {
+      // A crackling pop that rings out.
+      const src = ctx.createBufferSource();
+      src.buffer = engine.noise;
+      const bp = ctx.createBiquadFilter();
+      bp.type = "lowpass";
+      bp.frequency.value = 1800;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.35, at);
+      g.gain.exponentialRampToValueAtTime(0.001, at + 0.9);
+      src.connect(bp);
+      bp.connect(g);
+      g.connect(out);
+      const send = ctx.createGain();
+      send.gain.value = 0.5;
+      g.connect(send);
+      send.connect(engine.reverb);
+      src.start(at, Math.random());
+      src.stop(at + 1);
+      drum(out, at, 0.4, 0.5);
+      break;
+    }
+    case "ama":
+      // A grumpy "hmph": two low notes sliding down.
+      tone(out, midi(52), at, 0.12, { type: "triangle", attack: 0.01, release: 0.2, gain: 0.08 });
+      tone(out, midi(47), at + 0.16, 0.18, { type: "triangle", attack: 0.01, release: 0.3, gain: 0.08 });
       break;
     case "click":
       tone(out, midi(84), at, 0.005, { type: "sine", attack: 0.002, release: 0.05, gain: 0.025 });

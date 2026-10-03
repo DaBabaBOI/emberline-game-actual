@@ -18,6 +18,7 @@ import {
   rainfall,
   spearmenOf,
   residents,
+  tallyOf,
   fireScareNote,
   gatherNote,
   inDrought,
@@ -51,6 +52,10 @@ import { Clouds, DaySky, FireLights } from "./sky";
 import { Sea } from "./water";
 import { FilmLook } from "./effects";
 import { CinematicCamera } from "./cinematic";
+import { Fireworks } from "./fireworks";
+import { Islet } from "./islet";
+import { useFireworks } from "@/components/civ/hud/eggs";
+import { cameosFor } from "@/game/easter";
 import { playShot, useShot } from "@/components/civ/hud/letterbox";
 import { useDaylight, useGraphics } from "@/lib/graphics";
 import { UnderConstruction } from "./medieval-models";
@@ -142,6 +147,8 @@ export function WorldCanvas() {
   const fancy = graphics === "fancy" && !struggling;
   const daylight = useDaylight();
   const shot = useShot();
+  const fireworksAt = useFireworks();
+  const cameos = useMemo(() => cameosFor(state.nation).map((m) => m.name), [state.nation]);
   // Camera shots: the fly-in when a new game starts, a turn round the village
   // when a new era begins.
   const shownEra = useRef(state.era);
@@ -369,6 +376,7 @@ export function WorldCanvas() {
         litFires={burningIds}
         sick={state.population > 0 ? (state.sick ?? 0) / state.population : 0}
         era={state.era}
+        cameos={cameos}
       />
       <PickUp state={state} dispatch={dispatch} enabled={canPickUp} onHolding={setHolding} />
       <Warriors
@@ -407,6 +415,14 @@ export function WorldCanvas() {
         tiles={state.tiles}
         homeTile={home}
         onHunt={(animal) => dispatch({ type: "hunt", animal })}
+      />
+      <Fireworks home={home} startedAt={fireworksAt} />
+      <Islet
+        tiles={state.tiles}
+        home={home}
+        canReach={tallyOf(state, "canoes") > 0 || (state.outposts ?? []).length > 0}
+        found={state.secretsFound.includes("egg-islet")}
+        onFind={() => dispatch({ type: "easterEgg", id: "islet" })}
       />
       <CampfireSmoke fires={[...burning, ...buildings.filter((t) => t.building === "smithy")]} />
       {!guide.target &&
