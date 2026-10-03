@@ -160,6 +160,9 @@ These were decided with the project owner. Do not change them without being aske
   up in yellow with a marker overhead (`highlight.group`, `Figures group=`) and
   says how many people each figure stands for. New crowds of people on the
   map must pass a `group` so they light up too.
+- **Nobody appears or vanishes.** A figure doing a job away from the crowd
+  (like the hunter in `world/wildlife.tsx`) borrows a real villager (`Walker.hunting`),
+  leaves from where they stand and hands them back where the job ends.
 - **How to get Knowledge is always one click away** (`knowledgeSources()` in
   engine.ts, `hud/knowledge-help.tsx`): the bulb counter in the top bar opens a
   panel listing the one-time firsts still to come (new kinds of building,

@@ -7,6 +7,7 @@ import { hexDistance } from "@/game/hex";
 import type { Tile } from "@/game/types";
 import { Figures, type Agent } from "./figures";
 import { makeGround } from "./ground";
+import { grabStore, type Walker } from "./villagers";
 
 type Kind = "deer" | "boar";
 
@@ -131,8 +132,24 @@ function AnimalView({ animal, motion }: { animal: Animal; motion: React.RefObjec
   return <group ref={ref}>{animal.kind === "deer" ? <Deer legs={legs} /> : <Boar legs={legs} />}</group>;
 }
 
-// Deer and boar roam the forests. Every so often a hunter walks out from the
-// village, brings one down, and returns with food.
+// Who goes hunting: a grown-up who is well, free (not working, carried or out
+// already) and on the map. Whoever is closest to a gatherer's camp, if there
+// are any; otherwise anyone free.
+function pickHunter(camps: Tile[]): Walker | null {
+  const free = grabStore.walkers.filter(
+    (w) => !w.child && !w.held && !w.goneUntil && !w.hunting && !w.workAt && w.tunic === (w.baseTunic ?? w.tunic),
+  );
+  if (!free.length) return null;
+  if (!camps.length) return free[Math.floor(Math.random() * free.length)];
+  const near = (w: Walker) => Math.min(...camps.map((c) => Math.hypot(c.x - w.x, c.z - w.z)));
+  return free.reduce((a, b) => (near(a) <= near(b) ? a : b));
+}
+
+// Deer and boar roam the forests. Every so often one of the villagers goes
+// hunting (someone at a gatherer's camp if there is one, otherwise someone with
+// nothing to do), brings an animal down, and walks back with the food to where
+// they set out from. They are one of the tribe the whole time: they never
+// appear from or vanish into the fire.
 export function Wildlife({
   tiles,
   homeTile,
@@ -152,7 +169,15 @@ export function Wildlife({
   const nextId = useRef(0);
   const motion = useRef(new Map<number, Motion>());
   const hunter = useRef<Agent[]>([]);
-  const hunt = useRef<{ target: number; phase: "out" | "back"; nextAt: number }>({ target: -1, phase: "out", nextAt: 15 });
+  const hunt = useRef<{
+    target: number;
+    phase: "out" | "back";
+    nextAt: number;
+    // The villager out hunting, and where they set out from.
+    who: Walker | null;
+    from: { x: number; z: number };
+  }>({ target: -1, phase: "out", nextAt: 15, who: null, from: { x: 0, z: 0 } });
+  const camps = useMemo(() => tiles.filter((t) => t.building === "gatherer"), [tiles]);
 
   useFrame(({ clock }, delta) => {
     const now = clock.elapsedTime;
@@ -201,21 +226,25 @@ export function Wildlife({
         const prey = animals
           .filter((a) => motion.current.get(a.id)?.downAt === null && hexDistance(a.home, homeTile) <= 8)
           .sort((a, b) => hexDistance(a.home, homeTile) - hexDistance(b.home, homeTile))[0];
-        if (prey) {
+        const who = prey ? pickHunter(camps) : null;
+        if (prey && who) {
           h.target = prey.id;
           h.phase = "out";
+          h.who = who;
+          h.from = { x: who.x, z: who.z };
+          who.hunting = true;
           hunter.current = [
             {
-              x: homeTile.x,
-              y: homeTile.height,
-              z: homeTile.z,
-              heading: 0,
+              x: who.x,
+              y: who.y,
+              z: who.z,
+              heading: who.heading,
               moving: true,
-              scale: 1.4,
-              tunic: "#556b2f",
-              skin: "#c68642",
-              hair: "#2b1b10",
-              phase: 0,
+              scale: who.scale,
+              tunic: who.tunic,
+              skin: who.skin,
+              hair: who.hair,
+              phase: who.phase,
             },
           ];
         } else {
@@ -231,13 +260,25 @@ export function Wildlife({
       h.nextAt = now + 20;
       return;
     }
+    // Hand the villager back, standing where the hunter is.
+    const done = () => {
+      const w = h.who;
+      if (w) Object.assign(w, { x: man.x, z: man.z, y: man.y, tx: man.x, tz: man.z, heading: man.heading, wait: 2, hunting: false });
+      h.who = null;
+      h.target = -1;
+      hunter.current = [];
+    };
+    if (!h.who) {
+      done();
+      h.nextAt = now + 20;
+      return;
+    }
     const preyInfo = animals.find((a) => a.id === h.target);
     const prey = preyInfo ? motion.current.get(preyInfo.id) : undefined;
-    // The walk home never depends on the prey: it is cleared away a few seconds
-    // after the kill, and the hunter used to vanish mid-walk when it was. If the
-    // prey is gone before he reaches it, he just heads home.
+    // The walk back never depends on the prey: it is cleared away a few seconds
+    // after the kill. If the prey is gone before they reach it, they just head back.
     if (h.phase === "out" && (!preyInfo || !prey || prey.downAt !== null)) h.phase = "back";
-    const goal = h.phase === "out" && prey ? prey : { x: homeTile.x, z: homeTile.z };
+    const goal = h.phase === "out" && prey ? prey : h.from;
     const dx = goal.x - man.x;
     const dz = goal.z - man.z;
     const d = Math.hypot(dx, dz);
@@ -251,7 +292,7 @@ export function Wildlife({
           setAnimals((list) => list.filter((a) => a.id !== preyInfo.id));
         }, 4000);
       } else {
-        h.target = -1;
+        done();
         h.nextAt = now + 25 + Math.random() * 20;
       }
       return;
