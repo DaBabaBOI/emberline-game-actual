@@ -25,6 +25,14 @@ These were decided with the project owner. Do not change them without being aske
 - Unexplored land is hidden under cloud tiles; **the sea is always blue**.
   Scouts reveal land, and only scouts: placing a building never uncovers the
   clouds next to it (it used to, which made scouting pointless).
+  **Canoes** (`CANOE`, Canoe Dock from Rafts & Fishing, on a beach): one
+  canoe per dock; each trip fells one big tree near home (`bigTree()`, -0.35
+  growth; none left = no canoes) and takes 45 s. The first finds the Southern
+  Isles (island 3) as an outpost; later trips fish the open sea (+25 food).
+  A dock links outposts home like a Shipyard. Each building on an outpost
+  island costs 2 Sustainability ("small islands are fragile"). Canoes never
+  reach the kingdoms or the Misty Isle (Ocean Ships do). Multiplayer will use
+  canoes for trade and raids between players.
   A scouting trip takes `SCOUT_TRIP.ticks` (12, 18 s): paid when sent
   (`state.scouting`), land mapped when they return (`scoutsReturn()`), a
   "Scouts exploring" marker on the map and a countdown on the button. One trip

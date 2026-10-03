@@ -256,6 +256,40 @@ export function WoodcutterModel({ opacity }: ModelProps) {
   );
 }
 
+// A jetty on posts, a finished dugout canoe tied alongside, and a trunk on the
+// bank being hollowed into the next one.
+export function DockModel({ opacity }: ModelProps) {
+  return (
+    <group>
+      {[-0.08, 0.08].map((x) => (
+        <Part key={x} color="#9b7650" opacity={opacity} position={[x, 0.08, 0.2]}>
+          <boxGeometry args={[0.14, 0.03, 0.75]} />
+        </Part>
+      ))}
+      {[0, 0.28, 0.56].flatMap((z) =>
+        [-0.15, 0.15].map((x) => <Log key={`${x}${z}`} opacity={opacity} position={[x, 0.02, z - 0.08]} rotation={[0, 0, 0]} length={0.2} radius={0.018} />),
+      )}
+      {/* The canoe tied up by the jetty. */}
+      <group position={[0.3, 0.05, 0.3]}>
+        <Part color="#6b4a2b" opacity={opacity} scale={[0.8, 0.45, 4]}>
+          <sphereGeometry args={[0.09, 10, 6]} />
+        </Part>
+        <Part color="#3e2a17" opacity={opacity} position={[0, 0.025, 0]} scale={[0.6, 0.2, 3.4]}>
+          <sphereGeometry args={[0.09, 10, 6]} />
+        </Part>
+        <Log opacity={opacity} position={[-0.06, 0.07, -0.1]} rotation={[0.3, 0, 0.9]} length={0.3} radius={0.01} />
+      </group>
+      {/* A trunk on the bank, half hollowed out. */}
+      <group position={[-0.25, 0.07, -0.25]} rotation={[0, 0.5, 0]}>
+        <Log opacity={opacity} position={[0, 0, 0]} rotation={[Math.PI / 2, 0, 0]} length={0.5} radius={0.07} />
+        <Part color="#d9b67a" opacity={opacity} position={[0, 0.055, 0]}>
+          <boxGeometry args={[0.07, 0.02, 0.32]} />
+        </Part>
+      </group>
+    </group>
+  );
+}
+
 export function FishingModel({ opacity }: ModelProps) {
   return (
     <group>
@@ -999,6 +1033,7 @@ export const MODELS: Record<string, (props: ModelProps) => JSX.Element> = {
   gatherer: GathererModel,
   woodcutter: WoodcutterModel,
   fishing: FishingModel,
+  dock: DockModel,
   quarry: QuarryModel,
   elder: ElderModel,
   healer: HealerModel,

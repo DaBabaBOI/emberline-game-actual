@@ -205,7 +205,8 @@ export type TallyKey =
   | "disasters"
   | "landslides"
   | "gifts"
-  | "ships";
+  | "ships"
+  | "canoes";
 
 // One thing to do before an advancement can be researched.
 export interface Goal {
@@ -299,6 +300,8 @@ export interface GameState {
   // Ships out exploring or trading (from a Shipyard), and the islands found
   // overseas where we may build a few things.
   ships?: { start: number; back: number }[];
+  // Canoes out: exploring for the Southern Isles, or fishing the open sea.
+  canoes?: { start: number; back: number; kind: "explore" | "fish" }[];
   outposts?: number[];
   // We raided a kingdom: its revenge army lands by `tick`. And when we last
   // raided (our warriors need time before the next).

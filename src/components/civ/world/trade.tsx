@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Group } from "three";
 import { Html } from "@react-three/drei";
-import { DIPLOMACY, KINGDOMS, TICK_SECONDS } from "@/game/content";
+import { CANOE, DIPLOMACY, KINGDOMS, TICK_SECONDS } from "@/game/content";
 import { moodOf, nextVoyage } from "@/game/engine";
 import { ISLANDS, isLand } from "@/game/map";
 import type { GameState, KingdomId, Tile } from "@/game/types";
@@ -54,6 +54,7 @@ function Ship({
   stripe = "#b3261e",
   oneWay,
   side = 0,
+  canoe,
 }: {
   route: Route;
   start: number;
@@ -64,6 +65,8 @@ function Ship({
   stripe?: string;
   oneWay?: { arrive: number };
   side?: number;
+  // A dugout canoe with two paddlers instead of a sailing ship.
+  canoe?: boolean;
 }) {
   const ref = useRef<Group>(null);
   const progress = useRef(-1);
@@ -88,6 +91,31 @@ function Ship({
     g.rotation.y = heading + (oneWay || p < 0.5 ? 0 : Math.PI);
     g.rotation.z = Math.sin(clock.elapsedTime * 1.5) * 0.05;
   });
+  if (canoe)
+    return (
+      <group ref={ref} scale={1.4}>
+        <mesh castShadow position={[0, 0.04, 0]} scale={[0.7, 0.45, 4]}>
+          <sphereGeometry args={[0.1, 10, 6]} />
+          <meshStandardMaterial color="#6b4a2b" flatShading />
+        </mesh>
+        {[-0.14, 0.14].map((z, i) => (
+          <group key={z} position={[0, 0.1, z]}>
+            <mesh position={[0, 0.06, 0]}>
+              <boxGeometry args={[0.07, 0.12, 0.05]} />
+              <meshStandardMaterial color={i ? "#9b5a2b" : "#7a4a22"} />
+            </mesh>
+            <mesh position={[0, 0.15, 0]}>
+              <boxGeometry args={[0.05, 0.05, 0.05]} />
+              <meshStandardMaterial color="#c68642" />
+            </mesh>
+            <mesh position={[0.07, 0.05, 0]} rotation={[0, 0, 0.6]}>
+              <boxGeometry args={[0.015, 0.22, 0.015]} />
+              <meshStandardMaterial color="#5e3b1c" />
+            </mesh>
+          </group>
+        ))}
+      </group>
+    );
   return (
     <group ref={ref} scale={1.4}>
       <mesh castShadow position={[0, 0.06, 0]}>
@@ -158,7 +186,7 @@ const RAID_VOYAGE = 40;
 // our raiding fleet, a kingdom's army sailing in, and a label over each
 // kingdom's island saying how it feels about us.
 export function SeaTraffic({ state, home }: { state: GameState; home: Tile }) {
-  if (state.era < 3 && !state.ships?.length) return null;
+  if (state.era < 3 && !state.ships?.length && !state.canoes?.length) return null;
   const { tick, speed, tiles } = state;
   const voyage = nextVoyage(state);
   const raided = state.revenge && state.raidedTick !== undefined && tick - state.raidedTick < RAID_VOYAGE ? state.revenge.kingdom : null;
@@ -166,6 +194,11 @@ export function SeaTraffic({ state, home }: { state: GameState; home: Tile }) {
   const armyRoute = army && state.raid ? landingRoute(tiles, KINGDOM_LOOK[army].island, tiles[state.raid.fromTile]) : null;
   return (
     <group>
+      {/* Our canoes: to the Southern Isles, or out to fish. */}
+      {(state.canoes ?? []).map((c, i) => {
+        const route = routeFor(tiles, home, CANOE.island);
+        return route ? <Ship key={`canoe-${c.start}-${i}`} route={route} start={c.start} back={c.back} tick={tick} speed={speed} canoe side={i * 0.6} /> : null;
+      })}
       {/* Our ships: out to find land or a coast, or to trade with a kingdom. */}
       {(state.ships ?? []).map((ship, i) => {
         const island = voyage?.island ?? (i % 2 ? 2 : 1);
