@@ -1770,6 +1770,8 @@ export interface SustainPart {
   label: string;
   value: number;
   hint: string;
+  // What to do about it, with this town's numbers (shown by "What should I fix?").
+  fix?: string;
 }
 
 // Everything that pushes Sustainability up or down, so the player can see
@@ -1780,86 +1782,130 @@ export function sustainabilityBreakdown(state: GameState): SustainPart[] {
   const cover = forestCover(state);
   const dugTotal = state.tiles.reduce((sum, t) => sum + (t.dug ?? 0), 0);
   const cutHills = state.tiles.filter((t) => (t.dug ?? 0) > 0).length;
+  // For the fixes: thin forest near home, clear-cutting woodcutters, fires
+  // beyond what keeps everyone warm.
+  const home = state.tiles[state.startTile];
+  const thin = state.tiles.filter((t) => t.terrain === "forest" && !t.building && t.growth < 0.6 && hexDistance(t, home) <= LAND.radius).length;
+  const clearCutters = state.tiles.filter((t) => t.building === "woodcutter" && loggingMode(state, t) === "clear").length;
+  const pensWarm = state.researched.includes("hide-clothing") ? (counts.pen ?? 0) * GROWTH_PRESSURE.peoplePerPen : 0;
+  const firesNeeded = Math.max(1, Math.ceil(Math.max(0, state.population - pensWarm - (counts.townhouse ?? 0) * TOWN.warmth) / GROWTH_PRESSURE.peoplePerFire));
+  const spareFires = Math.max(0, lit - firesNeeded);
+  const forestFix = [
+    thin
+      ? state.researched.includes("early-farming")
+        ? `Plant saplings on the ${thin} thinned patch${thin === 1 ? "" : "es"} of forest near the village (Plant button, ${PLANT_COST.food} food each).`
+        : `Learn Early Farming, then plant saplings on the ${thin} thinned patch${thin === 1 ? "" : "es"} of forest near the village.`
+      : "",
+    clearCutters ? `Switch ${clearCutters} woodcutter${clearCutters === 1 ? "" : "s"} to selective logging (click a Woodcutter): half the wood, but the forest keeps up.` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
   const parts: SustainPart[] = [
     {
       label: `Forest standing: ${Math.round(cover * 100)}%`,
       value: -(1 - cover) * 85,
       hint: "Woodcutters fell trees faster than they grow back. Selective logging and replanting help.",
+      fix: forestFix || "Leave the forest to grow back: it takes a few minutes.",
     },
     {
       label: `Smoke from ${lit} fire${lit === 1 ? "" : "s"}`,
       value: -lit * 2,
       hint: "Every fire burns wood and fills the air with smoke.",
+      fix: spareFires
+        ? `Let ${spareFires} fire${spareFires === 1 ? "" : "s"} go out (click a fire to send its keeper away): ${firesNeeded} keep${firesNeeded === 1 ? "s" : ""} everyone warm.`
+        : state.researched.includes("hide-clothing")
+          ? "Every fire is needed for warmth. Livestock Pens (with Warm Clothes) keep people warm without one."
+          : "Every fire is needed for warmth. Learn Warm Clothes so Livestock Pens can keep people warm instead.",
     },
     {
       label: `${cutHills} hillside${cutHills === 1 ? "" : "s"} cut away by quarries`,
       value: -((counts.quarry ?? 0) * QUARRY_CUT.perQuarry + dugTotal * QUARRY_CUT.perHill),
       hint: "Quarries cut the hill down for good: the scar stays even after the quarry is gone. Their dust also smothers nearby crops.",
+      fix: counts.quarry
+        ? `Demolish quarries you no longer need (${counts.quarry} working). The cut hills stay, but they stop getting worse.`
+        : "The cut hills never grow back. Build fewer quarries in future.",
     },
     {
       label: `${counts.gatherer ?? 0} gatherer camp${counts.gatherer === 1 ? "" : "s"} hunting the wild`,
       value: -Math.max(0, (counts.gatherer ?? 0) - GATHERING.freeCamps) * GATHERING.sustainPerExtra,
       hint: `The wild can feed ${GATHERING.freeCamps} camps. Past that, animals are hunted faster than they can have young, and there are fewer each year.`,
+      fix: `Demolish ${Math.max(0, (counts.gatherer ?? 0) - GATHERING.freeCamps)} Gatherer's Camp${(counts.gatherer ?? 0) - GATHERING.freeCamps === 1 ? "" : "s"} (keep ${GATHERING.freeCamps}) and get food from fields or fishing instead.`,
     },
     {
       label: `${counts.watchfire ?? 0} watch fire${counts.watchfire === 1 ? "" : "s"} burning`,
       value: -(counts.watchfire ?? 0) * WATCH_FIRE.smoke,
       hint: "Watch fires burn wood day and night and add smoke.",
+      fix: "Keep one watch fire at most: the second adds little.",
     },
     {
       label: `${counts.farm ?? 0} field${counts.farm === 1 ? "" : "s"} cleared${state.researched.includes("three-field") ? " (resting in turn)" : ""}`,
       value: -(counts.farm ?? 0) * (state.researched.includes("three-field") ? FARMING.rotationStrain : 1),
       hint: "Farmland replaces wild land.",
+      fix: state.researched.includes("three-field")
+        ? "Fields are resting in turn already. Fewer, better-watered fields (wells, aqueducts) cost the land less."
+        : (TREE_BY_ID["three-field"]?.era ?? 99) <= state.era
+          ? "Learn Three-Field Rotation (Advancements): resting fields in turn halves their cost to the land."
+          : "Each field takes wild land. Grow food with fewer fields: fishing, and keep forest near them so the rain keeps up.",
     },
     {
       label: `${counts.pen ?? 0} livestock pen${counts.pen === 1 ? "" : "s"} grazing`,
       value: -(counts.pen ?? 0) * 2,
       hint: "Grazing animals wear down the grass around them.",
+      fix: "Demolish pens you don't need for food or warm clothes.",
     },
     {
       label: `${counts.smithy ?? 0} smith${counts.smithy === 1 ? "y" : "ies"} burning charcoal`,
       value: -(counts.smithy ?? 0) * 4,
       hint: "Smelting bronze burns wood all the time and fills the air with smoke.",
+      fix: "Keep a single smithy: once your warriors are armed, more only burn wood.",
     },
     {
       label: `${counts.canal ?? 0} canal${counts.canal === 1 ? "" : "s"} salting the soil`,
       value: -(counts.canal ?? 0) * 3,
       hint: "Irrigation water leaves salt behind as it dries.",
+      fix: "Demolish canals that no longer water many fields.",
     },
     {
       label: `${counts.house ?? 0} brick house${counts.house === 1 ? "" : "s"}`,
       value: -(counts.house ?? 0) * 1,
       hint: "Bricks are fired in kilns that burn wood.",
+      fix: "Each brick house costs a little: build Town Houses (more people per building) instead of many brick houses.",
     },
     {
       label: `${counts.well ?? 0} wells drawing down the ground water`,
       value: -Math.max(0, (counts.well ?? 0) - WATER.wellsFree) * WATER.wellSustain,
       hint: `The ground can feed ${WATER.wellsFree} wells. Past that, the water under the ground sinks and the land around dries out.`,
+      fix: `Demolish ${Math.max(0, (counts.well ?? 0) - WATER.wellsFree)} well${(counts.well ?? 0) - WATER.wellsFree === 1 ? "" : "s"} (keep ${WATER.wellsFree}); an aqueduct brings more water without draining the ground.`,
     },
     {
       label: `${(counts.aqueduct ?? 0) + (counts.watermill ?? 0)} aqueduct${(counts.aqueduct ?? 0) + (counts.watermill ?? 0) === 1 ? "" : "s"} and mills on the river`,
       value: -((counts.aqueduct ?? 0) * 3 + (counts.watermill ?? 0) * 2),
       hint: "Every aqueduct takes water from the river, and every mill dams it. Fish and marshes downstream suffer.",
+      fix: "Demolish mills and aqueducts that serve few fields or homes.",
     },
     {
       label: `${counts.latrine ?? 0} latrine${counts.latrine === 1 ? "" : "s"} draining into the river`,
       value: -(counts.latrine ?? 0) * 1,
       hint: "The drains keep the streets clean, but the waste ends up downstream.",
+      fix: "A small cost worth paying while it keeps the town healthy. Keep just enough latrines.",
     },
     {
       label: `${counts.baths ?? 0} bathhouse${counts.baths === 1 ? "" : "s"} heating water`,
       value: -(counts.baths ?? 0) * 2,
       hint: "Bathhouses burn wood all day to heat their pools.",
+      fix: "Keep one bathhouse; a second adds little health.",
     },
     {
       label: `${overseasBuildings(state)} building${overseasBuildings(state) === 1 ? "" : "s"} on small islands`,
       value: -overseasBuildings(state) * CANOE.fragile,
       hint: "Small islands have little forest and few animals: what is cleared there grows back slowly.",
+      fix: "Build less on the small islands: demolish outposts you can do without.",
     },
     {
       label: "Recent events",
       value: state.modifiers.sustainability,
       hint: "Fires and choices you made in events. This fades over time.",
+      fix: "Nothing to do: this fades by itself.",
     },
   ];
   // Only what is actually costing (or helping) the land right now.

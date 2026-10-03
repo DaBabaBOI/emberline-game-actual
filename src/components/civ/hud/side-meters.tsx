@@ -98,6 +98,12 @@ function SustainabilityPanel({ onClose }: { onClose: () => void }) {
   const { state } = useGame();
   const parts = sustainabilityBreakdown(state);
   const trend = sustainabilityTrend(state);
+  const [fixing, setFixing] = useState(false);
+  // The three things costing the land most, each with what to do about it.
+  const fixes = parts
+    .filter((p) => p.value <= -1 && p.fix)
+    .sort((a, b) => a.value - b.value)
+    .slice(0, 3);
   return (
     <div
       className="pixel-panel font-pixel absolute bottom-0 right-10 w-64 max-w-[calc(100vw-4rem)] p-3 text-xs md:right-12 md:w-72"
@@ -116,20 +122,46 @@ function SustainabilityPanel({ onClose }: { onClose: () => void }) {
         How healthy your land is. It starts at 100, and each choice below takes some of it away.
       </p>
       {parts.length === 0 && <p className="text-emerald-700">Nothing is harming the land right now.</p>}
-      <ul className="flex flex-col gap-1.5">
-        {parts.map((p) => (
-          <li key={p.label} className="flex flex-col">
-            <span className="flex justify-between gap-2">
-              <span className="font-semibold">{p.label}</span>
-              <span className={cn("font-num text-sm", p.value < 0 ? "text-red-700" : "text-emerald-700")}>
-                {p.value >= 0 ? "+" : "−"}
-                {Math.abs(Math.round(p.value))}
+      {fixes.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setFixing(!fixing)}
+          className="pixel-btn mb-2 w-full bg-emerald-600 px-2 py-1 text-white hover:bg-emerald-500"
+          data-testid="sustain-fix-toggle"
+        >
+          {fixing ? "Show every cause" : "What should I fix?"}
+        </button>
+      )}
+      {fixing && fixes.length > 0 ? (
+        <ol className="flex flex-col gap-2" data-testid="sustain-fixes">
+          {fixes.map((p, i) => (
+            <li key={p.label} className="flex flex-col">
+              <span className="flex justify-between gap-2">
+                <span className="font-semibold">
+                  {i + 1}. {p.label}
+                </span>
+                <span className="font-num text-sm text-red-700">−{Math.abs(Math.round(p.value))}</span>
               </span>
-            </span>
-            <span className="text-[11px] text-stone-500">{p.hint}</span>
-          </li>
-        ))}
-      </ul>
+              <span className="text-[11px] text-emerald-800">{p.fix}</span>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <ul className="flex flex-col gap-1.5">
+          {parts.map((p) => (
+            <li key={p.label} className="flex flex-col">
+              <span className="flex justify-between gap-2">
+                <span className="font-semibold">{p.label}</span>
+                <span className={cn("font-num text-sm", p.value < 0 ? "text-red-700" : "text-emerald-700")}>
+                  {p.value >= 0 ? "+" : "−"}
+                  {Math.abs(Math.round(p.value))}
+                </span>
+              </span>
+              <span className="text-[11px] text-stone-500">{p.hint}</span>
+            </li>
+          ))}
+        </ul>
+      )}
       <p
         className={cn(
           "mt-2 border-t-2 border-stone-300 pt-1.5",
