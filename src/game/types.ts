@@ -161,6 +161,8 @@ export interface BuildingDef {
   needsWaterNeighbor?: boolean;
   // Must touch the river (fresh water), not just the sea.
   needsRiver?: boolean;
+  // Extra ground it may go on when it touches the river (a Fishing Spot on the bank).
+  riverTerrain?: Terrain[];
   requires?: string;
   // A landmark (see LANDMARKS): built in stages, one of each.
   landmark?: boolean;

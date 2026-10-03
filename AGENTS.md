@@ -25,6 +25,8 @@ These were decided with the project owner. Do not change them without being aske
 - Unexplored land is hidden under cloud tiles; **the sea is always blue**.
   Scouts reveal land, and only scouts: placing a building never uncovers the
   clouds next to it (it used to, which made scouting pointless).
+  **Fishing Spots** go on a beach, or on the river bank (`riverTerrain`:
+  grass, steppe, marsh or forest touching the river).
   **Canoes** (`CANOE`, Canoe Dock from Rafts & Fishing, on a beach): one
   canoe per dock; each trip fells one big tree near home (`bigTree()`, -0.35
   growth; none left = no canoes) and takes 45 s. The first finds the Southern
@@ -345,8 +347,8 @@ These were decided with the project owner. Do not change them without being aske
   warrior can still tip it), **Hide** (nobody dies, they take a smaller share)
   or **Pay tribute** (4 food per raider, they leave but the next raid comes 60
   ticks sooner). Each War Camp holds `WARRIORS_PER_CAMP` (6); the Train button
-  says "+1 camp = +6" when full. **Watch Fire** (after Firekeeping, on the
-  shore): raiders seen 8 ticks sooner, +1 defense (max 2), burns wood, -1
+  says "+1 camp = +6" when full. **Watch Fire** (after Firekeeping, beach
+  only): raiders seen 8 ticks sooner, +1 defense (max 2), burns wood, -1
   Sustainability. Warriors patrol around camps and watch fires, recruits walk
   out of a camp, and warriors take at most 40% of the figures. The legion's base
   is 8 (was 6) to match the bigger armies. Dev: "Raid: band / party / fire".
