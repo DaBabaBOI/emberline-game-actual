@@ -6,6 +6,7 @@ import type { GameState } from "@/game/types";
 import { useGame } from "@/components/civ/game-provider";
 import { AccessibilityMenuSection } from "@/components/accessibility-settings";
 import { setDaylight, setGraphics, useDaylight, useGraphics } from "@/lib/graphics";
+import { SoundOptions } from "./game-audio";
 import { FEEDBACK_LIMITS, postScore, saveToCloud, scoreFor, sendFeedback, topScores, type ScoreRow } from "@/lib/online";
 
 const VERSION = UPDATES[0]?.date ?? "dev";
@@ -141,6 +142,7 @@ export function GameMenu() {
             <span className="font-semibold text-amber-300">Feedback</span>
             <FeedbackForm state={state} />
           </div>
+          <SoundOptions />
           <GraphicsOption />
           <div className="flex flex-col gap-1">
             <span className="font-semibold text-amber-300">Accessibility</span>

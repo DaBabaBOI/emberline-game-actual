@@ -714,6 +714,20 @@ These were decided with the project owner. Do not change them without being aske
     (the React compiler forbids mutating hook values in `useFrame`). Code the
     HUD needs (shot store, time of day) lives outside `world/`, so the HUD
     doesn't load three.js.
+- **Sound** (`src/lib/audio.ts`, `hud/game-audio.tsx`): music, ambience and
+  sound effects are all made live with Web Audio, with no sound files and no
+  library.
+  - **Unlocking:** browsers block sound until the first click or key press, so
+    `unlockAudio()` runs on the first one (title screen included).
+  - **Music:** each era has its own key, scale, instruments and tempo
+    (`ERA_MUSIC`). It is calmer at night, and drums pick up during a raid,
+    the legion, a rebellion or a disaster.
+  - **Effects:** `GameAudio` watches the state and plays one effect per change,
+    the most important first.
+  - **Settings:** music and sound volumes plus mute, saved under
+    `emberline-audio` (Menu > Sound, and the speaker in the top bar).
+  - **Loudness:** keep the music around -20 to -26 dB RMS (measured with an
+    analyser), or it is hard to hear on laptop speakers.
 - Keep the tutorial (`TUTORIAL` in `content.ts`) working when you change buildings.
 - **Elder Ama never covers what she asks for:** with Advancements open her
   panels sit between the tree's header and its details bar (`useSpotInTree()`
