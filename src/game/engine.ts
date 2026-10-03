@@ -93,6 +93,7 @@ import {
   TEACHING,
   SCOUT_KNOWLEDGE,
   SCOUT_TRIP,
+  CANOE,
   REBELLION,
   TUTORIAL,
   TUTORIAL_FAREWELL,
@@ -175,6 +176,7 @@ export type Action =
   | { type: "raidKingdom"; kingdom: KingdomId }
   | { type: "ship" }
   | { type: "harbour"; closed: boolean }
+  | { type: "canoe" }
   | { type: "crushRebels" }
   | { type: "meetDemands" }
   | { type: "devRebellion"; when: "soon" | "now" }
@@ -569,7 +571,7 @@ export function placementError(state: GameState, tile: Tile, def: BuildingDef): 
   if (tile.island >= 0 && tile.island !== home) {
     const kingdom = kingdomOfIsland(tile.island);
     if (kingdom) return `This land belongs to ${KINGDOMS[kingdom].name}`;
-    if (!(state.outposts ?? []).includes(tile.island)) return "Our ships haven't claimed this island";
+    if (!(state.outposts ?? []).includes(tile.island)) return "Our canoes and ships haven't reached this island";
     if (!def.overseas) return "Too far from home: only farms, fishing, woodcutters, pens, gatherers and trading posts";
   } else if (def.id === "tradingpost") return "Only on an island our ships have found";
   if (def.unique && (countBuildings(state)[def.id] ?? 0) >= 1) return "There is only one";
@@ -1028,6 +1030,56 @@ export function shipError(state: GameState): string | null {
   return null;
 }
 
+// Canoes: one per Canoe Dock. A trip needs a canoe cut from a big tree.
+export function bigTree(state: GameState): Tile | null {
+  const home = state.tiles[state.startTile];
+  return (
+    state.tiles
+      .filter((t) => t.terrain === "forest" && !t.building && t.island === home.island && t.growth >= CANOE.bigTree && !state.protectedTiles?.includes(t.id))
+      .sort((a, b) => hexDistance(a, home) - hexDistance(b, home) || b.growth - a.growth)[0] ?? null
+  );
+}
+
+export function canoeError(state: GameState): string | null {
+  const docks = countBuildings(state).dock ?? 0;
+  if (!docks) return "Build a Canoe Dock first";
+  if (state.plague?.closed) return "The harbour is closed";
+  if ((state.canoes ?? []).length >= docks) return "Every canoe is out";
+  if (!bigTree(state)) return "No big trees left to make a canoe";
+  if (!canAfford(state, CANOE.cost)) return "Not enough wood and food";
+  return null;
+}
+
+// What the next canoe will do: find the Southern Isles, then fish the open sea.
+export function canoeTrip(state: GameState): "explore" | "fish" {
+  const isles = state.tiles.some((t) => t.island === CANOE.island);
+  return isles && !(state.outposts ?? []).includes(CANOE.island) && !(state.canoes ?? []).some((c) => c.kind === "explore") ? "explore" : "fish";
+}
+
+function returnCanoes(state: GameState): GameState {
+  const due = (state.canoes ?? []).filter((c) => state.tick >= c.back);
+  if (!due.length) return state;
+  let next: GameState = { ...state, canoes: (state.canoes ?? []).filter((c) => state.tick < c.back) };
+  for (const c of due) {
+    if (c.kind === "explore" && !(next.outposts ?? []).includes(CANOE.island)) {
+      const tiles = next.tiles.map((t) => (t.island === CANOE.island ? { ...t, revealed: true } : t));
+      next = {
+        ...next,
+        tiles,
+        outposts: [...(next.outposts ?? []), CANOE.island],
+        log: [`Our canoe reached the ${ISLANDS[CANOE.island]?.name ?? "isles"}! We can build farms, fishing, woodcutters, pens and gatherers there. Each costs coins to keep supplied, and small islands are fragile.`, ...next.log].slice(0, 30),
+      };
+    } else {
+      next = {
+        ...next,
+        resources: { ...next.resources, food: next.resources.food + CANOE.fish },
+        log: [`A canoe came back from the open sea with fish (+${CANOE.fish} food).`, ...next.log].slice(0, 30),
+      };
+    }
+  }
+  return next;
+}
+
 // Where the next ship will go: islands to settle first, then the kingdoms' coasts.
 export function nextVoyage(state: GameState): { island: number; kind: "outpost" | "coast" } | null {
   const land = (i: number) => state.tiles.filter((t) => t.island === i);
@@ -1280,7 +1332,8 @@ export function production(state: GameState): Resources {
   // No base Knowledge: it comes from milestones, teaching buildings and literacy.
   const out: Resources = { food: 0, wood: 0, stone: 0, knowledge: 0, currency: 0 };
   const home = state.tiles[state.startTile]?.island ?? 0;
-  const port = hasPort(state);
+  // A Canoe Dock links the outposts home too.
+  const port = hasPort(state) || (countBuildings(state).dock ?? 0) > 0;
   const closed = !!state.plague?.closed;
   const unpaid = outpostsUnpaid(state);
   for (const tile of state.tiles) {
@@ -1795,6 +1848,11 @@ export function sustainabilityBreakdown(state: GameState): SustainPart[] {
       label: `${counts.baths ?? 0} bathhouse${counts.baths === 1 ? "" : "s"} heating water`,
       value: -(counts.baths ?? 0) * 2,
       hint: "Bathhouses burn wood all day to heat their pools.",
+    },
+    {
+      label: `${overseasBuildings(state)} building${overseasBuildings(state) === 1 ? "" : "s"} on small islands`,
+      value: -overseasBuildings(state) * CANOE.fragile,
+      hint: "Small islands have little forest and few animals: what is cleared there grows back slowly.",
     },
     {
       label: "Recent events",
@@ -2586,6 +2644,7 @@ function tickOnce(state: GameState): GameState {
   if (!inTutorial) next = updateRebellion(updatePlague(updateDisasters(updateDrought(updateLegion(updateRaids(next))))));
   next = returnCaravans(next);
   next = returnScouts(next);
+  next = returnCanoes(next);
   next = returnShips(updateKingdoms(next));
   next = finishStage(next);
   // The final battle ends the story (won or lost): nothing else happens today.
@@ -4199,6 +4258,23 @@ function step(state: GameState, action: Action): GameState {
 
     case "raidKingdom":
       return kingdomRaidError(state, action.kingdom) ? state : raidKingdom(state, action.kingdom);
+
+    case "canoe": {
+      if (canoeError(state)) return state;
+      const tree = bigTree(state)!;
+      const kind = canoeTrip(state);
+      const tiles = state.tiles.map((t) => (t.id === tree.id ? { ...t, growth: Math.max(0.02, t.growth - CANOE.tree) } : t));
+      return withMeters({
+        ...addTally(state, "canoes", 1),
+        tiles,
+        canoes: [...(state.canoes ?? []), { start: state.tick, back: state.tick + CANOE.ticks, kind }],
+        resources: spend(state.resources, CANOE.cost),
+        log: [
+          `A big tree was felled for a canoe, and it set off ${kind === "explore" ? "to look for the islands to the south" : "to fish the open sea"}. Back in ${secs(CANOE.ticks)} s.`,
+          ...state.log,
+        ].slice(0, 30),
+      });
+    }
 
     case "ship": {
       if (shipError(state)) return state;

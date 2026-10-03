@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { BUILDINGS, LOW_WOOD_AFTER_BUY, PLANT_COST, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL, WARRIORS_PER_CAMP } from "@/game/content";
+import { BUILDINGS, CANOE, LOW_WOOD_AFTER_BUY, PLANT_COST, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL, WARRIORS_PER_CAMP } from "@/game/content";
 import {
   affordableResearch,
   buildingCost,
@@ -10,6 +10,8 @@ import {
   caravanError,
   hostileKingdoms,
   nextVoyage,
+  canoeError,
+  canoeTrip,
   shipCost,
   shipError,
   waterSupply,
@@ -294,6 +296,7 @@ export function BottomBar() {
             </ToolButton>
           )}
           {state.researched.includes("barter-roads") && <CaravanButton />}
+          {(countBuildings(state).dock ?? 0) > 0 && <CanoeButton />}
           {state.researched.includes("navigation") && <ShipButton />}
           {state.kingdoms && (
             <ToolButton
@@ -344,6 +347,28 @@ export function BottomBar() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Send a canoe from a Canoe Dock: first to find the Southern Isles, then to
+// fish the open sea. Each one costs a big tree.
+function CanoeButton() {
+  const { state, dispatch } = useGame();
+  const out = (state.canoes ?? []).length;
+  const problem = canoeError(state);
+  const goal = canoeTrip(state) === "explore" ? "to find the islands to the south (then you can build there)" : `to fish the open sea (+${CANOE.fish} food)`;
+  return (
+    <ToolButton
+      guide="tool-canoe"
+      icon="boat"
+      label={out ? `Canoe (${out} out)` : "Canoe"}
+      onClick={() => dispatch({ type: "canoe" })}
+      disabled={!!problem}
+      title={problem ?? `Send a canoe ${goal}. Each canoe is cut from one big tree.`}
+      tone="bg-sky-900 hover:bg-sky-800"
+    >
+      <Cost cost={CANOE.cost} bad={!canAfford(state, CANOE.cost)} />
+    </ToolButton>
   );
 }
 

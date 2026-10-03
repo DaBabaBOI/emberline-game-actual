@@ -231,6 +231,21 @@ export const BUILDINGS: BuildingDef[] = [
     produces: { food: 0.7 },
   },
   {
+    id: "dock",
+    name: "Canoe Dock",
+    icon: "boat",
+    description: "A jetty where canoes are hollowed out of tree trunks. Each dock keeps one canoe.",
+    gain: "A canoe: find the Southern Isles and build there, or fish the open sea",
+    landCost: "Every canoe is cut from one big old tree",
+    landImpact: 1,
+    era: 0,
+    cost: { wood: 20 },
+    // On the sea shore, like a Fishing Spot (not by the river).
+    terrain: ["beach"],
+    needsWaterNeighbor: true,
+    requires: "fishing",
+  },
+  {
     id: "quarry",
     name: "Stone Quarry",
     icon: "pickaxe",
@@ -702,7 +717,7 @@ export const TREE: TreeNode[] = [
     era: 0,
     cost: 8,
     requires: ["fire"],
-    unlocks: ["fishing"],
+    unlocks: ["fishing", "dock"],
   },
   {
     id: "early-farming",
@@ -1140,7 +1155,7 @@ export const AFTER_STEPS: Record<string, AfterStep> = {
   storytelling: { build: "elder", text: "Now our elders can teach. Build an Elder's Hut: the children will learn from it, and we will gain Knowledge every day." },
   toolmaking: { build: "quarry", text: "Sharp stone tools! Place a Stone Quarry on the hills. Remember: it cuts the hill away for good, and its dust spoils crops nearby." },
   firekeeping: { text: "We know how to bank a fire now: every campfire burns 1.5 times as long (50% longer) before it needs more wood. Less wood cut, less smoke. We can also keep a Watch Fire burning on the shore, to see raiders coming sooner." },
-  fishing: { build: "fishing", text: "Rafts! Place a Fishing Spot on the shore, next to the water. Fish near the coast give even more." },
+  fishing: { build: "fishing", text: "Rafts! Place a Fishing Spot on the shore, next to the water. Fish near the coast give even more. A Canoe Dock lets us paddle out to the islands to the south, but every canoe costs one big tree." },
   "early-farming": { build: "farm", text: "We can plant grain. Place Farmland on open grass: it feeds many, but it takes the land from the wild." },
   spears: { upgrade: true, text: "Stone-tipped spears! Our hunters bring back more food. Give a warrior a spear with the Spear button: in a fight, a spearman counts as 1.5 warriors (a warrior without one counts as 1). Every warrior you train from now on gets a spear." },
   herbalism: { build: "healer", text: "We know which plants heal. Build a Healer's Hut: the sick get better faster, and sickness spreads less." },
@@ -2302,6 +2317,15 @@ export const SCOUT_KNOWLEDGE = { bigTrip: 20, trips: 5 };
 // A scouting trip takes this long (18 s at normal speed) before the new land
 // is mapped. During the tutorial it is instant (the clock stands still there).
 export const SCOUT_TRIP = { ticks: 12 };
+// Canoes (Rafts & Fishing, from a Canoe Dock): a trip takes `ticks` (45 s).
+// The first finds the Southern Isles (island 3), where outposts can then be
+// built; after that a trip fishes the open sea (+`fish` food). Every trip
+// needs a new canoe, cut from one big tree (`tree` growth off the biggest
+// forest near home); with no big tree left there are no canoes. Canoes can't
+// reach the kingdoms or the Misty Isle: that takes Ocean Ships. Each building
+// on an outpost island costs `fragile` Sustainability: small islands recover
+// slowly.
+export const CANOE = { cost: { wood: 15, food: 10 }, ticks: 30, fish: 25, tree: 0.35, bigTree: 0.5, island: 3, fragile: 2 };
 // Rebellions, from the Medieval era (`era`). If happiness is under `mood`,
 // unrest brews for `warnTicks` (90 s); if it climbs back over `mood` by then it
 // dies down. If not, a `share` of the people (at least `min`) take up arms.
