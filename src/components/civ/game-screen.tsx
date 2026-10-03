@@ -16,6 +16,8 @@ import { GuideOverlay, useGuide } from "./hud/guide-overlay";
 import { Debrief, GoalLine, NextEraPrompt } from "./hud/debrief";
 import { DiscoveryScene } from "./hud/discovery-scene";
 import { Letterbox, useShot } from "./hud/letterbox";
+import { GameAudio } from "./hud/game-audio";
+import { setMusicScene, unlockAudio } from "@/lib/audio";
 import { KingdomsPanel, LandmarkPicker } from "./hud/medieval";
 import {
   DevPanel,
@@ -108,11 +110,28 @@ function Hud({ onRestart }: { onRestart: () => void }) {
         <Debrief onRestart={onRestart} />
       </div>
       <Letterbox />
+      <GameAudio />
     </>
   );
 }
 
+// Browsers allow sound only after a click or key press: the first one starts
+// the music (the Stone Age theme on the title screen, then the game's own).
+function useUnlockAudio() {
+  useEffect(() => {
+    setMusicScene({ playing: true, era: 0, night: 0, tension: false });
+    const unlock = () => unlockAudio();
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
+}
+
 export function GameScreen() {
+  useUnlockAudio();
   const [game, setGame] = useState<GameState | null>(null);
   const [saved, setSaved] = useState<GameState | null>(() => loadGame());
   // A new game opens with a short story (not when continuing, and not in dev starts).

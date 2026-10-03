@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Music and sound! Each era has its own music (a flute and hand drums in the Stone Age, a lyre in the Ancient era, a lute in the Medieval...), calmer at night and tense during raids. Wind, waves, birds and crickets, and sounds for building, discoveries, new eras, raids, battles and events. Click once to start it (browsers need that); the speaker in the top bar turns it off, and Menu > Sound sets the volumes.",
       "A cinematic world: the sun rises and sets (a day lasts about 3 minutes), with golden mornings, sunsets, moonlit nights and stars. Fires light up the dark, the sea has rolling waves that catch the sun, and clouds drift over the islands, their shadows sliding across the land.",
       "A new game opens with a camera fly-in over the islands, and each new era with a slow turn round your village and its name. Click to skip.",
       "Menu > Graphics: Fancy adds a film look (soft shading, glowing fires, a colour grade for each era); Fast is smoother on phones. Turn off Day and night to keep it always day.",

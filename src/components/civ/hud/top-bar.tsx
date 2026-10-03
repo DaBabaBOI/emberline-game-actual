@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import type { IconId } from "@/game/sprites";
 import { GameMenu } from "./online";
+import { MuteButton } from "./game-audio";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { figureCounts, highlight } from "@/components/civ/world/crowd";
 import { KnowledgeGain, KnowledgeHelp } from "./knowledge-help";
@@ -180,6 +181,7 @@ export function TopBar() {
             </button>
           ))}
         </div>
+        <MuteButton />
         <GameMenu />
       </div>
     </div>

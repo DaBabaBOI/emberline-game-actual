@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { playShot } from "./letterbox";
+import { playSfx } from "@/lib/audio";
 import { setTimeOfDay } from "./time-of-day";
 import { AFTER_STEPS, DISASTERS, DISCOVERIES, DROUGHT, ERA_INTROS, ERAS, EVENTS, KINGDOMS, LESSONS, RAID_KINDS, RAID_RESPONSE, TREE_BY_ID, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
 import {
@@ -555,6 +556,14 @@ export function DevPanel() {
             {label}
           </button>
         ))}
+        <button
+          type="button"
+          className="pixel-btn bg-[#4a3b2e] px-2 py-1"
+          onClick={() => (["build", "discover", "step", "event", "raid", "battle", "era", "win", "lose"] as const).forEach((k, i) => setTimeout(() => playSfx(k), i * 1400))}
+          title="Plays every sound effect in turn"
+        >
+          Sounds
+        </button>
         <button
           type="button"
           className="pixel-btn bg-[#4a3b2e] px-2 py-1"
