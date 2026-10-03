@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Color, InstancedMesh, Matrix4, Object3D } from "three";
+import { Color, DoubleSide, InstancedMesh, Matrix4, Object3D } from "three";
 import { highlight } from "./crowd";
 
 export interface Agent {
@@ -25,6 +25,8 @@ export interface Agent {
   held?: boolean;
   // 0–1: how far the figure has toppled over (fire victims).
   fallen?: number;
+  // A gold crown (the team cameos, an easter egg).
+  crown?: boolean;
 }
 
 export const SKINS = ["#f1c7a0", "#e0ac69", "#c68642", "#8d5524", "#f5d0b0"];
@@ -104,6 +106,7 @@ export function Figures({
   const torso = useRef<InstancedMesh>(null);
   const head = useRef<InstancedMesh>(null);
   const hair = useRef<InstancedMesh>(null);
+  const crown = useRef<InstancedMesh>(null);
   const legs = useRef<InstancedMesh>(null);
   const arms = useRef<InstancedMesh>(null);
   const tool = useRef<InstancedMesh>(null);
@@ -173,6 +176,9 @@ export function Figures({
       local.position.set(0, 0.475, -0.005);
       local.scale.set(1, 0.62, 1);
       put(hair.current, i);
+      local.position.set(0, 0.525, 0);
+      local.scale.setScalar(a.crown ? 1 : 0.0001);
+      put(crown.current, i);
       local.scale.set(1, 1, 1);
 
       // The weapon arm stays bent forward, gripping it, with only a small swing.
@@ -271,9 +277,9 @@ export function Figures({
       put(dust.current, i);
     }
 
-    for (const m of [torso, head, hair, tool, tip, helmet, crest, shield, marker, handle, toolHead, dust]) if (m.current) m.current.count = n;
+    for (const m of [torso, head, hair, crown, tool, tip, helmet, crest, shield, marker, handle, toolHead, dust]) if (m.current) m.current.count = n;
     for (const m of [legs, arms]) if (m.current) m.current.count = n * 2;
-    for (const m of [torso, head, hair, legs, arms, tool, tip, helmet, crest, shield, marker, handle, toolHead, dust]) {
+    for (const m of [torso, head, hair, crown, legs, arms, tool, tip, helmet, crest, shield, marker, handle, toolHead, dust]) {
       if (m.current) m.current.instanceMatrix.needsUpdate = true;
     }
   });
@@ -292,6 +298,10 @@ export function Figures({
       <instancedMesh ref={hair} args={[undefined, undefined, max]} {...common}>
         <sphereGeometry args={[0.062, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
         <meshStandardMaterial />
+      </instancedMesh>
+      <instancedMesh ref={crown} args={[undefined, undefined, max]} {...common}>
+        <cylinderGeometry args={[0.052, 0.046, 0.05, 6, 1, true]} />
+        <meshStandardMaterial color="#ffd23f" emissive="#b8860b" emissiveIntensity={0.5} metalness={0.6} roughness={0.3} side={DoubleSide} />
       </instancedMesh>
       <instancedMesh ref={marker} args={[undefined, undefined, max]} frustumCulled={false} raycast={() => null}>
         <octahedronGeometry args={[0.06, 0]} />

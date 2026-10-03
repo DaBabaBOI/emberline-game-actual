@@ -8,8 +8,11 @@ import type { Tile } from "@/game/types";
 import { Figures, type Agent } from "./figures";
 import { makeGround } from "./ground";
 import { grabStore, type Walker } from "./villagers";
+import { goldenDeer } from "@/components/civ/hud/eggs";
+import { GOLDEN_DEER_CHANCE } from "@/game/easter";
 
-type Kind = "deer" | "boar";
+// A golden deer turns up very rarely (an easter egg: a feast when hunted).
+type Kind = "deer" | "boar" | "golden";
 
 interface Animal {
   id: number;
@@ -30,20 +33,22 @@ interface Motion {
 // Legs hang from a pivot at the hip so they can swing while walking.
 type Legs = React.RefObject<(Group | null)[]>;
 
-function Deer({ legs }: { legs: Legs }) {
+function Deer({ legs, gold = false }: { legs: Legs; gold?: boolean }) {
+  // The golden deer shines a little (the bloom makes it glow).
+  const coat = (c: string) => (gold ? { color: "#f2c14e", emissive: "#b8860b", emissiveIntensity: 0.6, metalness: 0.4, roughness: 0.35 } : { color: c });
   return (
     <group>
       <mesh castShadow position={[0, 0.2, 0]}>
         <boxGeometry args={[0.12, 0.12, 0.28]} />
-        <meshStandardMaterial color="#9c6a3c" />
+        <meshStandardMaterial {...coat("#9c6a3c")} />
       </mesh>
       <mesh castShadow position={[0, 0.3, 0.13]} rotation={[0.6, 0, 0]}>
         <cylinderGeometry args={[0.03, 0.04, 0.14, 6]} />
-        <meshStandardMaterial color="#9c6a3c" />
+        <meshStandardMaterial {...coat("#9c6a3c")} />
       </mesh>
       <mesh castShadow position={[0, 0.37, 0.19]}>
         <boxGeometry args={[0.07, 0.07, 0.11]} />
-        <meshStandardMaterial color="#8a5c33" />
+        <meshStandardMaterial {...coat("#8a5c33")} />
       </mesh>
       {[-1, 1].map((s) => (
         <group key={s}>
@@ -61,7 +66,7 @@ function Deer({ legs }: { legs: Legs }) {
         <group key={i} position={[x, 0.16, z]} ref={(el) => void (legs.current[i] = el)}>
           <mesh castShadow position={[0, -0.08, 0]}>
             <cylinderGeometry args={[0.012, 0.01, 0.16, 5]} />
-            <meshStandardMaterial color="#6b4a2b" />
+            <meshStandardMaterial {...coat("#6b4a2b")} />
           </mesh>
         </group>
       ))}
@@ -115,7 +120,7 @@ function AnimalView({ animal, motion }: { animal: Animal; motion: React.RefObjec
     last.current.x = m.x;
     last.current.z = m.z;
     const walking = m.downAt === null && moved > 0.0005 && moved < 0.5;
-    if (walking) last.current.step += Math.min(delta, 0.1) * (animal.kind === "deer" ? 11 : 14);
+    if (walking) last.current.step += Math.min(delta, 0.1) * (animal.kind === "boar" ? 14 : 11);
     const swing = walking ? Math.sin(last.current.step) * 0.55 : 0;
     legs.current.forEach((leg, i) => {
       if (leg) leg.rotation.x = i === 0 || i === 3 ? swing : -swing;
@@ -129,7 +134,7 @@ function AnimalView({ animal, motion }: { animal: Animal; motion: React.RefObjec
       g.rotation.z = 0;
     }
   });
-  return <group ref={ref}>{animal.kind === "deer" ? <Deer legs={legs} /> : <Boar legs={legs} />}</group>;
+  return <group ref={ref}>{animal.kind === "boar" ? <Boar legs={legs} /> : <Deer legs={legs} gold={animal.kind === "golden"} />}</group>;
 }
 
 // Who goes hunting: a grown-up who is well, free (not working, carried or out
@@ -183,7 +188,8 @@ export function Wildlife({
     const now = clock.elapsedTime;
     const dt = Math.min(delta, 0.1);
 
-    if (animals.length < wanted && forests.length && Math.random() < 0.02) {
+    // The dev panel can call up the golden deer at once.
+    if ((animals.length < wanted || goldenDeer.wanted) && forests.length && (goldenDeer.wanted || Math.random() < 0.02)) {
       const home = forests[Math.floor(Math.random() * forests.length)];
       const id = nextId.current++;
       motion.current.set(id, {
@@ -195,7 +201,9 @@ export function Wildlife({
         wait: Math.random() * 3,
         downAt: null,
       });
-      setAnimals((list) => [...list, { id, kind: Math.random() < 0.65 ? "deer" : "boar", home }]);
+      const golden = goldenDeer.wanted || Math.random() < GOLDEN_DEER_CHANCE;
+      goldenDeer.wanted = false;
+      setAnimals((list) => [...list, { id, kind: golden ? "golden" : Math.random() < 0.65 ? "deer" : "boar", home }]);
     }
 
     for (const animal of animals) {
@@ -245,6 +253,7 @@ export function Wildlife({
               skin: who.skin,
               hair: who.hair,
               phase: who.phase,
+              crown: who.crown,
             },
           ];
         } else {
@@ -286,7 +295,7 @@ export function Wildlife({
       if (h.phase === "out" && prey && preyInfo) {
         prey.downAt = now;
         h.phase = "back";
-        onHunt(preyInfo.kind);
+        onHunt(preyInfo.kind === "golden" ? "golden deer" : preyInfo.kind);
         setTimeout(() => {
           motion.current.delete(preyInfo.id);
           setAnimals((list) => list.filter((a) => a.id !== preyInfo.id));

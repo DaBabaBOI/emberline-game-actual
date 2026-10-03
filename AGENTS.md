@@ -728,6 +728,19 @@ These were decided with the project owner. Do not change them without being aske
     `emberline-audio` (Menu > Sound, and the speaker in the top bar).
   - **Loudness:** keep the music around -20 to -26 dB RMS (measured with an
     analyser), or it is hard to hear on laptop speakers.
+- **Easter eggs** (`src/game/easter.ts`): the rules and texts. Each one found
+  counts once as a secret (`egg-<id>` in `secretsFound`, "Secrets found" in
+  Advancements) through the `easterEgg` action. The eggs are:
+  - team cameos (a people named after a team member, or "SHISTECH", get them
+    crowned with a name tag);
+  - Elder Ama poked 10 times;
+  - the Konami code (fireworks);
+  - a rare golden deer;
+  - a rare message-in-a-bottle moment;
+  - a palm islet out at sea, found by clicking it once you have a canoe.
+
+  Keep their jokes kind; they name real teammates. Dev buttons: Fireworks,
+  Golden deer, and the Moment picker's "bottle".
 - Keep the tutorial (`TUTORIAL` in `content.ts`) working when you change buildings.
 - **Elder Ama never covers what she asks for:** with Advancements open her
   panels sit between the tree's header and its details bar (`useSpotInTree()`

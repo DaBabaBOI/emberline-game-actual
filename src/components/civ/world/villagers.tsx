@@ -2,6 +2,8 @@
 
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
+import { Html } from "@react-three/drei";
+import type { Group } from "three";
 import { TICK_SECONDS } from "@/game/content";
 import { hexDistance } from "@/game/hex";
 import { isLand } from "@/game/map";
@@ -187,7 +189,10 @@ export function Villagers({
   litFires,
   sick = 0,
   era = 0,
+  cameos = [],
 }: {
+  // Team members who joined the tribe (an easter egg): crowned, with a name tag.
+  cameos?: string[];
   // Clothes change with the era.
   era?: number;
   tiles: Tile[];
@@ -219,6 +224,9 @@ export function Villagers({
 
   const ground = useMemo(() => makeGround(tiles), [tiles]);
   const count = figureCounts(population, soldiers).villagers;
+  // The cameos are the first grown-ups (every fourth figure is a child).
+  const cameoAt = cameos.map((_, k) => k + Math.floor(k / 3)).filter((i) => i < count);
+  const tags = useRef<(Group | null)[]>([]);
   const sickFigures = Math.min(count, Math.round(count * sick + (sick > 0 ? 0.49 : 0)));
 
   useFrame((_, delta) => {
@@ -272,9 +280,33 @@ export function Villagers({
     }
     shown.current = list.filter((w) => !w.goneUntil && !w.hunting);
     grabStore.walkers = shown.current;
+    // The cameos' crowns and name tags (hidden while they're away).
+    list.forEach((w, i) => {
+      w.crown = cameoAt.includes(i);
+    });
+    cameoAt.forEach((i, k) => {
+      const tag = tags.current[k];
+      const w = list[i];
+      if (!tag || !w) return;
+      tag.visible = !w.goneUntil && !w.hunting;
+      tag.position.set(w.x, w.y + 0.95 * w.scale, w.z);
+    });
   });
 
-  return <Figures agents={shown} max={MAX_FIGURES} colorKey={`${sickFigures}|${era}`} group="people" />;
+  return (
+    <>
+      <Figures agents={shown} max={MAX_FIGURES} colorKey={`${sickFigures}|${era}`} group="people" />
+      {cameoAt.map((_, k) => (
+        <group key={cameos[k]} ref={(el) => void (tags.current[k] = el)}>
+          <Html zIndexRange={[12, 0]} center style={{ pointerEvents: "none" }}>
+            <span className="font-pixel whitespace-nowrap rounded-sm bg-[#2b2119]/80 px-1 text-[10px] text-amber-200" data-testid="cameo-tag">
+              {cameos[k]}
+            </span>
+          </Html>
+        </group>
+      ))}
+    </>
+  );
 }
 
 export function Warriors({

@@ -25,6 +25,7 @@ const LABELS: Record<string, { icon: IconId; text: string }> = {
   birds: { icon: "leaf", text: "The birds are back" },
   mice: { icon: "warning", text: "Mice in the stores" },
   dust: { icon: "rock", text: "Dust off the bare land" },
+  bottle: { icon: "scroll", text: "A message in a bottle!" },
 };
 
 // Seconds since this moment began (the scene mounts fresh for each one).
@@ -202,6 +203,39 @@ export function Mice() {
   );
 }
 
+// A green glass bottle with a rolled message inside, rocking on the sand.
+function Bottle() {
+  const ref = useRef<Group>(null);
+  useFrame(({ clock }) => {
+    const g = ref.current;
+    if (!g) return;
+    const t = clock.elapsedTime;
+    g.rotation.set(Math.PI / 2 + Math.sin(t * 2) * 0.08, t * 0.3, Math.sin(t * 1.4) * 0.25);
+    g.position.y = 0.08 + Math.sin(t * 2.2) * 0.02;
+  });
+  return (
+    <group ref={ref} position={[0.35, 0.08, 0.2]}>
+      <mesh castShadow>
+        <cylinderGeometry args={[0.07, 0.07, 0.26, 10]} />
+        <meshStandardMaterial color="#3f8f5a" transparent opacity={0.65} roughness={0.1} />
+      </mesh>
+      <mesh position={[0, 0.17, 0]}>
+        <cylinderGeometry args={[0.03, 0.05, 0.09, 8]} />
+        <meshStandardMaterial color="#3f8f5a" transparent opacity={0.65} roughness={0.1} />
+      </mesh>
+      <mesh position={[0, 0.23, 0]}>
+        <cylinderGeometry args={[0.028, 0.028, 0.04, 8]} />
+        <meshStandardMaterial color="#8b5a2b" />
+      </mesh>
+      {/* The rolled-up message inside. */}
+      <mesh>
+        <cylinderGeometry args={[0.035, 0.035, 0.18, 8]} />
+        <meshStandardMaterial color="#f4efe6" />
+      </mesh>
+    </group>
+  );
+}
+
 function Scene({ id, tile }: { id: string; tile: Tile }) {
   switch (id) {
     case "berries":
@@ -222,6 +256,8 @@ function Scene({ id, tile }: { id: string; tile: Tile }) {
       return <Mice />;
     case "dust":
       return <Wind color="#c9a46a" opacity={0.7} />;
+    case "bottle":
+      return <Bottle />;
     default:
       return null;
   }

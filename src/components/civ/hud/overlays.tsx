@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { goldenDeer, launchFireworks, useKonami } from "./eggs";
 import { playShot } from "./letterbox";
 import { playSfx } from "@/lib/audio";
 import { setTimeOfDay } from "./time-of-day";
@@ -25,6 +26,69 @@ import { PixelIcon } from "@/components/civ/pixel-icon";
 import { useGuide } from "./guide-overlay";
 import { PlagueBanner, RebellionBanner } from "./medieval";
 
+// An easter egg: poke Elder Ama's picture and she gets grumpier; the tenth poke
+// earns a secret.
+const AMA_LINES: Record<number, string> = {
+  3: "Yes, child?",
+  5: "I am listening, I promise.",
+  7: "Please stop poking me.",
+  9: "I am 74 years old, child.",
+};
+let amaPokes = 0;
+
+function AmaFace() {
+  const { dispatch } = useGame();
+  const [line, setLine] = useState<string | null>(null);
+  const hide = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (hide.current) clearTimeout(hide.current);
+  }, []);
+  const say = (text: string) => {
+    setLine(text);
+    if (hide.current) clearTimeout(hide.current);
+    hide.current = setTimeout(() => setLine(null), 2500);
+  };
+  return (
+    <span className="relative inline-flex">
+      <button
+        type="button"
+        aria-label="Elder Ama"
+        data-testid="ama-face"
+        onClick={() => {
+          amaPokes++;
+          if (amaPokes >= 10) {
+            amaPokes = 0;
+            dispatch({ type: "easterEgg", id: "ama" });
+            playSfx("discover");
+            say("Fine. Here is a secret for you.");
+          } else if (AMA_LINES[amaPokes]) {
+            playSfx("ama");
+            say(AMA_LINES[amaPokes]);
+          }
+        }}
+      >
+        <PixelIcon name="elder" size={28} />
+      </button>
+      {line && (
+        <span className="pixel-panel font-pixel absolute left-9 top-0 z-10 whitespace-nowrap px-2 py-0.5 text-xs" data-testid="ama-line">
+          {line}
+        </span>
+      )}
+    </span>
+  );
+}
+
+// The Konami code sets off fireworks over the village (an easter egg).
+export function KonamiFireworks() {
+  const { dispatch } = useGame();
+  const fire = useCallback(() => {
+    launchFireworks();
+    dispatch({ type: "easterEgg", id: "fireworks" });
+  }, [dispatch]);
+  useKonami(fire);
+  return null;
+}
+
 // One short line per step; the why is behind "Tell me more".
 export function TutorialPanel() {
   const { state, dispatch } = useGame();
@@ -38,7 +102,7 @@ export function TutorialPanel() {
     <div className="pixel-panel pointer-events-auto relative z-[26] w-full p-2.5 md:p-3" data-testid="tutorial">
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="font-pixel flex items-center gap-2 text-base font-semibold">
-          <PixelIcon name="elder" size={28} />
+          <AmaFace />
           Elder Ama
         </span>
         <span className="font-num text-xs text-amber-800/70">
@@ -78,7 +142,7 @@ export function CoachPanel() {
   return (
     <div className="pixel-panel pointer-events-auto relative z-[26] w-full p-2.5 text-xs md:p-3 md:text-sm" data-testid="coach">
       <div className="mb-1 flex items-center gap-2">
-        <PixelIcon name="elder" size={28} />
+        <AmaFace />
         <span className="font-pixel flex flex-col leading-tight">
           <span className="text-[11px] text-amber-800/80">New: {TREE_BY_ID[state.coach!.node]?.name}</span>
           <span className="text-base font-semibold">Elder Ama</span>
@@ -118,7 +182,7 @@ export function ElderLesson() {
       data-testid="elder-lesson"
     >
       <div className="mb-1 flex items-center gap-2">
-        <PixelIcon name="elder" size={28} />
+        <AmaFace />
         <span className="font-pixel flex flex-col leading-tight">
           <span className="text-[11px] text-amber-800/80">{farewell || intro ? "Elder Ama" : "Elder Ama\u2019s lesson"}</span>
           <span className="text-base font-semibold">{lesson.title}</span>
@@ -556,6 +620,26 @@ export function DevPanel() {
             {label}
           </button>
         ))}
+        <button
+          type="button"
+          className="pixel-btn bg-[#4a3b2e] px-2 py-1"
+          onClick={() => {
+            launchFireworks();
+            dispatch({ type: "easterEgg", id: "fireworks" });
+          }}
+        >
+          Fireworks
+        </button>
+        <button
+          type="button"
+          className="pixel-btn bg-[#4a3b2e] px-2 py-1"
+          onClick={() => {
+            goldenDeer.wanted = true;
+          }}
+          title="The next animal in the forest is the golden deer"
+        >
+          Golden deer
+        </button>
         <button
           type="button"
           className="pixel-btn bg-[#4a3b2e] px-2 py-1"

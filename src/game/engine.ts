@@ -103,6 +103,7 @@ import { diseaseName, isCalm, maybeOutbreak, sickShare, stepDisease } from "./di
 import { hexDistance } from "./hex";
 import { generateMap, ISLANDS, isLand, revealAround, riverPath, terrainHeight } from "./map";
 import { mulberry32 } from "./noise";
+import { cameosFor, EGGS, GOLDEN_DEER_FOOD, type EggId } from "./easter";
 import type { IconId } from "./sprites";
 import type {
   Goal,
@@ -148,6 +149,7 @@ export type Action =
   | { type: "skipTutorial" }
   | { type: "train" }
   | { type: "hunt"; animal: string }
+  | { type: "easterEgg"; id: EggId }
   | { type: "demolish"; tileId: number }
   | { type: "devGrant" }
   | { type: "devPeople" }
@@ -269,7 +271,8 @@ export function newGame(
     tutorialStep: 0,
     event: null,
     nextEventTick: 90,
-    log: [`${cleanNation(options.nation)} gather on the shores of Westmarch.`],
+    // Team cameos (easter eggs): their joke, newest first, after the opening line.
+    log: [...cameosFor(options.nation).map((m) => m.joke).reverse(), `${cleanNation(options.nation)} gather on the shores of Westmarch.`],
   };
   state.forestBaseline = forestGrowthNearHome(state);
   // Elder Ama hands over what each tutorial step needs when it starts (see
@@ -3134,6 +3137,9 @@ interface Moment {
   text: string;
   // Where on the map it happens (shown there for a few seconds).
   where: (s: GameState) => Tile | undefined;
+  // Rare moments only come up this share of the times they could (never
+  // skipped when the dev panel asks for one).
+  rare?: number;
 }
 
 // Places for a moment to happen, nearest the village first.
@@ -3214,7 +3220,35 @@ const MOMENTS: Moment[] = [
     where: (s) => aBuilding(s, ["hut", "house", "gatherer", "farm"]) ?? s.tiles[s.startTile],
   },
   { id: "dust", when: (s) => forestCover(s) < 0.5, apply: (s) => addMood(s, -3), text: "Wind blew dust off the bare land where the forest used to be.", where: bareLand },
+  {
+    // An easter egg: now and then (not every time it could), and only once a game.
+    id: "bottle",
+    when: (s) => !s.secretsFound.includes("egg-bottle") && nearHome(s, (t) => t.terrain === "beach" && !t.building).length > 0,
+    rare: 0.1,
+    apply: (s) => {
+      const found = findEgg(s, "bottle");
+      // The moment adds its own line; keep just one.
+      return { ...found, log: s.log };
+    },
+    text: EGGS.bottle.text,
+    where: (s) => nearHome(s, (t) => t.terrain === "beach" && !t.building)[0],
+  },
 ];
+
+// An easter egg found: counted once with the secrets, its line in the log, and
+// its small reward (the first time only). Fireworks can go off again and again.
+function findEgg(state: GameState, id: EggId): GameState {
+  const egg = EGGS[id];
+  const key = `egg-${id}`;
+  const first = !state.secretsFound.includes(key);
+  return {
+    ...state,
+    secretsFound: first ? [...state.secretsFound, key] : state.secretsFound,
+    resources: first && egg.knowledge ? { ...state.resources, knowledge: state.resources.knowledge + egg.knowledge } : state.resources,
+    modifiers: first && egg.mood ? { ...state.modifiers, happiness: state.modifiers.happiness + egg.mood } : state.modifiers,
+    log: [egg.text, ...state.log].slice(0, 30),
+  };
+}
 
 // Dev: `force` picks which moment (if it can happen right now).
 export const MOMENT_IDS = () => MOMENTS.map((m) => m.id);
@@ -3226,7 +3260,8 @@ export function smallMoment(state: GameState, force?: string): GameState {
   if (state.event || state.raid || state.legion) return { ...state, nextMomentTick: state.tick + 5 };
   const rand = mulberry32(state.seed + state.tick * 61);
   const last = state.lastMoment;
-  const options = MOMENTS.filter((m) => (force ? m.id === force : m.id !== last) && m.when(state));
+  const lucky = mulberry32(state.seed + state.tick * 13)();
+  const options = MOMENTS.filter((m) => (force ? m.id === force : m.id !== last && (!m.rare || lucky < m.rare)) && m.when(state));
   const next = state.tick + SMALL_MOMENTS.base + Math.floor(rand() * SMALL_MOMENTS.spread);
   if (!options.length) return { ...state, nextMomentTick: next };
   const moment = options[Math.floor(rand() * options.length)];
@@ -5089,7 +5124,13 @@ function step(state: GameState, action: Action): GameState {
       if (!state.dev) return state;
       return { ...state, tiles: state.tiles.map((t) => (t.revealed ? t : { ...t, revealed: true })) };
 
+    case "easterEgg":
+      return withMeters(findEgg(state, action.id));
+
     case "hunt":
+      if (action.animal === "golden deer") {
+        return findEgg(addTally({ ...state, resources: { ...state.resources, food: state.resources.food + GOLDEN_DEER_FOOD } }, "hunts", 1), "golden-deer");
+      }
       return maybeOutbreak({
         ...addTally(state, "hunts", 1),
         resources: { ...state.resources, food: state.resources.food + HUNT_FOOD },
