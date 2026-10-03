@@ -22,31 +22,44 @@ import { PixelIcon } from "@/components/civ/pixel-icon";
 import { useGuide } from "./guide-overlay";
 import { PlagueBanner, RebellionBanner } from "./medieval";
 
+// One short line per step; the why is behind "Tell me more".
 export function TutorialPanel() {
   const { state, dispatch } = useGame();
   const { waiting } = useGuide();
   const step = TUTORIAL[state.tutorialStep];
+  // Which step's "more" is open (it closes by itself on the next step).
+  const [moreFor, setMoreFor] = useState<number | null>(null);
   if (!step) return null;
+  const more = moreFor === state.tutorialStep;
   return (
-    <div className="pixel-panel pointer-events-auto relative z-[26] w-full p-2.5 text-xs md:p-3 md:text-sm">
+    <div className="pixel-panel pointer-events-auto relative z-[26] w-full p-2.5 md:p-3" data-testid="tutorial">
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="font-pixel flex items-center gap-2 text-base font-semibold">
           <PixelIcon name="elder" size={28} />
           Elder Ama
         </span>
-        <span className="text-[11px] text-amber-800/70">
+        <span className="font-num text-xs text-amber-800/70">
           {state.tutorialStep + 1}/{TUTORIAL.length}
         </span>
       </div>
-      <p>{step.text}</p>
+      <p className="text-sm font-semibold leading-snug md:text-base" data-testid="tutorial-text">
+        {step.text}
+      </p>
       {waiting && <p className="mt-1 text-xs italic text-amber-800">{waiting}</p>}
-      <button
-        type="button"
-        onClick={() => dispatch({ type: "skipTutorial" })}
-        className="mt-2 text-xs text-stone-500 underline"
-      >
-        Skip tutorial
-      </button>
+      {more && <p className="mt-1.5 text-xs leading-relaxed text-stone-600">{step.more}</p>}
+      <div className="mt-2 flex items-center justify-between gap-2 text-xs">
+        <button
+          type="button"
+          onClick={() => setMoreFor(more ? null : state.tutorialStep)}
+          className="text-amber-800 underline"
+          data-testid="tutorial-more"
+        >
+          {more ? "Less" : "Tell me more"}
+        </button>
+        <button type="button" onClick={() => dispatch({ type: "skipTutorial" })} className="text-stone-500 underline">
+          Skip tutorial
+        </button>
+      </div>
     </div>
   );
 }

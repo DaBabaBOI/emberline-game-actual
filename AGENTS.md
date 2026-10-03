@@ -94,8 +94,17 @@ These were decided with the project owner. Do not change them without being aske
 - **Tutorial budget:** Elder Ama hands over each step's exact cost when the step
   starts (`tutorialBudget(state, [step])` in `advanceTutorial`), plus
   `TUTORIAL_START_FOOD` (20) at the start and the rest of `AFTER_TUTORIAL_RESERVE`
-  (40 food, 10 wood in all) at the goodbye. There is never a big pile. When you
+  (40 food, 10 wood in all) at the goodbye, plus the cost of the building the
+  last step's coach asks for. There is never a big pile. When you
   add or change a tutorial step, fill in its `buys`.
+- **The tutorial is short: five one-line steps** (fire, woodcutter, house,
+  gatherer, Early Farming). Each step's `text` is one short sentence; the why
+  goes in `more` ("Tell me more"). Everything else is learned by playing: when
+  it ends, a War Camp with one warrior is handed over, Elder Ama coaches the
+  Farmland (`AFTER_STEPS`), and then says a one-line goodbye
+  (`farewellAfterCoach`). "I've played before" on the title screen starts with
+  the tutorial skipped (`NewGameOptions.skipTutorial`). Keep new tutorial and
+  coach text to one line; players found long text tiring to read.
 - **People on the map are representative:** at most 20 figures at once
   (`MAX_FIGURES` / `figureCounts()` in `world/villagers.tsx`), roughly one per
   three people and one per two warriors. Food use still scales with the real

@@ -213,6 +213,8 @@ export type Action =
 
 export interface NewGameOptions {
   dev?: boolean;
+  // "I've played before": start with the tutorial already done.
+  skipTutorial?: boolean;
   startEra?: number;
   nation?: string;
 }
@@ -275,6 +277,7 @@ export function newGame(
   state.resources = tutorialBudget(state, [0]);
   state.resources.food += TUTORIAL_START_FOOD;
   const started = options.dev ? applyDevStart(state, options.startEra ?? 0) : state;
+  if (options.skipTutorial && !options.dev) return reducer({ ...started, meters: computeMeters(started) }, { type: "skipTutorial" });
   return { ...started, meters: computeMeters(started) };
 }
 
@@ -2733,7 +2736,7 @@ function advanceCoach(state: GameState): GameState {
   const c = state.coach;
   if (!c) return state;
   const step = AFTER_STEPS[c.node];
-  if ((step?.build || step?.upgrade) && coachCount(state, c.node) > c.from) return { ...state, coach: null };
+  if ((step?.build || step?.upgrade) && coachCount(state, c.node) > c.from) return farewellAfterCoach({ ...state, coach: null }, c.node);
   return state;
 }
 
@@ -2868,8 +2871,49 @@ function advanceTutorial(state: GameState): GameState {
   const resources = { ...next.resources };
   for (const [k, v] of Object.entries(gift)) resources[k as keyof Resources] += v ?? 0;
   if (next.tutorialStep < TUTORIAL.length) return { ...next, resources };
-  // Elder Ama says goodbye; the next real lesson waits its usual gap after this.
-  return startGrace({ ...next, resources, lesson: TUTORIAL_FAREWELL.id, lessonTick: state.tick });
+  // The tutorial ends on Early Farming: Elder Ama walks them through placing
+  // Farmland (the coach), then says goodbye (see farewellAfterCoach). A War
+  // Camp with one warrior is handed over, so raids can be learned by playing.
+  const tiles = state.tiles.map((t) => ({ ...t }));
+  const soldiers = countBuildings(state).warcamp ? state.soldiers : giveWarCamp(tiles, state);
+  const coach = AFTER_STEPS[step.done] ? { node: step.done, from: coachCount(state, step.done) } : null;
+  // ...and what the coached building costs, so they never wait for it.
+  const build = coach ? AFTER_STEPS[coach.node].build : undefined;
+  if (build) {
+    for (const [k, v] of Object.entries(buildingCost(next, BUILDINGS_BY_ID[build]))) resources[k as keyof Resources] += v ?? 0;
+  }
+  return startGrace({
+    ...next,
+    tiles,
+    soldiers,
+    resources,
+    coach,
+    ...(coach ? {} : { lesson: TUTORIAL_FAREWELL.id, lessonTick: state.tick }),
+  });
+}
+
+// Right after the tutorial's last coached step, Elder Ama says goodbye.
+function farewellAfterCoach(state: GameState, node: string): GameState {
+  if (node !== TUTORIAL[TUTORIAL.length - 1].done || (state.lessonsSeen ?? []).includes(TUTORIAL_FAREWELL.id)) return state;
+  return {
+    ...state,
+    lesson: TUTORIAL_FAREWELL.id,
+    lessonTick: state.tick,
+    lessonsSeen: [...(state.lessonsSeen ?? []), TUTORIAL_FAREWELL.id],
+  };
+}
+
+// A War Camp near home with one trained warrior (the tutorial ends with one, so
+// the first raid isn't a free win for the raiders). Returns the warriors after.
+function giveWarCamp(tiles: Tile[], state: GameState): number {
+  const home = tiles[state.startTile];
+  const camp = BUILDINGS_BY_ID.warcamp;
+  const spot = tiles
+    .filter((t) => t.revealed && camp.terrain.includes(t.terrain) && !t.building)
+    .sort((a, b) => hexDistance(a, home) - hexDistance(b, home))[0];
+  if (!spot) return state.soldiers;
+  spot.building = "warcamp";
+  return Math.max(state.soldiers, 1);
 }
 
 // The world's troubles start a little after the tutorial ends, not during it.
@@ -4377,18 +4421,7 @@ function step(state: GameState, action: Action): GameState {
         if (spot) spot.building = "gatherer";
       }
       // ...and the War Camp with one trained warrior, so the first raid isn't a free win for the raiders.
-      let soldiers = state.soldiers;
-      if (!counts.warcamp) {
-        const home = tiles[state.startTile];
-        const camp = BUILDINGS_BY_ID.warcamp;
-        const spot = tiles
-          .filter((t) => t.revealed && camp.terrain.includes(t.terrain) && !t.building)
-          .sort((a, b) => hexDistance(a, home) - hexDistance(b, home))[0];
-        if (spot) {
-          spot.building = "warcamp";
-          soldiers = Math.max(soldiers, 1);
-        }
-      }
+      const soldiers = counts.warcamp ? state.soldiers : giveWarCamp(tiles, state);
       // A Wooden House (not beside the fire: sparks) and a field on open grass.
       const home = tiles[state.startTile];
       const free = (t: Tile, terrain: string[]) => t.revealed && terrain.includes(t.terrain) && !t.building;
@@ -5042,7 +5075,7 @@ function step(state: GameState, action: Action): GameState {
     }
 
     case "endCoach":
-      return { ...state, coach: null };
+      return state.coach ? farewellAfterCoach({ ...state, coach: null }, state.coach.node) : state;
 
     case "devCutHills":
       // Finish every quarry's cut at once, to see the scar.

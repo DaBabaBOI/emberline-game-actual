@@ -1539,7 +1539,7 @@ export const PLANT_COST = { food: 4 };
 export const TUTORIAL_FAREWELL = {
   id: "farewell",
   title: "You are ready, chief",
-  text: "You have warmth, wood, homes, food, guards and fields. From here the choices are yours. Raiders, sickness and hard years will come, so keep food stored and fires lit. And watch the forest: once it is gone, it takes a lifetime to return. I will speak up when I see something you should know.",
+  text: "A War Camp and one warrior now guard us. Keep food stored, fires lit, and the forest standing. The rest is up to you.",
   sdg: "SDG 11: make cities and communities inclusive, safe, resilient and sustainable",
 };
 
@@ -2576,14 +2576,44 @@ export const AFTER_TUTORIAL_RESERVE: Partial<Resources> = { food: 40, wood: 10 }
 export const TUTORIAL_START_FOOD = 20;
 
 // `buys` lists what the step pays for: building ids, "scout", "train" or an
-// advancement id. The starting resources are worked out from it.
-export const TUTORIAL: { text: string; done: string; unlocks: string[]; buys: string[] }[] = [
-  { text: "Welcome, chief. Our people are cold and tired after the long walk. First, warmth: pick the Campfire below and place it on open grass. Look at what it gives us, and what it costs.", done: "campfire", unlocks: ["campfire"], buys: ["campfire"] },
-  { text: "Feel that warmth! But a fire eats wood, and so will everything we build. Put a Woodcutter in the forest. See the little tree stumps in the corner of each building below? They show how hard it is on the land: the more stumps, the more harm. A leaf means it is gentle. The Woodcutter has three, because every tree it cuts takes many years to grow back.", done: "woodcutter", unlocks: ["woodcutter"], buys: ["woodcutter"] },
-  { text: "Wood is coming in. Now our people need a roof. Build a Wooden House, and more families can join us. Not right beside the fire, though: sparks can set wood alight. Leave a patch of ground between them.", done: "hut", unlocks: ["hut"], buys: ["hut"] },
-  { text: "A roof over our heads, but empty bellies. Place a Gatherer's Camp to collect wild food. Berry bushes give more.", done: "gatherer", unlocks: ["gatherer"], buys: ["gatherer"] },
-  { text: "Food is coming. But we don't know what lies beyond these hills. Press Scout and send our young ones to look.", done: "scout", unlocks: ["scout"], buys: ["scout"] },
-  { text: "The scouts saw smoke from other camps, and not everyone out there is friendly. Build a War Camp, then train our first warrior.", done: "train", unlocks: ["warcamp", "train"], buys: ["warcamp", "train"] },
-  { text: "With a guard at the camp, we can think about tomorrow. Every first thing we do teaches us something: the first fire, the first hut, the first time our tribe grows. That learning is Knowledge, the bulb at the top, and one day an Elder's Hut will help the children learn faster. Now, I have noticed wild grain sprouting wherever seeds fall. What if we planted them ourselves? Open Advancements and spend our Knowledge on Early Farming.", done: "early-farming", unlocks: ["advancements"], buys: ["early-farming"] },
-  { text: "Now we know how to plant. Place Farmland on open grass. Fields feed many, but they take the land from the wild, and the forest beside them. Fewer trees, less rain. Everything has a price, chief. Choosing which to pay is up to you.", done: "farm", unlocks: ["farm"], buys: ["farm"] },
+// advancement id. The starting resources are worked out from it. `text` is one
+// short line (the hand shows where to click); `more` is the why, behind "Tell
+// me more". Everything else is learned by playing: the goal line, the coach
+// after each advancement, and Elder Ama when something new happens.
+export const TUTORIAL: { text: string; more: string; done: string; unlocks: string[]; buys: string[] }[] = [
+  {
+    text: "Our people are cold. Place a Campfire on open grass.",
+    more: "A fire keeps people warm and cooks their food. Every building shows what it gives us and what it costs the land.",
+    done: "campfire",
+    unlocks: ["campfire"],
+    buys: ["campfire"],
+  },
+  {
+    text: "Fires need wood. Place a Woodcutter in the forest.",
+    more: "The stumps in a building's corner show how hard it is on the land: more stumps, more harm. A tree takes years to grow back and a moment to cut.",
+    done: "woodcutter",
+    unlocks: ["woodcutter"],
+    buys: ["woodcutter"],
+  },
+  {
+    text: "Now a roof. Build a Wooden House, away from the fire.",
+    more: "More homes let more families join us. Sparks can set wood alight, so leave a patch of ground between a house and a fire.",
+    done: "hut",
+    unlocks: ["hut"],
+    buys: ["hut"],
+  },
+  {
+    text: "Hungry bellies. Place a Gatherer's Camp for wild food.",
+    more: "Berry bushes give more. The wild only has so much to give, so too many camps hunt the animals faster than they can have young.",
+    done: "gatherer",
+    unlocks: ["gatherer"],
+    buys: ["gatherer"],
+  },
+  {
+    text: "Open Advancements and learn Early Farming.",
+    more: "Every first thing we do teaches us something: that is Knowledge, the bulb at the top. Spend it in Advancements to learn new things.",
+    done: "early-farming",
+    unlocks: ["advancements"],
+    buys: ["early-farming"],
+  },
 ];

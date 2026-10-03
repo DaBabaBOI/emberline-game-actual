@@ -144,6 +144,14 @@ export function TitleScreen({
             >
               {canContinue ? "Start a new game" : "Start"}
             </button>
+            <button
+              type="button"
+              onClick={() => start({ nation, skipTutorial: true })}
+              className="pixel-btn font-pixel mt-2 w-full bg-white py-2 text-base text-stone-700 hover:bg-stone-50"
+              data-testid="start-skip-tutorial"
+            >
+              I&apos;ve played before: skip the tutorial
+            </button>
           </div>
 
           {devMode && (
