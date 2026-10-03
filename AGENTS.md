@@ -108,6 +108,9 @@ These were decided with the project owner. Do not change them without being aske
   shows `sustainabilityBreakdown()` (every part pushing it down or up) and the
   trend over the last minute. A new building or mechanic that affects the land
   must add its own line to the breakdown and its own gain/cost text.
+  Each part that costs the land should also carry a `fix` (what exactly to do
+  about it, with counts); "What should I fix?" in that panel lists the three
+  costliest parts that have one.
 - **Sustainable alternatives exist for the big choices.** Clicking a building
   opens its info panel (`world/building-info.tsx`). Woodcutters can
   **clear-cut** (full wood, strips the forest) or log **selectively** (half the
