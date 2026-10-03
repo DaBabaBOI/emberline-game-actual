@@ -576,7 +576,9 @@ export function placementError(state: GameState, tile: Tile, def: BuildingDef): 
   } else if (def.id === "tradingpost") return "Only on an island our ships have found";
   if (def.unique && (countBuildings(state)[def.id] ?? 0) >= 1) return "There is only one";
   const ploughed = def.id === "farm" && tile.terrain === "forest" && state.researched.includes("heavy-plough");
-  if (!def.terrain.includes(tile.terrain) && !ploughed) return `Needs ${def.terrain.join(" / ")}`;
+  const onBank = !!def.riverTerrain?.includes(tile.terrain) && touchesRiver(state, tile);
+  if (!def.terrain.includes(tile.terrain) && !ploughed && !onBank)
+    return def.riverTerrain ? `Needs ${def.terrain.join(" / ")}, or the river bank` : `Needs ${def.terrain.join(" / ")}`;
   if (def.needsWaterNeighbor) {
     const touchesWater = state.tiles.some(
       (t) => !isLand(t.terrain) && hexDistance(t, tile) === 1,
