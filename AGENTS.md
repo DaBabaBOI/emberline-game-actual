@@ -111,6 +111,12 @@ These were decided with the project owner. Do not change them without being aske
   Each part that costs the land should also carry a `fix` (what exactly to do
   about it, with counts); "What should I fix?" in that panel lists the three
   costliest parts that have one.
+- **Every meter explains itself** (`meterBreakdown()` / `meterFixes()` in the
+  engine, `MeterPanel` in `hud/side-meters.tsx`). Its parts must add up to what
+  `computeMeters()` gives, so a change to a meter's formula must change its
+  breakdown too. A part that holds the meter back gets a `fix` and a `gain`
+  (roughly how much the fix adds); suggestions only name buildings the player
+  can build now, or the advancement that unlocks them.
 - **Sustainable alternatives exist for the big choices.** Clicking a building
   opens its info panel (`world/building-info.tsx`). Woodcutters can
   **clear-cut** (full wood, strips the forest) or log **selectively** (half the

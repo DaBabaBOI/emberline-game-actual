@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Every meter now explains itself: click Food, Shelter, Happiness, Literacy, Energy or Sustainability to see each thing pushing it up or down, and press \"What should I fix?\" for the three changes that would raise it most.",
       "Hunters are now your own people: someone from a gatherer's camp (or someone free) walks out, hunts, and walks back to where they set out. Nobody appears out of, or disappears into, the fire any more.",
       "Click the Sustainability meter, then \"What should I fix?\": it lists the three things costing the land the most, and exactly what to do about each.",
       "Fishing Spots can now go on the river bank as well as on beaches. Watch Fires can only go on beaches, where the lookouts can see boats coming.",
