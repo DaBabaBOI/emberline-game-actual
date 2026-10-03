@@ -689,6 +689,31 @@ These were decided with the project owner. Do not change them without being aske
   along an angle). Angles use the arms' convention: 0 = straight down,
   -PI/2 = straight ahead, -PI = straight up; figures face +z. Check new poses
   side-on in a browser before shipping.
+- **The look of the world** (`world/sky.tsx`, `water.tsx`, `effects.tsx`,
+  `cinematic.tsx`):
+  - **Day and night:** a day is `DAY_TICKS` (120) ticks, so it pauses and
+    speeds up with the game. `LOOKS` sets the sky, sun, sky light and fog for
+    each time of day. Keep sunset and night bright enough to play: players
+    found a dark sunset hard to see. "Day and night" off (Menu) holds it at
+    late morning.
+  - **Lights:** the sun (or moon) is the only shadow light. Firelight at night
+    is a fixed pool of 6 point lights (adding or removing lights rebuilds every
+    material).
+  - **Sea and clouds:** the sea is a see-through surface at `SEA_LEVEL` with
+    waves drawn in its lighting. Clouds turn invisible when the camera is among
+    them but keep casting shadows.
+  - **Graphics** (`src/lib/graphics.ts`): "fancy" adds the film look
+    (`@react-three/postprocessing`: ambient occlusion, bloom, per-era grade,
+    vignette, ACES tone mapping), firelight and 2048 shadows. "fast" is the
+    default on phones, and a game under 24 fps drops to it by itself.
+  - **Camera shots:** the fly-in at a new game and a turn round the village at
+    each new era, with black bars, a title and a fading HUD
+    (`hud/letterbox.tsx`). A click or key skips them, and none play for
+    reduced-motion players.
+  - **Rules:** shared materials and per-frame scratch objects are module-level
+    (the React compiler forbids mutating hook values in `useFrame`). Code the
+    HUD needs (shot store, time of day) lives outside `world/`, so the HUD
+    doesn't load three.js.
 - Keep the tutorial (`TUTORIAL` in `content.ts`) working when you change buildings.
 - **Elder Ama never covers what she asks for:** with Advancements open her
   panels sit between the tree's header and its details bar (`useSpotInTree()`

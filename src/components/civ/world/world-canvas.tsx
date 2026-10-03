@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Vector3 } from "three";
-import { Html, MapControls } from "@react-three/drei";
-import { BUILDINGS_BY_ID, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL, WEAR } from "@/game/content";
+import { Html, MapControls, PerformanceMonitor } from "@react-three/drei";
+import { BUILDINGS_BY_ID, ERAS, formatYear, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL, WEAR } from "@/game/content";
 import {
   buildingCost,
   DEMOLISH_TOOL,
@@ -46,7 +46,13 @@ import { PickUp } from "./pick-up";
 import { SeaTraffic, TradeShips, WaitingShips } from "./trade";
 import { Cracks, DisasterDust, disasterView, FloodWater, QuakeShake, Rubble, StormRain } from "./disasters";
 import { Wildlife } from "./wildlife";
-import { CampfireSmoke, Haze, Wildfire } from "./atmosphere";
+import { CampfireSmoke, Wildfire } from "./atmosphere";
+import { Clouds, DaySky, FireLights } from "./sky";
+import { Sea } from "./water";
+import { FilmLook } from "./effects";
+import { CinematicCamera } from "./cinematic";
+import { playShot, useShot } from "@/components/civ/hud/letterbox";
+import { useDaylight, useGraphics } from "@/lib/graphics";
 import { UnderConstruction } from "./medieval-models";
 import { Mice } from "./moments";
 
@@ -122,8 +128,36 @@ function GuideAnchor({ tile }: { tile: Tile | null }) {
   return null;
 }
 
+// "The Stone Age", "The Ancient Era", "The Medieval & Renaissance Era".
+function eraTitle(name: string) {
+  return name.endsWith("Age") ? `The ${name}` : `The ${name} Era`;
+}
+
 export function WorldCanvas() {
-  const { state, dispatch, selected, setSelected, panel } = useGame();
+  const { state, dispatch, selected, setSelected, panel, clock } = useGame();
+  const graphics = useGraphics();
+  // A computer that can't keep up with the film look (under 24 frames a
+  // second for a few seconds) drops to "fast" for the rest of this visit.
+  const [struggling, setStruggling] = useState(false);
+  const fancy = graphics === "fancy" && !struggling;
+  const daylight = useDaylight();
+  const shot = useShot();
+  // Camera shots: the fly-in when a new game starts, a turn round the village
+  // when a new era begins.
+  const shownEra = useRef(state.era);
+  useEffect(() => {
+    if (state.tick === 0 && state.tutorialStep === 0 && !state.dev) {
+      playShot({ kind: "intro", title: state.nation ?? "The Emberfolk", subtitle: `${ERAS[0].name} · ${formatYear(state.year)}`, seconds: 6 });
+    }
+    // Only on the first render of this game.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (state.era > shownEra.current) {
+      playShot({ kind: "era", title: eraTitle(ERAS[state.era].name), subtitle: formatYear(state.year), seconds: 9 });
+    }
+    shownEra.current = state.era;
+  }, [state.era, state.year]);
   const [rawHovered, setHovered] = useState<number | null>(null);
   // Tall phone screens start further out so more of the island fits.
   const [portrait] = useState(() => typeof window !== "undefined" && window.innerHeight > window.innerWidth);
@@ -232,7 +266,10 @@ export function WorldCanvas() {
     <Canvas
       // The tutorial overlay forwards camera turns and zooms here (guide-overlay.tsx).
       data-world-map=""
-      shadows
+      // Plain PCF shadows: three.js dropped the soft kind.
+      shadows="percentage"
+      // Phones on "fast" graphics draw fewer pixels.
+      dpr={fancy ? [1, 2] : [1, 1.25]}
       // A landmark under construction is cut off at its current height.
       onCreated={({ gl }) => {
         gl.localClippingEnabled = true;
@@ -249,32 +286,24 @@ export function WorldCanvas() {
       }}
     >
       <color attach="background" args={["#a8dcf5"]} />
-      <Haze fires={burning.length + 2 * buildings.filter((t) => t.building === "smithy").length} dust={dry >= 1 ? 1 : 0} storm={storm} />
-      {/* The Ancient era is a touch warmer and more golden, so the change of era shows. */}
-      {/* The plague's grey gloom, the drought's gold, or the era's own light. */}
-      <hemisphereLight
-        args={[plagueOn ? "#c9c3cf" : dry >= 1 ? "#ffe2a8" : state.era >= 1 ? "#ffeccc" : "#d6f1ff", "#6f8f4e", 0.75 - storm * 0.3 - (plagueOn ? 0.12 : 0)]}
+      {/* The sky, the sun and moon, the fog: the time of day, with wood smoke,
+          the drought's dust, storms and the plague's gloom on top. */}
+      <DaySky
+        home={home}
+        tick={state.tick}
+        running={clock.running}
+        msPerTick={clock.msPerTick}
+        era={state.era}
+        fires={burning.length + 2 * buildings.filter((t) => t.building === "smithy").length}
+        dust={dry >= 1 ? 1 : 0}
+        storm={storm}
+        plague={plagueOn}
+        shadowSize={fancy ? 2048 : 1024}
+        alwaysDay={daylight === "day"}
       />
-      <directionalLight
-        position={[home.x + 25, 40, home.z + 15]}
-        intensity={1.5}
-        color={state.era >= 1 ? "#fff0d2" : "#ffffff"}
-        castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-bias={-0.0004}
-        shadow-camera-left={-60}
-        shadow-camera-right={60}
-        shadow-camera-top={60}
-        shadow-camera-bottom={-60}
-        shadow-camera-far={150}
-      >
-        <object3D attach="target" position={[home.x, 0, home.z]} />
-      </directionalLight>
-
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]} receiveShadow raycast={() => null}>
-        <planeGeometry args={[600, 600]} />
-        <meshStandardMaterial color="#1a5f93" roughness={0.3} />
-      </mesh>
+      <Sea home={home} />
+      <Clouds home={home} storm={storm} />
+      {fancy && <FireLights fires={[...burning, ...buildings.filter((t) => t.building === "watchfire" || t.building === "smithy")]} home={home} />}
 
       <HexTerrain
         tiles={state.tiles}
@@ -536,10 +565,15 @@ export function WorldCanvas() {
 
       <GuideAnchor tile={guideTile === null ? null : state.tiles[guideTile]} />
 
+      <PerformanceMonitor bounds={() => [24, 50]} onDecline={() => setStruggling(true)} />
+      <CinematicCamera home={home} battleTick={state.battle?.tick ?? null} />
+      {fancy && <FilmLook era={state.era} cinematic={!!shot} />}
+
       <MapControls
+        makeDefault
         // During guided steps the camera still turns and zooms, but doesn't
         // slide, so a click on the highlighted spot can't turn into a drag.
-        enabled={!holding}
+        enabled={!holding && !shot}
         enablePan={!guide.target}
         target={target}
         enableDamping

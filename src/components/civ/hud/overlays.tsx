@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { playShot } from "./letterbox";
+import { setTimeOfDay } from "./time-of-day";
 import { AFTER_STEPS, DISASTERS, DISCOVERIES, DROUGHT, ERA_INTROS, ERAS, EVENTS, KINGDOMS, LESSONS, RAID_KINDS, RAID_RESPONSE, TREE_BY_ID, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
 import {
   canAfford,
@@ -540,6 +542,32 @@ export function DevPanel() {
         </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devPeople" })}>
           +10 people
+        </button>
+        {(
+          [
+            ["Dawn", 0.245],
+            ["Noon", 0.5],
+            ["Sunset", 0.755],
+            ["Night", 0.95],
+          ] as const
+        ).map(([label, t]) => (
+          <button key={label} type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => setTimeOfDay(t)}>
+            {label}
+          </button>
+        ))}
+        <button
+          type="button"
+          className="pixel-btn bg-[#4a3b2e] px-2 py-1"
+          onClick={() => playShot({ kind: "intro", title: state.nation ?? "The Emberfolk", subtitle: ERAS[state.era].name, seconds: 6 })}
+        >
+          Intro shot
+        </button>
+        <button
+          type="button"
+          className="pixel-btn bg-[#4a3b2e] px-2 py-1"
+          onClick={() => playShot({ kind: "era", title: ERAS[state.era].name, subtitle: "Era shot", seconds: 9 })}
+        >
+          Era shot
         </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devGrief" })} title="As if someone was dropped into a fire">
           Grief
