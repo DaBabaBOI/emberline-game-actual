@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "A much shorter tutorial: five steps, one line each (\"Tell me more\" if you want the why). The rest you learn by playing. Played before? Press \"I've played before\" on the title screen to skip it.",
       "Every meter now explains itself: click Food, Shelter, Happiness, Literacy, Energy or Sustainability to see each thing pushing it up or down, and press \"What should I fix?\" for the three changes that would raise it most.",
       "Hunters are now your own people: someone from a gatherer's camp (or someone free) walks out, hunts, and walks back to where they set out. Nobody appears out of, or disappears into, the fire any more.",
       "Click the Sustainability meter, then \"What should I fix?\": it lists the three things costing the land the most, and exactly what to do about each.",
