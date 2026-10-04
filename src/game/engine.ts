@@ -1435,8 +1435,9 @@ export function consumption(state: GameState) {
 }
 
 // No lit fire (after the tutorial): nothing can be cooked, so food goes less far.
+// With Warm Clothes, families cook at small hearths in their homes instead.
 export function eatingRaw(state: GameState) {
-  return state.tutorialStep >= TUTORIAL.length && !state.tiles.some((t) => isLit(state, t));
+  return state.tutorialStep >= TUTORIAL.length && !state.researched.includes("hide-clothing") && !state.tiles.some((t) => isLit(state, t));
 }
 
 // Every game starts with one woodcutter already working, so the player can
@@ -1752,12 +1753,22 @@ export function warnings(state: GameState): Warning[] {
     out.push({
       id: "fire",
       icon: "flame",
-      text: `Not enough campfires: ${cold} people are cold and becoming unhappy. Each fire warms ${GROWTH_PRESSURE.peoplePerFire}.`,
+      text: state.researched.includes("hide-clothing")
+        ? `${cold} people are cold and becoming unhappy. Each fire warms ${GROWTH_PRESSURE.peoplePerFire}; each Livestock Pen clothes ${GROWTH_PRESSURE.peoplePerPen}.`
+        : `Not enough campfires: ${cold} people are cold and becoming unhappy. Each fire warms ${GROWTH_PRESSURE.peoplePerFire}.`,
       severe: false,
     });
   }
 
-  if (!hasLitFire(state) && coldShare(state) > 0.05) {
+  if (!hasLitFire(state) && coldShare(state) > 0.05 && state.researched.includes("hide-clothing")) {
+    const cold = Math.round(coldShare(state) * state.population);
+    out.push({
+      id: "fire",
+      icon: "sheep",
+      text: `${cold} people have no warm clothes. Each Livestock Pen clothes ${GROWTH_PRESSURE.peoplePerPen} (or light a campfire).`,
+      severe: false,
+    });
+  } else if (!hasLitFire(state) && coldShare(state) > 0.05) {
     const noCampfire = (countBuildings(state).campfire ?? 0) === 0;
     out.push({
       id: "fire",
@@ -2161,7 +2172,7 @@ export function meterBreakdown(state: GameState, key: MeterKey): MeterPart[] {
         gain: counts.elder ? undefined : 5,
       },
       {
-        label: `Cold: ${Math.round(coldShare(state) * 100)}% with no fire`,
+        label: `Cold: ${Math.round(coldShare(state) * 100)}% with no fire${state.researched.includes("hide-clothing") ? " or warm clothes" : ""}`,
         value: -cold,
         hint: `Each fire warms ${GROWTH_PRESSURE.peoplePerFire} people; pens (with Warm Clothes) and Town Houses warm people too.`,
         fix: "Light another fire, or keep people warm with pens and Warm Clothes.",
