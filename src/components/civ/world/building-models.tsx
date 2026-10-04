@@ -477,36 +477,59 @@ export function WarCampModel({ opacity }: ModelProps) {
 }
 
 // A log lookout tower on the shore with a fire kept burning on top.
-export function WatchFireModel({ opacity }: ModelProps) {
-  const legs: [number, number][] = [
-    [-0.13, -0.13],
-    [0.13, -0.13],
-    [-0.13, 0.13],
-    [0.13, 0.13],
+// A watch tower on the shore: four tall legs with cross braces, a ladder, a
+// railed platform under a thatched roof, and a lookout keeping watch.
+export function WatchTowerModel({ opacity }: ModelProps) {
+  const corners: [number, number][] = [
+    [-0.11, -0.11],
+    [0.11, -0.11],
+    [-0.11, 0.11],
+    [0.11, 0.11],
   ];
   return (
     <group>
-      {legs.map(([x, z]) => (
-        <Log key={`${x}${z}`} opacity={opacity} position={[x, 0.36, z]} rotation={[0, 0, 0]} length={0.72} radius={0.018} />
+      {corners.map(([x, z]) => (
+        <Log key={`leg${x}${z}`} opacity={opacity} position={[x, 0.45, z]} rotation={[0, 0, 0]} length={0.9} radius={0.018} />
       ))}
-      {[0.2, 0.46].map((y) => (
-        <group key={y}>
-          <Log opacity={opacity} position={[0, y, -0.13]} rotation={[0, 0, Math.PI / 2]} length={0.3} radius={0.01} />
-          <Log opacity={opacity} position={[0, y, 0.13]} rotation={[0, 0, Math.PI / 2]} length={0.3} radius={0.01} />
+      {/* Cross braces on two sides. */}
+      {[-0.11, 0.11].map((z) => (
+        <group key={`brace${z}`}>
+          <Log opacity={opacity} position={[0, 0.32, z]} rotation={[0, 0, 0.98]} length={0.3} radius={0.008} />
+          <Log opacity={opacity} position={[0, 0.62, z]} rotation={[0, 0, -0.98]} length={0.3} radius={0.008} />
         </group>
       ))}
-      <Part color="#7a5534" opacity={opacity} position={[0, 0.72, 0]}>
-        <boxGeometry args={[0.38, 0.04, 0.38]} />
+      {/* The platform and its railing. */}
+      <Part color="#7a5534" opacity={opacity} position={[0, 0.9, 0]}>
+        <boxGeometry args={[0.34, 0.035, 0.34]} />
       </Part>
-      <Part color="#5f656b" opacity={opacity} position={[0, 0.77, 0]}>
-        <cylinderGeometry args={[0.1, 0.08, 0.06, 7]} />
-      </Part>
-      <Flame opacity={opacity} position={[0, 0.8, 0]} scale={0.8} />
-      {[0.12, 0.24, 0.36, 0.48, 0.6].map((y) => (
-        <Log key={y} opacity={opacity} position={[0, y, 0.2]} rotation={[0, 0, Math.PI / 2]} length={0.14} radius={0.007} />
+      {[
+        [0, -0.16, 0],
+        [0, 0.16, 0],
+        [-0.16, 0, Math.PI / 2],
+        [0.16, 0, Math.PI / 2],
+      ].map(([x, z, r]) => (
+        <Log key={`rail${x}${z}`} opacity={opacity} position={[x, 0.98, z]} rotation={[0, r, Math.PI / 2]} length={0.32} radius={0.007} />
       ))}
-      <Log opacity={opacity} position={[-0.07, 0.36, 0.2]} rotation={[0, 0, 0]} length={0.72} radius={0.008} />
-      <Log opacity={opacity} position={[0.07, 0.36, 0.2]} rotation={[0, 0, 0]} length={0.72} radius={0.008} />
+      {/* Roof posts and a thatched roof. */}
+      {corners.map(([x, z]) => (
+        <Log key={`post${x}${z}`} opacity={opacity} position={[x * 1.3, 1.04, z * 1.3]} rotation={[0, 0, 0]} length={0.24} radius={0.008} />
+      ))}
+      <Part color="#c9a24a" opacity={opacity} position={[0, 1.23, 0]}>
+        <coneGeometry args={[0.27, 0.2, 6]} />
+      </Part>
+      {/* The lookout. */}
+      <Part color="#8e5a3a" opacity={opacity} position={[0.04, 0.98, 0.02]}>
+        <cylinderGeometry args={[0.025, 0.03, 0.09, 6]} />
+      </Part>
+      <Part color="#c68642" opacity={opacity} position={[0.04, 1.05, 0.02]}>
+        <sphereGeometry args={[0.025, 8, 6]} />
+      </Part>
+      {/* The ladder up the front. */}
+      {[0.12, 0.24, 0.36, 0.48, 0.6, 0.72, 0.84].map((y) => (
+        <Log key={y} opacity={opacity} position={[0, y, 0.17]} rotation={[0, 0, Math.PI / 2]} length={0.12} radius={0.006} />
+      ))}
+      <Log opacity={opacity} position={[-0.06, 0.45, 0.17]} rotation={[0, 0, 0]} length={0.9} radius={0.007} />
+      <Log opacity={opacity} position={[0.06, 0.45, 0.17]} rotation={[0, 0, 0]} length={0.9} radius={0.007} />
     </group>
   );
 }
@@ -1039,6 +1062,6 @@ export const MODELS: Record<string, (props: ModelProps) => JSX.Element> = {
   healer: HealerModel,
   farm: FarmModel,
   warcamp: WarCampModel,
-  watchfire: WatchFireModel,
+  watchfire: WatchTowerModel,
   ...MEDIEVAL_MODELS,
 };

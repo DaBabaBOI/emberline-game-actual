@@ -370,9 +370,10 @@ These were decided with the project owner. Do not change them without being aske
   warrior can still tip it), **Hide** (nobody dies, they take a smaller share)
   or **Pay tribute** (4 food per raider, they leave but the next raid comes 60
   ticks sooner). Each War Camp holds `WARRIORS_PER_CAMP` (6); the Train button
-  says "+1 camp = +6" when full. **Watch Fire** (after Firekeeping, beach
-  only): raiders seen 8 ticks sooner, +1 defense (max 2), burns wood, -1
-  Sustainability. Warriors patrol around camps and watch fires, recruits walk
+  says "+1 camp = +6" when full. **Watch Tower** (id `watchfire`, kept for
+  saves; after Firekeeping, beach only): raiders seen 8 ticks sooner, +1
+  defense (max 2), built from big logs, -1 Sustainability. Warriors patrol
+  around camps and watch towers, recruits walk
   out of a camp, and warriors take at most 40% of the figures. The legion's base
   is 8 (was 6) to match the bigger armies. Dev: "Raid: band / party / fire".
 - **Famine is recoverable** (`FAMINE`, `famineOptions()`): with the stores empty,
