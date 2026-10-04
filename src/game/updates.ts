@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "People keep away from danger: nobody walks into a burning wildfire, and hunters walk round buildings and fires instead of straight through them.",
       "The Watch Fire is now a Watch Tower: a tall lookout tower with a ladder, a thatched roof and a lookout on top. Same job (raiders seen sooner, a little defense), no fire.",
       "Elder Ama now introduces every feature the tutorial skips, right when it first matters: selling a woodcutter the sacred grove has cut off, what scouting costs, planting saplings, training warriors before a raid, speeding up time and more. One short line at a time, and the button she means glows.",
       "Warm Clothes now really replaces campfires: each Livestock Pen clothes 10 people, and families cook at small hearths in their homes, so with enough pens you need no campfire at all.",

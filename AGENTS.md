@@ -175,6 +175,9 @@ These were decided with the project owner. Do not change them without being aske
   up in yellow with a marker overhead (`highlight.group`, `Figures group=`) and
   says how many people each figure stands for. New crowds of people on the
   map must pass a `group` so they light up too.
+- **People keep out of harm's way** (`ground.walkable()`): never into the sea,
+  the fog, mountains, buildings (fires included) or a burning wildfire tile. Anyone
+  walking to a goal on their own (like the hunter) steers round what blocks the way.
 - **Nobody appears or vanishes.** A figure doing a job away from the crowd
   (like the hunter in `world/wildlife.tsx`) borrows a real villager (`Walker.hunting`),
   leaves from where they stand and hands them back where the job ends.
