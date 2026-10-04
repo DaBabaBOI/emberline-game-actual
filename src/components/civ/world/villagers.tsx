@@ -431,15 +431,35 @@ export function Raiders({
     progress.current = Math.min(1, Math.max(goal - oneTick, Math.min(goal + oneTick, progress.current + pace * dt)));
     if (goal <= 0) progress.current = 0;
     const p = progress.current;
-    const heading = Math.atan2(to.x - from.x, to.z - from.z);
     const list = agents.current;
     const count = Math.min(30, raid.legion ?? raid.strength);
     list.length = count;
+    // Unit vectors along the way in, and across it.
+    const len = Math.hypot(to.x - from.x, to.z - from.z) || 1;
+    const ux = (to.x - from.x) / len;
+    const uz = (to.z - from.z) / len;
+    // A legion keeps its ranks; raiders come ashore in two or three groups that
+    // fan out to the sides on curved paths and close in again, leaders first,
+    // stragglers behind, each with its own weave.
+    const groups = raid.roman ? 1 : count > 8 ? 3 : 2;
+    const t = performance.now() / 1000;
     for (let i = 0; i < count; i++) {
-      const offX = (hash(i + 1) - 0.5) * 1.2;
-      const offZ = (hash(i + 2) - 0.5) * 1.2;
-      const x = from.x + (to.x - from.x) * p + offX;
-      const z = from.z + (to.z - from.z) * p + offZ;
+      const g = i % groups;
+      const side = groups === 1 ? 0 : g - (groups - 1) / 2;
+      const lag = raid.roman ? 0 : hash(i + 11) * 0.12;
+      const q = Math.max(0, Math.min(1, p * (1 + lag) - lag));
+      const flank = side * 1.6 * Math.sin(q * Math.PI);
+      const weave = raid.roman ? 0 : Math.sin(t * 1.3 + i * 2.1) * 0.12 * (q < 0.98 ? 1 : 0.3);
+      // At the end they spread into a wide arc instead of one huddle.
+      const arc = q * q * (hash(i + 5) - 0.5) * 1.8;
+      const rank = raid.roman ? (Math.floor(i / 5) - 2) * 0.22 : (hash(i + 2) - 0.5) * 0.6;
+      const file = raid.roman ? ((i % 5) - 2) * 0.24 : (hash(i + 1) - 0.5) * 0.6;
+      const along = len * q - rank;
+      const across = flank + file + weave + arc;
+      const x = from.x + ux * along - uz * across;
+      const z = from.z + uz * along + ux * across;
+      const prev = list[i];
+      const heading = prev && Math.hypot(x - prev.x, z - prev.z) > 1e-4 ? Math.atan2(x - prev.x, z - prev.z) : Math.atan2(ux, uz);
       const under = ground.tileAt(x, z);
       // Ease the height too, so they don't pop up and down at tile edges.
       const floor = ground.heightAt(x, z) + (under?.terrain === "mountain" ? 0.55 : 0);
@@ -450,7 +470,7 @@ export function Raiders({
         z,
         y,
         heading,
-        moving: p < 0.98 && speed > 0,
+        moving: q < 0.98 && speed > 0,
         scale: 1.4,
         // A kingdom's soldiers wear its colours.
         tunic: raid.roman ? "#b3261e" : raid.kingdom ? KINGDOM_LOOK[raid.kingdom].tunic : "#9b1c1c",
@@ -517,13 +537,18 @@ export function FireVictims({ tiles, victims }: { tiles: Tile[]; victims: { tile
   return <Figures agents={agents} max={6} />;
 }
 
-// A fight with raiders, played out where the warriors met them: two lines
-// clash, the fallen topple over one by one, then the winners move on (raiders
-// flee to their boats, or march on the village if they won).
+// A fight with raiders, played out where the warriors met them. Not two lines
+// shoving: each fighter picks an opponent and circles them, darting in to strike
+// and backing off. The fallen are knocked back as they drop, survivors gang up
+// on whoever is still standing, and at the end the losers scatter (raiders to
+// their boats, or warriors home) while the winners chase them a little way.
+type Fighter = Agent & { dies: boolean; dieAt: number; side: number; foe: number; orbit: number; spin: number; dart: number; speedK: number; vx: number; vz: number };
+
 export function BattleScene({ tiles, battle, homeTile }: { tiles: Tile[]; battle: Battle | null; homeTile: Tile }) {
   const warriors = useRef<Agent[]>([]);
   const raiders = useRef<Agent[]>([]);
   const started = useRef<{ key: string; at: number }>({ key: "", at: 0 });
+  const ground = useMemo(() => makeGround(tiles), [tiles]);
   const key = battle ? `${battle.tick}@${battle.tile}` : "";
 
   useFrame(({ clock }, delta) => {
@@ -541,7 +566,7 @@ export function BattleScene({ tiles, battle, homeTile }: { tiles: Tile[]; battle
     const dz = (homeTile.z - from.z) / len;
     const px = -dz;
     const pz = dx;
-    const y = tileTop(at);
+    const FIGHT = 7;
 
     if (started.current.key !== key) {
       started.current = { key, at: now };
@@ -549,13 +574,18 @@ export function BattleScene({ tiles, battle, homeTile }: { tiles: Tile[]; battle
       const nR = Math.min(battle.raiders, 10);
       const lostW = battle.warriors ? Math.round((nW * battle.warriorsLost) / battle.warriors) : 0;
       const lostR = Math.round((nR * battle.raidersLost) / Math.max(1, battle.raiders));
-      const line = (n: number, lost: number, side: number, look: Partial<Agent>) =>
-        Array.from({ length: n }, (_, i) => {
-          const across = (i - (n - 1) / 2) * 0.28;
+      const make = (n: number, lost: number, side: number, look: Partial<Agent>) => {
+        // Who falls, and when: spread over the fight, in no particular order.
+        const order = Array.from({ length: n }, (_, i) => i).sort((p, q) => hash(p * 31 + side * 7 + battle.tick) - hash(q * 31 + side * 7 + battle.tick));
+        return Array.from({ length: n }, (_, i) => {
+          const across = (i - (n - 1) / 2) * 0.32 + (hash(i * 3 + side) - 0.5) * 0.2;
+          // Each side starts a little way off and runs in.
+          const back = 0.9 + hash(i * 5 + side * 2) * 0.5;
+          const rank = order.indexOf(i);
           return {
-            x: at.x + dx * 0.3 * side + px * across,
-            y,
-            z: at.z + dz * 0.3 * side + pz * across,
+            x: at.x + dx * back * side + px * across,
+            y: tileTop(at),
+            z: at.z + dz * back * side + pz * across,
             heading: Math.atan2(-dx * side, -dz * side),
             moving: true,
             scale: 1.4,
@@ -563,55 +593,110 @@ export function BattleScene({ tiles, battle, homeTile }: { tiles: Tile[]; battle
             hair: "#1a1a1a",
             phase: i * 1.3,
             fallen: 0,
-            // Every other fighter along the line falls, until the losses are covered.
-            dies: i % 2 === 0 ? i / 2 < lost : Math.floor(i / 2) < lost - Math.ceil(n / 2),
-            order: i,
+            dies: rank < lost,
+            dieAt: 1.4 + (rank / Math.max(1, lost)) * (FIGHT - 2.2) + hash(i + side * 13) * 0.6,
+            side,
+            foe: i,
+            orbit: hash(i * 7 + side) * Math.PI * 2,
+            spin: (hash(i + 17 * side) > 0.5 ? 1 : -1) * (1.6 + hash(i * 11) * 1.4),
+            dart: hash(i * 13 + side) * 3,
+            speedK: 0.8 + hash(i * 19 + side) * 0.5,
+            vx: 0,
+            vz: 0,
             ...look,
-          } as Agent & { dies: boolean; order: number };
+          } as Fighter;
         });
-      warriors.current = line(nW, lostW, 1, { tunic: "#5b6f8a" });
-      raiders.current = line(nR, lostR, -1, { tunic: battle.roman ? "#b3261e" : "#9b1c1c" });
+      };
+      warriors.current = make(nW, lostW, 1, { tunic: "#5b6f8a" });
+      raiders.current = make(nR, lostR, -1, { tunic: battle.roman ? "#b3261e" : battle.rival ? "#6a2c8a" : "#9b1c1c" });
     }
 
     const age = now - started.current.at;
-    if (age > 11) {
+    if (age > FIGHT + 5) {
       warriors.current = [];
       raiders.current = [];
       return;
     }
     const dt = Math.min(delta, 0.1);
-    const step = (list: Agent[], side: number) => {
-      let falling = 0;
-      for (const raw of list) {
-        const a = raw as Agent & { dies: boolean; order: number };
-        if (a.dies) {
-          const fallAt = 0.9 + falling * 0.35;
-          falling++;
-          if (age > fallAt) {
-            a.moving = false;
-            a.fallen = Math.min(1, (age - fallAt) / 0.4);
-            continue;
+    const ws = warriors.current as Fighter[];
+    const rs = raiders.current as Fighter[];
+    const alive = (f: Fighter) => !(f.dies && age >= f.dieAt);
+    const over = age >= FIGHT;
+
+    const step = (list: Fighter[], enemies: Fighter[]) => {
+      for (const a of list) {
+        if (a.dies && age >= a.dieAt) {
+          // Knocked back as they fall.
+          if (a.fallen === 0) {
+            const foe = enemies[a.foe % Math.max(1, enemies.length)];
+            const kx = foe ? a.x - foe.x : -dx * a.side;
+            const kz = foe ? a.z - foe.z : -dz * a.side;
+            const k = Math.hypot(kx, kz) || 1;
+            a.vx = (kx / k) * 0.9;
+            a.vz = (kz / k) * 0.9;
           }
+          a.moving = false;
+          a.fallen = Math.min(1, (age - a.dieAt) / 0.35);
+          a.x += a.vx * dt;
+          a.z += a.vz * dt;
+          a.vx *= 0.85;
+          a.vz *= 0.85;
+          a.y = ground.heightAt(a.x, a.z);
+          continue;
         }
-        if (age < 3) {
-          // Lunge back and forth at the enemy line.
-          const lunge = Math.sin(age * 9 + a.phase) * 0.012;
-          a.x += dx * lunge * -side;
-          a.z += dz * lunge * -side;
-          a.moving = true;
+        let tx: number;
+        let tz: number;
+        let pace = 0.9 * a.speedK;
+        const standing = enemies.filter(alive);
+        if (over || !standing.length) {
+          // The fight is over. Winners chase a short way; losers scatter.
+          const raidersWon = battle.won === false;
+          const lost = a.side > 0 ? raidersWon : !raidersWon;
+          if (lost) {
+            // Raiders run for the boats; beaten warriors fall back home.
+            const away = a.side > 0 ? 1 : -1;
+            tx = a.x + (dx * away + px * (hash(a.phase * 10) - 0.5) * 1.2) * 2;
+            tz = a.z + (dz * away + pz * (hash(a.phase * 10) - 0.5) * 1.2) * 2;
+            pace = 1.3 * a.speedK;
+          } else {
+            // Winning raiders push on to the village; winning warriors give chase, then stop.
+            const chase = a.side > 0 ? -1 : 1;
+            const stop = a.side > 0 && age > FIGHT + 2;
+            tx = stop ? a.x : a.x + dx * chase * 2 + px * (hash(a.phase * 7) - 0.5);
+            tz = stop ? a.z : a.z + dz * chase * 2 + pz * (hash(a.phase * 7) - 0.5);
+            pace = 0.8 * a.speedK;
+          }
         } else {
-          // Warriors head home; raiders flee to the boats, or push on if they won.
-          const dir = side > 0 ? 1 : battle.won ? -1 : 1;
-          const speed = side < 0 && battle.won ? 0.7 : 0.4;
-          a.x += dx * dir * speed * dt;
-          a.z += dz * dir * speed * dt;
-          a.heading = Math.atan2(dx * dir, dz * dir);
-          a.moving = true;
+          // Pick a living opponent (when ours falls, the next one standing).
+          let foe = enemies[a.foe % enemies.length];
+          if (!foe || !alive(foe)) {
+            foe = standing[Math.floor(hash(a.phase * 3 + Math.floor(age)) * standing.length)];
+            a.foe = enemies.indexOf(foe);
+          }
+          // Circle them, darting in to strike and backing off again.
+          a.orbit += a.spin * dt;
+          const dart = Math.max(0, Math.sin(age * 4 + a.dart)) ** 6;
+          const r = age < 1 ? 0.3 : 0.32 - dart * 0.22;
+          tx = foe.x + Math.cos(a.orbit) * r;
+          tz = foe.z + Math.sin(a.orbit) * r;
+          pace = (age < 1 ? 1.4 : 1 + dart * 2) * a.speedK;
+          a.heading = Math.atan2(foe.x - a.x, foe.z - a.z);
         }
+        const ex = tx - a.x;
+        const ez = tz - a.z;
+        const dist = Math.hypot(ex, ez);
+        const move = Math.min(dist, pace * dt);
+        if (dist > 1e-3) {
+          a.x += (ex / dist) * move;
+          a.z += (ez / dist) * move;
+          if (over || !standing.length) a.heading = Math.atan2(ex, ez);
+        }
+        a.moving = dist > 0.02;
+        a.y = ground.heightAt(a.x, a.z);
       }
     };
-    step(warriors.current, 1);
-    step(raiders.current, -1);
+    step(ws, rs);
+    step(rs, ws);
   });
 
   if (!battle) return null;

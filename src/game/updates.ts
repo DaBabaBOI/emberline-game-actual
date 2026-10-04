@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Livelier raids: raiders come ashore in groups that fan out and close in from the sides, and fights are a real melee. Each fighter circles an opponent, darts in to strike and backs off; the fallen are knocked back, survivors gang up on whoever is left, and the losers scatter while the winners give chase.",
       "Play together: up to 4 players on the same island, by a 4-letter code, a shared link or an open room; bots take the empty seats. Race (most Chief XP when time runs out wins; send gifts, or warriors to raid each other) or co-op (reach the team target together). Quick, normal or long matches learn 3x, 2x or 1x as fast; a new era is worth 4x the XP, and damaged land costs XP every minute. The match sits in a small menu on the right.",
       "Clearer text: the pixel font no longer joins letters together, so \"fire\" stops looking like \"Are\" and \"fills\" like \"Alls\".",
       "New era: Industrial & Modern. Come through the Black Death, learn Steam & Coal and grow to 90 people. Factories, railways, apartment blocks and a power grid; coal is cheap but its carbon stays in the air for good and its smog makes people ill. Switch to water, wind, sun or nuclear power (its waste lasts thousands of years). The era ends in a climate crisis: heat, storms and floods at once, worse the more carbon you burned.",
