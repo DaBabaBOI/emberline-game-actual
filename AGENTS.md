@@ -201,6 +201,16 @@ These were decided with the project owner. Do not change them without being aske
   or house people are in `IMPROVE.buildings`. Placing a building resets its
   level. Later ores (uranium, plutonium, the unidentified minerals) are
   coming-soon nodes until those eras exist.
+- **Phones get the compact HUD** (`useCompact()`: narrower than 768 px, or
+  shorter than 500 px). The meters are a strip under the top bar
+  (`MeterStrip`) instead of side columns, the goal is one line, and only the
+  newest message shows. The top bar is two rows below 1024 px. Panels between
+  the bars place themselves with `--hud-top` and `--hud-bottom` (measured in
+  `useHudEdges()`), never a fixed offset, so anything new in either bar keeps
+  them clear. Only one copy of each meter is ever rendered, so test ids stay
+  unique.
+- **The build bar can be hidden** (▼ Hide). It comes back on its own whenever
+  something needs it: the tutorial, a guided step, a tool in hand, or a hint.
 - **Discovery scenes show the era** (`ERA_BACKDROPS` in
   `hud/discovery-scene.tsx`): one row per era. A new era needs a row.
 - **People keep out of harm's way** (`ground.walkable()`): never into the sea,

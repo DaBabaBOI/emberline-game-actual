@@ -5,6 +5,7 @@ import { goldenDeer, launchFireworks, useKonami } from "./eggs";
 import { HINTS } from "@/game/hints";
 import { playShot } from "./letterbox";
 import { playSfx } from "@/lib/audio";
+import { useCompact } from "@/lib/use-compact";
 import { setTimeOfDay } from "./time-of-day";
 import { AFTER_STEPS, DISASTERS, DISCOVERIES, DROUGHT, ERA_INTROS, ERAS, EVENTS, KINGDOMS, LESSONS, RAID_KINDS, RAID_RESPONSE, TREE_BY_ID, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
 import {
@@ -246,6 +247,7 @@ const MAX_TOASTS = 2;
 // so the screen never fills with messages.
 export function Toasts() {
   const { state } = useGame();
+  const compact = useCompact();
   const [toasts, setToasts] = useState<{ id: number; text: string }[]>([]);
   const seen = useRef(state.log);
   const nextId = useRef(0);
@@ -279,7 +281,8 @@ export function Toasts() {
 
   return (
     <div className="pointer-events-none flex w-full flex-col items-end gap-1">
-      {toasts.map((t, i) => (
+      {/* Phones show only the newest message. */}
+      {(compact ? toasts.slice(0, 1) : toasts).map((t, i) => (
         <div
           key={t.id}
           className="pixel-panel-dark font-pixel px-2.5 py-1 text-xs"
@@ -533,7 +536,12 @@ export function Warnings() {
   if (list.length === 0) return null;
   const shown = open ? list : list.slice(0, 1);
   return (
-    <div data-testid="warnings" className="pointer-events-none absolute bottom-48 left-11 right-11 flex flex-col gap-1.5 md:bottom-32 md:left-3 md:right-auto md:max-w-72">
+    // Just above the bottom bar, however tall it is (--hud-bottom: game-screen.tsx).
+    <div
+      data-testid="warnings"
+      style={{ bottom: "calc(var(--hud-bottom, 12rem) + 0.5rem)" }}
+      className="pointer-events-none absolute left-2 right-2 flex flex-col gap-1.5 md:left-3 md:right-auto md:max-w-72"
+    >
       {shown.map((w) => (
         <div
           key={w.id}

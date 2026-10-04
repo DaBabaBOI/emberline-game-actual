@@ -5,11 +5,12 @@ import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 
 import { clearSave, loadGame, newGame, type NewGameOptions } from "@/game/engine";
 import type { CultureId, DifficultyId, GameState } from "@/game/types";
 import { cn } from "@/lib/utils";
+import { useCompact } from "@/lib/use-compact";
 import { GameProvider, useGame } from "./game-provider";
 import { TitleScreen } from "./title-screen";
 import { IntroStory } from "./intro-story";
 import { TopBar } from "./hud/top-bar";
-import { SideMeters } from "./hud/side-meters";
+import { MeterStrip, SideMeters } from "./hud/side-meters";
 import { BottomBar } from "./hud/bottom-bar";
 import { TreeOverlay } from "./hud/tree-overlay";
 import { GuideOverlay, useGuide } from "./hud/guide-overlay";
@@ -46,6 +47,9 @@ function Hud({ onRestart }: { onRestart: () => void }) {
   const stack = useRef<HTMLDivElement>(null);
   const elder = useRef<HTMLDivElement>(null);
   const spot = useSpotInTree(treeOpen, stack, elder, target?.kind === "ui" ? target.ids : []);
+  const compact = useCompact();
+  const root = useRef<HTMLDivElement>(null);
+  useHudEdges(root);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -58,22 +62,28 @@ function Hud({ onRestart }: { onRestart: () => void }) {
   return (
     <>
       {/* During a camera shot the HUD fades away, leaving the film. */}
-      <div className={cn("pointer-events-none absolute inset-0 transition-opacity duration-700", shot && "invisible opacity-0")}>
-        <TopBar />
-        <SideMeters side="left" />
-        <SideMeters side="right" />
+      <div ref={root} className={cn("pointer-events-none absolute inset-0 transition-opacity duration-700", shot && "invisible opacity-0")}>
+        {/* Phones: the meters sit in a strip under the top bar. */}
+        <TopBar>{compact && <MeterStrip />}</TopBar>
+        {!compact && (
+          <>
+            <SideMeters side="left" />
+            <SideMeters side="right" />
+          </>
+        )}
         {/* Everything that pops up under the top bar lives in stacks, so panels
             queue up instead of drawing over each other. Wide screens get three
             columns (panels left, notices centre, messages right); smaller
             screens get one column. */}
         <div
           ref={stack}
-          style={spot}
+          // Below 1024 px the stack starts under the top bar (and the meter
+          // strip) and ends above the bottom bar, however tall they are.
+          style={treeOpen ? spot : { top: "calc(var(--hud-top, 6rem) + 0.5rem)", maxHeight: "calc(100dvh - var(--hud-top, 6rem) - var(--hud-bottom, 10rem) - 1rem)" }}
           className={cn(
-            "absolute left-11 right-11 flex flex-col gap-2 overflow-y-auto md:left-16 md:right-auto md:w-80 lg:contents",
-            treeOpen
-              ? "bottom-[var(--spot-bottom)] top-[var(--spot-top)] max-h-[var(--spot-max)] md:left-auto md:right-6"
-              : "top-24 max-h-[calc(100dvh-22rem)] md:top-20 md:max-h-[calc(100dvh-17rem)]",
+            "absolute flex flex-col gap-2 overflow-y-auto md:right-auto md:w-80 lg:contents",
+            compact ? "left-2 right-2 md:left-3" : "left-11 right-11 md:left-16",
+            treeOpen && "bottom-[var(--spot-bottom)] top-[var(--spot-top)] max-h-[var(--spot-max)] md:left-auto md:right-6",
           )}
         >
           <div className="flex flex-col items-center gap-2 lg:absolute lg:left-[25rem] lg:right-[21rem] lg:top-20">
@@ -185,6 +195,29 @@ export function GameScreen() {
       </GameProvider>
     </div>
   );
+}
+
+// Where the top bar ends and the bottom bar begins (CSS --hud-top and
+// --hud-bottom on the HUD), so the panels in between fit whatever their size.
+function useHudEdges(root: RefObject<HTMLDivElement | null>) {
+  useEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    const measure = () => {
+      const top = el.querySelector('[data-hud="top"]')?.getBoundingClientRect();
+      const bottom = el.querySelector('[data-hud="bottom"]')?.getBoundingClientRect();
+      if (top) el.style.setProperty("--hud-top", `${Math.round(top.bottom)}px`);
+      if (bottom) el.style.setProperty("--hud-bottom", `${Math.round(window.innerHeight - bottom.top)}px`);
+    };
+    const watch = new ResizeObserver(measure);
+    el.querySelectorAll("[data-hud]").forEach((n) => watch.observe(n));
+    window.addEventListener("resize", measure);
+    measure();
+    return () => {
+      watch.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [root]);
 }
 
 // With Advancements open, Elder Ama's panels sit between the tree's header and

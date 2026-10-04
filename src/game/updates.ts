@@ -9,6 +9,8 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Phones: the HUD is much tidier. The top bar takes two rows, the six meters sit in one strip under it (tap one to see why), the goal fits on one line (tap to read it all), only the newest message shows, and the build bar is smaller.",
+      "Hide the build bar with the ▼ Hide button to see more of the island; ▲ Build brings it back. It comes back by itself when a hint or the tutorial needs it.",
       "Improve your buildings: click a farm, woodcutter, quarry, home and more, and press Improve. Stone-built first, then Bronze-fitted, Iron-bound (new: Iron Tools) and Steel-framed (new: Steelmaking). Each level makes 25% more from the same land, or gives a home more room. Uranium, plutonium and two minerals nobody can name wait in the Advancements for later eras.",
       "Discovery cutscenes now show the era in the background: huts, then columns and aqueducts, castles and windmills, smoky factories, and rockets under a ringed planet.",
       "Realistic time (a joke, on the title screen): the calendar runs in real time, with today's date, the hour and the season, in 50,000 BCE. The next era is only about 47,000 real years away.",
