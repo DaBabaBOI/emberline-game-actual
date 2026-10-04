@@ -69,6 +69,9 @@ export interface Raid {
   // The Roman legion: `legion` legionaries, each worth two warriors.
   roman?: boolean;
   legion?: number;
+  // Raiders sent by a rival player (multiplayer): their name.
+  rival?: string;
+  rivalSeat?: number;
   startTick: number;
   arriveTick: number;
 }
@@ -348,6 +351,8 @@ export interface GameState {
   tippingDone?: boolean;
   tipped?: boolean;
   space?: string[];
+  // Multiplayer: the match's mode and speed (Knowledge pace).
+  mp?: { mode: "race" | "coop"; speed: "quick" | "normal" | "long" };
   // Type I reached: the story is told (the game can go on after the final debrief).
   finished?: boolean;
   // The discovery scene on screen (an advancement or secret just found), if any.

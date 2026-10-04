@@ -870,7 +870,12 @@ These were decided with the project owner. Do not change them without being aske
      power and waste by `NUCLEAR.breeder`.
    - Bot checks: start in era 5 with `newGame(…, { dev: true, startEra: 5 })`;
      a focused player reaches Type I in about 10-15 minutes; heavy coal tips.
-5. Later: multiplayer, where human players replace AI nations.
+5. **Multiplayer** (built 2026-10-04): `src/lib/multiplayer.ts`, `multiplayer-lobby.tsx`, `hud/mp-panel.tsx`, `supabase/multiplayer.sql`, `MP` in content.
+   - Each player runs their own copy of the room's island (`newGame(..., { seed, mp })`); only scores, gifts, raids and loot go through Supabase (polled every 3 s).
+   - Bots need no server: `botScore`/`botActions` are worked out from the seed and the minutes since the start, so every client agrees.
+   - Raid flow: `mpRaidOut` (the warriors leave for good), then `mpRaidIn` on the target; if the raiders win there, the target sends `loot` back.
+   - The match panel stays a one-line side menu (owner: "too crowded").
+   - The Supabase MCP tool times out on SQL containing `delete`: don't delete in the mp_* functions.
 6. **The Kardashev scale** (now the game's ending, see 4). It ranks a
    civilization by how much energy it can use (Type I: its planet's; Type II:
    its star's; Type III: its galaxy's). A possible frame for the late eras and

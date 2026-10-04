@@ -80,6 +80,7 @@ import {
   OCEAN,
   MINERAL_X,
   SPACE,
+  MP,
   BELIEFS,
   SETTLERS,
   GROWTH_PRESSURE,
@@ -186,6 +187,12 @@ export type Action =
   | { type: "launch"; project: string }
   | { type: "devTipping"; when: "soon" | "now" | "end" }
   | { type: "devTypeOne" }
+  // Multiplayer: gifts and raids between players.
+  | { type: "mpGiftOut"; resources: Partial<Resources>; to: string }
+  | { type: "mpGiftIn"; resources: Partial<Resources>; from: string }
+  | { type: "mpRaidOut"; warriors: number; to: string }
+  | { type: "mpRaidIn"; warriors: number; from: string; seat: number }
+  | { type: "mpLoot"; resources: Partial<Resources>; from: string }
   | { type: "raidResponse"; choice: RaidResponse }
   | { type: "devRaidKind"; kind: RaidKind }
   | { type: "setKeeper"; tileId: number; on: boolean }
@@ -251,6 +258,9 @@ export interface NewGameOptions {
   realTimeFrom?: number;
   startEra?: number;
   nation?: string;
+  // Multiplayer: everyone in a room plays the same island (the room's seed).
+  seed?: number;
+  mp?: GameState["mp"];
 }
 
 export const DEFAULT_NATION = "The Emberfolk";
@@ -266,7 +276,7 @@ export function newGame(
   difficulty: DifficultyId,
   options: NewGameOptions = {},
 ): GameState {
-  const seed = Math.floor(Math.random() * 1e9);
+  const seed = options.seed ?? Math.floor(Math.random() * 1e9);
   const { tiles, startTile } = generateMap(seed);
   const state: GameState = {
     version: SAVE_VERSION,
@@ -301,6 +311,7 @@ export function newGame(
     scoutsSent: 0,
     dev: Boolean(options.dev),
     ...(options.realTimeFrom ? { realTimeFrom: options.realTimeFrom } : {}),
+    ...(options.mp ? { mp: options.mp } : {}),
     tutorialStep: 0,
     event: null,
     nextEventTick: 90,
@@ -1802,6 +1813,8 @@ export function production(state: GameState): Resources {
   if (!closed) for (const k of Object.values(state.kingdoms ?? {})) if (k.treaty) out.currency += DIPLOMACY.treaty.trade;
   if (state.researched.includes("printing")) out.knowledge *= LEARNING.printingKnowledge;
   if (state.researched.includes("computers")) out.knowledge *= 1.3;
+  // Multiplayer: the match's speed.
+  if (state.mp) out.knowledge *= MP.pace[state.mp.speed];
   if (spaceDone(state, "telescope")) out.knowledge *= 1 + SPACE.knowledgeBoost;
   // The climate tipped: for good, hotter summers and droughts cut harvests.
   if (state.tipped) out.food *= 1 - TIPPING.food;
@@ -4686,6 +4699,14 @@ function updateRaids(state: GameState): GameState {
   return state;
 }
 
+// "30 food and 20 wood".
+function costLine(r: Partial<Resources>) {
+  return Object.entries(r)
+    .filter(([, v]) => v)
+    .map(([k, v]) => `${v} ${k === "currency" ? "coins" : k}`)
+    .join(" and ");
+}
+
 function spend(resources: Resources, cost: Partial<Resources>): Resources {
   const out = { ...resources };
   for (const [k, v] of Object.entries(cost)) out[k as keyof Resources] -= v ?? 0;
@@ -4720,14 +4741,17 @@ function awardXp(prev: GameState, next: GameState): GameState {
   gain += Math.max(0, next.researched.length - prev.researched.length) * XP.research;
   gain += Math.max(0, b.raidsWon - a.raidsWon) * XP.raidWon;
   gain += Math.max(0, (next.planted ?? 0) - (prev.planted ?? 0)) * XP.plant;
-  gain += Math.max(0, next.era - prev.era) * XP.era;
+  gain += Math.max(0, next.era - prev.era) * XP.era * (next.mp ? MP.eraXp : 1);
   if (next.droughtDone && !prev.droughtDone) gain += XP.drought;
   if (next.plagueDone && !prev.plagueDone) gain += XP.drought;
   if (landmarkDone(next) && !landmarkDone(prev)) gain += XP.drought / 2;
   if (next.tick !== prev.tick && next.tick % XP.minuteTicks === 0 && next.tutorialStep >= TUTORIAL.length) {
     if (next.meters.food >= 45) gain += XP.fedMinute;
     if (next.meters.sustainability >= MIN_SUSTAINABILITY_FOR_BEST_ENDING) gain += XP.healthyMinute;
+    // Multiplayer: a damaged land costs XP every minute.
+    if (next.mp && next.meters.sustainability < MP.drainBelow) gain -= MP.drain;
   }
+  if (gain < 0) return { ...next, xp: Math.max(0, (next.xp ?? 0) + gain) };
   return gain > 0 ? addXp(next, gain) : next;
 }
 
@@ -5650,6 +5674,50 @@ function step(state: GameState, action: Action): GameState {
       const fusion = state.tiles.filter((t) => !t.building && t.revealed && (t.terrain === "grass" || t.terrain === "steppe")).slice(0, 5);
       const built = { ...ready, tiles: ready.tiles.map((t) => (fusion.some((f) => f.id === t.id) ? { ...t, building: "fusion", worn: 0 } : t)) };
       return reachTypeOne(withMeters({ ...built, meters: { ...built.meters, sustainability: Math.max(built.meters.sustainability, KARDASHEV.minLand) } }));
+    }
+
+    case "mpGiftOut": {
+      if (!state.mp || !canAfford(state, action.resources)) return state;
+      return { ...state, resources: spend(state.resources, action.resources), log: [`Sent ${costLine(action.resources)} to ${action.to}.`, ...state.log].slice(0, 30) };
+    }
+
+    case "mpGiftIn":
+    case "mpLoot": {
+      if (!state.mp) return state;
+      const resources = { ...state.resources };
+      for (const [k, v] of Object.entries(action.resources)) resources[k as keyof Resources] += Math.max(0, Math.min(500, Number(v) || 0));
+      const text = action.type === "mpLoot" ? `Our raiders came back from ${action.from} with ${costLine(action.resources)}.` : `${action.from} sent us ${costLine(action.resources)}.`;
+      return { ...state, resources, log: [text, ...state.log].slice(0, 30) };
+    }
+
+    case "mpRaidOut": {
+      // The warriors sail off for good: whatever happens, they don't come back.
+      const n = Math.floor(action.warriors);
+      if (!state.mp || state.mp.mode !== "race" || n < 1 || n > state.soldiers || state.raid) return state;
+      return {
+        ...state,
+        soldiers: state.soldiers - n,
+        spearmen: Math.min(state.spearmen ?? 0, state.soldiers - n),
+        log: [`${n} warrior${n === 1 ? "" : "s"} sailed off to raid ${action.to}.`, ...state.log].slice(0, 30),
+      };
+    }
+
+    case "mpRaidIn": {
+      if (!state.mp || state.phase !== "playing") return state;
+      const strength = Math.max(1, Math.round(Math.min(60, action.warriors) * MP.warriorStrength));
+      // Already under attack and they haven't landed yet: they join the attack.
+      if (state.raid) {
+        if (state.tick >= state.raid.arriveTick) return { ...state, log: [`Raiders from ${action.from} saw the fighting and turned back.`, ...state.log].slice(0, 30) };
+        return { ...state, raid: { ...state.raid, strength: state.raid.strength + strength } };
+      }
+      const landing = pickLanding(state, mulberry32(state.seed + state.tick * 61));
+      if (!landing) return state;
+      return {
+        ...state,
+        raid: { strength, kind: "party", rival: action.from, rivalSeat: action.seat, fromTile: landing.from.id, targetTile: landing.home.id, meetTile: landing.meet.id, startTick: state.tick, arriveTick: state.tick + 14 },
+        lastBigTick: state.tick,
+        log: [`${action.from} sent ${action.warriors} warriors to raid us! They land soon.`, ...state.log].slice(0, 30),
+      };
     }
 
     case "devOres": {
