@@ -86,6 +86,8 @@ export interface Battle {
   raidersLost: number;
   // True when the village held.
   won: boolean;
+  // Raiders a rival player sent (multiplayer).
+  rival?: string;
   roman?: boolean;
 }
 
