@@ -160,7 +160,8 @@ function TradeButton() {
   const money = ERAS[state.era].currency.toLowerCase();
   const can = state.resources.currency >= TRADE.lot && state.tutorialStep >= TUTORIAL.length;
   return (
-    <span className="relative">
+    // A flex wrapper, so the button stretches to the row's height like the others.
+    <span className="relative flex">
       <ToolButton
         guide="tool-trade"
         icon="scales"
