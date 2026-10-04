@@ -205,6 +205,7 @@ These were decided with the project owner. Do not change them without being aske
 - **Currency has early uses** (`TRADE`, `trade` action, `tributeCoins`): traders from the start, prices rise per trade and ease back; the Trade button is badged when shells reach `TRADE.idle`.
 - **Scouts and canoes go where the player picks** (`SCOUT_TOOL`, `CANOE_TOOL`, `scoutTargetError`, `canoeTargetError`). With no tile (the tutorial, the bot) they pick for themselves as before. Their trips are drawn going out and coming back (`ScoutMarker`, `SeaTraffic`).
 - **Tiredness** (`WORK`, `workload`/`updateFatigue`): jobs are 0.5 per producing building (2 for big ones), warriors count as half a worker. Tune with the bot (`full.js x 12`); fatigue should only build up when a town is badly overbuilt or over-armed, never in normal play.
+- **How to play** (`how-to-play.tsx`): keep it true to the game. When a control, meter or core system changes, update its section too.
 - **No font ligatures** (`globals.css`): Pixelify joins "fi" into one glyph, so "fire" read as "Are". Keep `font-variant-ligatures: none` on everything.
 - **Phones get the compact HUD** (`useCompact()`: narrower than 768 px, or
   shorter than 500 px). The meters are a strip under the top bar

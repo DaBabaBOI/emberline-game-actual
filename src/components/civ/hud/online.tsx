@@ -7,6 +7,7 @@ import { useGame } from "@/components/civ/game-provider";
 import { AccessibilityMenuSection } from "@/components/accessibility-settings";
 import { setDaylight, setGraphics, useDaylight, useGraphics } from "@/lib/graphics";
 import { SoundOptions } from "./game-audio";
+import { HowToPlay } from "@/components/civ/how-to-play";
 import { FEEDBACK_LIMITS, postScore, saveToCloud, scoreFor, sendFeedback, topScores, type ScoreRow } from "@/lib/online";
 
 const VERSION = UPDATES[0]?.date ?? "dev";
@@ -102,8 +103,10 @@ export function GameMenu() {
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState<string | null>(null);
   const [saving, setSaving] = useState<"idle" | "saving" | "failed">("idle");
+  const [guide, setGuide] = useState(false);
   return (
     <div className="relative">
+      {guide && <HowToPlay onClose={() => setGuide(false)} />}
       <button
         type="button"
         onClick={() => setOpen(!open)}
@@ -114,6 +117,17 @@ export function GameMenu() {
       </button>
       {open && (
         <div className="pixel-panel-dark absolute right-0 top-8 z-30 flex w-64 flex-col gap-3 p-3 text-left text-xs">
+          <button
+            type="button"
+            onClick={() => {
+              setGuide(true);
+              setOpen(false);
+            }}
+            className="pixel-btn bg-amber-400 px-2 py-1 text-left font-semibold text-[#2b2119]"
+            data-testid="menu-how-to-play"
+          >
+            How to play
+          </button>
           <div className="flex flex-col gap-1">
             <span className="font-semibold text-amber-300">Cloud save</span>
             <span className="text-white/70">Get a code to continue this game on another device.</span>
