@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { BUILDINGS, CANOE, LOW_WOOD_AFTER_BUY, PLANT_COST, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL, WARRIORS_PER_CAMP } from "@/game/content";
+import { BUILDINGS, CANOE, SPACE, LOW_WOOD_AFTER_BUY, PLANT_COST, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL, WARRIORS_PER_CAMP } from "@/game/content";
 import {
   affordableResearch,
   buildingCost,
@@ -369,8 +369,16 @@ export function BottomBar() {
             }
             tone="bg-emerald-700 hover:bg-emerald-600"
           />
-          {state.flags.rocket && (
-            <ToolButton icon="rocket" label="Space" title="Zoom out to space" tone="bg-indigo-700 hover:bg-indigo-600" />
+          {(countBuildings(state).launchsite ?? 0) > 0 && (
+            <ToolButton
+              guide="tool-space"
+              icon="rocket"
+              label="Space"
+              onClick={() => setPanel("space")}
+              badge={SPACE.projects.some((p) => !(state.space ?? []).includes(p.id) && canAfford(state, p.cost)) ? "!" : undefined}
+              title="Look at our planet from orbit, and launch satellites, a telescope, a power satellite and a Moon base"
+              tone="bg-indigo-700 hover:bg-indigo-600"
+            />
           )}
         </div>
       </div>

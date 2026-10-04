@@ -152,6 +152,19 @@ export const HINTS: Hint[] = [
     target: guide("tool-canoe"),
   },
   {
+    id: "tipping",
+    when: (s) => !!s.tipping,
+    text: () => "The air must get cleaner, fast. Learn Carbon Capture and build Air Capture Plants (on clean power), plant forest, and close coal plants.",
+    target: guide("tool-advancements"),
+  },
+  {
+    id: "space",
+    when: (s) => !!countBuildings(s).launchsite && !(s.space ?? []).length,
+    text: () => "The Launch Site is ready: press Space to see our planet from orbit and launch satellites, a telescope, a power satellite and a Moon base.",
+    target: guide("tool-space"),
+    done: (s) => (s.space ?? []).length > 0,
+  },
+  {
     id: "kingdoms",
     when: (s) => s.era >= 3,
     text: () => "Other kingdoms share these seas. Open Kingdoms to trade with them, make treaties, or prepare for war.",

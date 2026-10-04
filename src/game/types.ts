@@ -113,6 +113,10 @@ export interface Debrief {
   // "lost": the people starved, left or were conquered. Never a good ending,
   // however healthy the land is.
   tier: "thriving" | "costly" | "stripped" | "lost";
+  // The game's end (Future & Space): the Kardashev rating reached, and whether
+  // the climate tipped on the way.
+  kardashev?: number;
+  tipped?: boolean;
 }
 
 export type MeterKey =
@@ -181,6 +185,10 @@ export interface BuildingDef {
   carbon?: number;
   smog?: number;
   clearsSmog?: boolean;
+  // Nuclear waste: Sustainability lost for good, each. `captures`: ppm of carbon
+  // it takes out of the air a tick (Future: the Air Capture Plant).
+  waste?: number;
+  captures?: number;
   produces?: Partial<Resources>;
   depositBonus?: { deposit: Deposit; amount: Partial<Resources> };
   // No longer used: placing a building never reveals land (scouts do). Optional
@@ -218,7 +226,9 @@ export type TallyKey =
   | "landslides"
   | "gifts"
   | "ships"
-  | "canoes";
+  | "canoes"
+  | "launches"
+  | "moonbase";
 
 // One thing to do before an advancement can be researched.
 export interface Goal {
@@ -331,6 +341,15 @@ export interface GameState {
   carbon?: number;
   climate?: { warnTick: number; startTick: number; endTick: number; deaths: number } | null;
   climateDone?: boolean;
+  // Future & Space: the climate tipping point (warned of at warnTick, decided by
+  // endTick: the air must be back down to TIPPING.safe), whether it is over, and
+  // whether the climate tipped. `space`: the projects launched from the Launch Site.
+  tipping?: { warnTick: number; endTick: number; startCarbon: number } | null;
+  tippingDone?: boolean;
+  tipped?: boolean;
+  space?: string[];
+  // Type I reached: the story is told (the game can go on after the final debrief).
+  finished?: boolean;
   // The discovery scene on screen (an advancement or secret just found), if any.
   cutscene?: string | null;
   // A natural disaster: warned of at warnTick, strikes at startTick, over at

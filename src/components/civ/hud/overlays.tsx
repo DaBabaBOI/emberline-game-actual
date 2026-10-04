@@ -28,6 +28,7 @@ import { PixelIcon } from "@/components/civ/pixel-icon";
 import { useGuide } from "./guide-overlay";
 import { PlagueBanner, RebellionBanner } from "./medieval";
 import { ClimateBanner } from "./industrial";
+import { TippingBanner } from "./future";
 
 // An easter egg: poke Elder Ama's picture and she gets grumpier; the tenth poke
 // earns a secret.
@@ -408,6 +409,7 @@ function DisasterBanner() {
 export function RaidBanner() {
   const { state, dispatch } = useGame();
   if (state.climate && !state.raid) return <ClimateBanner />;
+  if (state.tipping && !state.raid) return <TippingBanner />;
   if (state.rebellion && !state.raid) return <RebellionBanner />;
   if (state.plague && !state.raid) return <PlagueBanner />;
   if (state.disaster && !state.raid) return <DisasterBanner />;
@@ -820,6 +822,17 @@ export function DevPanel() {
         ))}
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devCarbon", by: 50 })}>
           Carbon +50
+        </button>
+      </div>
+      {/* Future & Space: the tipping point, and the ending. */}
+      <div className="flex max-w-xs flex-wrap gap-1">
+        {(["soon", "now", "end"] as const).map((when) => (
+          <button key={when} type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devTipping", when })}>
+            Tipping {when}
+          </button>
+        ))}
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devTypeOne" })} title="Clean power, the tipping point past: the ending">
+          Type I
         </button>
       </div>
       {/* Natural disasters: each is warned of, then strikes 3 ticks later. */}

@@ -855,6 +855,20 @@ These were decided with the project owner. Do not change them without being aske
    - **The game ends at Kardashev Type I:** planet-scale clean energy with the
      land still healthy; the final debrief judges how you got there.
    - About 15 minutes.
+   - **Built (2026-10-04):** `KARDASHEV` (the rating climbs from 0.73 to 1
+     as clean power reaches `KARDASHEV.clean`; `kardashev()`), `TIPPING`
+     (`updateTipping()`: the air must get to 350 ppm in time, else `tipped`
+     for good: −Sustainability and −food), `SPACE` (the Launch Site opens the
+     Space panel, `hud/future.tsx`; each launch adds a little carbon),
+     `AUTOMATION` (+output, −happiness until the Shorter Work Week),
+     `REWILDING`, `OCEAN`, `MINERAL_X`. `reachTypeOne()` ends the game with the
+     "final" debrief once the tipping point is decided, Type I is reached and
+     Sustainability is at least `KARDASHEV.minLand`. Models: `future-models.tsx`.
+   - Nuclear power (Industrial): `uranium` unlocks the Nuclear Plant (`waste`
+     costs Sustainability while it stands); `plutonium` breeders multiply both
+     power and waste by `NUCLEAR.breeder`.
+   - Bot checks: start in era 5 with `newGame(…, { dev: true, startEra: 5 })`;
+     a focused player reaches Type I in about 10-15 minutes; heavy coal tips.
 5. Later: multiplayer, where human players replace AI nations.
 6. **The Kardashev scale** (now the game's ending, see 4). It ranks a
    civilization by how much energy it can use (Type I: its planet's; Type II:

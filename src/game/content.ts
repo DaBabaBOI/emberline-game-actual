@@ -817,6 +817,128 @@ export const BUILDINGS: BuildingDef[] = [
     needsWaterNeighbor: true,
     requires: "seawalls",
   },
+  {
+    id: "nuclear",
+    name: "Nuclear Plant",
+    icon: "reactor",
+    description: "Splits uranium to boil water and spin the generators. A lot of power, day and night, with no smoke.",
+    gain: "+60 power with no carbon and no smog",
+    landCost: "Its spent fuel stays dangerous for thousands of years: −2 Sustainability for each plant. Needs water to cool it",
+    landImpact: 2,
+    era: 4,
+    cost: { stone: 80, currency: 150 },
+    terrain: ["grass", "steppe", "beach"],
+    needsWaterNeighbor: true,
+    requires: "uranium",
+    power: 60,
+    waste: 2,
+  },
+  // ---- Future & Space ----
+  {
+    id: "fusion",
+    name: "Fusion Reactor",
+    icon: "fusion",
+    description: "Fuses hydrogen into helium, the way the Sun does, inside a ring of magnets.",
+    gain: "+100 clean power: no carbon, no smog, almost no waste",
+    landCost: "Very costly to build",
+    landImpact: 1,
+    era: 5,
+    cost: { stone: 80, currency: 450 },
+    terrain: ["grass", "steppe", "hills"],
+    requires: "fusion",
+    power: 100,
+  },
+  {
+    id: "datacenter",
+    name: "Data Center",
+    icon: "datacenter",
+    description: "Halls of computers that never sleep, thinking about problems for us.",
+    gain: "+0.6 Knowledge",
+    landCost: "Needs 12 power, and it runs hot",
+    landImpact: 1,
+    era: 5,
+    cost: { stone: 40, currency: 200 },
+    terrain: ["grass", "steppe", "hills"],
+    requires: "ai",
+    power: -12,
+    produces: { knowledge: 0.6 },
+  },
+  {
+    id: "aircapture",
+    name: "Air Capture Plant",
+    icon: "capture",
+    description: "Giant fans pull air through filters that catch carbon, to be locked away underground.",
+    gain: "Takes 0.08 ppm of carbon out of the air every tick",
+    landCost: "Needs 15 power. On coal power it catches much less",
+    landImpact: 1,
+    era: 5,
+    cost: { stone: 30, currency: 200 },
+    terrain: ["grass", "steppe", "hills", "beach"],
+    requires: "capture",
+    power: -15,
+    captures: 0.08,
+  },
+  {
+    id: "vfarm",
+    name: "Vertical Farm",
+    icon: "vfarm",
+    description: "Floor upon floor of crops under lights, watered and fed by machines.",
+    gain: "+3 food, on one tile, with no land cleared",
+    landCost: "Needs 8 power",
+    landImpact: 0,
+    era: 5,
+    cost: { stone: 50, currency: 180 },
+    terrain: ["grass", "steppe", "hills"],
+    requires: "verticalfarms",
+    power: -8,
+    produces: { food: 3 },
+  },
+  {
+    id: "arcology",
+    name: "Arcology",
+    icon: "arcology",
+    description: "A whole town in one tall tower, with gardens on every level.",
+    gain: "Room for 100 people on one tile",
+    landCost: "Needs 10 power",
+    landImpact: 0,
+    era: 5,
+    cost: { stone: 120, currency: 300 },
+    terrain: ["grass", "steppe"],
+    requires: "arcology",
+    housing: 100,
+    power: -10,
+  },
+  {
+    id: "oceancleaner",
+    name: "Ocean Clean-up",
+    icon: "cleaner",
+    description: "Boats with long booms that sweep plastic and nets out of the sea.",
+    gain: "+3 Sustainability each (up to 3), and the fish come back: +0.5 food",
+    landCost: "Needs 5 power",
+    landImpact: 0,
+    era: 5,
+    cost: { stone: 20, currency: 150 },
+    terrain: ["beach"],
+    needsWaterNeighbor: true,
+    requires: "oceans",
+    power: -5,
+    produces: { food: 0.5 },
+  },
+  {
+    id: "launchsite",
+    name: "Launch Site",
+    icon: "rocket",
+    description: "A launch pad and a tall tower for rockets to orbit and beyond. Opens Space.",
+    gain: "Launch satellites, a space telescope, a solar power satellite and a Moon base",
+    landCost: "Needs 10 power; every launch puts a little carbon in the air",
+    landImpact: 1,
+    era: 5,
+    cost: { stone: 100, currency: 400 },
+    terrain: ["grass", "steppe", "beach"],
+    requires: "rocketry",
+    unique: true,
+    power: -10,
+  },
 ];
 
 export const BUILDINGS_BY_ID = Object.fromEntries(BUILDINGS.map((b) => [b.id, b]));
@@ -833,16 +955,7 @@ export const BRANCHES: { id: Branch; name: string; color: string }[] = [
 type NodeSeed = [id: string, name: string, branch: Branch, era: number, cost: number, requires: string[], description: string];
 
 const LATER_NODES: NodeSeed[] = [
-  ["uranium", "Uranium", "energy", 4, 0, ["steam"], "A heavy, faintly glowing ore. Huge power, and a danger that lasts thousands of years."],
-  ["plutonium", "Plutonium", "energy", 4, 0, ["uranium"], "Made from uranium inside reactors. Even more power, even more danger."],
-  ["ai", "Artificial Intelligence", "knowledge", 5, 0, ["electricity", "computers"], "Data centers and automated labs."],
-  ["aetherite", "Aetherite (unidentified)", "energy", 5, 0, ["fusion"], "A mineral nobody can name. It hums, and it is never warm or cold."],
-  ["mineral-x", "Mineral X-7 (unidentified)", "knowledge", 5, 0, ["aetherite"], "Found deep under the sea floor. It doesn't match anything we know."],
-  ["arcology", "Arcologies", "construction", 5, 0, ["steel"], "Cities in a single tower."],
-  ["fusion", "Fusion Power", "energy", 5, 0, ["steam"], "Near-limitless clean energy."],
-  ["rocketry", "Orbital Rocketry", "transport", 5, 0, ["railways"], "Reach orbit. Unlocks the space view."],
-  ["drones", "Drone Defense", "military", 5, 0, ["tanks"], "Autonomous defense grids."],
-  ["interstellar", "Interstellar Drive", "culture", 5, 0, ["rocketry", "fusion"], "Leave the solar system."],
+  ["interstellar", "Interstellar Drive", "culture", 5, 0, ["rocketry", "fusion"], "After Type I: the stars. Another story."],
 ];
 
 export const TREE: TreeNode[] = [
@@ -1392,6 +1505,142 @@ export const TREE: TreeNode[] = [
     cost: 90,
     requires: ["steam", "knights"],
   },
+  // Ores: uranium and plutonium, in the Industrial era.
+  {
+    id: "uranium",
+    name: "Uranium & Nuclear Power",
+    description: "Uranium ore, split in a reactor: a lot of power, with no smoke and no carbon. Its waste stays dangerous for thousands of years. Unlocks the Nuclear Plant.",
+    branch: "energy",
+    era: 4,
+    cost: 110,
+    requires: ["electricity"],
+    unlocks: ["nuclear"],
+  },
+  {
+    id: "plutonium",
+    name: "Plutonium Breeders",
+    description: "Reactors that turn spare uranium into plutonium and burn that too: every Nuclear Plant makes half as much power again, and leaves half as much waste again.",
+    branch: "energy",
+    era: 4,
+    cost: 130,
+    requires: ["uranium"],
+  },
+  // ---- Future & Space ----
+  {
+    id: "ai",
+    name: "Artificial Intelligence",
+    description: "Computers that learn. Unlocks the Data Center: Knowledge, day and night, for power.",
+    branch: "knowledge",
+    era: 5,
+    cost: 120,
+    requires: ["computers"],
+    unlocks: ["datacenter"],
+  },
+  {
+    id: "automation",
+    name: "Automation",
+    description: "Robots and AI take on much of the work: farms, factories, quarries and woodcutters make 30% more. But many people lose their jobs, and with them a sense of purpose: −10 happiness until work is shared fairly.",
+    branch: "construction",
+    era: 5,
+    cost: 160,
+    requires: ["ai"],
+  },
+  {
+    id: "purpose",
+    name: "Shorter Work Week",
+    description: "The robots do the dull work, so everyone works fewer days and spends the rest learning, making things and caring for each other. Automation no longer costs happiness, and literacy rises.",
+    branch: "culture",
+    era: 5,
+    cost: 120,
+    requires: ["automation"],
+  },
+  {
+    id: "verticalfarms",
+    name: "Vertical Farms",
+    description: "Crops grown indoors, floor upon floor, under lights. Unlocks the Vertical Farm: food without clearing land, so old fields can go back to forest.",
+    branch: "culture",
+    era: 5,
+    cost: 120,
+    requires: ["ai"],
+    unlocks: ["vfarm"],
+  },
+  {
+    id: "arcology",
+    name: "Arcologies",
+    description: "A whole town in one green tower. Unlocks the Arcology: room for 100 people on one tile.",
+    branch: "construction",
+    era: 5,
+    cost: 150,
+    requires: ["ai", "steel"],
+    unlocks: ["arcology"],
+  },
+  {
+    id: "fusion",
+    name: "Fusion Power",
+    description: "The power of the Sun, held in a ring of magnets that AI keeps steady. Unlocks the Fusion Reactor: 100 clean power each.",
+    branch: "energy",
+    era: 5,
+    cost: 160,
+    requires: ["ai"],
+    unlocks: ["fusion"],
+  },
+  {
+    id: "capture",
+    name: "Carbon Capture",
+    description: "Machines that pull carbon back out of the air and lock it away underground. Unlocks the Air Capture Plant.",
+    branch: "knowledge",
+    era: 5,
+    cost: 110,
+    requires: ["computers"],
+    unlocks: ["aircapture"],
+  },
+  {
+    id: "rewilding",
+    name: "Rewilding",
+    description: "Let the land go wild again: standing forest takes twice as much carbon from the air, and young forest grows back twice as fast.",
+    branch: "culture",
+    era: 5,
+    cost: 90,
+    requires: ["capture"],
+  },
+  {
+    id: "oceans",
+    name: "Ocean Clean-up",
+    description: "Sweep the plastic and lost nets out of the sea. Unlocks the Ocean Clean-up: healthier seas and more fish.",
+    branch: "culture",
+    era: 5,
+    cost: 110,
+    requires: ["capture"],
+    unlocks: ["oceancleaner"],
+  },
+  {
+    id: "mineral-x",
+    name: "Mineral X-7 (unidentified)",
+    description: "Our clean-up crews found it deep under the sea floor. It doesn't match anything we know, but power flows through it with almost no loss: everything that needs power needs a quarter less.",
+    branch: "knowledge",
+    era: 5,
+    cost: 150,
+    requires: ["oceans"],
+  },
+  {
+    id: "rocketry",
+    name: "Orbital Rocketry",
+    description: "Rockets that reach orbit. Unlocks the Launch Site, and with it Space: satellites, a telescope, power from orbit and a Moon base.",
+    branch: "transport",
+    era: 5,
+    cost: 180,
+    requires: ["computers"],
+    unlocks: ["launchsite"],
+  },
+  {
+    id: "aetherite",
+    name: "Aetherite (unidentified)",
+    description: "Found by the Moon base: a mineral nobody can name. It hums, and it is never warm or cold. Buildings can now be Aetherite-laced, the best improvement there is.",
+    branch: "energy",
+    era: 5,
+    cost: 200,
+    requires: ["rocketry"],
+  },
   ...LATER_NODES.map(
     ([id, name, branch, era, cost, requires, description]): TreeNode => ({
       id,
@@ -1478,6 +1727,19 @@ export const ADVANCEMENT_GOALS: Record<string, Goal[]> = {
     { label: "Have a Castle", kind: "have", building: "castle", amount: 1 },
     { label: "Have Factories", kind: "have", building: "factory", amount: 2 },
   ],
+  uranium: [{ label: "Have a power plant", kind: "have", building: "coalplant", amount: 1 }],
+  plutonium: [{ label: "Have Nuclear Plants", kind: "have", building: "nuclear", amount: 2 }],
+  ai: [{ label: "Have a University", kind: "have", building: "university", amount: 1 }],
+  automation: [{ label: "Have Data Centers", kind: "have", building: "datacenter", amount: 1 }],
+  purpose: [{ label: "Grow your city", kind: "population", amount: 170 }],
+  verticalfarms: [{ label: "Have Farmland", kind: "have", building: "farm", amount: 6 }],
+  arcology: [{ label: "Have Apartment Blocks", kind: "have", building: "apartments", amount: 2 }],
+  fusion: [{ label: "Have a Data Center", kind: "have", building: "datacenter", amount: 1 }],
+  rewilding: [{ label: "Plant saplings", kind: "tally", key: "planted", amount: 4 }],
+  oceans: [{ label: "Have Fishing Spots", kind: "have", building: "fishing", amount: 1 }],
+  "mineral-x": [{ label: "Have Ocean Clean-ups", kind: "have", building: "oceancleaner", amount: 2 }],
+  rocketry: [{ label: "Save up coins", kind: "stored", resource: "currency", amount: 800 }],
+  aetherite: [{ label: "Build the Moon base (Space)", kind: "tally", key: "moonbase", amount: 1 }],
 };
 
 // Elder Ama's guided step right after each advancement. With `build`, the hand
@@ -1532,6 +1794,20 @@ export const AFTER_STEPS: Record<string, AfterStep> = {
   cleanair: { text: "Clean Air Laws: every chimney makes half the smog. The streets can breathe again." },
   seawalls: { build: "seawall", text: "Build a Sea Wall on the shore: floods stay off the low land behind it. The sea is rising." },
   computers: { text: "Computers! +30% Knowledge. After the climate crisis, with 150 people, we can enter the Future." },
+  uranium: { build: "nuclear", text: "Build a Nuclear Plant by the water: 60 power and no carbon at all. But its waste stays dangerous for thousands of years, and the land pays for each one." },
+  plutonium: { text: "Breeder reactors: every Nuclear Plant now makes 90 power instead of 60, and leaves half as much waste again." },
+  ai: { build: "datacenter", text: "Build a Data Center: Knowledge day and night. It needs 12 power, so keep the grid ahead." },
+  automation: { text: "The robots are working: farms, factories, quarries and woodcutters make 30% more. But people without work feel lost: −10 happiness. A Shorter Work Week fixes that." },
+  purpose: { text: "Everyone works fewer days now, and spends the rest learning and making. No more lost purpose, and more of us read and study." },
+  verticalfarms: { build: "vfarm", text: "Build a Vertical Farm: 3 food on one tile. Then you can sell old fields and plant forest there instead." },
+  arcology: { build: "arcology", text: "Build an Arcology: room for 100 people in one green tower, so the city needs less land." },
+  fusion: { build: "fusion", text: "Build a Fusion Reactor: 100 clean power. Clean power is what takes us to Type I." },
+  capture: { build: "aircapture", text: "Build an Air Capture Plant: it takes carbon back out of the air. Run it on clean power: on coal power it catches much less." },
+  rewilding: { text: "Rewilding: standing forest now takes twice as much carbon from the air, and young forest grows back twice as fast. Plant!" },
+  oceans: { build: "oceancleaner", text: "Build an Ocean Clean-up on the shore: a healthier sea, and the fish come back." },
+  "mineral-x": { text: "Mineral X-7 carries power with almost no loss: everything that needs power now needs a quarter less." },
+  rocketry: { build: "launchsite", text: "Build a Launch Site, then press Space in the bar below to launch satellites, a telescope, a power satellite and a Moon base." },
+  aetherite: { text: "Aetherite! Click any improved building and press Improve: it can now be Aetherite-laced, the best there is." },
   tanks: { text: "Engines go to war: every warrior fights five times as hard. The other nations are watching." },
 };
 
@@ -2085,6 +2361,12 @@ export const ERA_INTROS: Record<number, { id: string; title: string; text: strin
     title: "Welcome to the Industrial age",
     text: "Steam, coal and iron! Our town is becoming a city: factories, railways, crowded streets. Coal gives cheap power, but its smoke chokes the streets and its carbon stays in the air for good, slowly warming the whole world. Clean power costs more at first. The kingdoms across the sea are nations now, and their scientists are as worried as ours about the weather to come.",
     sdg: "SDG 7: clean energy, and SDG 13: climate action",
+  },
+  5: {
+    id: "era-5",
+    title: "Welcome to the Future",
+    text: "We came through the crisis, but the carbon we burned is still in the air. Scientists warn of a tipping point: if the air isn't cleaner soon, the frozen north will thaw and warm the world further on its own. Pull carbon back out of the air, let the forests return, and power everything cleanly. Our goal: Type I on the Kardashev scale, a whole planet run on clean energy, with the land still healthy.",
+    sdg: "SDG 13: climate action, and SDG 7: clean energy for all",
   },
   3: {
     id: "era-3",
@@ -2679,6 +2961,148 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     itemX: 66,
     lines: ["Horses could not cross the mud and wire of the new battlefields.", "Armoured machines on tracks could.", "Wars grew deadlier than ever before."],
   },
+  // ---- Nuclear power (Industrial), and the Future & Space ----
+  uranium: {
+    bg: "day",
+    actors: ["person", "person"],
+    props: [
+      { icon: "uranium", x: 44, size: 44 },
+      { icon: "flame", x: 56, from: 1, until: 2, size: 40 },
+    ],
+    item: "reactor",
+    itemFrom: 2,
+    lines: ["A heavy grey rock that made our instruments click.", "Uranium: split inside a reactor, it gives off great heat.", "Power with no smoke. But its waste must be guarded for thousands of years."],
+  },
+  plutonium: {
+    bg: "night",
+    actors: ["person", "person"],
+    props: [
+      { icon: "reactor", x: 44, size: 48 },
+      { icon: "uranium", x: 58, until: 1, size: 36 },
+      { icon: "flame", x: 58, from: 1, size: 36 },
+    ],
+    item: "bulb",
+    itemFrom: 2,
+    lines: ["Inside the reactors, the spare uranium was changing.", "It had become plutonium, and that could be burned too.", "Half as much power again. Half as much waste again."],
+  },
+  ai: {
+    bg: "night",
+    actors: ["person-sit", "person-sit"],
+    props: [
+      { icon: "computer", x: 42, size: 40 },
+      { icon: "datacenter", x: 56, from: 1, size: 44 },
+    ],
+    item: "robot",
+    itemFrom: 2,
+    lines: ["Our computers began to learn from what they saw.", "Halls full of them, thinking day and night.", "Artificial intelligence: a mind we built ourselves."],
+  },
+  automation: {
+    bg: "day",
+    actors: ["person", "person"],
+    props: [
+      { icon: "wheat", x: 44, until: 1, size: 40 },
+      { icon: "factory", x: 44, from: 1, size: 44 },
+      { icon: "sad", x: 58, from: 2, size: 36 },
+    ],
+    item: "robot",
+    itemFrom: 0,
+    lines: ["The robots learned to sow, to build and to dig.", "Factories ran with hardly anyone inside.", "More of everything. But many of us had no work to go to."],
+  },
+  purpose: {
+    bg: "dawn",
+    actors: ["person-sit", "person"],
+    props: [
+      { icon: "robot", x: 42, size: 40 },
+      { icon: "book", x: 56, from: 1, size: 36 },
+    ],
+    item: "smile",
+    itemFrom: 2,
+    lines: ["The robots kept working while we rested.", "We worked three days, and spent the rest learning and making.", "We had found a purpose again."],
+  },
+  verticalfarms: {
+    bg: "day",
+    actors: ["person", "person"],
+    props: [
+      { icon: "wheat", x: 44, until: 2, size: 40 },
+      { icon: "sapling", x: 44, from: 2, size: 40 },
+    ],
+    item: "vfarm",
+    lines: ["Our fields covered half the island.", "So we grew crops indoors, floor upon floor, under lights.", "The old fields can be forest again."],
+  },
+  arcology: {
+    bg: "dusk",
+    actors: ["person", "person"],
+    props: [
+      { icon: "insula", x: 42, until: 1, size: 40 },
+      { icon: "insula", x: 52, until: 1, size: 40 },
+      { icon: "sapling", x: 46, from: 2, size: 36 },
+    ],
+    item: "arcology",
+    lines: ["The city kept spreading over the land.", "So we built up instead: a whole town in one tower.", "Gardens on every level, and the land around it left wild."],
+  },
+  fusion: {
+    bg: "night",
+    actors: ["person", "person"],
+    props: [
+      { icon: "sun", x: 46, y: 50, until: 1, size: 40 },
+      { icon: "bulb", x: 52, from: 2, size: 36 },
+    ],
+    item: "fusion",
+    lines: ["The Sun shines by pressing hydrogen together.", "In a ring of magnets, we did the same.", "Clean power, from water and patience."],
+  },
+  capture: {
+    bg: "day",
+    actors: ["person", "person"],
+    props: [
+      { icon: "factory", x: 44, until: 1, size: 44 },
+      { icon: "rock", x: 52, from: 2, size: 36 },
+    ],
+    item: "capture",
+    lines: ["The carbon we burned was still up in the air.", "Great fans pulled the air through filters that caught it.", "And it went back under the ground, where it came from."],
+  },
+  rewilding: {
+    bg: "dawn",
+    actors: ["person", "person"],
+    props: [
+      { icon: "stump", x: 44, until: 1, size: 40 },
+      { icon: "sapling", x: 44, from: 1, size: 40 },
+      { icon: "bird", x: 58, y: 48, from: 2, size: 32 },
+    ],
+    item: "leaf",
+    itemFrom: 2,
+    lines: ["Old fields and cut forests stood empty.", "We let them go wild again.", "The forest came back, and drank the carbon from the air."],
+  },
+  oceans: {
+    bg: "sea",
+    actors: ["person", "person"],
+    props: [{ icon: "fish", x: 58, from: 2, size: 36 }],
+    item: "cleaner",
+    lines: ["The sea was full of plastic and lost nets.", "Boats with long booms swept it all out.", "And the fish came back."],
+  },
+  "mineral-x": {
+    bg: "night",
+    actors: ["person", "person"],
+    props: [
+      { icon: "cleaner", x: 44, size: 40 },
+      { icon: "bulb", x: 58, from: 2, size: 32 },
+    ],
+    item: "mineralx",
+    lines: ["Our clean-up divers went deeper than ever.", "Under the sea floor: a mineral that matches nothing we know.", "Power flows through it with almost no loss. Nobody knows why."],
+  },
+  rocketry: {
+    bg: "dusk",
+    actors: ["person", "person"],
+    props: [{ icon: "satellite", x: 56, y: 62, from: 2, size: 32 }],
+    item: "rocket",
+    lines: ["We built rockets taller than any tower.", "Fire, smoke and thunder: one rose all the way to orbit.", "Now satellites circle the planet, and the Moon is in reach."],
+  },
+  aetherite: {
+    bg: "night",
+    actors: ["person", "person"],
+    props: [{ icon: "moon", x: 50, y: 58, size: 40 }],
+    item: "aetherite",
+    lines: ["On the Moon, our miners dug into the grey dust.", "They found a crystal that hums, and is never warm or cold.", "We call it Aetherite. Nobody knows what it is."],
+  },
 };
 
 // Ticks between two lessons, so they never pile up.
@@ -2799,7 +3223,7 @@ export const COLLAPSE = { level: 20, ticks: 80 };
 export const NEXT_ERA_POPULATION = 15;
 // Improving buildings with stone and new ores: each level makes `boost` more
 // (output, or room in a home) from the same land. Level 2 needs Toolmaking,
-// 3 Bronze, 4 Iron Tools, 5 Steelmaking. `stone` and `currency` are what each
+// 3 Bronze, 4 Iron Tools, 5 Steelmaking, 6 Aetherite (from the Moon). `stone` and `currency` are what each
 // level costs (by the level it goes up to).
 export const IMPROVE = {
   boost: 0.25,
@@ -2808,10 +3232,11 @@ export const IMPROVE = {
     { level: 3, name: "Bronze-fitted", requires: "bronze", color: "#b08d57" },
     { level: 4, name: "Iron-bound", requires: "iron-tools", color: "#4a4f55" },
     { level: 5, name: "Steel-framed", requires: "steelmaking", color: "#c9ccd1" },
+    { level: 6, name: "Aetherite-laced", requires: "aetherite", color: "#4fd8c4" },
   ],
-  stone: [0, 0, 12, 20, 30, 45],
-  currency: [0, 0, 0, 10, 25, 40],
-  buildings: ["woodcutter", "gatherer", "farm", "fishing", "quarry", "pen", "elder", "school", "hut", "house", "townhouse"],
+  stone: [0, 0, 12, 20, 30, 45, 60],
+  currency: [0, 0, 0, 10, 25, 40, 120],
+  buildings: ["woodcutter", "gatherer", "farm", "fishing", "quarry", "pen", "elder", "school", "hut", "house", "townhouse", "university", "factory", "apartments", "vfarm", "datacenter"],
 };
 // Beliefs: shrines and temples (each counts up to `max`), the yearly festival
 // at a shrine (every `every` ticks: `mood` happiness for `food` food; skipped
@@ -3129,6 +3554,46 @@ export const CLIMATE = {
   maxReady: 0.85,
   ready: { seawall: 0.08, seawallsMax: 3, hospital: 0.07, hospitalsMax: 3, park: 0.04, parksMax: 3, cleanPower: 0.15, forest: 0.1 },
 };
+
+// ---- Future & Space ----
+// The Kardashev scale rates a civilisation by the power it uses (Carl Sagan's
+// version: humanity is roughly 0.7 today; Type I uses about as much power as
+// reaches its whole planet). In the game the rating climbs from `start` to 1
+// as clean power (no coal) grows to `clean`. The game ends at Type I, if the
+// land is still at least `minLand` Sustainability and the tipping point is past.
+export const KARDASHEV = { start: 0.73, clean: 600, minLand: 40 };
+// The climate tipping point: `afterTicks` into the Future the scientists warn
+// that the frozen north is thawing; the air has `ticks` to get back down to
+// `safe` ppm (350 is the level some climate scientists call safe). If it does,
+// it holds; if not, the climate tips: for good, the land loses `sustain` and
+// fields grow `food` less.
+export const TIPPING = { afterTicks: 80, ticks: 400, safe: 350, sustain: 15, food: 0.15 };
+// Nuclear power: each plant's waste costs `waste` Sustainability for good
+// (plutonium breeders: `breeder` times the power and the waste).
+export const NUCLEAR = { breeder: 1.5 };
+// Automation: `boost` more from farms, factories, quarries and woodcutters;
+// `mood` less happiness until the Shorter Work Week (which adds `literacy`).
+export const AUTOMATION = { boost: 0.3, mood: 10, literacy: 6, buildings: ["farm", "factory", "quarry", "woodcutter", "vfarm"] };
+// Rewilding: forest takes `sink` times as much carbon, and grows back `growth` times as fast.
+export const REWILDING = { sink: 2, growth: 2 };
+// Ocean clean-up: Sustainability each, up to `max`.
+export const OCEAN = { sustain: 3, max: 3 };
+// Mineral X-7: power needed is cut by this share.
+export const MINERAL_X = { saving: 0.25 };
+// Space: what each launch from the Launch Site costs and does. `carbon`: ppm
+// each launch adds (rocket fuel).
+export const SPACE = {
+  carbon: 1,
+  projects: [
+    { id: "satellites", name: "Weather Satellites", icon: "satellite", cost: { currency: 300 }, text: "Forecasts from orbit: farmers sow and harvest at the right time. Fields grow 10% more food." },
+    { id: "telescope", name: "Space Telescope", icon: "spyglass", cost: { currency: 450 }, text: "A telescope above the air: +30% Knowledge." },
+    { id: "solarsat", name: "Solar Power Satellite", icon: "solar", cost: { currency: 900, stone: 150 }, text: "Sunlight collected in orbit, where it is never night, and beamed down: +80 clean power." },
+    { id: "moonbase", name: "Moon Base", icon: "moon", cost: { currency: 1200, stone: 200 }, text: "A base on the Moon. Its miners find something nobody can name (unlocks Aetherite)." },
+  ],
+  fieldBoost: 0.1,
+  knowledgeBoost: 0.3,
+  solarPower: 80,
+} as const;
 
 export const PLAGUE = {
   // It reached Europe's ports in 1347. The warning comes `warnTicks` before

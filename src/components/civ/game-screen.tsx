@@ -21,6 +21,7 @@ import { HintPanel } from "./hud/hints";
 import { GameAudio } from "./hud/game-audio";
 import { setMusicScene, unlockAudio } from "@/lib/audio";
 import { KingdomsPanel, LandmarkPicker } from "./hud/medieval";
+import { SpacePanel } from "./hud/future";
 import {
   DevPanel,
   ElderLesson,
@@ -117,6 +118,7 @@ function Hud({ onRestart }: { onRestart: () => void }) {
         <BottomBar />
         {panel === "tree" && <TreeOverlay />}
         {panel === "kingdoms" && <KingdomsPanel />}
+        {panel === "space" && <SpacePanel />}
         <GuideOverlay />
         <EventModal />
         <DiscoveryScene />

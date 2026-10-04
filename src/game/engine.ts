@@ -72,6 +72,14 @@ import {
   MIN_SUSTAINABILITY_FOR_BEST_ENDING,
   NEXT_ERA_POPULATION,
   IMPROVE,
+  KARDASHEV,
+  TIPPING,
+  NUCLEAR,
+  AUTOMATION,
+  REWILDING,
+  OCEAN,
+  MINERAL_X,
+  SPACE,
   BELIEFS,
   SETTLERS,
   GROWTH_PRESSURE,
@@ -175,6 +183,9 @@ export type Action =
   | { type: "devFogBack" }
   | { type: "devXp" }
   | { type: "devOres" }
+  | { type: "launch"; project: string }
+  | { type: "devTipping"; when: "soon" | "now" | "end" }
+  | { type: "devTypeOne" }
   | { type: "raidResponse"; choice: RaidResponse }
   | { type: "devRaidKind"; kind: RaidKind }
   | { type: "setKeeper"; tileId: number; on: boolean }
@@ -336,6 +347,8 @@ function devJumpToEra(state: GameState, era: number): GameState {
     eraStartTick: state.tick,
     legionDone: state.legionDone || era >= 2,
     droughtDone: state.droughtDone || era >= 3,
+    plagueDone: state.plagueDone || era >= 4,
+    climateDone: state.climateDone || era >= 5,
   });
 }
 
@@ -1321,8 +1334,22 @@ const HOMES = ["hut", "house", "townhouse", "apartments"];
 // The power a building adds to the grid (+) or needs from it (-). Factories
 // only need it once Electricity drives their machines.
 export function powerOf(state: GameState, building: string): number {
-  if (building === "factory") return state.researched.includes("electricity") ? -POWER.factoryNeed : 0;
-  return BUILDINGS_BY_ID[building]?.power ?? 0;
+  // Mineral X-7 (Future): everything that needs power needs a quarter less.
+  const need = state.researched.includes("mineral-x") ? 1 - MINERAL_X.saving : 1;
+  if (building === "factory") return state.researched.includes("electricity") ? -POWER.factoryNeed * need : 0;
+  const power = BUILDINGS_BY_ID[building]?.power ?? 0;
+  // Plutonium breeders: each nuclear plant makes half as much again.
+  if (building === "nuclear" && state.researched.includes("plutonium")) return power * NUCLEAR.breeder;
+  return power < 0 ? power * need : power;
+}
+
+// Power beamed down from orbit (the Solar Power Satellite).
+function orbitPower(state: GameState) {
+  return spaceDone(state, "solarsat") ? SPACE.solarPower : 0;
+}
+
+export function spaceDone(state: GameState, project: string) {
+  return (state.space ?? []).includes(project);
 }
 
 function gridTiles(state: GameState) {
@@ -1330,7 +1357,7 @@ function gridTiles(state: GameState) {
 }
 
 export function powerSupply(state: GameState) {
-  return gridTiles(state).reduce((sum, t) => sum + Math.max(0, powerOf(state, t.building!)) * wearFactor(t), 0);
+  return gridTiles(state).reduce((sum, t) => sum + Math.max(0, powerOf(state, t.building!)) * wearFactor(t), 0) + orbitPower(state);
 }
 
 export function powerDemand(state: GameState) {
@@ -1346,11 +1373,22 @@ export function powerCover(state: GameState) {
 // 0-1: the share of our power that comes without carbon.
 export function cleanPowerShare(state: GameState) {
   const supply = powerSupply(state);
-  if (supply <= 0) return 0;
-  const clean = gridTiles(state)
-    .filter((t) => powerOf(state, t.building!) > 0 && !BUILDINGS_BY_ID[t.building!].carbon)
-    .reduce((sum, t) => sum + powerOf(state, t.building!) * wearFactor(t), 0);
-  return clean / supply;
+  return supply <= 0 ? 0 : cleanPower(state) / supply;
+}
+
+// Power made without carbon: water, wind, sun, nuclear, fusion and orbit.
+export function cleanPower(state: GameState) {
+  return (
+    gridTiles(state)
+      .filter((t) => powerOf(state, t.building!) > 0 && !BUILDINGS_BY_ID[t.building!].carbon)
+      .reduce((sum, t) => sum + powerOf(state, t.building!) * wearFactor(t), 0) + orbitPower(state)
+  );
+}
+
+// The Kardashev rating (scaled for the game): KARDASHEV.start, climbing to 1
+// (Type I) as clean power grows to KARDASHEV.clean.
+export function kardashev(state: GameState) {
+  return KARDASHEV.start + (1 - KARDASHEV.start) * Math.min(1, cleanPower(state) / KARDASHEV.clean);
 }
 
 // Degrees C warmer than before industry.
@@ -1358,10 +1396,25 @@ export function warming(state: GameState) {
   return Math.max(0, ((state.carbon ?? CARBON.start) - CARBON.start) * CARBON.warmingPerPpm);
 }
 
-// ppm a tick: every chimney adds, standing forest takes a little back.
+// ppm a tick: every chimney adds, standing forest takes a little back (twice
+// as much with Rewilding), and air capture plants take more back.
 export function carbonFlow(state: GameState) {
   const added = state.tiles.reduce((sum, t) => sum + (t.building ? (BUILDINGS_BY_ID[t.building].carbon ?? 0) : 0), 0);
-  return added - CARBON.forestSink * forestCover(state);
+  return added - forestSink(state) - carbonCaptured(state);
+}
+
+export function forestSink(state: GameState) {
+  return CARBON.forestSink * forestCover(state) * (state.researched.includes("rewilding") ? REWILDING.sink : 1);
+}
+
+// Air capture plants work as well as the grid covers them, and much less on
+// coal power (burning carbon to catch carbon).
+export function carbonCaptured(state: GameState) {
+  const plants = gridTiles(state).filter((t) => BUILDINGS_BY_ID[t.building!].captures);
+  if (!plants.length) return 0;
+  const clean = cleanPowerShare(state);
+  const worth = powerCover(state) * (clean + 0.3 * (1 - clean));
+  return plants.reduce((sum, t) => sum + (BUILDINGS_BY_ID[t.building!].captures ?? 0) * wearFactor(t), 0) * worth;
 }
 
 function updateCarbon(state: GameState): GameState {
@@ -1386,6 +1439,93 @@ export function smogIndex(state: GameState) {
     for (const f of smoky) if (hexDistance(f, h) <= SMOG.range) total += BUILDINGS_BY_ID[f.building!].smog! * laws;
   }
   return Math.min(SMOG.max, total / homes.length);
+}
+
+// The climate tipping point (Future & Space): TIPPING.afterTicks into the era,
+// the scientists warn that the frozen north is thawing. The air has
+// TIPPING.ticks to get back down to TIPPING.safe ppm. If it gets there, the
+// climate holds; if time runs out first, it tips, for good.
+function updateTipping(state: GameState): GameState {
+  if (state.era !== 5 || state.tippingDone || state.phase !== "playing") return state;
+  const carbon = state.carbon ?? CARBON.start;
+  const t = state.tipping;
+  if (!t) {
+    if (state.tick - (state.eraStartTick ?? 0) < TIPPING.afterTicks || state.raid || state.event) return state;
+    // Clean enough already: the permafrost holds.
+    if (carbon <= TIPPING.safe) {
+      return addXp(
+        {
+          ...state,
+          tippingDone: true,
+          log: [`The scientists checked the frozen north: our air is clean enough (${Math.round(carbon)} ppm). The climate holds.`, ...state.log].slice(0, 30),
+        },
+        XP.era,
+      );
+    }
+    return {
+      ...state,
+      tipping: { warnTick: state.tick, endTick: state.tick + TIPPING.ticks, startCarbon: carbon },
+      lastBigTick: state.tick,
+      log: [
+        `The scientists warn: the frozen north is thawing. Get the air from ${Math.round(carbon)} back down to ${TIPPING.safe} ppm, or the climate will tip and keep warming on its own. Capture carbon, plant forest, and stop burning coal!`,
+        ...state.log,
+      ].slice(0, 30),
+    };
+  }
+  if (carbon <= TIPPING.safe) {
+    return addXp(
+      {
+        ...state,
+        tipping: null,
+        tippingDone: true,
+        modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + 10 },
+        log: [`We did it: the air is down to ${Math.round(carbon)} ppm, and the frozen north holds. The climate will not tip.`, ...state.log].slice(0, 30),
+      },
+      XP.era,
+    );
+  }
+  if (state.tick < t.endTick) return state;
+  const rand = mulberry32(state.seed + state.tick * 89);
+  const stormy = disasterActive(state) ? state : startDisaster(state, "storm", rand, 0);
+  return {
+    ...stormy,
+    tipping: null,
+    tippingDone: true,
+    tipped: true,
+    log: [
+      `Too late: the air is still at ${Math.round(carbon)} ppm. The frozen north is thawing for good, and the climate has tipped: hotter summers, failing harvests, and the land pays.`,
+      ...stormy.log,
+    ].slice(0, 30),
+  };
+}
+
+// The tipping point's countdown is on.
+export function tippingActive(state: GameState) {
+  return !!state.tipping && !state.tippingDone;
+}
+
+// The end of the story: Type I on the Kardashev scale, once the tipping point
+// is decided, with the land still healthy.
+export function typeOneReady(state: GameState) {
+  return (
+    state.era === 5 &&
+    !!state.tippingDone &&
+    kardashev(state) >= 1 &&
+    state.meters.sustainability >= KARDASHEV.minLand &&
+    state.phase === "playing"
+  );
+}
+
+function reachTypeOne(state: GameState): GameState {
+  if (state.debrief || state.finished || !typeOneReady(state)) return state;
+  const done = { ...state, finished: true, log: [`Type I! ${state.nation ?? "Our people"} power the whole planet cleanly, and the land is still healthy.`, ...state.log].slice(0, 30) };
+  return { ...done, debrief: makeDebrief(done, "final") };
+}
+
+// Automation without a fair share of the work: people lose their jobs and
+// their sense of purpose.
+export function automationMood(state: GameState) {
+  return state.researched.includes("automation") && !state.researched.includes("purpose") ? AUTOMATION.mood : 0;
 }
 
 // Is the climate crisis striking now (after the warning, before it's over)?
@@ -1608,7 +1748,14 @@ export function production(state: GameState): Resources {
     // An improved building (stone, bronze, iron, steel) makes more from the same land.
     const better = improveFactor(tile);
     const boost =
-      (tile.building === "factory" ? electric : 1) * (["market", "factory", "tradingpost"].includes(tile.building) ? rail : 1);
+      (tile.building === "factory" ? electric : 1) *
+      (["market", "factory", "tradingpost"].includes(tile.building) ? rail : 1) *
+      // Future: what needs power works as well as the grid covers it; robots
+      // help on farms, in factories, quarries and the woods; weather
+      // satellites help the fields.
+      (def.era >= 5 && (def.power ?? 0) < 0 ? powerCover(state) : 1) *
+      (state.researched.includes("automation") && AUTOMATION.buildings.includes(tile.building) ? 1 + AUTOMATION.boost : 1) *
+      (tile.building === "farm" && spaceDone(state, "satellites") ? 1 + SPACE.fieldBoost : 1);
     for (const [k, v] of Object.entries(def.produces ?? {}))
       // Costs (a bathhouse burning wood) don't shrink as it wears; output does.
       out[k as keyof Resources] += (v ?? 0) * factor * share * boost * (k === "food" ? dust : 1) * ((v ?? 0) > 0 ? worn * better : 1);
@@ -1655,6 +1802,9 @@ export function production(state: GameState): Resources {
   if (!closed) for (const k of Object.values(state.kingdoms ?? {})) if (k.treaty) out.currency += DIPLOMACY.treaty.trade;
   if (state.researched.includes("printing")) out.knowledge *= LEARNING.printingKnowledge;
   if (state.researched.includes("computers")) out.knowledge *= 1.3;
+  if (spaceDone(state, "telescope")) out.knowledge *= 1 + SPACE.knowledgeBoost;
+  // The climate tipped: for good, hotter summers and droughts cut harvests.
+  if (state.tipped) out.food *= 1 - TIPPING.food;
   // The climate crisis: heat and storms ruin crops, the warmer the worse.
   if (inClimateCrisis(state)) out.food *= Math.max(0.3, 1 - CLIMATE.cropLoss * warming(state));
   if (state.researched.includes("roads")) out.currency *= ROADS_COINS;
@@ -2194,6 +2344,22 @@ export function sustainabilityBreakdown(state: GameState): SustainPart[] {
       hint: "Trees and grass in town give a little back to the land.",
     },
     {
+      label: `Nuclear waste from ${counts.nuclear ?? 0} plant${counts.nuclear === 1 ? "" : "s"}`,
+      value: -(counts.nuclear ?? 0) * (BUILDINGS_BY_ID.nuclear?.waste ?? 0) * (state.researched.includes("plutonium") ? NUCLEAR.breeder : 1),
+      hint: "Spent fuel stays dangerous for thousands of years and has to be guarded all that time.",
+      fix: "Fewer nuclear plants: wind, sun, water and (later) fusion leave no waste like it.",
+    },
+    {
+      label: `${Math.min(OCEAN.max, counts.oceancleaner ?? 0)} ocean clean-up${counts.oceancleaner === 1 ? "" : "s"}`,
+      value: Math.min(OCEAN.max, counts.oceancleaner ?? 0) * OCEAN.sustain * powerCover(state),
+      hint: `Plastic and lost nets swept out of the sea: +${OCEAN.sustain} each, up to ${OCEAN.max}.`,
+    },
+    {
+      label: "The climate tipped",
+      value: state.tipped ? -TIPPING.sustain : 0,
+      hint: "The frozen north thawed and keeps warming the world on its own. This can't be undone.",
+    },
+    {
       label: "Recent events",
       value: state.modifiers.sustainability,
       hint: "Fires and choices you made in events. This fades over time.",
@@ -2397,6 +2563,11 @@ export function meterBreakdown(state: GameState, key: MeterKey): MeterPart[] {
         hint: `Books for everyone: +${LEARNING.printingLiteracy}.`,
       },
       {
+        label: "Shorter Work Week",
+        value: state.researched.includes("purpose") ? AUTOMATION.literacy : 0,
+        hint: `Time to learn: +${AUTOMATION.literacy}.`,
+      },
+      {
         label: `${plural(learned, "advancement")} learned`,
         value: learned * 2,
         hint: "+2 for each advancement.",
@@ -2444,7 +2615,7 @@ export function meterBreakdown(state: GameState, key: MeterKey): MeterPart[] {
         gain: counts.elder ? undefined : 5,
       },
       {
-        label: `Cold: ${Math.round(coldShare(state) * 100)}% with no fire${state.researched.includes("hide-clothing") ? " or warm clothes" : ""}`,
+        label: `Cold: ${Math.round(coldShare(state) * 100)}% with no fire${state.era >= 4 ? ", warm clothes or heated home" : state.researched.includes("hide-clothing") ? " or warm clothes" : ""}`,
         value: -cold,
         hint: `Each fire warms ${GROWTH_PRESSURE.peoplePerFire} people; pens (with Warm Clothes) and Town Houses warm people too.`,
         fix: "Light another fire, or keep people warm with pens and Warm Clothes.",
@@ -2510,6 +2681,24 @@ export function meterBreakdown(state: GameState, key: MeterKey): MeterPart[] {
         fix: "Demolish guildhalls you can do without.",
       },
       {
+        label: "Smog over the homes",
+        value: -SMOG.mood * smogIndex(state),
+        hint: "Smoke from coal plants, factories and stations drifts over the homes nearby.",
+        fix: "Build City Parks near the homes, learn Clean Air Laws, or move smoky buildings away from homes.",
+      },
+      {
+        label: "Dark, cold flats",
+        value: -(counts.apartments ? POWER.darkFlatsMood * (1 - powerCover(state)) : 0),
+        hint: "Apartment blocks without enough power.",
+        fix: "Build more power plants so the grid covers what it needs.",
+      },
+      {
+        label: "Jobs lost to robots",
+        value: -automationMood(state),
+        hint: "Automation took much of the work, and with it many people's sense of purpose.",
+        fix: "Learn the Shorter Work Week (Advancements): the work is shared out, and people use their time to learn and make.",
+      },
+      {
         label: "Recent events",
         value: state.modifiers.happiness,
         hint: "Choices in events, discoveries and losses. This fades over time.",
@@ -2555,10 +2744,14 @@ export function sustainabilityTrend(state: GameState) {
 export function coldShare(state: GameState) {
   const counts = countBuildings(state);
   const pens = state.researched.includes("hide-clothing") ? counts.pen ?? 0 : 0;
+  // Apartment blocks and arcologies are heated from the grid: their own
+  // people stay warm as well as the power covers them.
+  const heated = state.tiles.reduce((sum, t) => sum + (t.building === "apartments" || t.building === "arcology" ? homeRoom(t) : 0), 0);
   const warmed =
     litFires(state).length * GROWTH_PRESSURE.peoplePerFire +
     pens * GROWTH_PRESSURE.peoplePerPen +
-    (counts.townhouse ?? 0) * TOWN.warmth;
+    (counts.townhouse ?? 0) * TOWN.warmth +
+    heated * powerCover(state);
   return state.population > 0 ? Math.max(0, 1 - warmed / state.population) : 0;
 }
 
@@ -2764,6 +2957,7 @@ export function computeMeters(state: GameState): Meters {
     (landmarkWorking(state, "library") ? LANDMARK.libraryLiteracy : 0) +
     (state.researched.includes("printing") ? LEARNING.printingLiteracy : 0) +
     Math.min(BELIEFS.max, counts.temple ?? 0) * BELIEFS.templeLiteracy +
+    (state.researched.includes("purpose") ? AUTOMATION.literacy : 0) +
     (state.researched.length - 1) * 2;
 
   const happiness =
@@ -2784,7 +2978,8 @@ export function computeMeters(state: GameState): Meters {
     (landmarkWorking(state, "cathedral") ? LANDMARK.cathedralMood : 0) -
     Math.min(2, counts.guildhall ?? 0) * LEARNING.guildMood -
     SMOG.mood * smogIndex(state) -
-    (counts.apartments ? POWER.darkFlatsMood * (1 - powerCover(state)) : 0) +
+    (counts.apartments ? POWER.darkFlatsMood * (1 - powerCover(state)) : 0) -
+    automationMood(state) +
     state.modifiers.happiness;
 
   return {
@@ -3180,6 +3375,7 @@ export function makeDebrief(state: GameState, kind: Debrief["kind"]): Debrief {
     planted: state.planted ?? 0,
     lessons: state.lessonsSeen ?? [],
     tier: kind === "loss" ? "lost" : endingTier(meters.sustainability),
+    ...(kind === "final" ? { kardashev: kardashev(state), tipped: !!state.tipped } : {}),
   };
 }
 
@@ -3392,8 +3588,9 @@ function tickOnce(state: GameState): GameState {
   next = cutHills(next);
   next = sparks(next);
   // No raids or events while a new player is still learning.
-  if (!inTutorial) next = updateClimate(updateRebellion(updatePlague(updateDisasters(updateDrought(updateLegion(updateRaids(next)))))));
+  if (!inTutorial) next = updateTipping(updateClimate(updateRebellion(updatePlague(updateDisasters(updateDrought(updateLegion(updateRaids(next))))))));
   next = updateCarbon(next);
+  next = reachTypeOne(next);
   next = returnCaravans(next);
   next = returnScouts(next);
   next = returnCanoes(next);
@@ -3664,7 +3861,11 @@ function growForests(state: GameState): GameState {
     if ((t.cracked ?? 0) > 0) changes.set(t.id, { ...changes.get(t.id), cracked: Math.max(0, (t.cracked ?? 0) - 0.005) });
     if ((t.rubble ?? 0) > 0) changes.set(t.id, { ...changes.get(t.id), rubble: Math.max(0, (t.rubble ?? 0) - 0.005) });
     if (t.terrain === "forest" && t.growth < 1 && t.scorch < 0.4) {
-      if (strain < 1) changes.set(t.id, { ...changes.get(t.id), growth: Math.min(1, t.growth + 0.06 * (1 - strain)) });
+      if (strain < 1)
+        changes.set(t.id, {
+          ...changes.get(t.id),
+          growth: Math.min(1, t.growth + 0.06 * (1 - strain) * (state.researched.includes("rewilding") ? REWILDING.growth : 1)),
+        });
     }
     // Forests only grow back where they already stood; they don't take over new land.
   }
@@ -4640,6 +4841,15 @@ export function currentGoal(state: GameState): string | null {
     ].filter(Boolean);
     return needs.length ? `Goal: ${needs.join(" and ")} to enter the Future.` : null;
   }
+  if (state.era === 5) {
+    const k = kardashev(state).toFixed(2);
+    const clean = `${Math.round(cleanPower(state))}/${KARDASHEV.clean} clean power`;
+    if (state.tipping)
+      return `Goal: carbon down to ${TIPPING.safe} ppm before the climate tips (now ${Math.round(state.carbon ?? CARBON.start)}). Air capture, forest and no coal help.`;
+    if (state.finished) return `Type I reached. Keep the planet thriving: land health ${state.meters.sustainability}.`;
+    const land = state.meters.sustainability < KARDASHEV.minLand ? ` and land health ${KARDASHEV.minLand}+ (now ${state.meters.sustainability})` : "";
+    return `Goal: Type I on the Kardashev scale (now ${k}): ${clean}${land}.${state.tippingDone ? "" : " The tipping point is coming."}`;
+  }
   return `Goal: keep the town thriving. Land health: ${state.meters.sustainability}.`;
 }
 
@@ -5404,6 +5614,43 @@ function step(state: GameState, action: Action): GameState {
     case "devXp":
       if (!state.dev) return state;
       return addXp(state, 100);
+
+    case "launch": {
+      // A project launched from the Launch Site (see SPACE).
+      const project = SPACE.projects.find((x) => x.id === action.project);
+      if (!project || !countBuildings(state).launchsite || spaceDone(state, project.id) || !canAfford(state, project.cost)) return state;
+      const launched = addTally(
+        {
+          ...state,
+          space: [...(state.space ?? []), project.id],
+          resources: spend(state.resources, project.cost),
+          carbon: (state.carbon ?? CARBON.start) + SPACE.carbon,
+          log: [`Launched: ${project.name}. ${project.text}`, ...state.log].slice(0, 30),
+        },
+        "launches",
+        1,
+      );
+      return withMeters(addXp(project.id === "moonbase" ? addTally(launched, "moonbase", 1) : launched, XP.research));
+    }
+
+    case "devTipping": {
+      if (!state.dev || state.era !== 5 || state.tippingDone) return state;
+      const t = state.tipping;
+      if (action.when === "end") return t ? { ...state, tipping: { ...t, endTick: state.tick + 1 } } : state;
+      if (action.when === "now" && t) return state;
+      // Soon: the warning comes next tick. Now: the warning, with the air well above safe.
+      const ready = { ...state, eraStartTick: state.tick - TIPPING.afterTicks, carbon: Math.max(state.carbon ?? CARBON.start, TIPPING.safe + 40) };
+      return action.when === "now" ? updateTipping(ready) : ready;
+    }
+
+    case "devTypeOne": {
+      // Clean power, the tipping point past and healthy land: the ending.
+      if (!state.dev || state.era !== 5) return state;
+      const ready: GameState = { ...state, tipping: null, tippingDone: true, space: Array.from(new Set([...(state.space ?? []), "solarsat"])) };
+      const fusion = state.tiles.filter((t) => !t.building && t.revealed && (t.terrain === "grass" || t.terrain === "steppe")).slice(0, 5);
+      const built = { ...ready, tiles: ready.tiles.map((t) => (fusion.some((f) => f.id === t.id) ? { ...t, building: "fusion", worn: 0 } : t)) };
+      return reachTypeOne(withMeters({ ...built, meters: { ...built.meters, sustainability: Math.max(built.meters.sustainability, KARDASHEV.minLand) } }));
+    }
 
     case "devOres": {
       // Every ore for improving buildings is known, with stone and coins to spend.
