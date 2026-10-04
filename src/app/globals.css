@@ -436,3 +436,13 @@ html[data-in-game] .accessibility-floating {
 @media (prefers-reduced-motion: reduce) {
   .letterbox-bar, .letterbox-title { animation: none; }
 }
+
+/* Elder Ama's hints point at a button by making it glow (hud/hints.tsx). */
+@keyframes hint-glow {
+  0%, 100% { box-shadow: 0 0 0 2px #ffd23f, 0 0 10px 2px rgba(255, 210, 63, 0.6); }
+  50% { box-shadow: 0 0 0 3px #ffd23f, 0 0 18px 6px rgba(255, 210, 63, 0.9); }
+}
+.hint-glow { animation: hint-glow 1.2s ease-in-out infinite; position: relative; z-index: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .hint-glow { animation: none; box-shadow: 0 0 0 3px #ffd23f; }
+}

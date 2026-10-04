@@ -260,7 +260,7 @@ export function TopBar() {
           {knowHelp && <KnowledgeHelp state={state} onClose={() => setKnowHelp(false)} />}
         </span>
         <span className="hidden h-6 w-px bg-white/20 md:block" />
-        <div className="flex gap-1">
+        <div className="flex gap-1" data-guide="speed">
           {SPEEDS.map((s) => (
             <button
               key={s.value}

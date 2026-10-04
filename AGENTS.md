@@ -730,6 +730,14 @@ These were decided with the project owner. Do not change them without being aske
     `emberline-audio` (Menu > Sound, and the speaker in the top bar).
   - **Loudness:** keep the music around -20 to -26 dB RMS (measured with an
     analyser), or it is hard to hear on laptop speakers.
+- **Every feature is introduced when it first matters** (`src/game/hints.ts`,
+  `hud/hints.tsx`). The tutorial only teaches the basics; everything else gets
+  one line from Elder Ama the first time it applies (a woodcutter cut off by
+  the sacred grove: sell it; scouting affordable: what it costs; a meter low:
+  click it). Each hint shows once a game (`hintsSeen`), one at a time, at least
+  `HINT.gapTicks` apart, never over the tutorial, events, lessons, guided steps,
+  raids or camera shots. The button it talks about glows (`target`). When you add
+  a feature the tutorial doesn't cover, add its hint, in order of importance.
 - **Population control** (click the population counter): "Hold at N" sets
   `popLimit`, which stops births and newcomers (`belowLimit()`), and "Send
   settlers" lets `SETTLERS.size` people leave peacefully (never below

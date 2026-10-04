@@ -260,6 +260,7 @@ export function BottomBar() {
 
         <div className="flex shrink-0 gap-1.5 overflow-x-auto border-t-2 border-white/10 pt-1.5 md:overflow-visible md:border-l-2 md:border-t-0 md:pl-3 md:pt-0">
           <ToolButton
+            guide="tool-sell"
             icon="coin"
             label="Sell"
             onClick={() => setSelected(selected === DEMOLISH_TOOL ? null : DEMOLISH_TOOL)}

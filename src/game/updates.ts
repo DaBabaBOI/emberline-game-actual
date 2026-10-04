@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Elder Ama now introduces every feature the tutorial skips, right when it first matters: selling a woodcutter the sacred grove has cut off, what scouting costs, planting saplings, training warriors before a raid, speeding up time and more. One short line at a time, and the button she means glows.",
       "Warm Clothes now really replaces campfires: each Livestock Pen clothes 10 people, and families cook at small hearths in their homes, so with enough pens you need no campfire at all.",
       "Population control: click the population counter to hold your tribe at a size you choose, or send a few families off to start a village of their own. Nobody has to be harmed.",
       "Easter eggs are hidden around the game. Each one counts in \"Secrets found\" (in Advancements). A hint to start: name your people after someone on the team.",
