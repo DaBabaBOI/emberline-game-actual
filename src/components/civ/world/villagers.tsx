@@ -340,7 +340,7 @@ export function Warriors({
     const list = tiles.filter((t) => t.building === "warcamp");
     return list.length ? list : [homeTile];
   }, [tiles, homeTile]);
-  // Warriors patrol the ground around their camps and the watch fires, and stand
+  // Warriors patrol the ground around their camps and the watch towers, and stand
   // watch at the fires, instead of all milling about on one tile.
   const patrol = useMemo(() => {
     const posts = [...camps, ...tiles.filter((t) => t.building === "watchfire")];

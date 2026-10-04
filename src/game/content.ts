@@ -187,11 +187,11 @@ export const BUILDINGS: BuildingDef[] = [
   },
   {
     id: "watchfire",
-    name: "Watch Fire",
+    name: "Watch Tower",
     icon: "beacon",
-    description: "A fire kept burning on the shore. Raiders are seen sooner, and the lookouts add a little defense.",
-    gain: "Raiders seen 12 s sooner, +1 defense (up to 2 watch fires)",
-    landCost: "Burns wood day and night, and adds smoke",
+    description: "A tall lookout tower on the shore. Raiders are seen sooner, and the lookouts add a little defense.",
+    gain: "Raiders seen 12 s sooner, +1 defense (up to 2 watch towers)",
+    landCost: "Built from the biggest logs in the forest",
     landImpact: 1,
     era: 0,
     cost: { wood: 12 },
@@ -1156,7 +1156,7 @@ export const ADVANCEMENT_GOALS: Record<string, Goal[]> = {
 export const AFTER_STEPS: Record<string, AfterStep> = {
   storytelling: { build: "elder", text: "Now our elders can teach. Build an Elder's Hut: the children will learn from it, and we will gain Knowledge every day." },
   toolmaking: { build: "quarry", text: "Sharp stone tools! Place a Stone Quarry on the hills. Remember: it cuts the hill away for good, and its dust spoils crops nearby." },
-  firekeeping: { text: "We know how to bank a fire now: every campfire burns 1.5 times as long (50% longer) before it needs more wood. Less wood cut, less smoke. We can also keep a Watch Fire burning on the shore, to see raiders coming sooner." },
+  firekeeping: { text: "We know how to bank a fire now: every campfire burns 1.5 times as long (50% longer) before it needs more wood. Less wood cut, less smoke. We can also build a Watch Tower on the shore, to see raiders coming sooner." },
   fishing: { build: "fishing", text: "Rafts! Place a Fishing Spot on the shore, next to the water. Fish near the coast give even more. A Canoe Dock lets us paddle out to the islands to the south, but every canoe costs one big tree." },
   "early-farming": { build: "farm", text: "We can plant grain. Place Farmland on open grass: it feeds many, but it takes the land from the wild." },
   spears: { upgrade: true, text: "Stone-tipped spears! Our hunters bring back more food. Give a warrior a spear with the Spear button: in a fight, a spearman counts as 1.5 warriors (a warrior without one counts as 1). Every warrior you train from now on gets a spear." },
@@ -2251,7 +2251,8 @@ export const RAID_KINDS: Record<
 // `tributePerRaider` each; they leave but come back `tributeSooner` ticks sooner).
 export const RAID_RESPONSE = { fightTicks: 7, tributePerRaider: 4, tributeSooner: 60, hideMood: 4 };
 
-// A watch fire on the shore sees raiders earlier and adds a little defense.
+// A watch tower on the shore sees raiders earlier and adds a little defense
+// (`smoke`: what its big logs cost the land, in Sustainability).
 export const WATCH_FIRE = { warnTicks: 8, defense: 1, maxDefense: 2, smoke: 1 };
 
 // Famine is hard but you can come back from it: while the stores are empty about

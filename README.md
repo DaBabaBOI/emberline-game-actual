@@ -132,7 +132,7 @@ and events also link to these goals:
 - **Defend against raiders.** When raiders land you choose: fight, hide in the
   houses, or pay them off with food. Your warriors march out and fight on the
   map. After Hunting Spears you can arm them (spearmen count as 1.5 warriors), and
-  after Firekeeping you can build a Watch Fire on the shore to see raiders coming
+  after Firekeeping you can build a Watch Tower on the shore to see raiders coming
   sooner.
 - **Pick your people up** and drop them somewhere: on a building to help out, on
   a cold campfire to relight it. Drop them in a fire, the sea or the unexplored

@@ -1855,10 +1855,10 @@ export function sustainabilityBreakdown(state: GameState): SustainPart[] {
       fix: `Demolish ${Math.max(0, (counts.gatherer ?? 0) - GATHERING.freeCamps)} Gatherer's Camp${(counts.gatherer ?? 0) - GATHERING.freeCamps === 1 ? "" : "s"} (keep ${GATHERING.freeCamps}) and get food from fields or fishing instead.`,
     },
     {
-      label: `${counts.watchfire ?? 0} watch fire${counts.watchfire === 1 ? "" : "s"} burning`,
+      label: `${counts.watchfire ?? 0} watch tower${counts.watchfire === 1 ? "" : "s"}`,
       value: -(counts.watchfire ?? 0) * WATCH_FIRE.smoke,
-      hint: "Watch fires burn wood day and night and add smoke.",
-      fix: "Keep one watch fire at most: the second adds little.",
+      hint: "Each watch tower is built from the biggest logs in the forest.",
+      fix: "Keep one watch tower at most: the second adds little.",
     },
     {
       label: `${counts.farm ?? 0} field${counts.farm === 1 ? "" : "s"} cleared${state.researched.includes("three-field") ? " (resting in turn)" : ""}`,
@@ -2356,7 +2356,7 @@ export function defenseStrength(state: GameState) {
   );
 }
 
-// Lookouts at the watch fires add a little defense (up to WATCH_FIRE.maxDefense).
+// Lookouts in the watch towers add a little defense (up to WATCH_FIRE.maxDefense).
 export function watchDefense(state: GameState) {
   return Math.min(WATCH_FIRE.maxDefense, (countBuildings(state).watchfire ?? 0) * WATCH_FIRE.defense);
 }
@@ -2375,7 +2375,7 @@ export function defenseBreakdown(state: GameState): string {
   if ((counts.warcamp ?? 0) > 0) text += " + 1 war camp";
   if (counts.walls) text += ` + ${counts.walls * WALL_DEFENSE} walls`;
   if (counts.castle) text += ` + ${counts.castle * CASTLE.defense} castle${counts.castle === 1 ? "" : "s"}`;
-  if (watchDefense(state)) text += ` + ${watchDefense(state)} watch fire${watchDefense(state) === 1 ? "" : "s"}`;
+  if (watchDefense(state)) text += ` + ${watchDefense(state)} watch tower${watchDefense(state) === 1 ? "" : "s"}`;
   return text;
 }
 
@@ -4147,8 +4147,8 @@ function updateRaids(state: GameState): GameState {
       lastBigTick: state.tick,
       log: [
         from_
-          ? `An army of ${KINGDOMS[from_].name} (${strength}) is landing on the shore! ${revenge ? "They have come for revenge." : "They are at war with us."}${early ? " The watch fire saw them early." : ""}`
-          : `${RAID_KINDS[kind].name} of ${strength} raiders is landing on the shore!${early ? " The watch fire saw them early." : ""}`,
+          ? `An army of ${KINGDOMS[from_].name} (${strength}) is landing on the shore! ${revenge ? "They have come for revenge." : "They are at war with us."}${early ? " The lookouts in the watch tower saw them early." : ""}`
+          : `${RAID_KINDS[kind].name} of ${strength} raiders is landing on the shore!${early ? " The lookouts in the watch tower saw them early." : ""}`,
         ...state.log,
       ].slice(0, 30),
     };
