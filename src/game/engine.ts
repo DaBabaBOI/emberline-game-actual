@@ -153,6 +153,8 @@ export type Action =
   | { type: "easterEgg"; id: EggId }
   | { type: "setPopLimit"; limit: number | null }
   | { type: "sendSettlers" }
+  | { type: "showHint"; id: string }
+  | { type: "dismissHint" }
   | { type: "demolish"; tileId: number }
   | { type: "devGrant" }
   | { type: "devPeople" }
@@ -423,7 +425,7 @@ export function landStrain(state: GameState) {
   return time * depth;
 }
 
-const treesNear = (state: GameState, tile: Tile) =>
+export const treesNear = (state: GameState, tile: Tile) =>
   state.tiles.filter(
     (t) =>
       t.terrain === "forest" &&
@@ -5165,6 +5167,13 @@ function step(state: GameState, action: Action): GameState {
         log: [limit === null ? "The tribe may grow again." : `Families agree to hold the tribe at ${limit} people.`, ...state.log].slice(0, 30),
       };
     }
+
+    case "showHint":
+      if ((state.hintsSeen ?? []).includes(action.id)) return state;
+      return { ...state, hint: { id: action.id, tick: state.tick }, hintTick: state.tick, hintsSeen: [...(state.hintsSeen ?? []), action.id] };
+
+    case "dismissHint":
+      return state.hint ? { ...state, hint: null } : state;
 
     case "sendSettlers": {
       const n = settlersReady(state);

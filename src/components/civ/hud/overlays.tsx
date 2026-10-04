@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { goldenDeer, launchFireworks, useKonami } from "./eggs";
+import { HINTS } from "@/game/hints";
 import { playShot } from "./letterbox";
 import { playSfx } from "@/lib/audio";
 import { setTimeOfDay } from "./time-of-day";
@@ -620,6 +621,18 @@ export function DevPanel() {
             {label}
           </button>
         ))}
+        <button
+          type="button"
+          className="pixel-btn bg-[#4a3b2e] px-2 py-1"
+          onClick={() => {
+            // The next of Elder Ama's hints that applies, without waiting for its turn.
+            const h = HINTS.find((x) => !(state.hintsSeen ?? []).includes(x.id) && x.when(state));
+            if (h) dispatch({ type: "showHint", id: h.id });
+          }}
+          title="Shows the next hint that applies now"
+        >
+          Hint
+        </button>
         <button
           type="button"
           className="pixel-btn bg-[#4a3b2e] px-2 py-1"

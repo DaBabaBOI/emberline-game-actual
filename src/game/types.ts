@@ -358,6 +358,11 @@ export interface GameState {
   // Population control: the tribe stops growing at this many people (null or
   // missing: it grows freely).
   popLimit?: number | null;
+  // Elder Ama's one-line hints (src/game/hints.ts): the one showing, and every
+  // one already shown (each comes once a game).
+  hint?: { id: string; tick: number } | null;
+  hintsSeen?: string[];
+  hintTick?: number;
   // Chief XP (only goes up) and level (missing in older saves: 0 and 1).
   xp?: number;
   chiefLevel?: number;

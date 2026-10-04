@@ -16,6 +16,7 @@ import { GuideOverlay, useGuide } from "./hud/guide-overlay";
 import { Debrief, GoalLine, NextEraPrompt } from "./hud/debrief";
 import { DiscoveryScene } from "./hud/discovery-scene";
 import { Letterbox, useShot } from "./hud/letterbox";
+import { HintPanel } from "./hud/hints";
 import { GameAudio } from "./hud/game-audio";
 import { setMusicScene, unlockAudio } from "@/lib/audio";
 import { KingdomsPanel, LandmarkPicker } from "./hud/medieval";
@@ -96,6 +97,7 @@ function Hud({ onRestart }: { onRestart: () => void }) {
             <TutorialPanel />
             <CoachPanel />
             <ElderLesson />
+          <HintPanel />
           </div>
           <div className="flex flex-col items-end lg:absolute lg:right-16 lg:top-20 lg:w-64">
             <Toasts />
