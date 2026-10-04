@@ -3555,6 +3555,21 @@ export const CLIMATE = {
   ready: { seawall: 0.08, seawallsMax: 3, hospital: 0.07, hospitalsMax: 3, park: 0.04, parksMax: 3, cleanPower: 0.15, forest: 0.1 },
 };
 
+// Multiplayer: `pace` multiplies Knowledge by match speed; a new era is worth
+// `eraXp` times its usual XP; land health under `drainBelow` costs `drain` XP a
+// minute. A rival raid's warriors each fight like `warriorStrength`. Gifts go
+// in steps of `giftStep`.
+export const MP = {
+  pace: { quick: 3, normal: 2, long: 1 } as Record<"quick" | "normal" | "long", number>,
+  eraXp: 4,
+  drainBelow: 40,
+  drain: 6,
+  warriorStrength: 1.5,
+  giftStep: 30,
+  loot: { food: 40, currency: 40 },
+  minutes: { quick: 15, normal: 25, long: 40 } as Record<"quick" | "normal" | "long", number>,
+};
+
 // ---- Future & Space ----
 // The Kardashev scale rates a civilisation by the power it uses (Carl Sagan's
 // version: humanity is roughly 0.7 today; Type I uses about as much power as

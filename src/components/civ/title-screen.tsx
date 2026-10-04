@@ -19,7 +19,10 @@ export function TitleScreen({
   onContinue,
   onStart,
   onLoadCloud,
+  onMultiplayer,
 }: {
+  // Play together (multiplayer lobby).
+  onMultiplayer: () => void;
   canContinue: boolean;
   onContinue: () => void;
   // Continue a game saved to the cloud with its code.
@@ -82,6 +85,16 @@ export function TitleScreen({
               Continue saved game
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={onMultiplayer}
+            className="pixel-btn font-pixel mb-6 flex w-full items-center justify-center gap-2 bg-indigo-600 py-3 text-lg font-semibold text-white hover:bg-indigo-500"
+            data-testid="play-together"
+          >
+            <PixelIcon name="person" size={22} />
+            Play together (up to 4)
+          </button>
 
           <div className="pixel-panel p-5">
             <label className="font-pixel mb-4 block">

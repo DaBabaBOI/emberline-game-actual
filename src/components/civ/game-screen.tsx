@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import { useCompact } from "@/lib/use-compact";
 import { GameProvider, useGame } from "./game-provider";
 import { TitleScreen } from "./title-screen";
+import { MultiplayerLobby } from "./multiplayer-lobby";
+import { MultiplayerPanel, type Match } from "./hud/mp-panel";
 import { IntroStory } from "./intro-story";
 import { TopBar } from "./hud/top-bar";
 import { MeterStrip, SideMeters } from "./hud/side-meters";
@@ -39,7 +41,7 @@ const WorldCanvas = dynamic(
   { ssr: false, loading: () => <div className="absolute inset-0 bg-sky-300" /> },
 );
 
-function Hud({ onRestart }: { onRestart: () => void }) {
+function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null }) {
   const { panel, setSelected } = useGame();
   // The Advancements tree fills the screen: Elder Ama moves out of the way.
   const treeOpen = panel === "tree";
@@ -110,7 +112,8 @@ function Hud({ onRestart }: { onRestart: () => void }) {
             <ElderLesson />
           <HintPanel />
           </div>
-          <div className="flex flex-col items-end lg:absolute lg:right-16 lg:top-20 lg:w-64">
+          <div className="flex flex-col items-end gap-2 lg:absolute lg:right-16 lg:top-20 lg:w-64">
+            {match && <MultiplayerPanel match={match} />}
             <Toasts />
           </div>
         </div>
@@ -152,6 +155,16 @@ export function GameScreen() {
   const [saved, setSaved] = useState<GameState | null>(() => loadGame());
   // A new game opens with a short story (not when continuing, and not in dev starts).
   const [intro, setIntro] = useState(false);
+  // Multiplayer: the lobby (opened by a ?room=ABCD link too), then the match.
+  const [lobby, setLobby] = useState<{ code?: string } | null>(() => {
+    try {
+      const code = new URLSearchParams(window.location.search).get("room");
+      return code ? { code: code.toUpperCase().slice(0, 4) } : null;
+    } catch {
+      return null;
+    }
+  });
+  const [match, setMatch] = useState<Match | null>(null);
   // Tell the page a game is on screen (hides the floating Settings button; the
   // same options are in the game's Menu).
   const playing = !!game && !intro;
@@ -167,9 +180,26 @@ export function GameScreen() {
     return <IntroStory nation={game.nation ?? "The Emberfolk"} onBegin={() => setIntro(false)} />;
   }
 
+  if (!game && lobby) {
+    return (
+      <MultiplayerLobby
+        initialCode={lobby.code}
+        onBack={() => setLobby(null)}
+        onStart={(room, session, seats) => {
+          if (match) return;
+          setMatch({ room, session, humans: seats });
+          setLobby(null);
+          clearSave();
+          setGame(newGame("balanced", "normal", { seed: room.seed, skipTutorial: true, nation: session.name, mp: { mode: room.mode, speed: room.speed } }));
+        }}
+      />
+    );
+  }
+
   if (!game) {
     return (
       <TitleScreen
+        onMultiplayer={() => setLobby({})}
         canContinue={Boolean(saved && saved.phase === "playing")}
         onContinue={() => setGame(saved)}
         onLoadCloud={(state) => setGame(state)}
@@ -189,7 +219,9 @@ export function GameScreen() {
           <WorldCanvas />
         </div>
         <Hud
+          match={match}
           onRestart={() => {
+            setMatch(null);
             setSaved(null);
             setGame(null);
           }}

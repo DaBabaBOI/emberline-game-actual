@@ -8,8 +8,8 @@
 // through the save_game/load_game functions, by code.
 import type { GameState } from "@/game/types";
 
-const SUPABASE_URL = "https://lgfrxrnjexdcjhpwztpy.supabase.co";
-const PUBLISHABLE_KEY = "sb_publishable_2ehFe1z5_RD_IxrNcSH1bg_eKQMbV5U";
+export const SUPABASE_URL = "https://lgfrxrnjexdcjhpwztpy.supabase.co";
+export const PUBLISHABLE_KEY = "sb_publishable_2ehFe1z5_RD_IxrNcSH1bg_eKQMbV5U";
 
 async function call(path: string, body?: unknown, prefer?: string): Promise<Response | null> {
   try {
