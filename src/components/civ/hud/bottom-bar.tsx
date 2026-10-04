@@ -21,6 +21,8 @@ import {
   defenseStrength,
   DEMOLISH_TOOL,
   PLANT_TOOL,
+  SCOUT_TOOL,
+  CANOE_TOOL,
   foodKeeps,
   foodSpoiling,
   housingCapacity,
@@ -399,10 +401,11 @@ export function BottomBar() {
             locked={tutorialLocked(state, "scout")}
             icon="spyglass"
             label="Scout"
-            onClick={() => dispatch({ type: "scout" })}
+            // After the tutorial: pick where on the map (in the fog) to send them.
+            onClick={() => (inTutorial ? dispatch({ type: "scout" }) : setSelected(selected === SCOUT_TOOL ? null : SCOUT_TOOL))}
             disabled={!!state.scouting || !canAfford(state, scoutCost(state))}
-            title={state.scouting ? "The scouts are out exploring" : "Send scouts to reveal new land. A trip takes a little while, and each costs more than the last."}
-            tone="bg-[#4a3b2e] hover:bg-[#5c4a3a]"
+            title={state.scouting ? "The scouts are out exploring" : "Send scouts to reveal new land: press, then click a spot in the fog. Further in takes longer, and each trip costs more than the last."}
+            tone={selected === SCOUT_TOOL ? "bg-amber-400 text-[#2b2119]" : "bg-[#4a3b2e] hover:bg-[#5c4a3a]"}
           >
             {state.scouting ? (
               <span className="text-[10px] text-amber-200" data-testid="scouts-out">
@@ -447,7 +450,7 @@ export function BottomBar() {
 // Send a canoe from a Canoe Dock: first to find the Southern Isles, then to
 // fish the open sea. Each one costs a big tree.
 function CanoeButton() {
-  const { state, dispatch } = useGame();
+  const { state, selected, setSelected } = useGame();
   const out = (state.canoes ?? []).length;
   const problem = canoeError(state);
   const goal = canoeTrip(state) === "explore" ? "to find the islands to the south (then you can build there)" : `to fish the open sea (+${CANOE.fish} food)`;
@@ -456,10 +459,11 @@ function CanoeButton() {
       guide="tool-canoe"
       icon="boat"
       label={out ? `Canoe (${out} out)` : "Canoe"}
-      onClick={() => dispatch({ type: "canoe" })}
+      // Pick where on the sea (or which island) to paddle to.
+      onClick={() => setSelected(selected === CANOE_TOOL ? null : CANOE_TOOL)}
       disabled={!!problem}
-      title={problem ?? `Send a canoe ${goal}. Each canoe is cut from one big tree.`}
-      tone="bg-sky-900 hover:bg-sky-800"
+      title={problem ?? `Press, then click where on the sea to go: near the Southern Isles ${goal.startsWith("to find") ? "to find them" : "or"} anywhere else to fish (+${CANOE.fish} food) and map the sea. Each canoe is cut from one big tree.`}
+      tone={selected === CANOE_TOOL ? "bg-amber-400 text-[#2b2119]" : "bg-sky-900 hover:bg-sky-800"}
     >
       <Cost cost={CANOE.cost} bad={!canAfford(state, CANOE.cost)} />
     </ToolButton>

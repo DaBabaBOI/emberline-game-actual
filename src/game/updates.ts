@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Choose where to explore: press Scout or Canoe, then click a spot (in the fog for scouts, on the sea or another island for canoes). Further away takes longer. You can watch the scouts walk out and back, and the canoe paddle there and home again; whatever they saw is mapped when they return.",
       "Shells are useful from the start: press Trade to swap them for food, wood or stone (each trade makes the next a little dearer; prices ease back). The Trade button gets a ! when shells pile up. You can also pay raiders off in shells instead of food.",
       "Livelier raids: raiders come ashore in groups that fan out and close in from the sides, and fights are a real melee. Each fighter circles an opponent, darts in to strike and backs off; the fallen are knocked back, survivors gang up on whoever is left, and the losers scatter while the winners give chase.",
       "Play together: up to 4 players on the same island, by a 4-letter code, a shared link or an open room; bots take the empty seats. Race (most Chief XP when time runs out wins; send gifts, or warriors to raid each other) or co-op (reach the team target together). Quick, normal or long matches learn 3x, 2x or 1x as fast; a new era is worth 4x the XP, and damaged land costs XP every minute. The match sits in a small menu on the right.",

@@ -69,7 +69,7 @@ export const HINTS: Hint[] = [
   {
     id: "scout",
     when: (s) => playedTicks(s) > 10 && !s.scouting && canAfford(s, scoutCost(s)),
-    text: (s) => `Scout sends people to explore and reveals new land. Each trip costs more than the last: the next costs ${costText(scoutCost(s))}.`,
+    text: (s) => `Press Scout, then click a spot in the fog: people walk out to explore and come back with a map of it. Further in takes longer, and each trip costs more (next: ${costText(scoutCost(s))}).`,
     target: guide("tool-scout"),
   },
   {
@@ -154,7 +154,7 @@ export const HINTS: Hint[] = [
   {
     id: "canoe",
     when: (s) => !!countBuildings(s).dock && tallyOf(s, "canoes") === 0,
-    text: () => "Your Canoe Dock is ready: press Canoe to carve one from a big tree. The first one finds the southern isles.",
+    text: () => "Your Canoe Dock is ready: press Canoe, then click where on the sea to paddle. Near the southern isles it finds them; anywhere else it fishes and maps the sea.",
     target: guide("tool-canoe"),
   },
   {

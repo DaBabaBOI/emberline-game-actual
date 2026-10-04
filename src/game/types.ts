@@ -330,7 +330,8 @@ export interface GameState {
   // overseas where we may build a few things.
   ships?: { start: number; back: number }[];
   // Canoes out: exploring for the Southern Isles, or fishing the open sea.
-  canoes?: { start: number; back: number; kind: "explore" | "fish" }[];
+  // `tile`: where it was sent (picked on the map); `dock`: the dock it left from.
+  canoes?: { start: number; back: number; kind: "explore" | "fish"; tile?: number; dock?: number }[];
   outposts?: number[];
   // We raided a kingdom: its revenge army lands by `tick`. And when we last
   // raided (our warriors need time before the next).
@@ -395,7 +396,8 @@ export interface GameState {
   // (GRIEF in content.ts). Fades every tick. Missing in older saves.
   grief?: number;
   // Scouts out exploring: the tile they head for, and the tick they come back.
-  scouting?: { tile: number; back: number };
+  // Scouts out: where to, when they left and are back, and where from (home).
+  scouting?: { tile: number; back: number; start?: number; from?: number };
   // Unrest that may turn into a rebellion (REBELLION in content.ts): brewing
   // until riseTick, then risen (rebels on the map) until crushed, paid or sackTick.
   rebellion?: { stage: "brewing" | "risen"; riseTick: number; rebels: number; tile: number; sackTick: number } | null;

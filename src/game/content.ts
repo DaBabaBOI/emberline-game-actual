@@ -3298,7 +3298,9 @@ export const CAVE_PAINTINGS_KNOWLEDGE = 8;
 export const SCOUT_KNOWLEDGE = { bigTrip: 20, trips: 5 };
 // A scouting trip takes this long (18 s at normal speed) before the new land
 // is mapped. During the tutorial it is instant (the clock stands still there).
-export const SCOUT_TRIP = { ticks: 12 };
+// Scouts: a trip takes `ticks`, plus `perHex` for each hex past the edge of
+// the known land; they can be sent up to `reach` hexes into the fog.
+export const SCOUT_TRIP = { ticks: 12, perHex: 3, reach: 4 };
 // Canoes (Rafts & Fishing, from a Canoe Dock): a trip takes `ticks` (45 s).
 // The first finds the Southern Isles (island 3), where outposts can then be
 // built; after that a trip fishes the open sea (+`fish` food). Every trip
@@ -3307,7 +3309,9 @@ export const SCOUT_TRIP = { ticks: 12 };
 // reach the kingdoms or the Misty Isle: that takes Ocean Ships. Each building
 // on an outpost island costs `fragile` Sustainability: small islands recover
 // slowly.
-export const CANOE = { cost: { wood: 15, food: 10 }, ticks: 30, fish: 25, tree: 0.35, bigTree: 0.5, island: 3, fragile: 2 };
+// `reach`: how far (hexes) from a dock a canoe can be sent; `perHex`: ticks of
+// paddling there and back for each; `sees`: hexes it maps around where it goes.
+export const CANOE = { cost: { wood: 15, food: 10 }, ticks: 30, fish: 25, tree: 0.35, bigTree: 0.5, island: 3, fragile: 2, reach: 16, perHex: 2.5, sees: 3 };
 // Rebellions, from the Medieval era (`era`). If happiness is under `mood`,
 // unrest brews for `warnTicks` (90 s); if it climbs back over `mood` by then it
 // dies down. If not, a `share` of the people (at least `min`) take up arms.

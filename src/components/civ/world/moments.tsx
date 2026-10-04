@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import type { Group, Mesh } from "three";
@@ -10,6 +10,9 @@ import { PixelIcon } from "@/components/civ/pixel-icon";
 import { Plume } from "./atmosphere";
 import { tileTop } from "./hex-terrain";
 import { BUILDING_SCALE, buildingTurn } from "./building-models";
+import { Figures, SKINS, type Agent } from "./figures";
+import { makeGround } from "./ground";
+import { TICK_SECONDS } from "@/game/content";
 
 // Small moments (berries found, birds coming back, a gust of wind) play out
 // on the map where they happen, for MOMENT_TICKS, with a short label above.
@@ -288,17 +291,84 @@ export function SmallMoment({ state }: { state: GameState }) {
 
 
 // While scouts are out: a marker over the land they are exploring.
+// The scouts out exploring: three of them walk from the village to the spot
+// picked in the fog (the first half of the trip), look around, and walk back
+// (the second half). Their label follows them.
 export function ScoutMarker({ state }: { state: GameState }) {
-  const tile = state.scouting ? state.tiles[state.scouting.tile] : null;
-  if (!tile) return null;
+  const trip = state.scouting;
+  const tiles = state.tiles;
+  const ground = useMemo(() => makeGround(tiles), [tiles]);
+  const agents = useRef<Agent[]>([]);
+  const label = useRef<Group>(null);
+  const shown = useRef(0);
+  const target = trip ? tiles[trip.tile] : null;
+  const from = trip ? tiles[trip.from ?? state.startTile] : null;
+  const start = trip?.start ?? (trip ? trip.back - 12 : 0);
+  const tick = state.tick;
+  const speed = state.speed;
+
+  useFrame((_, delta) => {
+    if (!trip || !target || !from) {
+      agents.current = [];
+      shown.current = 0;
+      return;
+    }
+    const span = Math.max(1, trip.back - start);
+    // Walk smoothly between ticks, never drifting from the game's clock.
+    const goal = Math.min(1, (tick - start) / span);
+    const step = (speed / TICK_SECONDS / span) * Math.min(delta, 0.1);
+    shown.current = Math.min(goal + 1 / span, Math.max(goal, shown.current + step));
+    const p = shown.current;
+    const out = p < 0.5;
+    // 0 at home, 1 at the spot: out for the first half, back for the second.
+    const along = out ? p * 2 : (1 - p) * 2;
+    const list = agents.current;
+    list.length = 3;
+    for (let i = 0; i < 3; i++) {
+      // Single file, a little apart.
+      const k = Math.max(0, Math.min(1, along - i * 0.04 * (out ? 1 : -1)));
+      const side = (i - 1) * 0.18;
+      const dx = target.x - from.x;
+      const dz = target.z - from.z;
+      const len = Math.hypot(dx, dz) || 1;
+      const x = from.x + dx * k - (dz / len) * side;
+      const z = from.z + dz * k + (dx / len) * side;
+      const there = along > 0.97;
+      list[i] = {
+        x,
+        z,
+        y: ground.heightAt(x, z),
+        // Facing the way they walk; at the spot, looking around.
+        heading: there ? Math.sin(p * 40 + i) * 1.2 : Math.atan2(dx * (out ? 1 : -1), dz * (out ? 1 : -1)),
+        moving: !there && speed > 0,
+        scale: 1.3,
+        tunic: "#c58b3a",
+        skin: SKINS[i % SKINS.length],
+        hair: "#1a1a1a",
+        phase: i * 1.9,
+      };
+    }
+    const lead = list[0];
+    if (label.current && lead) label.current.position.set(lead.x, lead.y + 1.4, lead.z);
+  });
+
+  if (!trip || !target) return null;
   return (
-    <group position={[tile.x, tileTop(tile), tile.z]}>
-      <Html zIndexRange={[13, 0]} center position={[0, 1.4, 0]} style={{ pointerEvents: "none" }}>
-        <div className="pixel-panel font-pixel flex items-center gap-1 whitespace-nowrap px-2 py-0.5 text-xs" data-testid="scout-marker">
-          <PixelIcon name="spyglass" size={16} />
-          Scouts exploring
-        </div>
-      </Html>
-    </group>
+    <>
+      <Figures agents={agents} max={3} />
+      <group ref={label}>
+        <Html zIndexRange={[13, 0]} center style={{ pointerEvents: "none" }}>
+          <div className="pixel-panel font-pixel flex items-center gap-1 whitespace-nowrap px-2 py-0.5 text-xs" data-testid="scout-marker">
+            <PixelIcon name="spyglass" size={16} />
+            Scouts {tick - start < (trip.back - start) / 2 ? "heading out" : "coming back"}
+          </div>
+        </Html>
+      </group>
+      {/* Where they're going. */}
+      <mesh position={[target.x, tileTop(target) + 0.05, target.z]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.55, 0.7, 6]} />
+        <meshBasicMaterial color="#facc15" transparent opacity={0.8} />
+      </mesh>
+    </>
   );
 }
