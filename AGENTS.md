@@ -175,6 +175,18 @@ These were decided with the project owner. Do not change them without being aske
   up in yellow with a marker overhead (`highlight.group`, `Figures group=`) and
   says how many people each figure stands for. New crowds of people on the
   map must pass a `group` so they light up too.
+- **Beliefs are invented, never a real religion** (`BELIEFS`), and they're
+  trade-offs like everything else:
+  - **Stone Age:** spirits of the forest (the sacred grove event).
+  - **Ancient:** the Shrine (+4 happiness each, up to 2) and its yearly festival
+    (`festival()`: +8 happiness for 15 food, put off when food is short).
+  - **Classical:** the Temple (+6 happiness, +8 literacy, −2 Sustainability for
+    its stone, up to 2), and the river card "Honour or tame the river".
+    Honouring it bans mills and aqueducts for good (`riverChoice`) for +4
+    Sustainability.
+  - **Medieval:** the cathedral landmark.
+
+  Never rank or name real faiths.
 - **People keep out of harm's way** (`ground.walkable()`): never into the sea,
   the fog, mountains, buildings (fires included) or a burning wildfire tile. Anyone
   walking to a goal on their own (like the hunter) steers round what blocks the way.

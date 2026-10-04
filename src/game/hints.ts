@@ -124,6 +124,12 @@ export const HINTS: Hint[] = [
     target: guide("tool-advancements"),
   },
   {
+    id: "beliefs",
+    when: (s) => s.era >= 1 && !countBuildings(s).shrine && s.resources.wood >= 15 && s.resources.stone >= 10,
+    text: () => "Our people have their own beliefs. Build a Shrine: it cheers everyone up, and once a year there's a festival (it costs some food).",
+    target: guide("build-shrine"),
+  },
+  {
     id: "repair",
     when: (s) => s.tiles.some((t) => (t.worn ?? 0) >= WEAR.warnAt),
     text: () => "A hammer over a building means it is wearing out. Click it and press Repair before it breaks.",
