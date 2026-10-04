@@ -175,6 +175,12 @@ These were decided with the project owner. Do not change them without being aske
   up in yellow with a marker overhead (`highlight.group`, `Figures group=`) and
   says how many people each figure stands for. New crowds of people on the
   map must pass a `group` so they light up too.
+- **Realistic time** (a joke mode, title screen checkbox; `realTimeFrom`,
+  `src/game/calendar.ts`): the game plays as normal, but the top bar shows
+  today's real date and time in 50,000 BCE, with the season, and the year only
+  turns over after a real year. The sky follows the real clock, and there is no
+  "left behind" deadline (`behindTicksLeft()`). The engine's own `year` is
+  untouched, so everything that runs on it still works.
 - **Beliefs are invented, never a real religion** (`BELIEFS`), and they're
   trade-offs like everything else:
   - **Stone Age:** spirits of the forest (the sacred grove event).

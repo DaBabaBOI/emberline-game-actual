@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Realistic time (a joke, on the title screen): the calendar runs in real time, with today's date, the hour and the season, in 50,000 BCE. The next era is only about 47,000 real years away.",
       "Beliefs: in the Ancient era build a Shrine (a carved spirit pole): it cheers people up, and every year the village holds a festival that costs some food. In the Classical era a Temple adds happiness and teaches reading, and the people decide whether to honour the river (no mills or aqueducts, healthier land) or tame it.",
       "People keep away from danger: nobody walks into a burning wildfire, and hunters walk round buildings and fires instead of straight through them.",
       "The Watch Fire is now a Watch Tower: a tall lookout tower with a ladder, a thatched roof and a lookout on top. Same job (raiders seen sooner, a little defense), no fire.",
