@@ -355,6 +355,9 @@ export interface GameState {
   rebellion?: { stage: "brewing" | "risen"; riseTick: number; rebels: number; tile: number; sackTick: number } | null;
   // No new rebellion before this tick.
   rebellionCalm?: number;
+  // Population control: the tribe stops growing at this many people (null or
+  // missing: it grows freely).
+  popLimit?: number | null;
   // Chief XP (only goes up) and level (missing in older saves: 0 and 1).
   xp?: number;
   chiefLevel?: number;

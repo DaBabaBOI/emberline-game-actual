@@ -63,6 +63,7 @@ import {
   WALL_DEFENSE,
   MIN_SUSTAINABILITY_FOR_BEST_ENDING,
   NEXT_ERA_POPULATION,
+  SETTLERS,
   GROWTH_PRESSURE,
   DISEASE,
   CAMPFIRE_BURN_TICKS,
@@ -150,6 +151,8 @@ export type Action =
   | { type: "train" }
   | { type: "hunt"; animal: string }
   | { type: "easterEgg"; id: EggId }
+  | { type: "setPopLimit"; limit: number | null }
+  | { type: "sendSettlers" }
   | { type: "demolish"; tileId: number }
   | { type: "devGrant" }
   | { type: "devPeople" }
@@ -2817,6 +2820,23 @@ function bumpStats(state: GameState, change: (st: Stats) => void): GameState {
 
 // Ready to leave this era. Stone Age: Agriculture and 15 people. Ancient era:
 // the Roman legion beaten, Coinage and 40 people.
+// Population control: is there room under the chief's limit?
+export function belowLimit(state: GameState, population: number) {
+  return state.popLimit == null || population <= state.popLimit;
+}
+
+// How many people the next era asks for (null when it doesn't ask).
+export function nextEraPopulation(state: GameState): number | null {
+  if (state.era === 0) return NEXT_ERA_POPULATION;
+  if (state.era === 1) return CLASSICAL_POPULATION;
+  return null;
+}
+
+// How many would leave with "Send settlers" right now (0: too few to spare).
+export function settlersReady(state: GameState) {
+  return Math.max(0, Math.min(SETTLERS.size, Math.floor(state.population) - SETTLERS.keep));
+}
+
 export function readyForNextEra(state: GameState) {
   if (state.phase !== "playing" || state.debrief) return false;
   if (state.era === 0) return state.researched.includes("agriculture") && state.population >= NEXT_ERA_POPULATION;
@@ -2989,9 +3009,11 @@ function tickOnce(state: GameState): GameState {
     famineTicks = Math.max(0, famineTicks - 2);
     // The tribe only grows when it makes at least as much food as it eats: stored
     // food alone would let it grow into a famine.
-    if (state.meters.food > 45 && prod.food >= cons && state.meters.shelter > 40 && population < capacity * 1.15) {
+    // ...and only up to the limit the chief has set, if any.
+    if (state.meters.food > 45 && prod.food >= cons && state.meters.shelter > 40 && population < capacity * 1.15 && belowLimit(state, population)) {
       // Never more than GROWTH_CAP a tick: a big town doesn't double in two minutes.
       population += Math.min(GROWTH_CAP, Math.max(0.08, population * growth));
+      if (state.popLimit != null) population = Math.min(population, Math.max(state.popLimit, state.population));
     }
   }
 
@@ -3178,7 +3200,7 @@ const MOMENTS: Moment[] = [
   },
   {
     id: "baby",
-    when: (s) => s.meters.food >= 45 && s.population < housingCapacity(s),
+    when: (s) => s.meters.food >= 45 && s.population < housingCapacity(s) && belowLimit(s, s.population + 1),
     apply: (s) => ({ ...s, population: s.population + 1 }),
     text: "A baby was born by the fire (+1 person).",
     where: (s) => aBuilding(s, ["hut", "house", "townhouse"]) ?? s.tiles[s.startTile],
@@ -5123,6 +5145,25 @@ function step(state: GameState, action: Action): GameState {
     case "devReveal":
       if (!state.dev) return state;
       return { ...state, tiles: state.tiles.map((t) => (t.revealed ? t : { ...t, revealed: true })) };
+
+    case "setPopLimit": {
+      const limit = action.limit === null ? null : Math.max(SETTLERS.keep, Math.round(action.limit));
+      return {
+        ...state,
+        popLimit: limit,
+        log: [limit === null ? "The tribe may grow again." : `Families agree to hold the tribe at ${limit} people.`, ...state.log].slice(0, 30),
+      };
+    }
+
+    case "sendSettlers": {
+      const n = settlersReady(state);
+      if (!n) return state;
+      return withMeters({
+        ...state,
+        population: state.population - n,
+        log: [`${n} people set off to start a village of their own. Fewer mouths to feed here, and they promise to visit.`, ...state.log].slice(0, 30),
+      });
+    }
 
     case "easterEgg":
       return withMeters(findEgg(state, action.id));

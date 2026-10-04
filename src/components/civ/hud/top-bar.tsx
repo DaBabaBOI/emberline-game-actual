@@ -1,9 +1,9 @@
 "use client";
 
 import { HOME } from "@/lib/home";
-import { ERAS, XP, chiefTitle, formatYear, xpToReach } from "@/game/content";
+import { ERAS, SETTLERS, XP, chiefTitle, formatYear, xpToReach } from "@/game/content";
 import { useGame } from "@/components/civ/game-provider";
-import { nextYear, warnings } from "@/game/engine";
+import { nextEraPopulation, nextYear, settlersReady, warnings } from "@/game/engine";
 import type { GameState } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { PixelIcon } from "@/components/civ/pixel-icon";
@@ -32,8 +32,24 @@ function Chip({ icon, value, title, low }: { icon: IconId; value: string; title:
 
 // Population or warriors: hovering (or tapping) lights up those people on the
 // map in yellow, and says how many people each figure stands for.
-function CrowdChip({ icon, count, figures, group, noun }: { icon: IconId; count: number; figures: number; group: "people" | "warriors"; noun: string }) {
+function CrowdChip({
+  icon,
+  count,
+  figures,
+  group,
+  noun,
+  controls,
+}: {
+  icon: IconId;
+  count: number;
+  figures: number;
+  group: "people" | "warriors";
+  noun: string;
+  // A panel a click opens (population control), instead of the tip.
+  controls?: (close: () => void) => React.ReactNode;
+}) {
   const [on, setOn] = useState(false);
+  const [open, setOpen] = useState(false);
   useEffect(() => {
     highlight.group = on ? group : highlight.group === group ? null : highlight.group;
   }, [on, group]);
@@ -53,14 +69,23 @@ function CrowdChip({ icon, count, figures, group, noun }: { icon: IconId; count:
         onMouseLeave={() => setOn(false)}
         onFocus={() => setOn(true)}
         onBlur={() => setOn(false)}
-        onClick={() => setOn(true)}
-        className={cn("flex items-center gap-1 whitespace-nowrap px-1", on && "bg-amber-400 text-[#2b2119]")}
+        onClick={() => {
+          setOn(true);
+          if (controls) setOpen(!open);
+        }}
+        aria-expanded={controls ? open : undefined}
+        className={cn("flex items-center gap-1 whitespace-nowrap px-1", (on || open) && "bg-amber-400 text-[#2b2119]")}
         data-testid={`crowd-${group}`}
       >
         <PixelIcon name={icon} size={16} />
         <span className="font-num">{count.toLocaleString()}</span>
       </button>
-      {on && (
+      {open && controls && (
+        <span className="pixel-panel-dark absolute left-1/2 top-full z-30 mt-2 flex w-64 -translate-x-1/2 flex-col gap-2 p-2 text-left text-xs" data-testid={`crowd-panel-${group}`}>
+          {controls(() => setOpen(false))}
+        </span>
+      )}
+      {on && !open && (
         <span className="pixel-panel-dark absolute left-1/2 top-full z-30 mt-2 w-56 -translate-x-1/2 p-2 text-left text-xs" data-testid={`crowd-tip-${group}`}>
           {count.toLocaleString()} {noun}. {figures > 0 ? (
             <>
@@ -73,6 +98,74 @@ function CrowdChip({ icon, count, figures, group, noun }: { icon: IconId; count:
         </span>
       )}
     </span>
+  );
+}
+
+// Population control: hold the tribe at a size, or let some families leave to
+// start a village of their own (no one is harmed).
+function PopulationControl({ close }: { close: () => void }) {
+  const { state, dispatch } = useGame();
+  const pop = Math.floor(state.population);
+  const limit = state.popLimit ?? null;
+  const goal = nextEraPopulation(state);
+  const leaving = settlersReady(state);
+  const set = (n: number) => dispatch({ type: "setPopLimit", limit: Math.max(SETTLERS.keep, n) });
+  return (
+    <>
+      <span className="flex items-center justify-between">
+        <span className="font-semibold text-amber-300">Population: {pop}</span>
+        <button type="button" onClick={close} className="text-white/60 underline">
+          Close
+        </button>
+      </span>
+      <span className="text-white/70">More people means more food, wood and land needed. You choose how big the tribe gets.</span>
+      <span className="grid grid-cols-2 gap-1">
+        <button
+          type="button"
+          onClick={() => dispatch({ type: "setPopLimit", limit: null })}
+          className={cn("pixel-btn px-2 py-1", limit === null ? "bg-amber-300 text-[#2b2119]" : "bg-[#4a3b2e] text-white")}
+          data-testid="pop-grow"
+        >
+          Grow freely
+        </button>
+        <button
+          type="button"
+          onClick={() => set(limit ?? pop)}
+          className={cn("pixel-btn px-2 py-1", limit !== null ? "bg-amber-300 text-[#2b2119]" : "bg-[#4a3b2e] text-white")}
+          data-testid="pop-hold"
+        >
+          Hold at {limit ?? pop}
+        </button>
+      </span>
+      {limit !== null && (
+        <span className="flex items-center justify-between gap-2">
+          <button type="button" onClick={() => set(limit - 1)} className="pixel-btn bg-[#4a3b2e] px-2 py-0.5 text-white" aria-label="Lower the limit" data-testid="pop-lower">
+            −
+          </button>
+          <span>
+            Stop at <span className="font-num">{limit}</span> people
+          </span>
+          <button type="button" onClick={() => set(limit + 1)} className="pixel-btn bg-[#4a3b2e] px-2 py-0.5 text-white" aria-label="Raise the limit" data-testid="pop-raise">
+            +
+          </button>
+        </span>
+      )}
+      {limit !== null && goal !== null && limit < goal && (
+        <span className="text-amber-300">The next era needs {goal} people: raise the limit when you are ready.</span>
+      )}
+      <button
+        type="button"
+        disabled={!leaving}
+        onClick={() => dispatch({ type: "sendSettlers" })}
+        className="pixel-btn bg-[#4a3b2e] px-2 py-1 text-white disabled:opacity-40"
+        data-testid="pop-settlers"
+      >
+        Send {leaving || SETTLERS.size} settlers to start a new village
+      </button>
+      <span className="text-white/60">
+        {leaving ? "They leave happily: fewer mouths to feed here." : `At least ${SETTLERS.keep} people stay.`}
+      </span>
+    </>
   );
 }
 
@@ -110,7 +203,7 @@ export function TopBar() {
     // Above the tutorial's dimmed overlay (z-25) so speed and Menu always work,
     // but under the Advancements screen (z-20) while it is open. Only the bar
     // itself takes clicks, not the full-width strip around it.
-    <div className={cn("pointer-events-none absolute inset-x-0 top-2 flex justify-center px-2 md:top-3 md:px-3", panel !== "tree" && "z-[26]")}>
+    <div className={cn("pointer-events-none absolute inset-x-0 top-2 flex justify-center px-2 md:top-3 md:px-3", panel !== "tree" && "z-[27]")}>
       <div
         className="pixel-panel-dark font-pixel pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-x-3 gap-y-1 px-2 py-1 text-xs md:flex-nowrap md:gap-4 md:px-4 md:py-1.5 md:text-sm"
         // A bronze trim from the Ancient era on.
@@ -136,6 +229,7 @@ export function TopBar() {
           figures={figureCounts(state.population, state.soldiers).villagers}
           group="people"
           noun="people"
+          controls={(close) => <PopulationControl close={close} />}
         />
         <Chip icon="coin" value={Math.floor(r.currency).toLocaleString()} title={era.currency} />
         <CrowdChip

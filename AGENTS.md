@@ -728,6 +728,12 @@ These were decided with the project owner. Do not change them without being aske
     `emberline-audio` (Menu > Sound, and the speaker in the top bar).
   - **Loudness:** keep the music around -20 to -26 dB RMS (measured with an
     analyser), or it is hard to hear on laptop speakers.
+- **Population control** (click the population counter): "Hold at N" sets
+  `popLimit`, which stops births and newcomers (`belowLimit()`), and "Send
+  settlers" lets `SETTLERS.size` people leave peacefully (never below
+  `SETTLERS.keep`). Event cards the player accepts can still add people. The
+  panel warns when the limit is below what the next era needs. Players must
+  never need to harm villagers to keep numbers down.
 - **Easter eggs** (`src/game/easter.ts`): the rules and texts. Each one found
   counts once as a secret (`egg-<id>` in `secretsFound`, "Secrets found" in
   Advancements) through the `easterEgg` action. The eggs are:
