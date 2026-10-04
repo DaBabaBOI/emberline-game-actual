@@ -82,6 +82,7 @@ import {
   SPACE,
   MP,
   TRADE,
+  WORK,
   BELIEFS,
   SETTLERS,
   GROWTH_PRESSURE,
@@ -554,7 +555,9 @@ export function canoeTargetError(state: GameState, tile: Tile): string | null {
 
 export function canoeTicks(state: GameState, tile: Tile) {
   const dock = nearestDock(state, tile);
-  return Math.max(CANOE.ticks, Math.round(10 + CANOE.perHex * (dock ? hexDistance(dock, tile) : 8)));
+  const ticks = Math.max(CANOE.ticks, Math.round(10 + CANOE.perHex * (dock ? hexDistance(dock, tile) : 8)));
+  // Star Charts: they steer straight, day and night.
+  return state.researched.includes("starcharts") ? Math.round(ticks * 0.7) : ticks;
 }
 
 // Improving a building with stone and ores: its level (1 as built) and how
@@ -1200,7 +1203,7 @@ function returnCanoes(state: GameState): GameState {
     if (c.tile !== undefined && next.tiles[c.tile]) {
       const tiles = next.tiles.map((t) => ({ ...t }));
       const before = tiles.filter((t) => t.revealed).length;
-      revealAround(tiles, tiles[c.tile], CANOE.sees);
+      revealAround(tiles, tiles[c.tile], CANOE.sees + (next.researched.includes("starcharts") ? 1 : 0));
       const mapped = tiles.filter((t) => t.revealed).length - before;
       next = { ...next, tiles, log: mapped ? [`The canoe mapped ${mapped} new tiles around where it went.`, ...next.log].slice(0, 30) : next.log };
     }
@@ -1586,6 +1589,40 @@ function reachTypeOne(state: GameState): GameState {
   return { ...done, debrief: makeDebrief(done, "final") };
 }
 
+// Work and rest: the jobs in town against the people free to do them.
+export function workload(state: GameState) {
+  let needed = 0;
+  for (const t of state.tiles) {
+    if (!t.building || (t.worn ?? 0) >= 1) continue;
+    const def = BUILDINGS_BY_ID[t.building];
+    if (!def?.produces || !Object.values(def.produces).some((v) => (v ?? 0) > 0)) continue;
+    needed += WORK.big.includes(t.building) ? WORK.bigCrew : WORK.crew;
+  }
+  // Robots take on the work (Future: Automation).
+  if (state.researched.includes("automation")) needed = Math.ceil(needed / 2);
+  needed = Math.ceil(needed);
+  const workers = Math.max(0, Math.floor(state.population - state.soldiers * (1 - WORK.soldierHelp) - (state.sick ?? 0)));
+  return { needed, workers, ratio: workers > 0 ? needed / workers : needed > 0 ? 9 : 0 };
+}
+
+// How much less tired people make (0 to WORK.outputLoss, halved by Rest Days).
+function fatigueLoss(state: GameState) {
+  return ((state.fatigue ?? 0) / 100) * WORK.outputLoss * (state.researched.includes("restdays") ? 0.5 : 1);
+}
+
+export function fatigueMood(state: GameState) {
+  return Math.round(((state.fatigue ?? 0) / 100) * WORK.mood);
+}
+
+function updateFatigue(state: GameState): GameState {
+  if (state.tutorialStep < TUTORIAL.length) return state;
+  const { ratio } = workload(state);
+  const now = state.fatigue ?? 0;
+  const rest = WORK.rest * (state.researched.includes("restdays") ? 2 : 1);
+  const next = ratio > 1 ? Math.min(100, now + WORK.rise * (ratio - 1)) : Math.max(0, now - rest);
+  return next === now ? state : { ...state, fatigue: next };
+}
+
 // Automation without a fair share of the work: people lose their jobs and
 // their sense of purpose.
 export function automationMood(state: GameState) {
@@ -1819,7 +1856,10 @@ export function production(state: GameState): Resources {
       // satellites help the fields.
       (def.era >= 5 && (def.power ?? 0) < 0 ? powerCover(state) : 1) *
       (state.researched.includes("automation") && AUTOMATION.buildings.includes(tile.building) ? 1 + AUTOMATION.boost : 1) *
-      (tile.building === "farm" && spaceDone(state, "satellites") ? 1 + SPACE.fieldBoost : 1);
+      (tile.building === "farm" && spaceDone(state, "satellites") ? 1 + SPACE.fieldBoost : 1) *
+      // Small advancements: seed saving for fields, baskets for gatherers.
+      (tile.building === "farm" && state.researched.includes("seedsaving") ? 1.1 : 1) *
+      (tile.building === "gatherer" && state.researched.includes("basketry") ? 1.2 : 1);
     for (const [k, v] of Object.entries(def.produces ?? {}))
       // Costs (a bathhouse burning wood) don't shrink as it wears; output does.
       out[k as keyof Resources] += (v ?? 0) * factor * share * boost * (k === "food" ? dust : 1) * ((v ?? 0) > 0 ? worn * better : 1);
@@ -1868,6 +1908,9 @@ export function production(state: GameState): Resources {
   if (state.researched.includes("computers")) out.knowledge *= 1.3;
   // Multiplayer: the match's speed.
   if (state.mp) out.knowledge *= MP.pace[state.mp.speed];
+  // Tired from overwork: less of everything they make.
+  const tired = 1 - fatigueLoss(state);
+  if (tired < 1) for (const k of Object.keys(out) as (keyof Resources)[]) if (out[k] > 0) out[k] *= tired;
   if (spaceDone(state, "telescope")) out.knowledge *= 1 + SPACE.knowledgeBoost;
   // The climate tipped: for good, hotter summers and droughts cut harvests.
   if (state.tipped) out.food *= 1 - TIPPING.food;
@@ -1981,7 +2024,7 @@ function gapFactor(state: GameState) {
 }
 
 export interface Warning {
-  id: "fire" | "food" | "wood" | "famine" | "unrest" | "collapse" | "behind" | "land" | "sick" | "rain" | "wear" | "roof" | "hostile-steppe" | "hostile-reach";
+  id: "fire" | "food" | "wood" | "famine" | "tired" | "unrest" | "collapse" | "behind" | "land" | "sick" | "rain" | "wear" | "roof" | "hostile-steppe" | "hostile-reach";
   icon: IconId;
   text: string;
   // Ticks left on the countdown in the text; "{secs}" in the text is where it goes.
@@ -2069,6 +2112,17 @@ export function warnings(state: GameState): Warning[] {
       text: "Food is running low: about {secs}s left. Build gatherers or farms.",
       countdown: state.resources.food / -netFood,
       severe: state.resources.food / -netFood < 20,
+    });
+  }
+
+  // Overworked: more jobs than hands.
+  if ((state.fatigue ?? 0) >= WORK.warnAt) {
+    const w = workload(state);
+    out.push({
+      id: "tired",
+      icon: "sad",
+      text: `Your people are worn out: ${w.needed} jobs, ${w.workers} people free to work (the sick can't; warriors help half the time). They make ${Math.round(fatigueLoss(state) * 100)}% less and are unhappier. Grow the town, train fewer warriors, remove buildings you don't need, or learn Rest Days.`,
+      severe: (state.fatigue ?? 0) >= 70,
     });
   }
 
@@ -2759,6 +2813,12 @@ export function meterBreakdown(state: GameState, key: MeterKey): MeterPart[] {
         fix: "Build more power plants so the grid covers what it needs.",
       },
       {
+        label: "Tired from overwork",
+        value: -fatigueMood(state),
+        hint: "More jobs than people to do them. Warriors and the sick don't work.",
+        fix: "Grow the town, sell buildings you can do without, or learn Rest Days. Tiredness fades once there are enough hands.",
+      },
+      {
         label: "Jobs lost to robots",
         value: -automationMood(state),
         hint: "Automation took much of the work, and with it many people's sense of purpose.",
@@ -2823,11 +2883,12 @@ export function coldShare(state: GameState) {
 
 // Food lost to rot each second: stores above foodKeeps slowly go bad.
 export function foodKeeps(state: GameState) {
-  return GROWTH_PRESSURE.foodKeeps + (countBuildings(state).granary ?? 0) * GRANARY_KEEPS;
+  return GROWTH_PRESSURE.foodKeeps + (countBuildings(state).granary ?? 0) * GRANARY_KEEPS * (state.researched.includes("kilns") ? 1.5 : 1);
 }
 
 export function foodSpoiling(state: GameState) {
-  return Math.max(0, state.resources.food - foodKeeps(state)) * GROWTH_PRESSURE.foodRots;
+  // Smoking Food: smoked fish and meat keep much longer.
+  return Math.max(0, state.resources.food - foodKeeps(state)) * GROWTH_PRESSURE.foodRots * (state.researched.includes("smoking") ? 0.6 : 1);
 }
 
 export function isLit(state: GameState, tile: Tile) {
@@ -3045,7 +3106,8 @@ export function computeMeters(state: GameState): Meters {
     Math.min(2, counts.guildhall ?? 0) * LEARNING.guildMood -
     SMOG.mood * smogIndex(state) -
     (counts.apartments ? POWER.darkFlatsMood * (1 - powerCover(state)) : 0) -
-    automationMood(state) +
+    automationMood(state) -
+    fatigueMood(state) +
     state.modifiers.happiness;
 
   return {
@@ -3656,6 +3718,7 @@ function tickOnce(state: GameState): GameState {
   // No raids or events while a new player is still learning.
   if (!inTutorial) next = updateTipping(updateClimate(updateRebellion(updatePlague(updateDisasters(updateDrought(updateLegion(updateRaids(next))))))));
   next = updateCarbon(next);
+  next = updateFatigue(next);
   if ((next.tradePrice ?? 1) > 1) next = { ...next, tradePrice: Math.max(1, (next.tradePrice ?? 1) - TRADE.ease) };
   next = reachTypeOne(next);
   next = returnCaravans(next);
@@ -4014,6 +4077,26 @@ function updateLegion(state: GameState): GameState {
       nextRaidTick: Number.MAX_SAFE_INTEGER,
       log: [`Scouts report a Roman legion of ${size} marching toward us!`, ...state.log].slice(0, 30),
     };
+  }
+  // The vanguard: Roman scouts land first to test our defences.
+  if (state.legion && !state.legion.vanguard && !state.raid && state.tick >= state.legion.arriveTick - ROMAN_LEGION.vanguard) {
+    const landing = pickLanding(state, mulberry32(state.seed + state.tick * 59));
+    if (landing) {
+      return {
+        ...state,
+        legion: { ...state.legion, vanguard: true },
+        raid: {
+          strength: ROMAN_LEGION.vanguardSize,
+          kind: "band",
+          fromTile: landing.from.id,
+          targetTile: landing.home.id,
+          meetTile: landing.meet.id,
+          startTick: state.tick,
+          arriveTick: state.tick + 12,
+        },
+        log: ["Roman scouts have landed to test our defences! The legion is not far behind.", ...state.log].slice(0, 30),
+      };
+    }
   }
   if (state.legion && !state.raid && state.tick >= state.legion.arriveTick) {
     const landing = pickLanding(state, mulberry32(state.seed + state.tick * 53));
@@ -4736,7 +4819,7 @@ function updateRaids(state: GameState): GameState {
           (revenge ? KINGDOM_RAID.revengeSize : 1),
       ),
     );
-    const early = (countBuildings(state).watchfire ?? 0) > 0 ? WATCH_FIRE.warnTicks : 0;
+    const early = ((countBuildings(state).watchfire ?? 0) > 0 ? WATCH_FIRE.warnTicks : 0) + (state.researched.includes("townwatch") ? 6 : 0);
     return {
       ...state,
       raid: {
@@ -6015,7 +6098,7 @@ function step(state: GameState, action: Action): GameState {
       }
       return maybeOutbreak({
         ...addTally(state, "hunts", 1),
-        resources: { ...state.resources, food: state.resources.food + HUNT_FOOD },
+        resources: { ...state.resources, food: state.resources.food + HUNT_FOOD * (state.researched.includes("dogs") ? 1.5 : 1) },
         log: [`Hunters brought down a ${action.animal} (+${HUNT_FOOD} food).`, ...state.log].slice(0, 30),
       }, isCalm(state) ? 0 : DISEASE.hunt, mulberry32(state.seed + state.tick * 37 + Math.round(state.resources.food))(), "It came with the meat from the hunt.");
   }

@@ -1505,6 +1505,79 @@ export const TREE: TreeNode[] = [
     cost: 90,
     requires: ["steam", "knights"],
   },
+  // Small advancements, each doing one thing of its own.
+  {
+    id: "basketry",
+    name: "Basket Weaving",
+    description: "Baskets of reeds and bark carry far more than arms can: Gatherer's Camps bring in 20% more.",
+    branch: "construction",
+    era: 0,
+    cost: 12,
+    requires: ["toolmaking"],
+  },
+  {
+    id: "smoking",
+    name: "Smoking Food",
+    description: "Fish and meat hung in the smoke of the fire keep for weeks: food rots 40% slower.",
+    branch: "knowledge",
+    era: 0,
+    cost: 15,
+    requires: ["fishing"],
+  },
+  {
+    id: "seedsaving",
+    name: "Seed Saving",
+    description: "Keep the seeds of the best plants for next year: every field grows 10% more.",
+    branch: "knowledge",
+    era: 0,
+    cost: 15,
+    requires: ["early-farming"],
+  },
+  {
+    id: "dogs",
+    name: "Hunting Dogs",
+    description: "Tame wolves that track and herd game: every hunt brings back 50% more food.",
+    branch: "military",
+    era: 0,
+    cost: 12,
+    requires: ["herding"],
+  },
+  {
+    id: "kilns",
+    name: "Kilns",
+    description: "Pots fired hotter are harder and seal tight: Granaries keep 50% more food from rotting.",
+    branch: "construction",
+    era: 1,
+    cost: 25,
+    requires: ["pottery"],
+  },
+  {
+    id: "starcharts",
+    name: "Star Charts",
+    description: "Paddlers who know the stars find their way at night: canoe trips are 30% shorter and they map further.",
+    branch: "transport",
+    era: 1,
+    cost: 25,
+    requires: ["writing"],
+  },
+  {
+    id: "restdays",
+    name: "Rest Days",
+    description: "A day of rest every few days, for everyone: tiredness from overwork fades twice as fast and costs half as much.",
+    branch: "culture",
+    era: 1,
+    cost: 20,
+    requires: ["writing"],
+  },
+  {
+    id: "townwatch",
+    name: "Town Watch",
+    description: "Watchmen on the roads and the walls: raiders are seen coming 6 ticks sooner.",
+    branch: "military",
+    era: 2,
+    cost: 40,
+    requires: ["roads"],
+  },
   // Ores: uranium and plutonium, in the Industrial era.
   {
     id: "uranium",
@@ -1794,6 +1867,14 @@ export const AFTER_STEPS: Record<string, AfterStep> = {
   cleanair: { text: "Clean Air Laws: every chimney makes half the smog. The streets can breathe again." },
   seawalls: { build: "seawall", text: "Build a Sea Wall on the shore: floods stay off the low land behind it. The sea is rising." },
   computers: { text: "Computers! +30% Knowledge. After the climate crisis, with 150 people, we can enter the Future." },
+  basketry: { text: "Baskets! Our Gatherer's Camps bring in 20% more." },
+  smoking: { text: "Smoked fish and meat keep much longer: food rots 40% slower." },
+  seedsaving: { text: "We keep the best seeds: every field grows 10% more." },
+  dogs: { text: "Our dogs track the game: every hunt brings back 50% more food." },
+  kilns: { text: "Kiln-fired jars seal tight: Granaries keep 50% more food." },
+  starcharts: { text: "Our paddlers steer by the stars: canoe trips are 30% shorter, and they map further." },
+  restdays: { text: "Rest days for everyone: tiredness fades twice as fast, and costs half as much." },
+  townwatch: { text: "The town watch is on the roads: raiders are seen coming sooner." },
   uranium: { build: "nuclear", text: "Build a Nuclear Plant by the water: 60 power and no carbon at all. But its waste stays dangerous for thousands of years, and the land pays for each one." },
   plutonium: { text: "Breeder reactors: every Nuclear Plant now makes 90 power instead of 60, and leaves half as much waste again." },
   ai: { build: "datacenter", text: "Build a Data Center: Knowledge day and night. It needs 12 power, so keep the grid ahead." },
@@ -3103,6 +3184,69 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     item: "aetherite",
     lines: ["On the Moon, our miners dug into the grey dust.", "They found a crystal that hums, and is never warm or cold.", "We call it Aetherite. Nobody knows what it is."],
   },
+  basketry: {
+    bg: "day",
+    actors: ["person-sit", "person"],
+    props: [{ icon: "herb", x: 44, until: 1, size: 36 }],
+    item: "basket",
+    lines: ["Reeds by the river, bent and woven.", "A basket that carries ten handfuls at once.", "The gatherers come home loaded."],
+  },
+  smoking: {
+    bg: "dusk",
+    actors: ["person", "person"],
+    props: [
+      { icon: "campfire", x: 44, size: 44 },
+      { icon: "fish", x: 56, from: 1, size: 32 },
+    ],
+    item: "meat",
+    itemFrom: 2,
+    lines: ["Fish hung too close to the fire.", "Days later, it was still good to eat.", "Smoke keeps food from rotting."],
+  },
+  seedsaving: {
+    bg: "day",
+    actors: ["person", "person-sit"],
+    props: [{ icon: "wheat", x: 44, size: 40 }],
+    item: "sprout",
+    itemFrom: 2,
+    lines: ["Some plants grew taller than the rest.", "We kept their seeds for next spring.", "Every year, the fields grow a little better."],
+  },
+  dogs: {
+    bg: "dawn",
+    actors: ["person", "person"],
+    props: [{ icon: "meat", x: 58, from: 2, size: 32 }],
+    item: "sheep",
+    itemFrom: 1,
+    lines: ["A young wolf followed the hunters home.", "It learned to track and to herd.", "Now the hunts bring back far more."],
+  },
+  kilns: {
+    bg: "dusk",
+    actors: ["person", "person"],
+    props: [{ icon: "campfire", x: 44, size: 44 }, { icon: "bricks", x: 54, until: 1, size: 32 }],
+    item: "amphora",
+    lines: ["Clay pots, fired in a closed oven.", "Hotter than any open fire, they came out hard as stone.", "Sealed tight, the grain stays dry for a year."],
+  },
+  starcharts: {
+    bg: "night",
+    actors: ["person-sit", "elder-sit"],
+    props: [{ icon: "star", x: 50, y: 58, size: 28 }, { icon: "boat", x: 56, from: 2, size: 36 }],
+    item: "scroll",
+    lines: ["The same stars rise in the same places every night.", "We marked them down, one by one.", "Now our canoes find their way in the dark."],
+  },
+  restdays: {
+    bg: "dawn",
+    actors: ["person-sit", "person-sit"],
+    props: [{ icon: "smile", x: 52, from: 2, size: 32 }],
+    item: "sun",
+    itemFrom: 1,
+    lines: ["Everyone worked every day, until they could not.", "So we chose a day to rest, for all of us.", "We came back stronger."],
+  },
+  townwatch: {
+    bg: "night",
+    actors: ["person", "person"],
+    props: [{ icon: "torch", x: 44, size: 36 }, { icon: "road", x: 56, size: 36 }],
+    item: "shield",
+    lines: ["Lamps along the roads, and watchmen beside them.", "They see the raiders long before the gates do.", "The whole town has time to get ready."],
+  },
 };
 
 // Ticks between two lessons, so they never pile up.
@@ -3195,6 +3339,26 @@ export const RAID_RESPONSE = { fightTicks: 7, tributePerRaider: 4, tributeSooner
 // Every trade raises prices by `rise` (they want more for less); prices ease
 // back by `ease` a tick. Buying wood and stone instead of cutting spares the land.
 // Holding `idle` or more marks the Trade button (something worth doing).
+// Work and rest: every building that makes something needs `crew` workers
+// (`bigCrew` for the big ones). The sick don't work; warriors count as
+// `soldierHelp` of a worker. With more
+// jobs than workers, tiredness (0-100) rises by `rise` a tick for each 100% of
+// overwork; with enough hands it falls by `rest` a tick. Tired people make up to
+// `outputLoss` less and are up to `mood` less happy. Rest Days double the rest
+// and halve the loss.
+export const WORK = {
+  crew: 0.5,
+  bigCrew: 2,
+  // Warriors lend a hand between fights.
+  soldierHelp: 0.5,
+  big: ["factory", "coalplant", "nuclear", "fusion", "datacenter", "university", "castle", "smithy", "guildhall"],
+  rise: 0.6,
+  rest: 0.8,
+  outputLoss: 0.35,
+  mood: 15,
+  warnAt: 30,
+};
+
 export const TRADE = { idle: 60, lot: 10, food: 18, wood: 10, stone: 6, rise: 0.2, ease: 0.006 };
 
 // A watch tower on the shore sees raiders earlier and adds a little defense
@@ -3362,7 +3526,9 @@ export const WALL_DEFENSE = 4;
 // The Ancient era ends with a Roman legion. Scouts see it coming when the year
 // reaches warningYear; it lands warningTicks later. Each legionary fights like
 // two of your warriors. Size: (base + population / perPeople) × difficulty.
-export const ROMAN_LEGION = { warningYear: -1600, warningTicks: 90, strengthEach: 2, base: 8, perPeople: 5 };
+// The legion: `vanguard` ticks before it lands, a small party of scouts
+// (`vanguardSize` strength) probes the shore first.
+export const ROMAN_LEGION = { warningYear: -1600, warningTicks: 90, strengthEach: 2, base: 9, perPeople: 5, vanguard: 40, vanguardSize: 5 };
 
 // Leaving the Ancient era: beat the Roman legion, research Coinage and grow to
 // this many people.

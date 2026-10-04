@@ -9,6 +9,9 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "People get tired when there are more jobs than workers: tired people make less and are less happy. Warriors help with the work half the time. Learn Rest Days to recover faster.",
+      "Eight new advancements: Basketry, Smoking Fish, Seed Saving, Tamed Dogs, Kilns, Star Charts, Rest Days and Town Watch. Each does something different (food that keeps, faster canoes, earlier raid warnings and more).",
+      "The Roman legion is bigger, and a small band of Roman scouts lands first to test your defences.",
       "Fires look much better: flickering tongues of flame that sway, a hot bright core, glowing embers, rising sparks and a soft glow.",
       "The land tiles now meet edge to edge (no more sea showing through the gaps), and worn-down buildings have broken planks and fallen stones around them; a broken one is scorched, with a fallen beam.",
       "Fixes: a building's info panel now stays on screen (docked at the side) instead of running off the top when zoomed in, and markers on the map no longer draw over the goal and other panels.",
