@@ -76,7 +76,7 @@ export function HexTerrain({
 }) {
   const ref = useRef<InstancedMesh>(null);
   const lastPointer = useRef("mouse");
-  const geometry = useMemo(() => new CylinderGeometry(0.985, 0.985, 1, 6, 1), []);
+  const geometry = useMemo(() => new CylinderGeometry(1.0, 1.0, 1, 6, 1), []);
 
   useLayoutEffect(() => {
     const mesh = ref.current;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Vector3 } from "three";
 import { Html, MapControls, PerformanceMonitor } from "@react-three/drei";
@@ -390,6 +391,7 @@ export function WorldCanvas() {
               <Model opacity={1} lit={t.building !== "campfire" || burningIds.includes(t.id)} />
             )}
             {(t.level ?? 1) >= 2 && <Plinth level={t.level!} />}
+            {(t.worn ?? 0) >= 0.35 && <WearMarks worn={t.worn ?? 0} seed={t.id} />}
           </group>
         );
       })}
@@ -397,7 +399,7 @@ export function WorldCanvas() {
       {buildings
         .filter((t) => (t.worn ?? 0) >= WEAR.warnAt)
         .map((t) => (
-          <Html zIndexRange={[14, 0]} key={`wear-${t.id}`} center position={[t.x, tileTop(t) + 1.5, t.z]} style={{ pointerEvents: "none" }}>
+          <Html zIndexRange={[13, 0]} key={`wear-${t.id}`} center position={[t.x, tileTop(t) + 1.5, t.z]} style={{ pointerEvents: "none" }}>
             <span
               className={"block border-2 border-[#140e0a] p-0.5 " + ((t.worn ?? 0) >= 1 ? "bg-red-500" : "bg-amber-300")}
               title="Needs repair"
@@ -635,8 +637,19 @@ export function WorldCanvas() {
         </Html>
       )}
       {inspected !== null && state.tiles[inspected]?.building && !selected && (
-        <Html zIndexRange={[15, 0]} center position={[state.tiles[inspected].x, tileTop(state.tiles[inspected]) + 2.2, state.tiles[inspected].z]}>
-          <BuildingInfo state={state} tileId={inspected} dispatch={dispatch} onClose={() => setInspected(null)} />
+        // Docked at the side of the screen (not floating over the building), so it
+        // never runs off the edge when the camera is close. A portal out of the 3D
+        // scene's overlay into the page.
+        <Html zIndexRange={[30, 20]}>
+          {createPortal(
+            <div
+              className="fixed bottom-48 right-2 z-30 max-h-[calc(100dvh-16rem)] overflow-y-auto md:bottom-auto md:right-16 md:top-24 lg:right-20"
+              data-testid="building-info-dock"
+            >
+              <BuildingInfo state={state} tileId={inspected} dispatch={dispatch} onClose={() => setInspected(null)} />
+            </div>,
+            document.body,
+          )}
         </Html>
       )}
 
@@ -681,6 +694,44 @@ function Plinth({ level }: { level: number }) {
           <cylinderGeometry args={[0.5, 0.5, 0.035, 6]} />
           <meshStandardMaterial color={tier.color} metalness={0.6} roughness={0.35} flatShading />
         </mesh>
+      )}
+    </group>
+  );
+}
+
+// A worn building shows it: broken planks and fallen stones pile up around it
+// as it wears (one more every few percent), and a broken one gets a soot-dark
+// patch and a fallen beam.
+function WearMarks({ worn, seed }: { worn: number; seed: number }) {
+  const bits = Math.min(8, Math.ceil((worn - 0.3) * 10));
+  const rnd = (i: number) => {
+    const v = Math.sin(seed * 12.9898 + i * 78.233) * 43758.5453;
+    return v - Math.floor(v);
+  };
+  return (
+    <group>
+      {Array.from({ length: bits }, (_, i) => {
+        const a = rnd(i) * Math.PI * 2;
+        const r = 0.34 + rnd(i + 20) * 0.14;
+        const plank = i % 2 === 0;
+        return (
+          <mesh key={i} position={[Math.cos(a) * r, 0.02, Math.sin(a) * r]} rotation={[0, rnd(i + 40) * Math.PI, plank ? 0.15 : 0]} castShadow>
+            {plank ? <boxGeometry args={[0.16, 0.02, 0.035]} /> : <dodecahedronGeometry args={[0.035 + rnd(i + 60) * 0.02, 0]} />}
+            <meshStandardMaterial color={plank ? "#6b4a2b" : "#8a8580"} roughness={1} flatShading />
+          </mesh>
+        );
+      })}
+      {worn >= 1 && (
+        <>
+          <mesh position={[0, 0.006, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <circleGeometry args={[0.46, 6]} />
+            <meshStandardMaterial color="#3a3029" transparent opacity={0.55} roughness={1} />
+          </mesh>
+          <mesh position={[0.18, 0.12, 0.2]} rotation={[0.2, 0.6, 1.0]} castShadow>
+            <boxGeometry args={[0.36, 0.035, 0.035]} />
+            <meshStandardMaterial color="#5a3d22" roughness={1} />
+          </mesh>
+        </>
       )}
     </group>
   );

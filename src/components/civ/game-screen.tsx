@@ -65,7 +65,9 @@ function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null 
   return (
     <>
       {/* During a camera shot the HUD fades away, leaving the film. */}
-      <div ref={root} className={cn("pointer-events-none absolute inset-0 transition-opacity duration-700", shot && "invisible opacity-0")}>
+      {/* z-14: the screen's panels sit above markers drawn on the map (z up to 13),
+          but under a building's own info panel (z 20-30). */}
+      <div ref={root} className={cn("pointer-events-none absolute inset-0 z-[14] transition-opacity duration-700", shot && "invisible opacity-0")}>
         {/* Phones: the meters sit in a strip under the top bar. */}
         <TopBar>{compact && <MeterStrip />}</TopBar>
         {!compact && (
