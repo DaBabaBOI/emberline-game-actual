@@ -15,10 +15,8 @@ function barColor(value: number) {
 }
 
 export function SideMeters({ side }: { side: "left" | "right" }) {
-  const { state } = useGame();
   // Whose "why" panel is open (one at a time).
   const [open, setOpen] = useState<MeterKey | null>(null);
-  const trend = sustainabilityTrend(state);
   return (
     <div
       className={cn(
@@ -28,79 +26,131 @@ export function SideMeters({ side }: { side: "left" | "right" }) {
         open && "z-[27]",
       )}
     >
-      {METERS.filter((m) => m.side === side).map((m) => {
-        const value = state.meters[m.key];
-        const land = m.key === "sustainability";
-        const shown = open === m.key;
-        const grief = m.key === "happiness" ? Math.round(state.grief ?? 0) : 0;
-        const roofless = m.key === "happiness" ? homelessMood(state) : 0;
-        return (
-          <div
-            key={m.key}
-            role="button"
-            tabIndex={0}
-            aria-label={`${m.label}: ${value} out of 100. Show why`}
-            aria-expanded={shown}
-            onClick={() => setOpen(shown ? null : m.key)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                setOpen(shown ? null : m.key);
-              }
-            }}
-            data-testid={land ? "sustain-meter" : `meter-${m.key}`}
-            className={cn(
-              "pixel-panel-dark font-pixel group relative flex w-8 cursor-pointer flex-col items-center gap-0.5 px-0.5 py-1 hover:bg-[#3a2e24] md:w-10 md:gap-1 md:px-1 md:py-1.5",
-              shown && "outline outline-2 outline-emerald-400",
-            )}
-          >
-            <PixelIcon name={m.icon} size={18} />
-            <div className="relative h-9 w-2 overflow-hidden bg-white/15 md:h-14 md:w-2.5">
-              <div
-                className={cn("absolute bottom-0 w-full transition-[height] duration-150", barColor(value))}
-                style={{ height: `${value}%` }}
-              />
-              {[25, 50, 75].map((mark) => (
-                <div key={mark} className="absolute inset-x-0 h-px bg-black/50" style={{ bottom: `${mark}%` }} />
-              ))}
-            </div>
-            <span className="font-num text-xs">{value}</span>
-            {land && Math.abs(trend) >= 1 && (
-              <span
-                className={cn("font-num text-[11px] leading-none", trend < 0 ? "text-red-300" : "text-emerald-300")}
-                title="Change over the last minute"
-              >
-                {trend < 0 ? "▼" : "▲"}
-                {Math.round(Math.abs(trend))}
-              </span>
-            )}
-            {!open && (
-              <span
-                className={cn(
-                  "pixel-panel-dark pointer-events-none absolute top-1/2 hidden -translate-y-1/2 px-2 py-1 text-xs group-hover:block",
-                  m.key === "food" || grief > 0 || roofless > 0 ? "w-60" : "whitespace-nowrap",
-                  side === "left" ? "left-12" : "right-12",
-                )}
-                data-testid={m.key === "food" ? "food-meter-tip" : undefined}
-              >
-                {m.label}: {value}/100 (click to see why)
-                {m.key === "food" && <span className="mt-1 block text-white/70">{foodMeterNote(state)}</span>}
-                {roofless > 0 && (
-                  <span className="mt-1 block text-red-300" data-testid="roof-note">
-                    No roof: −{roofless}. {homelessCount(state)} sleeping out in the cold. Build homes.
-                  </span>
-                )}
-                {grief > 0 && (
-                  <span className="mt-1 block text-red-300" data-testid="grief-note">
-                    Grieving: −{grief}. Someone was dropped into a fire or the sea. It fades slowly.
-                  </span>
-                )}
-              </span>
-            )}
+      {METERS.filter((m) => m.side === side).map((m) => (
+        <MeterButton key={m.key} meter={m.key} open={open} setOpen={setOpen} tip={side} />
+      ))}
+      {open && <MeterPanel meter={open} place={side} onClose={() => setOpen(null)} />}
+    </div>
+  );
+}
+
+// Phones: all six meters in one strip under the top bar, each a small bar with
+// its number; tapping one opens its "why" panel just below.
+export function MeterStrip() {
+  const [open, setOpen] = useState<MeterKey | null>(null);
+  return (
+    <div className="pointer-events-auto relative w-full max-w-md" data-testid="meter-strip">
+      <div className="pixel-panel-dark font-pixel grid grid-cols-6 gap-0.5 p-0.5">
+        {METERS.map((m) => (
+          <MeterButton key={m.key} meter={m.key} open={open} setOpen={setOpen} />
+        ))}
+      </div>
+      {open && <MeterPanel meter={open} place="below" onClose={() => setOpen(null)} />}
+    </div>
+  );
+}
+
+// One meter: its icon, a bar and the number. Click (or tap) for why. `tip`:
+// which side the hover tip opens towards (side columns only).
+function MeterButton({
+  meter,
+  open,
+  setOpen,
+  tip,
+}: {
+  meter: MeterKey;
+  open: MeterKey | null;
+  setOpen: (m: MeterKey | null) => void;
+  tip?: "left" | "right";
+}) {
+  const { state } = useGame();
+  const m = METERS.find((x) => x.key === meter)!;
+  const value = state.meters[meter];
+  const land = meter === "sustainability";
+  const shown = open === meter;
+  const grief = meter === "happiness" ? Math.round(state.grief ?? 0) : 0;
+  const roofless = meter === "happiness" ? homelessMood(state) : 0;
+  const trend = land ? sustainabilityTrend(state) : 0;
+  const strip = !tip;
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-label={`${m.label}: ${value} out of 100. Show why`}
+      aria-expanded={shown}
+      onClick={() => setOpen(shown ? null : meter)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setOpen(shown ? null : meter);
+        }
+      }}
+      data-testid={land ? "sustain-meter" : `meter-${meter}`}
+      className={cn(
+        "group relative flex cursor-pointer items-center hover:bg-[#3a2e24]",
+        strip
+          ? "gap-1 px-1 py-0.5"
+          : "pixel-panel-dark font-pixel w-8 flex-col gap-0.5 px-0.5 py-1 md:w-10 md:gap-1 md:px-1 md:py-1.5",
+        shown && "outline outline-2 outline-emerald-400",
+      )}
+    >
+      <PixelIcon name={m.icon} size={strip ? 14 : 18} />
+      {strip ? (
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="font-num text-[11px] leading-none">
+            {value}
+            {land && Math.abs(trend) >= 1 && <span className={trend < 0 ? "text-red-300" : "text-emerald-300"}>{trend < 0 ? "▼" : "▲"}</span>}
+          </span>
+          <span className="relative block h-1.5 w-full overflow-hidden bg-white/15">
+            <span className={cn("absolute inset-y-0 left-0 block", barColor(value))} style={{ width: `${value}%` }} />
+          </span>
+        </span>
+      ) : (
+        <>
+          <div className="relative h-9 w-2 overflow-hidden bg-white/15 md:h-14 md:w-2.5">
+            <div
+              className={cn("absolute bottom-0 w-full transition-[height] duration-150", barColor(value))}
+              style={{ height: `${value}%` }}
+            />
+            {[25, 50, 75].map((mark) => (
+              <div key={mark} className="absolute inset-x-0 h-px bg-black/50" style={{ bottom: `${mark}%` }} />
+            ))}
           </div>
-        );
-      })}
-      {open && <MeterPanel meter={open} side={side} onClose={() => setOpen(null)} />}
+          <span className="font-num text-xs">{value}</span>
+          {land && Math.abs(trend) >= 1 && (
+            <span
+              className={cn("font-num text-[11px] leading-none", trend < 0 ? "text-red-300" : "text-emerald-300")}
+              title="Change over the last minute"
+            >
+              {trend < 0 ? "▼" : "▲"}
+              {Math.round(Math.abs(trend))}
+            </span>
+          )}
+        </>
+      )}
+      {!open && tip && (
+        <span
+          className={cn(
+            "pixel-panel-dark pointer-events-none absolute top-1/2 hidden -translate-y-1/2 px-2 py-1 text-xs group-hover:block",
+            meter === "food" || grief > 0 || roofless > 0 ? "w-60" : "whitespace-nowrap",
+            tip === "left" ? "left-12" : "right-12",
+          )}
+          data-testid={meter === "food" ? "food-meter-tip" : undefined}
+        >
+          {m.label}: {value}/100 (click to see why)
+          {meter === "food" && <span className="mt-1 block text-white/70">{foodMeterNote(state)}</span>}
+          {roofless > 0 && (
+            <span className="mt-1 block text-red-300" data-testid="roof-note">
+              No roof: −{roofless}. {homelessCount(state)} sleeping out in the cold. Build homes.
+            </span>
+          )}
+          {grief > 0 && (
+            <span className="mt-1 block text-red-300" data-testid="grief-note">
+              Grieving: −{grief}. Someone was dropped into a fire or the sea. It fades slowly.
+            </span>
+          )}
+        </span>
+      )}
     </div>
   );
 }
@@ -135,7 +185,7 @@ const ABOUT: Record<MeterKey, { about: string; world: string }> = {
 
 // Why is this meter where it is? Every part, with a hint on what helps, and
 // "What should I fix?": the three changes that would raise it most.
-function MeterPanel({ meter, side, onClose }: { meter: MeterKey; side: "left" | "right"; onClose: () => void }) {
+function MeterPanel({ meter, place, onClose }: { meter: MeterKey; place: "left" | "right" | "below"; onClose: () => void }) {
   const { state } = useGame();
   const info = METERS.find((m) => m.key === meter)!;
   const land = meter === "sustainability";
@@ -148,8 +198,11 @@ function MeterPanel({ meter, side, onClose }: { meter: MeterKey; side: "left" | 
   return (
     <div
       className={cn(
-        "pixel-panel font-pixel absolute bottom-0 w-64 max-w-[calc(100vw-4rem)] p-3 text-xs md:w-72",
-        side === "left" ? "left-10 md:left-12" : "right-10 md:right-12",
+        "pixel-panel font-pixel absolute p-3 text-xs",
+        place === "below"
+          ? "inset-x-0 top-full mt-1 max-h-[calc(100dvh-12rem)] overflow-y-auto"
+          : "bottom-0 w-64 max-w-[calc(100vw-4rem)] md:w-72",
+        place === "left" ? "left-10 md:left-12" : place === "right" && "right-10 md:right-12",
       )}
       data-testid={id("panel")}
       data-meter={meter}

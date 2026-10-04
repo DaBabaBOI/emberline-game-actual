@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { BUILDINGS, CANOE, LOW_WOOD_AFTER_BUY, PLANT_COST, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL, WARRIORS_PER_CAMP } from "@/game/content";
 import {
   affordableResearch,
@@ -38,6 +38,7 @@ import type { IconId } from "@/game/sprites";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { cn } from "@/lib/utils";
+import { useCompact } from "@/lib/use-compact";
 import { Countdown } from "./countdown";
 
 const COST_ICONS: Record<keyof Resources, IconId> = {
@@ -121,6 +122,7 @@ function ToolButton({
   tone: string;
   children?: ReactNode;
 }) {
+  const compact = useCompact();
   return (
     <button
       type="button"
@@ -129,7 +131,8 @@ function ToolButton({
       disabled={disabled || locked}
       title={locked ? "Unlocks later in the tutorial" : title}
       className={cn(
-        "pixel-btn relative flex min-w-16 flex-col items-center justify-center gap-0.5 px-2 py-1 text-[11px] disabled:opacity-40",
+        "pixel-btn relative flex flex-col items-center justify-center gap-0.5 text-[11px] disabled:opacity-40",
+        compact ? "min-w-14 px-1.5 py-0.5 leading-tight" : "min-w-16 px-2 py-1",
         locked ? "bg-[#4a3b2e]" : tone,
       )}
     >
@@ -141,7 +144,7 @@ function ToolButton({
           {badge}
         </span>
       )}
-      <PixelIcon name={locked ? "lock" : icon} size={24} />
+      <PixelIcon name={locked ? "lock" : icon} size={compact ? 18 : 24} />
       {label}
       {!locked && children}
     </button>
@@ -159,22 +162,45 @@ export function BottomBar() {
   // After the tutorial, flag purchases that would leave the fires short of wood.
   const tight = (cost: Partial<Resources>) =>
     !inTutorial && (cost.wood ?? 0) > 0 && state.resources.wood - (cost.wood ?? 0) < LOW_WOOD_AFTER_BUY;
+  const compact = useCompact();
+  // The bar can be tucked away to see more of the island. It comes back by
+  // itself whenever it's needed: the tutorial, a guided step, a building or
+  // tool in hand, or one of Elder Ama's hints (they point at its buttons).
+  const [tucked, setTucked] = useState(false);
+  const hidden = tucked && !inTutorial && !state.coach && !selected && !state.hint;
 
   return (
-    <div className="pointer-events-auto absolute inset-x-0 bottom-2 flex flex-col items-center gap-1.5 px-2 md:bottom-3 md:px-3">
+    <div className="pointer-events-none absolute inset-x-0 bottom-1.5 flex flex-col items-center gap-1.5 px-1.5 md:bottom-3 md:px-3" data-hud="bottom">
+      {!inTutorial && (
+        <button
+          type="button"
+          onClick={() => setTucked(!tucked)}
+          className="pixel-btn font-pixel pointer-events-auto self-end bg-[#2b2119] px-2 py-0.5 text-[11px] text-white/90"
+          aria-expanded={!hidden}
+          data-testid="bar-toggle"
+        >
+          {hidden ? "▲ Build" : "▼ Hide"}
+        </button>
+      )}
       {selected && (
         // Phones have no Esc key or right click: a clear way out of build mode.
         <button
           type="button"
           onClick={() => setSelected(null)}
-          className="pixel-btn font-pixel bg-[#fdf6e3] px-3 py-1 text-xs text-[#2b2119]"
+          className="pixel-btn font-pixel pointer-events-auto bg-[#fdf6e3] px-3 py-1 text-xs text-[#2b2119]"
           data-testid="cancel-tool"
         >
           Cancel
         </button>
       )}
-      <div className="pixel-panel-dark font-pixel flex w-full min-w-0 max-w-full flex-col items-stretch gap-2 p-1.5 md:w-auto md:flex-row md:gap-3 md:p-2">
-        <div className="hidden flex-col justify-center gap-0.5 border-r-2 border-white/10 pr-3 text-[11px] text-white/85 md:flex">
+      {!hidden && (
+      <div
+        className={cn(
+          "pixel-panel-dark font-pixel pointer-events-auto flex w-full min-w-0 max-w-full flex-col items-stretch md:w-auto md:flex-row",
+          compact ? "gap-1 p-1 md:gap-2" : "gap-2 p-1.5 md:gap-3 md:p-2",
+        )}
+      >
+        <div className={cn("flex-col justify-center gap-0.5 border-r-2 border-white/10 pr-3 text-[11px] text-white/85", compact ? "hidden" : "hidden md:flex")}>
           <Stat icon="hut" title="Housing">
             {Math.floor(state.population)}/{housingCapacity(state)}
           </Stat>
@@ -238,7 +264,8 @@ export function BottomBar() {
                       : `Research ${TREE_BY_ID[b.requires ?? ""]?.name ?? "more"} to unlock`
                 }
                 className={cn(
-                  "pixel-btn relative flex w-20 shrink-0 flex-col items-center gap-0.5 px-1 py-1.5 text-center",
+                  "pixel-btn relative flex shrink-0 flex-col items-center gap-0.5 px-1 text-center",
+                  compact ? "w-[4.25rem] py-0.5" : "w-20 py-1.5",
                   active ? "bg-amber-400 text-[#2b2119]" : "bg-[#4a3b2e] hover:bg-[#5c4a3a]",
                   (!unlocked || usedUp) && "cursor-not-allowed opacity-40",
                   // Can't afford it yet: dimmed like the tool buttons (still selectable to look).
@@ -246,8 +273,8 @@ export function BottomBar() {
                 )}
               >
                 {unlocked && <LandImpact level={b.landImpact} />}
-                <PixelIcon name={unlocked ? b.icon : "lock"} size={24} />
-                <span className="text-[11px] leading-tight">{b.name}</span>
+                <PixelIcon name={unlocked ? b.icon : "lock"} size={compact ? 18 : 24} />
+                <span className={cn("leading-tight", compact ? "text-[10px]" : "text-[11px]")}>{b.name}</span>
                 {usedUp ? (
                   <span className="text-[10px] text-emerald-300">built</span>
                 ) : (
@@ -347,6 +374,7 @@ export function BottomBar() {
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

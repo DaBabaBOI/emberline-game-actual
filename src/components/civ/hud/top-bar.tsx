@@ -24,7 +24,7 @@ const SPEEDS: { value: GameState["speed"]; label: string }[] = [
 
 function Chip({ icon, value, title, low }: { icon: IconId; value: string; title: string; low?: boolean }) {
   return (
-    <span title={title} className={cn("flex items-center gap-1 whitespace-nowrap", low && "animate-pulse text-red-400")}>
+    <span title={title} className={cn("flex items-center gap-0.5 whitespace-nowrap sm:gap-1", low && "animate-pulse text-red-400")}>
       <PixelIcon name={icon} size={16} />
       <span className="font-num">{value}</span>
     </span>
@@ -184,16 +184,17 @@ function ChiefXp({ state }: { state: GameState }) {
       data-testid="chief-xp"
     >
       <span className="text-[11px] text-amber-300">
-        Lv {level} {chiefTitle(level)}
+        Lv {level}
+        <span className="hidden sm:inline"> {chiefTitle(level)}</span>
       </span>
-      <span className="mt-0.5 block h-2 w-24 border border-[#140e0a] bg-white/15">
+      <span className="mt-0.5 block h-2 w-8 border border-[#140e0a] bg-white/15 min-[380px]:w-12 sm:w-24">
         <span className="block h-full bg-amber-400" style={{ width: `${share * 100}%` }} />
       </span>
     </div>
   );
 }
 
-export function TopBar() {
+export function TopBar({ children }: { children?: React.ReactNode }) {
   const { state, dispatch, panel } = useGame();
   const era = ERAS[state.era];
   const r = state.resources;
@@ -203,18 +204,22 @@ export function TopBar() {
   return (
     // Above the tutorial's dimmed overlay (z-25) so speed and Menu always work,
     // but under the Advancements screen (z-20) while it is open. Only the bar
-    // itself takes clicks, not the full-width strip around it.
-    <div className={cn("pointer-events-none absolute inset-x-0 top-2 flex justify-center px-2 md:top-3 md:px-3", panel !== "tree" && "z-[27]")}>
+    // itself takes clicks, not the full-width strip around it. Below 1024 px it
+    // takes two rows: who and when, speed and Menu; then the stores.
+    <div
+      className={cn("pointer-events-none absolute inset-x-0 top-1.5 flex flex-col items-center gap-1 px-1.5 lg:top-3 lg:px-3", panel !== "tree" && "z-[27]")}
+      data-hud="top"
+    >
       <div
-        className="pixel-panel-dark font-pixel pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-x-3 gap-y-1 px-2 py-1 text-xs md:flex-nowrap md:gap-4 md:px-4 md:py-1.5 md:text-sm"
+        className="pixel-panel-dark font-pixel pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 px-2 py-1 text-xs lg:flex-nowrap lg:gap-4 lg:px-4 lg:py-1.5 lg:text-sm"
         // A bronze trim from the Ancient era on.
         style={state.era >= 1 ? { borderColor: "#b0773a", boxShadow: "inset 0 -3px 0 #8a5a2b" } : undefined}
       >
-        <a href={HOME} className="font-semibold text-amber-300" title="Back to the home page">
+        <a href={HOME} className="order-1 font-semibold text-amber-300 lg:order-none" title="Back to the home page">
           ◀
         </a>
-        <div className="flex flex-col leading-tight">
-          <span className="max-w-40 truncate text-xs font-semibold text-white" title="Your people">
+        <div className="order-1 flex flex-col leading-tight lg:order-none">
+          <span className="hidden max-w-40 truncate text-xs font-semibold text-white lg:block" title="Your people">
             {state.nation ?? "The Emberfolk"}
           </span>
           <span className={"text-[11px] uppercase tracking-wide " + (state.era >= 1 ? "text-orange-300" : "text-amber-300")}>
@@ -222,51 +227,55 @@ export function TopBar() {
           </span>
           {state.realTimeFrom ? <RealCalendar /> : <RollingYear />}
         </div>
-        <ChiefXp state={state} />
-        <span className="hidden h-6 w-px bg-white/20 md:block" />
-        <CrowdChip
-          icon="person"
-          count={Math.floor(state.population)}
-          figures={figureCounts(state.population, state.soldiers).villagers}
-          group="people"
-          noun="people"
-          controls={(close) => <PopulationControl close={close} />}
-        />
-        <Chip icon="coin" value={Math.floor(r.currency).toLocaleString()} title={era.currency} />
-        <CrowdChip
-          icon="sword"
-          count={state.soldiers}
-          figures={figureCounts(state.population, state.soldiers).warriors}
-          group="warriors"
-          noun="warriors"
-        />
-        <span className="hidden h-6 w-px bg-white/20 md:block" />
-        <Chip icon="meat" value={Math.floor(r.food).toString()} title="Stored food" low={low.has("food") || low.has("famine")} />
-        <Chip icon="log" value={Math.floor(r.wood).toString()} title="Wood" low={low.has("wood")} />
-        <Chip icon="rock" value={Math.floor(r.stone).toString()} title="Stone" />
-        {/* Knowledge: click to see how to get more. */}
-        <span className="relative">
-          <button
-            type="button"
-            onClick={() => setKnowHelp(!knowHelp)}
-            className={cn("flex items-center gap-1 whitespace-nowrap px-1", knowHelp ? "bg-amber-400 text-[#2b2119]" : "hover:bg-white/15")}
-            title="Knowledge: click to see how to get more"
-            data-testid="knowledge-chip"
-          >
-            <PixelIcon name="bulb" size={16} />
-            <span className="font-num">{Math.floor(r.knowledge)}</span>
-            <span className="text-[10px] text-amber-300">?</span>
-          </button>
-          <KnowledgeGain value={r.knowledge} />
-          {knowHelp && <KnowledgeHelp state={state} onClose={() => setKnowHelp(false)} />}
-        </span>
-        <span className="hidden h-6 w-px bg-white/20 md:block" />
-        <div className="flex gap-1" data-guide="speed">
+        {/* The stores: their own row below 1024 px. */}
+        <div className="order-6 flex w-full flex-wrap items-center justify-center gap-x-1 gap-y-1 min-[380px]:gap-x-1.5 sm:gap-x-2.5 lg:contents">
+          <ChiefXp state={state} />
+          <span className="hidden h-6 w-px bg-white/20 lg:block" />
+          <CrowdChip
+            icon="person"
+            count={Math.floor(state.population)}
+            figures={figureCounts(state.population, state.soldiers).villagers}
+            group="people"
+            noun="people"
+            controls={(close) => <PopulationControl close={close} />}
+          />
+          <Chip icon="coin" value={Math.floor(r.currency).toLocaleString()} title={era.currency} />
+          <CrowdChip
+            icon="sword"
+            count={state.soldiers}
+            figures={figureCounts(state.population, state.soldiers).warriors}
+            group="warriors"
+            noun="warriors"
+          />
+          <span className="hidden h-6 w-px bg-white/20 lg:block" />
+          <Chip icon="meat" value={Math.floor(r.food).toString()} title="Stored food" low={low.has("food") || low.has("famine")} />
+          <Chip icon="log" value={Math.floor(r.wood).toString()} title="Wood" low={low.has("wood")} />
+          <Chip icon="rock" value={Math.floor(r.stone).toString()} title="Stone" />
+          {/* Knowledge: click to see how to get more. */}
+          <span className="relative">
+            <button
+              type="button"
+              onClick={() => setKnowHelp(!knowHelp)}
+              className={cn("flex items-center gap-1 whitespace-nowrap px-1", knowHelp ? "bg-amber-400 text-[#2b2119]" : "hover:bg-white/15")}
+              title="Knowledge: click to see how to get more"
+              data-testid="knowledge-chip"
+            >
+              <PixelIcon name="bulb" size={16} />
+              <span className="font-num">{Math.floor(r.knowledge)}</span>
+              <span className="hidden text-[10px] text-amber-300 sm:inline">?</span>
+            </button>
+            <KnowledgeGain value={r.knowledge} />
+            {knowHelp && <KnowledgeHelp state={state} onClose={() => setKnowHelp(false)} />}
+          </span>
+        </div>
+        <span className="hidden h-6 w-px bg-white/20 lg:block" />
+        <div className="order-2 flex gap-1 lg:order-none" data-guide="speed">
           {SPEEDS.map((s) => (
             <button
               key={s.value}
               type="button"
               onClick={() => dispatch({ type: "setSpeed", speed: s.value })}
+              aria-label={s.value === 0 ? "Pause" : `Speed ${s.value}`}
               className={cn(
                 "px-2 py-0.5 text-xs",
                 state.speed === s.value ? "bg-amber-400 text-[#2b2119]" : "bg-white/10 hover:bg-white/20",
@@ -276,9 +285,14 @@ export function TopBar() {
             </button>
           ))}
         </div>
-        <MuteButton />
-        <GameMenu />
+        <span className="order-3 lg:order-none">
+          <MuteButton />
+        </span>
+        <span className="order-4 lg:order-none">
+          <GameMenu />
+        </span>
       </div>
+      {children}
     </div>
   );
 }
@@ -337,5 +351,5 @@ function RollingYear() {
     frame = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(frame);
   }, [from, to, running, msPerTick]);
-  return <span ref={span} className="font-num text-base" data-testid="year" />;
+  return <span ref={span} className="font-num text-sm lg:text-base" data-testid="year" />;
 }
