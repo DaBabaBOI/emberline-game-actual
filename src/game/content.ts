@@ -2278,6 +2278,9 @@ export const COLLAPSE = { level: 20, ticks: 80 };
 
 // Leaving the Stone Age: research Agriculture and grow to this many people.
 export const NEXT_ERA_POPULATION = 15;
+// Population control: families can set off to start a village of their own
+// (`size` at a time, never leaving fewer than `keep`).
+export const SETTLERS = { size: 4, keep: 5 };
 
 // The best ending needs the land to still be healthy: growth can't just ignore
 // the damage it does. Used for every debrief's ending tier.
