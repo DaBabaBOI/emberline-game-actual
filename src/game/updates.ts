@@ -9,6 +9,9 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Fires look much better: flickering tongues of flame that sway, a hot bright core, glowing embers, rising sparks and a soft glow.",
+      "The land tiles now meet edge to edge (no more sea showing through the gaps), and worn-down buildings have broken planks and fallen stones around them; a broken one is scorched, with a fallen beam.",
+      "Fixes: a building's info panel now stays on screen (docked at the side) instead of running off the top when zoomed in, and markers on the map no longer draw over the goal and other panels.",
       "Choose where to explore: press Scout or Canoe, then click a spot (in the fog for scouts, on the sea or another island for canoes). Further away takes longer. You can watch the scouts walk out and back, and the canoe paddle there and home again; whatever they saw is mapped when they return.",
       "Shells are useful from the start: press Trade to swap them for food, wood or stone (each trade makes the next a little dearer; prices ease back). The Trade button gets a ! when shells pile up. You can also pay raiders off in shells instead of food.",
       "Livelier raids: raiders come ashore in groups that fan out and close in from the sides, and fights are a real melee. Each fighter circles an opponent, darts in to strike and backs off; the fallen are knocked back, survivors gang up on whoever is left, and the losers scatter while the winners give chase.",

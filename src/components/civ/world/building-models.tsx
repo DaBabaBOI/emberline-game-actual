@@ -14,28 +14,85 @@ interface ModelProps {
   lit?: boolean;
 }
 
+// A fire: four tongues of flame that flicker and sway on their own around a
+// bright core, a bed of glowing embers, sparks drifting up, and a soft halo
+// (unlit, so the bloom makes it glow). Used by campfires, smithies and more.
+const FLAME_TONGUES = [
+  { a: 0.3, r: 0.045, h: 0.3, w: 0.07, color: "#ff6a12" },
+  { a: 1.9, r: 0.05, h: 0.26, w: 0.065, color: "#ff8a1f" },
+  { a: 3.4, r: 0.045, h: 0.32, w: 0.07, color: "#ff5410" },
+  { a: 4.9, r: 0.05, h: 0.24, w: 0.06, color: "#ff9a2a" },
+];
+const SPARKS = 6;
+
 export function Flame({ opacity, position = [0, 0, 0], scale = 1 }: ModelProps & {
   position?: [number, number, number];
   scale?: number;
 }) {
-  const outer = useRef<Mesh>(null);
-  const inner = useRef<Mesh>(null);
+  const tongues = useRef<(Mesh | null)[]>([]);
+  const core = useRef<Mesh>(null);
+  const halo = useRef<Mesh>(null);
+  const embers = useRef<Mesh>(null);
+  const sparks = useRef<(Mesh | null)[]>([]);
+  const seed = position[0] * 10 + position[2] * 7;
   useFrame(({ clock }) => {
-    const t = clock.elapsedTime * 8 + position[0] * 10;
-    const s = 1 + Math.sin(t) * 0.12 + Math.sin(t * 2.3) * 0.06;
-    outer.current?.scale.set(scale, scale * s, scale);
-    inner.current?.scale.set(scale, scale * (2 - s), scale);
+    const t = clock.elapsedTime;
+    tongues.current.forEach((m, i) => {
+      if (!m) return;
+      const k = t * (7 + i * 1.3) + seed + i * 2.1;
+      const flick = 1 + Math.sin(k) * 0.18 + Math.sin(k * 2.7) * 0.08;
+      m.scale.set(scale * (1.05 - flick * 0.1), scale * flick, scale * (1.05 - flick * 0.1));
+      // Sway, as if in a light breeze.
+      m.rotation.z = Math.sin(t * 2.1 + i) * 0.16;
+      m.rotation.x = Math.cos(t * 1.7 + i * 1.4) * 0.12;
+    });
+    const pulse = 1 + Math.sin(t * 11 + seed) * 0.1;
+    core.current?.scale.set(scale, scale * pulse, scale);
+    halo.current?.scale.setScalar(scale * (1 + Math.sin(t * 5 + seed) * 0.08));
+    if (embers.current) (embers.current.material as { opacity: number }).opacity = (0.75 + Math.sin(t * 3 + seed) * 0.2) * opacity;
+    sparks.current.forEach((m, i) => {
+      if (!m) return;
+      // Each spark rises, drifts and fades, then starts again.
+      const life = (t * 0.55 + i / SPARKS + seed * 0.1) % 1;
+      m.position.set(Math.sin(i * 2.4 + life * 5) * 0.08 * scale, (0.15 + life * 0.7) * scale, Math.cos(i * 1.7 + life * 4) * 0.08 * scale);
+      m.scale.setScalar((1 - life) * scale);
+      (m.material as { opacity: number }).opacity = (1 - life) * opacity;
+    });
   });
   return (
     <group position={position}>
-      <mesh ref={outer} position={[0, 0.12 * scale, 0]}>
-        <coneGeometry args={[0.1, 0.28, 7]} />
-        <meshStandardMaterial color="#ff7a1a" emissive="#ff5a00" emissiveIntensity={1.6} transparent opacity={0.9 * opacity} />
+      {/* Glowing embers under the flames. */}
+      <mesh ref={embers} position={[0, 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null}>
+        <circleGeometry args={[0.13 * scale, 10]} />
+        <meshBasicMaterial color="#ff4d0d" transparent opacity={0.85 * opacity} toneMapped={false} />
       </mesh>
-      <mesh ref={inner} position={[0, 0.09 * scale, 0]}>
-        <coneGeometry args={[0.055, 0.18, 6]} />
-        <meshStandardMaterial color="#ffe066" emissive="#ffd23f" emissiveIntensity={2} transparent opacity={opacity} />
+      {FLAME_TONGUES.map((f, i) => (
+        <mesh
+          key={i}
+          ref={(el) => void (tongues.current[i] = el)}
+          position={[Math.cos(f.a) * f.r * scale, (f.h / 2) * scale, Math.sin(f.a) * f.r * scale]}
+          raycast={() => null}
+        >
+          <coneGeometry args={[f.w, f.h, 6]} />
+          <meshBasicMaterial color={f.color} transparent opacity={0.85 * opacity} toneMapped={false} depthWrite={false} />
+        </mesh>
+      ))}
+      {/* The hot heart of the fire. */}
+      <mesh ref={core} position={[0, 0.1 * scale, 0]} raycast={() => null}>
+        <coneGeometry args={[0.05, 0.2, 6]} />
+        <meshBasicMaterial color="#fff1a8" transparent opacity={opacity} toneMapped={false} depthWrite={false} />
       </mesh>
+      {/* A soft halo of light around it. */}
+      <mesh ref={halo} position={[0, 0.14 * scale, 0]} raycast={() => null}>
+        <sphereGeometry args={[0.2, 10, 8]} />
+        <meshBasicMaterial color="#ff9a3c" transparent opacity={0.16 * opacity} toneMapped={false} depthWrite={false} />
+      </mesh>
+      {Array.from({ length: SPARKS }, (_, i) => (
+        <mesh key={`s${i}`} ref={(el) => void (sparks.current[i] = el)} raycast={() => null}>
+          <boxGeometry args={[0.018, 0.018, 0.018]} />
+          <meshBasicMaterial color="#ffcf5a" transparent opacity={opacity} toneMapped={false} depthWrite={false} />
+        </mesh>
+      ))}
     </group>
   );
 }
