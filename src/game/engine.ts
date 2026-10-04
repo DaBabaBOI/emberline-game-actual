@@ -63,6 +63,7 @@ import {
   WALL_DEFENSE,
   MIN_SUSTAINABILITY_FOR_BEST_ENDING,
   NEXT_ERA_POPULATION,
+  BELIEFS,
   SETTLERS,
   GROWTH_PRESSURE,
   DISEASE,
@@ -503,13 +504,22 @@ export function fireRisk(state: GameState) {
   return risk;
 }
 
+// The river card comes once, before anything is built on the river.
+function riverChoicePossible(state: GameState) {
+  const c = countBuildings(state);
+  return !state.riverChoice && !c.aqueduct && !c.watermill;
+}
+
 function pickEvent(roll: number, state: GameState) {
   const wildfire = Math.min(FIRE_RISK.max, FIRE_RISK.base + FIRE_RISK.perForestTile * fireRisk(state));
   // Never the same card twice in a row.
   // The old grove only comes up once, and only while there is old forest to protect.
   const grovePossible = !(state.protectedTiles ?? []).length && oldestForest(state, 4).length >= 2;
   const weights = EVENTS.map((e) =>
-    e.id === state.lastEvent || (e.era ?? 0) > state.era || (e.id === "sacred-grove" && !grovePossible)
+    e.id === state.lastEvent ||
+    (e.era ?? 0) > state.era ||
+    (e.id === "sacred-grove" && !grovePossible) ||
+    (e.id === "river-spirits" && !riverChoicePossible(state))
       ? 0
       : e.id === "wildfire"
         ? wildfire
@@ -598,6 +608,7 @@ export function placementError(state: GameState, tile: Tile, def: BuildingDef): 
     if (!touchesWater) return "Must touch water";
   }
   if (def.needsRiver && !touchesRiver(state, tile)) return "Must touch the river";
+  if (state.riverChoice === "honour" && (def.id === "aqueduct" || def.id === "watermill")) return "We promised to honour the river";
   if (!canAfford(state, buildingCost(state, def))) return "Not enough resources";
   return null;
 }
@@ -1925,6 +1936,17 @@ export function sustainabilityBreakdown(state: GameState): SustainPart[] {
       fix: "Build less on the small islands: demolish outposts you can do without.",
     },
     {
+      label: `${counts.temple ?? 0} temple${counts.temple === 1 ? "" : "s"} of cut stone`,
+      value: -(counts.temple ?? 0) * BELIEFS.templeSustain,
+      hint: "Stone for the walls and columns is cut from the hills.",
+      fix: "Keep to the temples you have: each one cuts more of the hills.",
+    },
+    {
+      label: "The river is honoured",
+      value: state.riverChoice === "honour" ? BELIEFS.riverSustain : 0,
+      hint: "No mills or aqueducts on it, by the people's choice: the fish and marshes downstream thrive.",
+    },
+    {
       label: "Recent events",
       value: state.modifiers.sustainability,
       hint: "Fires and choices you made in events. This fades over time.",
@@ -2121,6 +2143,7 @@ export function meterBreakdown(state: GameState, key: MeterKey): MeterPart[] {
         value: landmarkWorking(state, "library") ? LANDMARK.libraryLiteracy : 0,
         hint: `The landmark adds ${LANDMARK.libraryLiteracy} once finished.`,
       },
+      each("temple", BELIEFS.templeLiteracy, "temple"),
       {
         label: "Printing",
         value: state.researched.includes("printing") ? LEARNING.printingLiteracy : 0,
@@ -2214,6 +2237,20 @@ export function meterBreakdown(state: GameState, key: MeterKey): MeterPart[] {
         fix: build("well", "water for more people."),
       },
       { label: plural(baths, "bathhouse"), value: baths * TOWN.bathsMood, hint: `+${TOWN.bathsMood} each, up to 2.` },
+      {
+        label: plural(Math.min(BELIEFS.max, counts.shrine ?? 0), "shrine"),
+        value: Math.min(BELIEFS.max, counts.shrine ?? 0) * BELIEFS.shrineMood,
+        hint: `+${BELIEFS.shrineMood} each, up to ${BELIEFS.max}, and a festival every year.`,
+        fix: (counts.shrine ?? 0) < BELIEFS.max ? build("shrine", `+${BELIEFS.shrineMood}, and a festival every year.`) : undefined,
+        gain: (counts.shrine ?? 0) < BELIEFS.max && build("shrine", "") ? BELIEFS.shrineMood : undefined,
+      },
+      {
+        label: plural(Math.min(BELIEFS.max, counts.temple ?? 0), "temple"),
+        value: Math.min(BELIEFS.max, counts.temple ?? 0) * BELIEFS.templeMood,
+        hint: `+${BELIEFS.templeMood} each, up to ${BELIEFS.max}.`,
+        fix: (counts.temple ?? 0) < BELIEFS.max ? build("temple", `+${BELIEFS.templeMood} happiness and +${BELIEFS.templeLiteracy} literacy.`) : undefined,
+        gain: (counts.temple ?? 0) < BELIEFS.max && build("temple", "") ? BELIEFS.templeMood : undefined,
+      },
       {
         label: "The cathedral",
         value: landmarkWorking(state, "cathedral") ? LANDMARK.cathedralMood : 0,
@@ -2474,6 +2511,7 @@ export function computeMeters(state: GameState): Meters {
     (counts.university ?? 0) * LEARNING.universityLiteracy +
     (landmarkWorking(state, "library") ? LANDMARK.libraryLiteracy : 0) +
     (state.researched.includes("printing") ? LEARNING.printingLiteracy : 0) +
+    Math.min(BELIEFS.max, counts.temple ?? 0) * BELIEFS.templeLiteracy +
     (state.researched.length - 1) * 2;
 
   const happiness =
@@ -2489,6 +2527,8 @@ export function computeMeters(state: GameState): Meters {
     homelessMood(state) -
     thirst * DROUGHT.thirstMood +
     Math.min(2, counts.baths ?? 0) * TOWN.bathsMood +
+    Math.min(BELIEFS.max, counts.shrine ?? 0) * BELIEFS.shrineMood +
+    Math.min(BELIEFS.max, counts.temple ?? 0) * BELIEFS.templeMood +
     (landmarkWorking(state, "cathedral") ? LANDMARK.cathedralMood : 0) -
     Math.min(2, counts.guildhall ?? 0) * LEARNING.guildMood +
     state.modifiers.happiness;
@@ -3130,6 +3170,7 @@ function tickOnce(state: GameState): GameState {
   }
 
   if (!inTutorial) next = smallMoment(next);
+  next = festival(next);
 
   const beforeDisease = next.population;
   // Crowded towns without latrines, and people drinking dirty water in the
@@ -3282,6 +3323,28 @@ function findEgg(state: GameState, id: EggId): GameState {
     resources: first && egg.knowledge ? { ...state.resources, knowledge: state.resources.knowledge + egg.knowledge } : state.resources,
     modifiers: first && egg.mood ? { ...state.modifiers, happiness: state.modifiers.happiness + egg.mood } : state.modifiers,
     log: [egg.text, ...state.log].slice(0, 30),
+  };
+}
+
+// Beliefs: once a year (BELIEFS.festival.every ticks) a village with a shrine
+// holds a festival: a feast that cheers everyone up but eats into the stores.
+// Too little food: the festival is put off and people are a little let down.
+function festival(state: GameState): GameState {
+  if (!countBuildings(state).shrine || state.tutorialStep < TUTORIAL.length) return state;
+  const due = state.nextFestivalTick ?? state.tick + BELIEFS.festival.every;
+  if (state.tick < due) return state.nextFestivalTick === undefined ? { ...state, nextFestivalTick: due } : state;
+  if (state.event || state.raid || state.legion) return { ...state, nextFestivalTick: state.tick + 10 };
+  const next = state.tick + BELIEFS.festival.every;
+  const f = BELIEFS.festival;
+  if (state.resources.food < f.food * 2) {
+    return { ...state, nextFestivalTick: next, modifiers: { ...state.modifiers, happiness: state.modifiers.happiness - 2 }, log: ["Too little food for this year's festival. People are a little let down.", ...state.log].slice(0, 30) };
+  }
+  return {
+    ...state,
+    nextFestivalTick: next,
+    resources: { ...state.resources, food: state.resources.food - f.food },
+    modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + f.mood },
+    log: [`The yearly festival at the shrine: music, dancing and a feast (+${f.mood} happiness, −${f.food} food).`, ...state.log].slice(0, 30),
   };
 }
 
@@ -4431,6 +4494,7 @@ function step(state: GameState, action: Action): GameState {
           ? baseTiles.map((t) => (cleared.includes(t.id) ? { ...t, growth: 0.02 } : t))
           : baseTiles,
         protectedTiles: guarded.length ? [...(state.protectedTiles ?? []), ...guarded] : state.protectedTiles,
+        riverChoice: effect.river ?? state.riverChoice,
         nextRaidTick: state.nextRaidTick - (effect.raidSooner ?? 0),
         kingdoms: effect.mood ? changeMood(state, effect.mood).kingdoms : state.kingdoms,
         event: null,

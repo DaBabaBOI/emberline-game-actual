@@ -534,6 +534,90 @@ export function WatchTowerModel({ opacity }: ModelProps) {
   );
 }
 
+// Beliefs: a shrine. A carved spirit pole painted in bands, an offering stone
+// with fruit on it, and a ring of small stones round them.
+export function ShrineModel({ opacity }: ModelProps) {
+  const bands = ["#8b5a2b", "#c0392b", "#8b5a2b", "#2f6fa8", "#8b5a2b"];
+  return (
+    <group>
+      {Array.from({ length: 10 }, (_, i) => {
+        const a = (i / 10) * Math.PI * 2;
+        return (
+          <Part key={`ring${i}`} color="#8d8780" opacity={opacity} position={[Math.cos(a) * 0.36, 0.025, Math.sin(a) * 0.36]}>
+            <dodecahedronGeometry args={[0.035, 0]} />
+          </Part>
+        );
+      })}
+      {bands.map((c, i) => (
+        <Part key={`band${i}`} color={c} opacity={opacity} position={[0, 0.08 + i * 0.11, -0.05]}>
+          <cylinderGeometry args={[0.055, 0.06, 0.11, 8]} />
+        </Part>
+      ))}
+      {/* The carved face at the top, with a pair of wings. */}
+      <Part color="#d9b45a" opacity={opacity} position={[0, 0.67, -0.05]}>
+        <boxGeometry args={[0.13, 0.12, 0.12]} />
+      </Part>
+      {[-1, 1].map((side) => (
+        <Part key={`wing${side}`} color="#d9b45a" opacity={opacity} position={[side * 0.13, 0.6, -0.05]} rotation={[0, 0, side * 0.5]}>
+          <boxGeometry args={[0.14, 0.03, 0.06]} />
+        </Part>
+      ))}
+      <Part color="#2b2119" opacity={opacity} position={[0, 0.68, 0.012]}>
+        <boxGeometry args={[0.07, 0.02, 0.01]} />
+      </Part>
+      {/* The offering stone, with fruit. */}
+      <Part color="#9c968f" opacity={opacity} position={[0, 0.05, 0.18]}>
+        <boxGeometry args={[0.22, 0.1, 0.14]} />
+      </Part>
+      {[
+        ["#d62d4a", -0.05],
+        ["#ffd23f", 0.02],
+        ["#3fa34d", 0.07],
+      ].map(([c, x]) => (
+        <Part key={`fruit${x}`} color={c as string} opacity={opacity} position={[x as number, 0.125, 0.18]}>
+          <sphereGeometry args={[0.025, 8, 6]} />
+        </Part>
+      ))}
+    </group>
+  );
+}
+
+// Beliefs: a temple. A stepped stone base, columns front and back, and a
+// low pitched roof.
+export function TempleModel({ opacity }: ModelProps) {
+  const stone = "#e6dcc3";
+  return (
+    <group>
+      <Part color="#cfc4a8" opacity={opacity} position={[0, 0.03, 0]}>
+        <boxGeometry args={[0.78, 0.06, 0.56]} />
+      </Part>
+      <Part color={stone} opacity={opacity} position={[0, 0.08, 0]}>
+        <boxGeometry args={[0.7, 0.05, 0.48]} />
+      </Part>
+      {/* The hall inside the columns. */}
+      <Part color="#d8cdb0" opacity={opacity} position={[0, 0.27, 0]}>
+        <boxGeometry args={[0.46, 0.34, 0.28]} />
+      </Part>
+      {[-0.28, -0.14, 0, 0.14, 0.28].flatMap((x) =>
+        [-0.2, 0.2].map((z) => (
+          <Part key={`col${x}${z}`} color={stone} opacity={opacity} position={[x, 0.29, z]}>
+            <cylinderGeometry args={[0.025, 0.028, 0.38, 8]} />
+          </Part>
+        )),
+      )}
+      <Part color={stone} opacity={opacity} position={[0, 0.5, 0]}>
+        <boxGeometry args={[0.72, 0.05, 0.5]} />
+      </Part>
+      {/* The roof: two tiled slopes meeting along the ridge. */}
+      {[-1, 1].map((side) => (
+        <Part key={`roof${side}`} color="#b5653a" opacity={opacity} position={[0, 0.6, side * 0.12]} rotation={[side * 0.42, 0, 0]}>
+          <boxGeometry args={[0.76, 0.03, 0.29]} />
+        </Part>
+      ))}
+    </group>
+  );
+}
+
 // A fenced pen with a few sheep and goats that graze and look around.
 function Sheep({ opacity, position, dark, phase }: ModelProps & { position: [number, number, number]; dark?: boolean; phase: number }) {
   const head = useRef<Mesh>(null);
@@ -1063,5 +1147,7 @@ export const MODELS: Record<string, (props: ModelProps) => JSX.Element> = {
   farm: FarmModel,
   warcamp: WarCampModel,
   watchfire: WatchTowerModel,
+  shrine: ShrineModel,
+  temple: TempleModel,
   ...MEDIEVAL_MODELS,
 };

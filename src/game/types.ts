@@ -247,6 +247,8 @@ export interface EventChoice {
     clearForest?: number;
     // Protect this many of the oldest forest tiles near the village for good.
     protectForest?: number;
+    // Beliefs: honour the river (no mills or aqueducts) or tame it.
+    river?: "honour" | "tame";
     // How each kingdom feels about it (Medieval era).
     mood?: Partial<Record<KingdomId, number>>;
     // Chance (0–1) that sickness breaks out because of this choice.
@@ -363,6 +365,9 @@ export interface GameState {
   hint?: { id: string; tick: number } | null;
   hintsSeen?: string[];
   hintTick?: number;
+  // Beliefs: what the people decided about the river, and the next festival.
+  riverChoice?: "honour" | "tame";
+  nextFestivalTick?: number;
   // Chief XP (only goes up) and level (missing in older saves: 0 and 1).
   xp?: number;
   chiefLevel?: number;

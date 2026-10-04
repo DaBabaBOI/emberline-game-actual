@@ -374,6 +374,31 @@ export const BUILDINGS: BuildingDef[] = [
     requires: "pottery",
   },
   {
+    // Beliefs (invented, never a real religion): the people's own traditions.
+    id: "shrine",
+    name: "Shrine",
+    icon: "dove",
+    description: "A carved spirit pole and an offering stone where the people give thanks. Once a year the whole village holds a festival here.",
+    gain: "+4 happiness (up to 2 shrines), and a yearly festival: +8 happiness",
+    landCost: "Each festival's feast eats 15 food from the stores",
+    landImpact: 0,
+    era: 1,
+    cost: { wood: 15, stone: 10 },
+    terrain: ["grass", "steppe", "hills", "forest"],
+  },
+  {
+    id: "temple",
+    name: "Temple",
+    icon: "column",
+    description: "A stone hall for the town's festivals and teachings. Its keepers write down the stories and teach the young to read.",
+    gain: "+6 happiness and +8 literacy (up to 2 temples)",
+    landCost: "Stone cut from the hills for its walls and columns",
+    landImpact: 1,
+    era: 2,
+    cost: { stone: 40, wood: 20 },
+    terrain: ["grass", "steppe", "hills"],
+  },
+  {
     id: "forester",
     name: "Forester's Lodge",
     icon: "sapling",
@@ -1266,6 +1291,22 @@ export const EVENTS: EventCard[] = [
       { label: "Cut it down (+40 wood, you lose the grove)", effect: { clearForest: 4, resources: { wood: 40 }, happiness: -4 } },
     ],
     realWorld: "Many cultures have protected sacred groves, and some of them still stand today as islands of old forest.",
+  },
+  {
+    // Beliefs: shown once, before any mill or aqueduct is built on the river.
+    id: "river-spirits",
+    era: 2,
+    title: "The spirits of the river",
+    icon: "drop",
+    body: "The elders say the river is alive and gives us everything. Now the builders want to dam it for mills and draw it off in aqueducts. What do we believe?",
+    choices: [
+      {
+        label: "Honour the river: no mills or aqueducts on it (+4 Sustainability for good, +6 happiness)",
+        effect: { river: "honour", happiness: 6 },
+      },
+      { label: "Tame the river: build what we need (some are upset: −4 happiness)", effect: { river: "tame", happiness: -4 } },
+    ],
+    realWorld: "Many peoples have treated rivers as sacred, and some countries now give rivers legal rights to protect them.",
   },
   {
     id: "thinning-herds",
@@ -2280,6 +2321,18 @@ export const COLLAPSE = { level: 20, ticks: 80 };
 
 // Leaving the Stone Age: research Agriculture and grow to this many people.
 export const NEXT_ERA_POPULATION = 15;
+// Beliefs: shrines and temples (each counts up to `max`), the yearly festival
+// at a shrine (every `every` ticks: `mood` happiness for `food` food; skipped
+// when the stores are too low), and what honouring the river is worth to the land.
+export const BELIEFS = {
+  shrineMood: 4,
+  templeMood: 6,
+  templeLiteracy: 8,
+  templeSustain: 2,
+  max: 2,
+  festival: { every: 200, food: 15, mood: 8 },
+  riverSustain: 4,
+};
 // Population control: families can set off to start a village of their own
 // (`size` at a time, never leaving fewer than `keep`).
 export const SETTLERS = { size: 4, keep: 5 };
