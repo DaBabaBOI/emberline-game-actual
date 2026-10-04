@@ -295,7 +295,7 @@ export const BUILDINGS: BuildingDef[] = [
     name: "Livestock Pen",
     icon: "sheep",
     description: "Goats and sheep behind a fence. A little milk and meat, and later their hides and wool make warm clothes.",
-    gain: "A little food; with Warm Clothes researched, clothing for 6 people so fewer fires are needed",
+    gain: "A little food; with Warm Clothes researched, clothing for 10 people so they need no fire",
     landCost: "Grazing animals wear down the grass around them",
     landImpact: 1,
     era: 0,
@@ -763,7 +763,7 @@ export const TREE: TreeNode[] = [
   {
     id: "hide-clothing",
     name: "Warm Clothes",
-    description: "Sew hides and wool into warm clothes. Each Livestock Pen keeps 6 people warm without a fire.",
+    description: "Sew hides and wool into warm clothes. Each Livestock Pen keeps 10 people warm without a fire, and families cook at small hearths in their homes: no campfire needed.",
     branch: "energy",
     era: 0,
     cost: 12,
@@ -1162,7 +1162,7 @@ export const AFTER_STEPS: Record<string, AfterStep> = {
   spears: { upgrade: true, text: "Stone-tipped spears! Our hunters bring back more food. Give a warrior a spear with the Spear button: in a fight, a spearman counts as 1.5 warriors (a warrior without one counts as 1). Every warrior you train from now on gets a spear." },
   herbalism: { build: "healer", text: "We know which plants heal. Build a Healer's Hut: the sick get better faster, and sickness spreads less." },
   herding: { build: "pen", text: "We can keep goats and sheep. Place a Livestock Pen: steady food, but grazing wears down the grass." },
-  "hide-clothing": { text: "Warm clothes from hides and wool: each Livestock Pen now keeps 6 people warm without a fire. Fewer fires, less wood, less smoke." },
+  "hide-clothing": { text: "Warm clothes from hides and wool: each Livestock Pen now keeps 10 people warm, and families cook at small hearths in their homes. With enough pens you need no campfires at all: less wood, less smoke." },
   agriculture: { text: "We are farmers now. Grow the tribe to 15 people and we can enter the Ancient era. Watch the goal at the top of the screen." },
   writing: { build: "school", text: "Marks on clay that everyone can read! Build a Scribe School: more literacy, and Knowledge every day." },
   pottery: { build: "granary", text: "Jars that keep grain dry. Build a Granary so less of our food rots away." },
@@ -1521,8 +1521,9 @@ export const GROWTH_PRESSURE = {
   foodRots: 0.015,
   // Each lit campfire warms this many people; the rest are cold.
   peoplePerFire: 10,
-  // With Warm Clothes, each Livestock Pen clothes this many people warmly.
-  peoplePerPen: 6,
+  // With Warm Clothes, each Livestock Pen clothes this many people warmly (as
+  // many as a fire warms, so a pen can replace a fire).
+  peoplePerPen: 10,
   // Raiders come in bigger groups the bigger (richer) the tribe: +1 per this many people.
   raidersPerPeople: 10,
 };

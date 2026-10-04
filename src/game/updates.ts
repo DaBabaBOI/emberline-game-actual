@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Warm Clothes now really replaces campfires: each Livestock Pen clothes 10 people, and families cook at small hearths in their homes, so with enough pens you need no campfire at all.",
       "Population control: click the population counter to hold your tribe at a size you choose, or send a few families off to start a village of their own. Nobody has to be harmed.",
       "Easter eggs are hidden around the game. Each one counts in \"Secrets found\" (in Advancements). A hint to start: name your people after someone on the team.",
       "Music and sound! Each era has its own music (a flute and hand drums in the Stone Age, a lyre in the Ancient era, a lute in the Medieval...), calmer at night and tense during raids. Wind, waves, birds and crickets, and sounds for building, discoveries, new eras, raids, battles and events. Click once to start it (browsers need that); the speaker in the top bar turns it off, and Menu > Sound sets the volumes.",

@@ -302,7 +302,9 @@ These were decided with the project owner. Do not change them without being aske
   Quarries also cost −3 Sustainability each (the hillside is gone for good).
 - **Livestock and clothing:** Herding unlocks the Livestock Pen (a little food,
   grazing wears the land: −2 Sustainability each). Warm Clothes (research) makes each pen
-  keep `peoplePerPen` (6) people warm without a fire, so fewer fires are needed
+  keep `peoplePerPen` (10, as many as a fire) people warm without a fire, and
+  families then cook at home hearths (no raw-food penalty, `eatingRaw()`), so
+  with enough pens no campfire is needed at all
   (less wood cut, less smoke). A trade-off, not a free upgrade.
 - **Growing is as hard as surviving** (`GROWTH_PRESSURE`): stored food above 100
   rots (no preservation yet), each lit campfire warms only 10 people (the
