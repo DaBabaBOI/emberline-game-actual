@@ -311,7 +311,7 @@ export interface GameState {
   culture: CultureId;
   difficulty: DifficultyId;
   // The Roman legion on its way (seen by scouts), and whether it has been fought.
-  legion?: { size: number; arriveTick: number } | null;
+  legion?: { size: number; arriveTick: number; vanguard?: boolean } | null;
   legionDone?: boolean;
   // When the legion was beaten (tick and year): the Ancient era's clock runs from then.
   legionBeatenTick?: number;
@@ -356,6 +356,8 @@ export interface GameState {
   space?: string[];
   // Multiplayer: the match's mode and speed (Knowledge pace).
   mp?: { mode: "race" | "coop"; speed: "quick" | "normal" | "long" };
+  // 0-100: how tired the people are from overwork (see WORK).
+  fatigue?: number;
   // Traders: how much dearer than usual they are now (1 = the usual price).
   tradePrice?: number;
   // Type I reached: the story is told (the game can go on after the final debrief).

@@ -204,6 +204,7 @@ These were decided with the project owner. Do not change them without being aske
 - **Raids are a melee, never two lines** (`BattleScene`, `Raiders` in villagers.tsx): fighters duel, circle, dart in and fall at staggered times; raiders approach in flanking groups. Keep it varied (owner: "they still run at each other").
 - **Currency has early uses** (`TRADE`, `trade` action, `tributeCoins`): traders from the start, prices rise per trade and ease back; the Trade button is badged when shells reach `TRADE.idle`.
 - **Scouts and canoes go where the player picks** (`SCOUT_TOOL`, `CANOE_TOOL`, `scoutTargetError`, `canoeTargetError`). With no tile (the tutorial, the bot) they pick for themselves as before. Their trips are drawn going out and coming back (`ScoutMarker`, `SeaTraffic`).
+- **Tiredness** (`WORK`, `workload`/`updateFatigue`): jobs are 0.5 per producing building (2 for big ones), warriors count as half a worker. Tune with the bot (`full.js x 12`); fatigue should only build up when a town is badly overbuilt or over-armed, never in normal play.
 - **No font ligatures** (`globals.css`): Pixelify joins "fi" into one glyph, so "fire" read as "Are". Keep `font-variant-ligatures: none` on everything.
 - **Phones get the compact HUD** (`useCompact()`: narrower than 768 px, or
   shorter than 500 px). The meters are a strip under the top bar
