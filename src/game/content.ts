@@ -3190,7 +3190,12 @@ export const RAID_KINDS: Record<
 // battle plays out over `fightTicks`, and training more warriors can still tip
 // it), hide in the houses (nobody dies, they take a share) or pay tribute (food,
 // `tributePerRaider` each; they leave but come back `tributeSooner` ticks sooner).
-export const RAID_RESPONSE = { fightTicks: 7, tributePerRaider: 4, tributeSooner: 60, hideMood: 4 };
+export const RAID_RESPONSE = { fightTicks: 7, tributePerRaider: 4, tributeSooner: 60, hideMood: 4, coinsPerRaider: 3 };
+// Traders (from the start): `lot` shells/coins buy this much of each good.
+// Every trade raises prices by `rise` (they want more for less); prices ease
+// back by `ease` a tick. Buying wood and stone instead of cutting spares the land.
+// Holding `idle` or more marks the Trade button (something worth doing).
+export const TRADE = { idle: 60, lot: 10, food: 18, wood: 10, stone: 6, rise: 0.2, ease: 0.006 };
 
 // A watch tower on the shore sees raiders earlier and adds a little defense
 // (`smoke`: what its big logs cost the land, in Sustainability).
