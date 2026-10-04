@@ -19,6 +19,7 @@ import {
   rainfall,
   secs,
   tributeCost,
+  tributeCoins,
   waterSupply,
   warnings,
 } from "@/game/engine";
@@ -453,7 +454,8 @@ export function RaidBanner() {
   // They have landed: pick a response before they arrive (no choice means we fight).
   if (!raid.response) {
     const price = tributeCost(raid);
-    const options: { id: "fight" | "hide" | "tribute"; label: string; note: string; ok: boolean }[] = [
+    const coins = tributeCoins(raid);
+    const options: { id: "fight" | "hide" | "tribute" | "tributeCoins"; label: string; note: string; ok: boolean }[] = [
       {
         id: "fight",
         label: "Fight",
@@ -472,6 +474,12 @@ export function RaidBanner() {
         note: "They leave, but come back sooner",
         ok: canAfford(state, { food: price }),
       },
+      {
+        id: "tributeCoins",
+        label: `Pay ${coins} ${ERAS[state.era].currency.toLowerCase()}`,
+        note: "They leave, but come back sooner",
+        ok: canAfford(state, { currency: coins }),
+      },
     ];
     return (
       <div className="pointer-events-none flex justify-center">
@@ -483,7 +491,7 @@ export function RaidBanner() {
               arrive in <Countdown ticks={eta} />s.
             </span>
           </div>
-          <div className="mt-2 grid grid-cols-3 gap-1.5">
+          <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
             {options.map((o) => (
               <button
                 key={o.id}

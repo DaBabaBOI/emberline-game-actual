@@ -81,6 +81,7 @@ import {
   MINERAL_X,
   SPACE,
   MP,
+  TRADE,
   BELIEFS,
   SETTLERS,
   GROWTH_PRESSURE,
@@ -188,6 +189,7 @@ export type Action =
   | { type: "devTipping"; when: "soon" | "now" | "end" }
   | { type: "devTypeOne" }
   // Multiplayer: gifts and raids between players.
+  | { type: "trade"; get: "food" | "wood" | "stone" }
   | { type: "mpGiftOut"; resources: Partial<Resources>; to: string }
   | { type: "mpGiftIn"; resources: Partial<Resources>; from: string }
   | { type: "mpRaidOut"; warriors: number; to: string }
@@ -3603,6 +3605,7 @@ function tickOnce(state: GameState): GameState {
   // No raids or events while a new player is still learning.
   if (!inTutorial) next = updateTipping(updateClimate(updateRebellion(updatePlague(updateDisasters(updateDrought(updateLegion(updateRaids(next))))))));
   next = updateCarbon(next);
+  if ((next.tradePrice ?? 1) > 1) next = { ...next, tradePrice: Math.max(1, (next.tradePrice ?? 1) - TRADE.ease) };
   next = reachTypeOne(next);
   next = returnCaravans(next);
   next = returnScouts(next);
@@ -4552,6 +4555,16 @@ function hideText(state: GameState, raid: Raid): string {
 // The price of buying the raiders off.
 export function tributeCost(raid: Raid) {
   return raid.strength * RAID_RESPONSE.tributePerRaider;
+}
+
+// The same tribute paid in shells or coins.
+export function tributeCoins(raid: Raid) {
+  return raid.strength * RAID_RESPONSE.coinsPerRaider;
+}
+
+// What one lot of shells or coins buys from the traders right now.
+export function tradeOffer(state: GameState, get: "food" | "wood" | "stone") {
+  return Math.max(1, Math.round(TRADE[get] / (state.tradePrice ?? 1)));
 }
 
 function updateRaids(state: GameState): GameState {
@@ -5602,7 +5615,29 @@ function step(state: GameState, action: Action): GameState {
           log: [`We paid ${price} food. The raiders sailed away, but they will be back sooner.`, ...state.log].slice(0, 30),
         });
       }
+      if (action.choice === "tributeCoins") {
+        const price = tributeCoins(raid);
+        if (state.resources.currency < price) return state;
+        return withMeters({
+          ...state,
+          raid: null,
+          resources: { ...state.resources, currency: state.resources.currency - price },
+          nextRaidTick: state.nextRaidTick - RAID_RESPONSE.tributeSooner,
+          log: [`We paid ${price} ${ERAS[state.era].currency.toLowerCase()}. The raiders sailed away, but they will be back sooner.`, ...state.log].slice(0, 30),
+        });
+      }
       return { ...state, raid: { ...raid, response: action.choice } };
+    }
+
+    case "trade": {
+      if (state.tutorialStep < TUTORIAL.length || state.resources.currency < TRADE.lot) return state;
+      const got = tradeOffer(state, action.get);
+      return {
+        ...state,
+        resources: { ...state.resources, currency: state.resources.currency - TRADE.lot, [action.get]: state.resources[action.get] + got },
+        tradePrice: (state.tradePrice ?? 1) + TRADE.rise,
+        log: [`Traded ${TRADE.lot} ${ERAS[state.era].currency.toLowerCase()} for ${got} ${action.get}.`, ...state.log].slice(0, 30),
+      };
     }
 
     case "devRaidKind":

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { BUILDINGS, CANOE, SPACE, LOW_WOOD_AFTER_BUY, PLANT_COST, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL, WARRIORS_PER_CAMP } from "@/game/content";
+import { BUILDINGS, CANOE, ERAS, SPACE, TRADE, LOW_WOOD_AFTER_BUY, PLANT_COST, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL, WARRIORS_PER_CAMP } from "@/game/content";
 import {
   affordableResearch,
   buildingCost,
@@ -30,6 +30,7 @@ import {
   rainfall,
   scoutCost,
   spearmenOf,
+  tradeOffer,
   tutorialLocked,
   warriorCap,
 } from "@/game/engine";
@@ -148,6 +149,60 @@ function ToolButton({
       {label}
       {!locked && children}
     </button>
+  );
+}
+
+// Traders: swap shells (or coins) for food, wood or stone. Every trade makes
+// the next one dearer; prices ease back over time.
+function TradeButton() {
+  const { state, dispatch } = useGame();
+  const [open, setOpen] = useState(false);
+  const money = ERAS[state.era].currency.toLowerCase();
+  const can = state.resources.currency >= TRADE.lot && state.tutorialStep >= TUTORIAL.length;
+  return (
+    <span className="relative">
+      <ToolButton
+        guide="tool-trade"
+        icon="scales"
+        label="Trade"
+        onClick={() => setOpen(!open)}
+        disabled={state.tutorialStep < TUTORIAL.length}
+        // Shells piling up: worth a trade.
+        badge={can && state.resources.currency >= TRADE.idle ? "!" : undefined}
+        title={`${state.resources.currency >= TRADE.idle ? `${Math.floor(state.resources.currency)} ${money} piling up! ` : ""}Traders swap ${TRADE.lot} ${money} for food, wood or stone. Buying wood and stone spares your own forest and hills.`}
+        tone={open ? "bg-amber-400 text-[#2b2119]" : "bg-[#4a3b2e] hover:bg-[#5c4a3a]"}
+      >
+        <Cost cost={{ currency: TRADE.lot }} bad={!can} />
+      </ToolButton>
+      {open && (
+        <span className="pixel-panel-dark absolute bottom-full left-1/2 z-10 mb-2 flex w-52 -translate-x-1/2 flex-col gap-1 p-2 text-[11px]" data-testid="trade-menu">
+          <span className="text-white/80">
+            {TRADE.lot} {money} buys:
+          </span>
+          {(["food", "wood", "stone"] as const).map((k) => (
+            <button
+              key={k}
+              type="button"
+              disabled={!can}
+              onClick={() => dispatch({ type: "trade", get: k })}
+              className="pixel-btn flex items-center justify-between bg-emerald-800 px-2 py-1 text-white hover:bg-emerald-700 disabled:opacity-40"
+              data-testid={`trade-${k}`}
+            >
+              <span className="flex items-center gap-1">
+                <PixelIcon name={COST_ICONS[k]} size={14} />
+                {tradeOffer(state, k)} {k}
+              </span>
+              <span className="text-white/70">
+                −{TRADE.lot} <PixelIcon name="coin" size={12} />
+              </span>
+            </button>
+          ))}
+          <span className="text-[10px] text-white/60">
+            {(state.tradePrice ?? 1) > 1.05 ? "Prices are up after your trades; they ease back slowly." : "Buying spares your own forest and hills."}
+          </span>
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -294,6 +349,7 @@ export function BottomBar() {
             title="Sell a building to make room. You get half its cost back."
             tone={selected === DEMOLISH_TOOL ? "bg-amber-400 text-[#2b2119]" : "bg-[#4a3b2e] hover:bg-[#5c4a3a]"}
           />
+          <TradeButton />
           {/* Planting saplings comes with Early Farming. */}
           {state.researched.includes("early-farming") && (
             <ToolButton

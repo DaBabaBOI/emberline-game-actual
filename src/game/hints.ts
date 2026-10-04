@@ -73,6 +73,12 @@ export const HINTS: Hint[] = [
     target: guide("tool-scout"),
   },
   {
+    id: "trade",
+    when: (s) => playedTicks(s) > 30 && s.resources.currency >= 20,
+    text: () => "Our shells buy things! Press Trade to swap them for food, wood or stone. Buying wood spares our own forest.",
+    target: guide("tool-trade"),
+  },
+  {
     id: "raid-train",
     when: (s) => !!countBuildings(s).warcamp && s.soldiers < warriorCap(s) && s.nextRaidTick - s.tick < 60 && s.nextRaidTick > s.tick,
     text: (s) => `Raiders will come again soon. Press Train to make more warriors (${s.soldiers} of ${warriorCap(s)} so far).`,

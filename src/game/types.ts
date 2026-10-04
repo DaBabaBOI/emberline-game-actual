@@ -51,7 +51,7 @@ export type RaidKind = "band" | "party" | "fire";
 export type KingdomId = "steppe" | "reach";
 export type LandmarkId = "library" | "cathedral" | "harbour";
 export type DisasterKind = "storm" | "flood" | "earthquake" | "landslide";
-export type RaidResponse = "fight" | "hide" | "tribute";
+export type RaidResponse = "fight" | "hide" | "tribute" | "tributeCoins";
 
 export interface Raid {
   strength: number;
@@ -355,6 +355,8 @@ export interface GameState {
   space?: string[];
   // Multiplayer: the match's mode and speed (Knowledge pace).
   mp?: { mode: "race" | "coop"; speed: "quick" | "normal" | "long" };
+  // Traders: how much dearer than usual they are now (1 = the usual price).
+  tradePrice?: number;
   // Type I reached: the story is told (the game can go on after the final debrief).
   finished?: boolean;
   // The discovery scene on screen (an advancement or secret just found), if any.
