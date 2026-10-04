@@ -164,7 +164,7 @@ export type Action =
   | { type: "tick" }
   | { type: "setSpeed"; speed: GameState["speed"] }
   | { type: "place"; tileId: number; buildingId: string }
-  | { type: "scout" }
+  | { type: "scout"; tileId?: number }
   | { type: "research"; nodeId: string }
   | { type: "resolveEvent"; choice: number }
   | { type: "skipTutorial" }
@@ -215,7 +215,7 @@ export type Action =
   | { type: "raidKingdom"; kingdom: KingdomId }
   | { type: "ship" }
   | { type: "harbour"; closed: boolean }
-  | { type: "canoe" }
+  | { type: "canoe"; tileId?: number }
   | { type: "crushRebels" }
   | { type: "meetDemands" }
   | { type: "devRebellion"; when: "soon" | "now" }
@@ -513,6 +513,49 @@ export function woodcutterYield(state: GameState, tile: Tile) {
 }
 
 export const PLANT_TOOL = "__plant";
+// Picking where to send scouts or a canoe.
+export const SCOUT_TOOL = "__scout";
+export const CANOE_TOOL = "__canoe";
+
+// How far into the fog a tile is: hexes to the nearest known land.
+function fogDepth(state: GameState, tile: Tile) {
+  let best = Infinity;
+  for (const t of state.tiles) if (t.revealed && isLand(t.terrain)) best = Math.min(best, hexDistance(t, tile));
+  return best;
+}
+
+// Why scouts can't go there (null: they can).
+export function scoutTargetError(state: GameState, tile: Tile): string | null {
+  if (tile.revealed) return "We know this land already: pick a spot in the fog";
+  if (!isLand(tile.terrain) && tile.terrain !== "river") return "Scouts walk: pick fog over land (canoes go by sea)";
+  if (fogDepth(state, tile) > SCOUT_TRIP.reach) return `Too far into the unknown: at most ${SCOUT_TRIP.reach} tiles from known land`;
+  return null;
+}
+
+export function scoutTicks(state: GameState, tile: Tile) {
+  return SCOUT_TRIP.ticks + SCOUT_TRIP.perHex * Math.max(0, fogDepth(state, tile) - 1);
+}
+
+function nearestDock(state: GameState, tile: Tile) {
+  return state.tiles
+    .filter((t) => t.building === "dock")
+    .sort((a, b) => hexDistance(a, tile) - hexDistance(b, tile))[0];
+}
+
+// Why a canoe can't go there (null: it can).
+export function canoeTargetError(state: GameState, tile: Tile): string | null {
+  const dock = nearestDock(state, tile);
+  if (!dock) return "Build a Canoe Dock first";
+  const home = state.tiles[state.startTile].island;
+  if (isLand(tile.terrain) && tile.island === home) return "Canoes go by sea: pick open water or another island";
+  if (hexDistance(dock, tile) > CANOE.reach) return `Too far to paddle: at most ${CANOE.reach} tiles from a dock`;
+  return null;
+}
+
+export function canoeTicks(state: GameState, tile: Tile) {
+  const dock = nearestDock(state, tile);
+  return Math.max(CANOE.ticks, Math.round(10 + CANOE.perHex * (dock ? hexDistance(dock, tile) : 8)));
+}
 
 // Improving a building with stone and ores: its level (1 as built) and how
 // much more it makes for it (output, or room in a home).
@@ -1153,6 +1196,14 @@ function returnCanoes(state: GameState): GameState {
   if (!due.length) return state;
   let next: GameState = { ...state, canoes: (state.canoes ?? []).filter((c) => state.tick < c.back) };
   for (const c of due) {
+    // A canoe sent somewhere maps the sea (and any land) around it.
+    if (c.tile !== undefined && next.tiles[c.tile]) {
+      const tiles = next.tiles.map((t) => ({ ...t }));
+      const before = tiles.filter((t) => t.revealed).length;
+      revealAround(tiles, tiles[c.tile], CANOE.sees);
+      const mapped = tiles.filter((t) => t.revealed).length - before;
+      next = { ...next, tiles, log: mapped ? [`The canoe mapped ${mapped} new tiles around where it went.`, ...next.log].slice(0, 30) : next.log };
+    }
     if (c.kind === "explore" && !(next.outposts ?? []).includes(CANOE.island)) {
       const tiles = next.tiles.map((t) => (t.island === CANOE.island ? { ...t, revealed: true } : t));
       next = {
@@ -4954,21 +5005,30 @@ function step(state: GameState, action: Action): GameState {
     case "scout": {
       const cost = scoutCost(state);
       if (tutorialLocked(state, "scout") || !canAfford(state, cost) || state.scouting) return state;
-      const frontier = state.tiles.filter(
-        (t) =>
-          !t.revealed &&
-          state.tiles.some((n) => n.revealed && isLand(n.terrain) && hexDistance(n, t) === 1),
-      );
-      if (frontier.length === 0) return state;
-      const rand = mulberry32(state.seed + state.tick * 7 + state.log.length);
-      const target = frontier[Math.floor(rand() * frontier.length)];
+      let target: Tile;
+      if (action.tileId !== undefined) {
+        // Where the player picked on the map.
+        const picked = state.tiles[action.tileId];
+        if (!picked || scoutTargetError(state, picked)) return state;
+        target = picked;
+      } else {
+        const frontier = state.tiles.filter(
+          (t) =>
+            !t.revealed &&
+            state.tiles.some((n) => n.revealed && isLand(n.terrain) && hexDistance(n, t) === 1),
+        );
+        if (frontier.length === 0) return state;
+        const rand = mulberry32(state.seed + state.tick * 7 + state.log.length);
+        target = frontier[Math.floor(rand() * frontier.length)];
+      }
+      const trip = scoutTicks(state, target);
       const sent: GameState = { ...state, resources: spend(state.resources, cost), flags: { ...state.flags, scouted: true } };
       // In the tutorial the clock is still, so the trip is over at once.
       if (state.tutorialStep < TUTORIAL.length) return withMeters(scoutsReturn(sent, target.id));
       return withMeters({
         ...sent,
-        scouting: { tile: target.id, back: state.tick + SCOUT_TRIP.ticks },
-        log: [`Scouts set out to explore. They will be back in ${secs(SCOUT_TRIP.ticks)} s.`, ...state.log].slice(0, 30),
+        scouting: { tile: target.id, back: state.tick + trip, start: state.tick, from: state.startTile },
+        log: [`Scouts set out to explore. They will be back in ${secs(trip)} s.`, ...state.log].slice(0, 30),
       });
     }
 
@@ -5361,16 +5421,23 @@ function step(state: GameState, action: Action): GameState {
 
     case "canoe": {
       if (canoeError(state)) return state;
+      const picked = action.tileId !== undefined ? state.tiles[action.tileId] : undefined;
+      if (action.tileId !== undefined && (!picked || canoeTargetError(state, picked))) return state;
       const tree = bigTree(state)!;
-      const kind = canoeTrip(state);
+      // Sent to a spot near the Southern Isles (or with no spot, while they are
+      // still unfound): it finds them. Anywhere else: fish and map the sea.
+      const isles = !(state.outposts ?? []).includes(CANOE.island) && state.tiles.some((t) => t.island === CANOE.island);
+      const nearIsles = picked ? isles && state.tiles.some((t) => t.island === CANOE.island && hexDistance(t, picked) <= 2) : false;
+      const kind = picked ? (nearIsles ? "explore" : "fish") : canoeTrip(state);
+      const trip = picked ? canoeTicks(state, picked) : CANOE.ticks;
       const tiles = state.tiles.map((t) => (t.id === tree.id ? { ...t, growth: Math.max(0.02, t.growth - CANOE.tree) } : t));
       return withMeters({
         ...addTally(state, "canoes", 1),
         tiles,
-        canoes: [...(state.canoes ?? []), { start: state.tick, back: state.tick + CANOE.ticks, kind }],
+        canoes: [...(state.canoes ?? []), { start: state.tick, back: state.tick + trip, kind, tile: picked?.id, dock: picked ? nearestDock(state, picked)?.id : undefined }],
         resources: spend(state.resources, CANOE.cost),
         log: [
-          `A big tree was felled for a canoe, and it set off ${kind === "explore" ? "to look for the islands to the south" : "to fish the open sea"}. Back in ${secs(CANOE.ticks)} s.`,
+          `A big tree was felled for a canoe, and it set off ${kind === "explore" ? "to look for the islands to the south" : picked ? "to fish and explore where you pointed" : "to fish the open sea"}. Back in ${secs(trip)} s.`,
           ...state.log,
         ].slice(0, 30),
       });

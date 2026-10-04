@@ -196,7 +196,10 @@ export function SeaTraffic({ state, home }: { state: GameState; home: Tile }) {
     <group>
       {/* Our canoes: to the Southern Isles, or out to fish. */}
       {(state.canoes ?? []).map((c, i) => {
-        const route = routeFor(tiles, home, CANOE.island);
+        // Sent to a spot picked on the map: from the water by its dock to there.
+        const dock = c.dock !== undefined ? tiles[c.dock] : undefined;
+        const launch = dock ? tiles.filter((t) => !isLand(t.terrain) && t.terrain !== "river" && Math.hypot(t.x - dock.x, t.z - dock.z) < 1.9)[0] : undefined;
+        const route = c.tile !== undefined && tiles[c.tile] ? { from: launch ?? dock ?? home, to: tiles[c.tile] } : routeFor(tiles, home, CANOE.island);
         return route ? <Ship key={`canoe-${c.start}-${i}`} route={route} start={c.start} back={c.back} tick={tick} speed={speed} canoe side={i * 0.6} /> : null;
       })}
       {/* Our ships: out to find land or a coast, or to trade with a kingdom. */}

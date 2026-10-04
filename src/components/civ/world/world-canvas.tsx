@@ -5,6 +5,7 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { Vector3 } from "three";
 import { Html, MapControls, PerformanceMonitor } from "@react-three/drei";
 import { BUILDINGS_BY_ID, ERAS, formatYear, IMPROVE, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL, WEAR, SMOG } from "@/game/content";
+import { CANOE_TOOL, SCOUT_TOOL, canoeTargetError, canoeTicks, scoutTargetError, scoutTicks } from "@/game/engine";
 import {
   buildingCost,
   DEMOLISH_TOOL,
@@ -187,7 +188,17 @@ export function WorldCanvas() {
   const hoverTile = hovered !== null ? state.tiles[hovered] : null;
   const demolishing = selected === DEMOLISH_TOOL;
   const planting = selected === PLANT_TOOL;
+  const scoutPick = selected === SCOUT_TOOL;
+  const canoePick = selected === CANOE_TOOL;
   const def = selected && !demolishing && !planting ? BUILDINGS_BY_ID[selected] : null;
+  // Picking where to send scouts or a canoe: can they go there, and how long.
+  const tripNote = (() => {
+    if (!hoverTile || !(scoutPick || canoePick)) return null;
+    const problem = scoutPick ? scoutTargetError(state, hoverTile) : canoeTargetError(state, hoverTile);
+    if (problem) return { ok: false, text: problem };
+    const ticks = scoutPick ? scoutTicks(state, hoverTile) : canoeTicks(state, hoverTile);
+    return { ok: true, text: `${scoutPick ? "Send the scouts here" : "Paddle here"}: back in ${Math.round(ticks * 1.5)} s` };
+  })();
   const plantNote = planting && hoverTile ? plantError(state, hoverTile) ?? null : null;
   const error = hoverTile && def ? placementError(state, hoverTile, def) : null;
   const demolishNote = (() => {
@@ -275,6 +286,14 @@ export function WorldCanvas() {
     }
     if (demolishing) {
       dispatch({ type: "demolish", tileId: id });
+      return;
+    }
+    if (scoutPick || canoePick) {
+      const problem = scoutPick ? scoutTargetError(state, tile) : canoeTargetError(state, tile);
+      if (problem) return;
+      dispatch(scoutPick ? { type: "scout", tileId: id } : { type: "canoe", tileId: id });
+      setSelected(null);
+      if (touch) setHovered(null);
       return;
     }
     if (!selected) return;
@@ -479,7 +498,11 @@ export function WorldCanvas() {
           y={tileTop(hoverTile)}
           z={hoverTile.z}
           color={
-            planting
+            tripNote
+              ? tripNote.ok
+                ? "#38bdf8"
+                : "#ef4444"
+              : planting
               ? plantNote
                 ? "#ef4444"
                 : "#22c55e"
@@ -499,6 +522,13 @@ export function WorldCanvas() {
         <Html zIndexRange={[15, 0]} center position={[hoverTile.x, tileTop(hoverTile) + 1.2, hoverTile.z]} style={{ pointerEvents: "none" }}>
           <div className="pixel-panel-dark font-pixel whitespace-nowrap px-2 py-1 text-xs" data-testid="home-label">
             {BUILDINGS_BY_ID[hoverTile.building!].name}: {dwellers.living} of {dwellers.room} people live here
+          </div>
+        </Html>
+      )}
+      {hoverTile && tripNote && (
+        <Html zIndexRange={[15, 0]} center position={[hoverTile.x, tileTop(hoverTile) + 1.2, hoverTile.z]} style={{ pointerEvents: "none" }}>
+          <div className={"pixel-panel-dark font-pixel whitespace-nowrap px-2 py-1 text-xs " + (tripNote.ok ? "" : "text-red-300")} data-testid="trip-note">
+            {tripNote.text}
           </div>
         </Html>
       )}
