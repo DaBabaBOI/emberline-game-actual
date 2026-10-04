@@ -57,13 +57,22 @@ go out). To leave the Stone Age you research Agriculture and grow to 15
 people. In the Ancient era a Roman legion lands on your shore; beat it, learn
 Coinage and grow to 40 people to reach the Classical era. There the village
 becomes a town by a river (water, sanitation, trade), and the era ends with a
-great drought that only a prepared town gets through well. After each era a
+great drought that only a prepared town gets through well. The Medieval era
+brings castles, guilds, two neighbouring kingdoms (trade, gifts or raids) and
+the risk of rebellion, and ends with the great sickness (the plague). The
+Industrial era is the choice between coal and clean power, and the carbon from
+coal brings a climate crisis. In the Future era you must get the air back to a
+safe level before the climate tips for good, then reach Type I on the
+Kardashev scale with clean power and launch into space. After each era a
 **debrief** lists what you achieved next to what it cost.
 
-There are five ways to lose, each announced by a countdown first: **famine**,
+Up to four players can also play the same island online, racing for the most
+Chief XP or working together (see [architecture.md](architecture.md#7-multiplayer-without-a-game-server)).
+
+There are six ways to lose, each announced by a countdown first: **famine**,
 **unrest** (people too unhappy for too long), **land collapse**
-(Sustainability below 20 for about two minutes), being **conquered** by the
-legion, or being **left behind** (taking too long to reach the next era). Everything else is a setback you can recover from.
+(Sustainability below 20 for about two minutes), being **conquered**, the
+**plague**, or being **left behind** (taking too long to reach the next era). Everything else is a setback you can recover from.
 
 ## 3. The chosen feature: trade-offs you can see
 
@@ -107,6 +116,14 @@ not a special case.
 | Livestock Pen | Food; with Warm Clothes, keeps 10 people warm (no campfire needed) | Grazing wears the land (−2 each) | Fewer fires needed, so less wood cut |
 | Bronze Smithy (Ancient) | +20% food and wood per smithy (up to 3) | Burns charcoal (wood) every tick, −4 Sustainability | Forester's Lodge to keep up with the wood |
 | Irrigation Canal (Ancient) | Next-door farms +50% | Salts the soil (−3) | Fewer, well-placed canals |
+| Town House (Classical) | Room for 24 people on one tile, warm without a campfire | Packed towns spread sickness fast unless there are latrines | Build latrines with the houses |
+| Aqueduct (Classical) | Water for 40 people; nearby fields grow more and survive a drought | Takes water from the river: fish and marshes downstream suffer | Fewer, well-placed aqueducts |
+| Castle (Medieval) | +15 defense, room for 10 more warriors | Takes a hillside of stone, and a neighbouring kingdom sees it as a threat | Gifts and treaties instead of walls |
+| Coal Power Plant (Industrial) | +40 power | Thick smoke over nearby homes, and the most carbon of anything | Wind, solar and hydro: less power each, costly, but clean |
+| Hydro Dam (Industrial) | +30 clean power | Floods the valley behind it and blocks the fish | Wind and solar farms |
+| Nuclear Plant (Industrial) | +60 power with no carbon | Spent fuel stays dangerous (−2 Sustainability each) | Wind, solar and hydro |
+| Air Capture Plant (Future) | Takes carbon out of the air | Needs power; on coal power it catches much less | Run it on clean power |
+| Workload (all eras) | Every building makes something | Every building needs hands; too many jobs and people get tired, make less and are unhappier | Fewer, better buildings; Rest Days |
 | Event cards (12) | Each choice gains something | …and costs something | You pick which price to pay |
 
 ### What the player sees
@@ -168,9 +185,10 @@ Other systems join the same web:
 | SDG | Where it is in the game |
 | --- | --- |
 | **11 Sustainable Cities and Communities** (core) | The whole trade-off system: growing a settlement that lasts. Shelter & Health meter (target 11.1), "growing village" and "crowding" lessons (11.3, 11.1). |
+| 13 Climate Action | Carbon from smoke and coal, the climate crisis (Industrial), and the tipping point you must avoid (Future). |
 | 15 Life on Land | Forest cover, rain, exhausted land, wildlife only in mature forest, planting (15.2, 15.3, 15.5). |
 | 12 Responsible Consumption and Production | Food rots above storage, overhunting, charcoal for bronze (12.2, 12.3). |
-| 7 Affordable and Clean Energy | Energy meter (fires), smoke, Warm Clothes means fewer fires (7.1, 7.3). |
+| 7 Affordable and Clean Energy | Energy meter (fires), smoke, Warm Clothes means fewer fires (7.1, 7.3); later, coal against wind, solar, hydro and nuclear power, and clean power to reach Type I. |
 | 4 Quality Education | Literacy meter, Elder's Hut and Scribe School, the "writing" lesson (4.6). |
 | 2, 3 | Food & Water meter (2.1), Happiness meter (3.4), shown in the debrief. |
 
@@ -195,7 +213,11 @@ statistics**; the SDG target numbers and wording are from the UN goals.
   show a countdown first.
 - **Each era looks different:** in the Ancient era villagers wear dyed linen,
   warriors wear leather, the light is warmer, paths wear into the grass and the
-  top bar gets a bronze trim.
+  top bar gets a bronze trim. Later eras bring stone towns, castles and
+  windmills, then factories and smoke, then green towers and air capture
+  plants (see the [screenshots](README.md#screenshots)).
+- **Help is always there:** a How to play guide on the title screen and in the
+  Menu, and a hint the first time each feature appears.
 - **Phones work:** bars stack and scroll; tap once to preview, twice to build;
   an on-screen Cancel instead of Esc or right-click.
 - **Accessible pacing:** pause, 1x, 2x and 4x; autosave in the browser; an

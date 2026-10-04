@@ -1,8 +1,10 @@
 # Architecture
 
 Emberline is a static website: HTML, JavaScript and 3D graphics that run
-entirely in the player's browser. There is no server, no database and no
-account. The game saves itself in the browser (`localStorage`).
+entirely in the player's browser. There is no game server and no account. The
+game saves itself in the browser (`localStorage`). A small hosted database
+(Supabase) is used only for the optional online parts: cloud saves, the
+leaderboard, feedback and multiplayer rooms.
 
 **Built with:** Next.js 16 (static export), React 19, TypeScript (strict),
 Three.js through React Three Fiber and drei, and Tailwind CSS. It is hosted on
@@ -180,3 +182,23 @@ These keep the project reliable as it grows (the full list is in `AGENTS.md`):
   plenty of resources, and a dev panel can trigger each feature: raids, the legion,
   wildfire, sparks, outbreaks, cutting hills, clearing forest, any event card, any
   lesson, "all goals met", and ending the era.
+
+## 7. Multiplayer, without a game server
+
+Each player runs the whole game in their own browser, on the same island (the
+room's seed). Only results go through the database, about every 3 seconds.
+Empty seats are bots that every browser works out the same way from the seed
+and the clock, so they need no server either.
+
+A match, step by step:
+
+1. The host calls `mp_create_room` and gets a 4-letter code and a secret.
+2. Others call `mp_join_room` with the code and get a seat and their own secret.
+3. The host calls `mp_start_room`; every browser sees the status change and starts the same island.
+4. About every 3 seconds each browser sends its score with `mp_update_player`, and reads the seats and any new events.
+5. A gift or a raid is `mp_send_event`; the other player's browser picks it up on its next read.
+
+Security: the tables are read-only to the public (row-level security), and every
+write goes through an `mp_*` function that checks the player's secret. Only the
+public (publishable) key is in the code. The setup is in
+[`supabase/multiplayer.sql`](../supabase/multiplayer.sql).
