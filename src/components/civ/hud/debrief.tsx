@@ -51,7 +51,10 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
   const d = state.debrief ?? (state.phase === "gameover" ? makeDebrief(state, "loss") : null);
   if (!d) return null;
   // Older saves may have stored a land-only verdict on a loss.
-  const tier = TIERS[d.kind === "loss" ? "lost" : d.tier];
+  const base = TIERS[d.kind === "loss" ? "lost" : d.tier];
+  // A village in the Stone Age; a town, a city, then a whole world later on.
+  const place = d.era >= 5 || d.kind === "final" ? "world" : d.era >= 4 ? "city" : d.era >= 1 ? "town" : "village";
+  const tier = { ...base, title: base.title.replace("village", place) };
   const deaths = d.stats.deaths;
   const lost = Math.round(deaths.famine + deaths.disease + deaths.fire + deaths.battle + (deaths.accident ?? 0) + (deaths.disaster ?? 0));
   const who = state.nation ?? "Your people";
@@ -71,11 +74,9 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
               : "Famine";
   const sub =
     d.kind === "era"
-      ? d.era === 0
-        ? `${who} are ready to settle down and farm for good. Here is how you got here.`
-        : `${who} beat Rome, and their silver coins travel far. The village is becoming a town. Here is how you got here.`
+      ? `${ERA_ENDS[d.era] ?? `${who} are ready for what comes next.`} Here is how you got here.`.replace("{who}", who)
       : d.kind === "final"
-        ? `${who} came through the great drought. Here is the whole story, from the first fire.`
+        ? `${who} reached Type I on the Kardashev scale (${(d.kardashev ?? 1).toFixed(2)}): the whole planet runs on clean energy${d.tipped ? ", though the climate tipped on the way" : ", and the climate held"}. Here is the whole story, from the first fire.`
         : state.lostTo === "conquest"
           ? `The Roman legion broke through in ${formatYear(d.year)} and ${who} lost their village.`
           : state.lostTo === "unrest"
@@ -243,6 +244,15 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
 // on what's missing once Agriculture is known.
 // Always one line saying what to aim for next (hidden while the tutorial or a
 // guided step is already telling the player).
+// How each era ended, for its debrief ({who}: the people's name).
+const ERA_ENDS: Record<number, string> = {
+  0: "{who} are ready to settle down and farm for good.",
+  1: "{who} beat Rome, and their silver coins travel far. The village is becoming a town.",
+  2: "{who} came through the great drought, and their landmark stands.",
+  3: "{who} survived the Black Death, and the first steam engines are turning.",
+  4: "{who} came through the climate crisis, and the computers are humming.",
+};
+
 export function GoalLine() {
   const { state } = useGame();
   const compact = useCompact();

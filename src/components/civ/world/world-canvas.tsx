@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Vector3 } from "three";
 import { Html, MapControls, PerformanceMonitor } from "@react-three/drei";
-import { BUILDINGS_BY_ID, ERAS, formatYear, IMPROVE, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL, WEAR } from "@/game/content";
+import { BUILDINGS_BY_ID, ERAS, formatYear, IMPROVE, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL, WEAR, SMOG } from "@/game/content";
 import {
   buildingCost,
   DEMOLISH_TOOL,
@@ -47,7 +47,7 @@ import { PickUp } from "./pick-up";
 import { SeaTraffic, TradeShips, WaitingShips } from "./trade";
 import { Cracks, DisasterDust, disasterView, FloodWater, QuakeShake, Rubble, StormRain } from "./disasters";
 import { Wildlife } from "./wildlife";
-import { CampfireSmoke, Wildfire } from "./atmosphere";
+import { CampfireSmoke, ChimneySmoke, Wildfire } from "./atmosphere";
 import { Clouds, DaySky, FireLights } from "./sky";
 import { Sea } from "./water";
 import { FilmLook } from "./effects";
@@ -60,6 +60,7 @@ import { playShot, useShot } from "@/components/civ/hud/letterbox";
 import { useDaylight, useGraphics } from "@/lib/graphics";
 import { UnderConstruction } from "./medieval-models";
 import { Mice } from "./moments";
+import { hexDistance } from "@/game/hex";
 
 function HexOutline({ x, y, z, color }: { x: number; y: number; z: number; color: string }) {
   return (
@@ -221,6 +222,19 @@ export function WorldCanvas() {
   const dust = def && !error && hoverTile ? dustNote(state, hoverTile, def.id) : null;
   const gather = def?.id === "gatherer" && !error && hoverTile && !inTutorialNow ? gatherNote(state) : null;
   const town = def && !error && hoverTile ? townNote(state, hoverTile, def.id) : null;
+  // Industrial: what it does to the grid, the air over the homes and the climate.
+  const industry =
+    def && !error && hoverTile && (def.power || def.smog || def.carbon)
+      ? [
+          def.power && def.power > 0 ? `+${def.power} power.` : def.power ? `Needs ${-def.power} power.` : "",
+          def.smog
+            ? `Smoke over ${state.tiles.filter((t) => t.building && ["hut", "house", "townhouse", "apartments"].includes(t.building) && hexDistance(t, hoverTile) <= SMOG.range).length} homes nearby.`
+            : "",
+          def.carbon ? "Carbon into the air, for good." : "",
+        ]
+          .filter(Boolean)
+          .join(" ")
+      : null;
   // Overseas: each building there costs more coins to keep supplied.
   const overseas =
     def && !error && hoverTile && hoverTile.island >= 0 && hoverTile.island !== state.tiles[state.startTile].island
@@ -301,7 +315,15 @@ export function WorldCanvas() {
         running={clock.running}
         msPerTick={clock.msPerTick}
         era={state.era}
-        fires={burning.length + 2 * buildings.filter((t) => t.building === "smithy").length}
+        fires={
+          burning.length +
+          2 * buildings.filter((t) => t.building === "smithy").length +
+          // Industrial smoke: coal plants, factories and stations (half with Clean Air Laws).
+          Math.round(
+            buildings.reduce((n, t) => n + (t.building === "coalplant" ? 3 : t.building === "factory" ? 2 : t.building === "station" ? 1 : 0), 0) *
+              (state.researched.includes("cleanair") ? 0.5 : 1),
+          )
+        }
         dust={dry >= 1 ? 1 : 0}
         storm={storm}
         plague={plagueOn}
@@ -394,6 +416,7 @@ export function WorldCanvas() {
       <BattleScene tiles={state.tiles} battle={battleShowing ? state.battle ?? null : null} homeTile={home} />
       <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} speed={state.speed} />
       <TradeShips tiles={state.tiles} home={home} caravans={state.caravans ?? []} tick={state.tick} speed={state.speed} />
+      <ChimneySmoke tiles={buildings} cleanAir={state.researched.includes("cleanair")} />
       <SeaTraffic state={state} home={home} />
       <WaitingShips state={state} home={home} />
       {/* The plague: rats scurrying round a few homes. */}
@@ -529,6 +552,12 @@ export function WorldCanvas() {
                   <span className="flex items-start gap-1.5 text-amber-200">
                     <PixelIcon name="warning" size={12} />
                     {gather}
+                  </span>
+                )}
+                {industry && (
+                  <span className="flex items-start gap-1.5 text-amber-200" data-testid="industry-note">
+                    <PixelIcon name="powerplant" size={12} />
+                    {industry}
                   </span>
                 )}
                 {overseas && (

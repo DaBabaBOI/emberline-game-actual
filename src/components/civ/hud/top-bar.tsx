@@ -1,9 +1,9 @@
 "use client";
 
 import { HOME } from "@/lib/home";
-import { ERAS, SETTLERS, XP, chiefTitle, formatYear, xpToReach } from "@/game/content";
+import { CARBON, ERAS, KARDASHEV, SETTLERS, XP, chiefTitle, formatYear, xpToReach } from "@/game/content";
 import { useGame } from "@/components/civ/game-provider";
-import { nextEraPopulation, nextYear, settlersReady, warnings } from "@/game/engine";
+import { cleanPower, kardashev, nextEraPopulation, nextYear, powerCover, powerDemand, powerSupply, settlersReady, warming, warnings } from "@/game/engine";
 import { realCalendar } from "@/game/calendar";
 import type { GameState } from "@/game/types";
 import { cn } from "@/lib/utils";
@@ -251,6 +251,30 @@ export function TopBar({ children }: { children?: React.ReactNode }) {
           <Chip icon="meat" value={Math.floor(r.food).toString()} title="Stored food" low={low.has("food") || low.has("famine")} />
           <Chip icon="log" value={Math.floor(r.wood).toString()} title="Wood" low={low.has("wood")} />
           <Chip icon="rock" value={Math.floor(r.stone).toString()} title="Stone" />
+          {/* Industrial era: the power grid, and the carbon in the air. */}
+          {state.era >= 4 && (
+            <>
+              <Chip
+                icon="powerplant"
+                value={`${Math.round(powerSupply(state))}/${Math.round(powerDemand(state))}`}
+                title="Power: made / needed. Short of power, the buildings that need it work less well."
+                low={powerCover(state) < 1}
+              />
+              <Chip
+                icon="sun"
+                value={`${Math.round(state.carbon ?? CARBON.start)} ppm +${warming(state).toFixed(1)}°`}
+                title="Carbon in the air (parts per million) and how much warmer the world is. 280 before industry. It only goes up: coal and factories add to it for good."
+                low={warming(state) >= 1.5}
+              />
+              {state.era >= 5 && (
+                <Chip
+                  icon="earth"
+                  value={`K ${kardashev(state).toFixed(2)}`}
+                  title={`Kardashev rating (scaled for the game): ${Math.round(cleanPower(state))} of ${KARDASHEV.clean} clean power. At 1.00 (Type I) the whole planet runs on clean energy.`}
+                />
+              )}
+            </>
+          )}
           {/* Knowledge: click to see how to get more. */}
           <span className="relative">
             <button

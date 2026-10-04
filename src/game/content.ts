@@ -24,8 +24,9 @@ export const ERAS = [
   { name: "Classical", startYear: -500, yearsPerTick: 1, currency: "Silver coins" },
   // Medieval: 0.6 years a tick, so the Black Death (PLAGUE.arriveYear) arrives about 14.5 minutes in.
   { name: "Medieval & Renaissance", startYear: 1000, yearsPerTick: 0.6, currency: "Florins" },
-  { name: "Industrial & Modern", startYear: 1750, yearsPerTick: 1, currency: "Banknotes" },
-  { name: "Future & Space", startYear: 2050, yearsPerTick: 0.5, currency: "Credits" },
+  // Industrial: 0.4 years a tick, so the climate crisis warning (CLIMATE.warnYear) comes about 15 minutes in.
+  { name: "Industrial & Modern", startYear: 1750, yearsPerTick: 0.4, currency: "Banknotes" },
+  { name: "Future & Space", startYear: 2080, yearsPerTick: 0.5, currency: "Credits" },
 ];
 
 export function formatYear(year: number) {
@@ -666,6 +667,278 @@ export const BUILDINGS: BuildingDef[] = [
     overseas: true,
     produces: { currency: 0.5 },
   },
+  // ---- Industrial & Modern era ----
+  {
+    id: "factory",
+    name: "Factory",
+    icon: "factory",
+    description: "Machines driven by a coal-fired steam engine turn out goods by the thousand.",
+    gain: "+1.2 coins, and better tools: food and wood +10% each (up to 3). With Electricity it needs 10 power and makes 50% more",
+    landCost: "Coal smoke over the homes nearby, and carbon that stays in the air for good",
+    landImpact: 2,
+    era: 4,
+    cost: { stone: 30, wood: 20, currency: 60 },
+    terrain: ["grass", "steppe", "hills"],
+    requires: "steam",
+    produces: { currency: 1.2 },
+    carbon: 0.03,
+    smog: 2,
+  },
+  {
+    id: "station",
+    name: "Railway Station",
+    icon: "train",
+    description: "Trains on iron rails carry people and goods across the island in hours, not days.",
+    gain: "Markets, factories and trading posts make 15% more coins each (up to 3 stations)",
+    landCost: "The line cuts across the land, and steam engines burn coal",
+    landImpact: 1,
+    era: 4,
+    cost: { stone: 30, wood: 30, currency: 50 },
+    terrain: ["grass", "steppe"],
+    requires: "railways",
+    produces: { currency: 0.3 },
+    carbon: 0.01,
+    smog: 1,
+  },
+  {
+    id: "coalplant",
+    name: "Coal Power Plant",
+    icon: "powerplant",
+    description: "Burns coal to boil water and spin the generators. Cheap power, day and night.",
+    gain: "+40 power for the grid",
+    landCost: "Thick smoke over the homes nearby, and the most carbon of anything",
+    landImpact: 3,
+    era: 4,
+    cost: { stone: 40, currency: 60 },
+    terrain: ["grass", "steppe", "hills"],
+    requires: "electricity",
+    power: 40,
+    carbon: 0.06,
+    smog: 3,
+  },
+  {
+    id: "apartments",
+    name: "Apartment Block",
+    icon: "insula",
+    description: "Steel frames and lifts: room for a whole street on one tile.",
+    gain: "Room for 40 people",
+    landCost: "Needs 4 power; dark, cold flats without it make people unhappy",
+    landImpact: 1,
+    era: 4,
+    cost: { stone: 40, wood: 10, currency: 40 },
+    terrain: ["grass", "steppe"],
+    requires: "steel",
+    housing: 40,
+    power: -4,
+  },
+  {
+    id: "hydrodam",
+    name: "Hydro Dam",
+    icon: "dam",
+    description: "A concrete wall across the river; the falling water spins the turbines.",
+    gain: "+30 clean power, no smoke",
+    landCost: "Floods the valley behind it and blocks the fish",
+    landImpact: 2,
+    era: 4,
+    cost: { stone: 60, currency: 80 },
+    terrain: ["grass", "steppe", "hills", "forest"],
+    needsRiver: true,
+    requires: "hydropower",
+    power: 30,
+    unique: true,
+  },
+  {
+    id: "windfarm",
+    name: "Wind Farm",
+    icon: "turbine",
+    description: "Tall white turbines that turn the wind into power.",
+    gain: "+12 clean power, no smoke",
+    landCost: "Takes a stretch of open land; costly to build",
+    landImpact: 0,
+    era: 4,
+    cost: { stone: 20, currency: 90 },
+    terrain: ["grass", "steppe", "hills", "beach"],
+    requires: "renewables",
+    power: 12,
+  },
+  {
+    id: "solarfarm",
+    name: "Solar Farm",
+    icon: "solar",
+    description: "Rows of panels that turn sunlight straight into power.",
+    gain: "+10 clean power, no smoke",
+    landCost: "Covers the ground it stands on; costly at first",
+    landImpact: 1,
+    era: 4,
+    cost: { stone: 10, currency: 100 },
+    terrain: ["grass", "steppe", "beach"],
+    requires: "solar",
+    power: 10,
+  },
+  {
+    id: "hospital",
+    name: "Hospital",
+    icon: "hospital",
+    description: "Doctors, nurses and clean wards, open to everyone.",
+    gain: "The sick get better much faster, and fewer die in heatwaves",
+    landCost: "Needs 5 power to run",
+    landImpact: 0,
+    era: 4,
+    cost: { stone: 40, wood: 10, currency: 60 },
+    terrain: ["grass", "steppe"],
+    requires: "publichealth",
+    power: -5,
+  },
+  {
+    id: "park",
+    name: "City Park",
+    icon: "park",
+    description: "Trees, grass and paths in the middle of town.",
+    gain: "Clears the smog over homes within 2 tiles, +happiness, and shade in a heatwave",
+    landCost: "None: it gives a little land back",
+    landImpact: 0,
+    era: 4,
+    cost: { wood: 10, currency: 30 },
+    terrain: ["grass", "steppe"],
+    requires: "publichealth",
+    clearsSmog: true,
+  },
+  {
+    id: "seawall",
+    name: "Sea Wall",
+    icon: "seawall",
+    description: "A long wall of concrete and stone along the shore.",
+    gain: "Keeps floods off the low land within 2 tiles",
+    landCost: "Changes the shore: the beach behind it narrows",
+    landImpact: 1,
+    era: 4,
+    cost: { stone: 50, currency: 40 },
+    terrain: ["beach", "grass", "steppe"],
+    needsWaterNeighbor: true,
+    requires: "seawalls",
+  },
+  {
+    id: "nuclear",
+    name: "Nuclear Plant",
+    icon: "reactor",
+    description: "Splits uranium to boil water and spin the generators. A lot of power, day and night, with no smoke.",
+    gain: "+60 power with no carbon and no smog",
+    landCost: "Its spent fuel stays dangerous for thousands of years: −2 Sustainability for each plant. Needs water to cool it",
+    landImpact: 2,
+    era: 4,
+    cost: { stone: 80, currency: 150 },
+    terrain: ["grass", "steppe", "beach"],
+    needsWaterNeighbor: true,
+    requires: "uranium",
+    power: 60,
+    waste: 2,
+  },
+  // ---- Future & Space ----
+  {
+    id: "fusion",
+    name: "Fusion Reactor",
+    icon: "fusion",
+    description: "Fuses hydrogen into helium, the way the Sun does, inside a ring of magnets.",
+    gain: "+100 clean power: no carbon, no smog, almost no waste",
+    landCost: "Very costly to build",
+    landImpact: 1,
+    era: 5,
+    cost: { stone: 80, currency: 450 },
+    terrain: ["grass", "steppe", "hills"],
+    requires: "fusion",
+    power: 100,
+  },
+  {
+    id: "datacenter",
+    name: "Data Center",
+    icon: "datacenter",
+    description: "Halls of computers that never sleep, thinking about problems for us.",
+    gain: "+0.6 Knowledge",
+    landCost: "Needs 12 power, and it runs hot",
+    landImpact: 1,
+    era: 5,
+    cost: { stone: 40, currency: 200 },
+    terrain: ["grass", "steppe", "hills"],
+    requires: "ai",
+    power: -12,
+    produces: { knowledge: 0.6 },
+  },
+  {
+    id: "aircapture",
+    name: "Air Capture Plant",
+    icon: "capture",
+    description: "Giant fans pull air through filters that catch carbon, to be locked away underground.",
+    gain: "Takes 0.08 ppm of carbon out of the air every tick",
+    landCost: "Needs 15 power. On coal power it catches much less",
+    landImpact: 1,
+    era: 5,
+    cost: { stone: 30, currency: 200 },
+    terrain: ["grass", "steppe", "hills", "beach"],
+    requires: "capture",
+    power: -15,
+    captures: 0.08,
+  },
+  {
+    id: "vfarm",
+    name: "Vertical Farm",
+    icon: "vfarm",
+    description: "Floor upon floor of crops under lights, watered and fed by machines.",
+    gain: "+3 food, on one tile, with no land cleared",
+    landCost: "Needs 8 power",
+    landImpact: 0,
+    era: 5,
+    cost: { stone: 50, currency: 180 },
+    terrain: ["grass", "steppe", "hills"],
+    requires: "verticalfarms",
+    power: -8,
+    produces: { food: 3 },
+  },
+  {
+    id: "arcology",
+    name: "Arcology",
+    icon: "arcology",
+    description: "A whole town in one tall tower, with gardens on every level.",
+    gain: "Room for 100 people on one tile",
+    landCost: "Needs 10 power",
+    landImpact: 0,
+    era: 5,
+    cost: { stone: 120, currency: 300 },
+    terrain: ["grass", "steppe"],
+    requires: "arcology",
+    housing: 100,
+    power: -10,
+  },
+  {
+    id: "oceancleaner",
+    name: "Ocean Clean-up",
+    icon: "cleaner",
+    description: "Boats with long booms that sweep plastic and nets out of the sea.",
+    gain: "+3 Sustainability each (up to 3), and the fish come back: +0.5 food",
+    landCost: "Needs 5 power",
+    landImpact: 0,
+    era: 5,
+    cost: { stone: 20, currency: 150 },
+    terrain: ["beach"],
+    needsWaterNeighbor: true,
+    requires: "oceans",
+    power: -5,
+    produces: { food: 0.5 },
+  },
+  {
+    id: "launchsite",
+    name: "Launch Site",
+    icon: "rocket",
+    description: "A launch pad and a tall tower for rockets to orbit and beyond. Opens Space.",
+    gain: "Launch satellites, a space telescope, a solar power satellite and a Moon base",
+    landCost: "Needs 10 power; every launch puts a little carbon in the air",
+    landImpact: 1,
+    era: 5,
+    cost: { stone: 100, currency: 400 },
+    terrain: ["grass", "steppe", "beach"],
+    requires: "rocketry",
+    unique: true,
+    power: -10,
+  },
 ];
 
 export const BUILDINGS_BY_ID = Object.fromEntries(BUILDINGS.map((b) => [b.id, b]));
@@ -682,22 +955,7 @@ export const BRANCHES: { id: Branch; name: string; color: string }[] = [
 type NodeSeed = [id: string, name: string, branch: Branch, era: number, cost: number, requires: string[], description: string];
 
 const LATER_NODES: NodeSeed[] = [
-  ["electricity", "Electricity", "knowledge", 4, 0, ["universities"], "Power lines and light bulbs."],
-  ["steel", "Steel Frames", "construction", 4, 0, ["castles"], "Skyscrapers and bridges."],
-  ["steam", "Steam & Coal", "energy", 4, 0, ["windmills"], "Factories boom. So does pollution."],
-  ["railways", "Railways", "transport", 4, 0, ["navigation"], "Trains link the whole island."],
-  ["tanks", "Mechanized Armies", "military", 4, 0, ["knights"], "Tanks, planes and radar."],
-  ["computers", "Computers", "culture", 4, 0, ["printing"], "The information age begins."],
-  ["uranium", "Uranium", "energy", 4, 0, ["steam"], "A heavy, faintly glowing ore. Huge power, and a danger that lasts thousands of years."],
-  ["plutonium", "Plutonium", "energy", 4, 0, ["uranium"], "Made from uranium inside reactors. Even more power, even more danger."],
-  ["ai", "Artificial Intelligence", "knowledge", 5, 0, ["electricity", "computers"], "Data centers and automated labs."],
-  ["aetherite", "Aetherite (unidentified)", "energy", 5, 0, ["fusion"], "A mineral nobody can name. It hums, and it is never warm or cold."],
-  ["mineral-x", "Mineral X-7 (unidentified)", "knowledge", 5, 0, ["aetherite"], "Found deep under the sea floor. It doesn't match anything we know."],
-  ["arcology", "Arcologies", "construction", 5, 0, ["steel"], "Cities in a single tower."],
-  ["fusion", "Fusion Power", "energy", 5, 0, ["steam"], "Near-limitless clean energy."],
-  ["rocketry", "Orbital Rocketry", "transport", 5, 0, ["railways"], "Reach orbit. Unlocks the space view."],
-  ["drones", "Drone Defense", "military", 5, 0, ["tanks"], "Autonomous defense grids."],
-  ["interstellar", "Interstellar Drive", "culture", 5, 0, ["rocketry", "fusion"], "Leave the solar system."],
+  ["interstellar", "Interstellar Drive", "culture", 5, 0, ["rocketry", "fusion"], "After Type I: the stars. Another story."],
 ];
 
 export const TREE: TreeNode[] = [
@@ -1129,6 +1387,260 @@ export const TREE: TreeNode[] = [
     requires: ["navigation"],
     secret: true,
   },
+  // ---- Industrial & Modern era ----
+  {
+    id: "steam",
+    name: "Steam & Coal",
+    description: "Coal-fired steam engines drive machines. Unlocks the Factory. With 90 people, opens the Industrial era.",
+    branch: "energy",
+    era: 3,
+    cost: 80,
+    requires: ["guilds"],
+    unlocks: ["factory"],
+  },
+  {
+    id: "railways",
+    name: "Railways",
+    description: "Steam trains on iron rails. Unlocks the Railway Station.",
+    branch: "transport",
+    era: 4,
+    cost: 70,
+    requires: ["steam"],
+    unlocks: ["station"],
+  },
+  {
+    id: "electricity",
+    name: "Electricity",
+    description: "Power lines and light bulbs. Unlocks the Coal Power Plant; factories can use power for 50% more.",
+    branch: "energy",
+    era: 4,
+    cost: 80,
+    requires: ["steam"],
+    unlocks: ["coalplant"],
+  },
+  {
+    id: "steel",
+    name: "Steel Frames",
+    description: "Tall buildings on steel skeletons. Unlocks the Apartment Block.",
+    branch: "construction",
+    era: 4,
+    cost: 70,
+    requires: ["steam"],
+    unlocks: ["apartments"],
+  },
+  {
+    id: "hydropower",
+    name: "Hydropower",
+    description: "Falling water spins turbines. Unlocks the Hydro Dam.",
+    branch: "energy",
+    era: 4,
+    cost: 70,
+    requires: ["electricity"],
+    unlocks: ["hydrodam"],
+  },
+  {
+    id: "renewables",
+    name: "Wind Power",
+    description: "Turbines that turn the wind into power. Unlocks the Wind Farm.",
+    branch: "energy",
+    era: 4,
+    cost: 90,
+    requires: ["electricity"],
+    unlocks: ["windfarm"],
+  },
+  {
+    id: "solar",
+    name: "Solar Power",
+    description: "Panels that turn sunlight into power. Unlocks the Solar Farm.",
+    branch: "energy",
+    era: 4,
+    cost: 100,
+    requires: ["renewables", "computers"],
+    unlocks: ["solarfarm"],
+  },
+  {
+    id: "publichealth",
+    name: "Public Health",
+    description: "Clean wards and green spaces for everyone. Unlocks the Hospital and the City Park.",
+    branch: "culture",
+    era: 4,
+    cost: 70,
+    requires: ["quarantine"],
+    unlocks: ["hospital", "park"],
+  },
+  {
+    id: "cleanair",
+    name: "Clean Air Laws",
+    description: "Rules on smoke: every chimney makes half the smog.",
+    branch: "culture",
+    era: 4,
+    cost: 80,
+    requires: ["publichealth", "electricity"],
+  },
+  {
+    id: "seawalls",
+    name: "Coastal Defences",
+    description: "Concrete walls against the sea. Unlocks the Sea Wall.",
+    branch: "construction",
+    era: 4,
+    cost: 70,
+    requires: ["steel"],
+    unlocks: ["seawall"],
+  },
+  {
+    id: "computers",
+    name: "Computers",
+    description: "Machines that calculate: +30% Knowledge. With 150 people after the climate crisis, opens the Future.",
+    branch: "knowledge",
+    era: 4,
+    cost: 120,
+    requires: ["electricity", "printing"],
+  },
+  {
+    id: "tanks",
+    name: "Mechanized Armies",
+    description: "Engines go to war: every warrior fights five times as hard. Nations take note.",
+    branch: "military",
+    era: 4,
+    cost: 90,
+    requires: ["steam", "knights"],
+  },
+  // Ores: uranium and plutonium, in the Industrial era.
+  {
+    id: "uranium",
+    name: "Uranium & Nuclear Power",
+    description: "Uranium ore, split in a reactor: a lot of power, with no smoke and no carbon. Its waste stays dangerous for thousands of years. Unlocks the Nuclear Plant.",
+    branch: "energy",
+    era: 4,
+    cost: 110,
+    requires: ["electricity"],
+    unlocks: ["nuclear"],
+  },
+  {
+    id: "plutonium",
+    name: "Plutonium Breeders",
+    description: "Reactors that turn spare uranium into plutonium and burn that too: every Nuclear Plant makes half as much power again, and leaves half as much waste again.",
+    branch: "energy",
+    era: 4,
+    cost: 130,
+    requires: ["uranium"],
+  },
+  // ---- Future & Space ----
+  {
+    id: "ai",
+    name: "Artificial Intelligence",
+    description: "Computers that learn. Unlocks the Data Center: Knowledge, day and night, for power.",
+    branch: "knowledge",
+    era: 5,
+    cost: 120,
+    requires: ["computers"],
+    unlocks: ["datacenter"],
+  },
+  {
+    id: "automation",
+    name: "Automation",
+    description: "Robots and AI take on much of the work: farms, factories, quarries and woodcutters make 30% more. But many people lose their jobs, and with them a sense of purpose: −10 happiness until work is shared fairly.",
+    branch: "construction",
+    era: 5,
+    cost: 160,
+    requires: ["ai"],
+  },
+  {
+    id: "purpose",
+    name: "Shorter Work Week",
+    description: "The robots do the dull work, so everyone works fewer days and spends the rest learning, making things and caring for each other. Automation no longer costs happiness, and literacy rises.",
+    branch: "culture",
+    era: 5,
+    cost: 120,
+    requires: ["automation"],
+  },
+  {
+    id: "verticalfarms",
+    name: "Vertical Farms",
+    description: "Crops grown indoors, floor upon floor, under lights. Unlocks the Vertical Farm: food without clearing land, so old fields can go back to forest.",
+    branch: "culture",
+    era: 5,
+    cost: 120,
+    requires: ["ai"],
+    unlocks: ["vfarm"],
+  },
+  {
+    id: "arcology",
+    name: "Arcologies",
+    description: "A whole town in one green tower. Unlocks the Arcology: room for 100 people on one tile.",
+    branch: "construction",
+    era: 5,
+    cost: 150,
+    requires: ["ai", "steel"],
+    unlocks: ["arcology"],
+  },
+  {
+    id: "fusion",
+    name: "Fusion Power",
+    description: "The power of the Sun, held in a ring of magnets that AI keeps steady. Unlocks the Fusion Reactor: 100 clean power each.",
+    branch: "energy",
+    era: 5,
+    cost: 160,
+    requires: ["ai"],
+    unlocks: ["fusion"],
+  },
+  {
+    id: "capture",
+    name: "Carbon Capture",
+    description: "Machines that pull carbon back out of the air and lock it away underground. Unlocks the Air Capture Plant.",
+    branch: "knowledge",
+    era: 5,
+    cost: 110,
+    requires: ["computers"],
+    unlocks: ["aircapture"],
+  },
+  {
+    id: "rewilding",
+    name: "Rewilding",
+    description: "Let the land go wild again: standing forest takes twice as much carbon from the air, and young forest grows back twice as fast.",
+    branch: "culture",
+    era: 5,
+    cost: 90,
+    requires: ["capture"],
+  },
+  {
+    id: "oceans",
+    name: "Ocean Clean-up",
+    description: "Sweep the plastic and lost nets out of the sea. Unlocks the Ocean Clean-up: healthier seas and more fish.",
+    branch: "culture",
+    era: 5,
+    cost: 110,
+    requires: ["capture"],
+    unlocks: ["oceancleaner"],
+  },
+  {
+    id: "mineral-x",
+    name: "Mineral X-7 (unidentified)",
+    description: "Our clean-up crews found it deep under the sea floor. It doesn't match anything we know, but power flows through it with almost no loss: everything that needs power needs a quarter less.",
+    branch: "knowledge",
+    era: 5,
+    cost: 150,
+    requires: ["oceans"],
+  },
+  {
+    id: "rocketry",
+    name: "Orbital Rocketry",
+    description: "Rockets that reach orbit. Unlocks the Launch Site, and with it Space: satellites, a telescope, power from orbit and a Moon base.",
+    branch: "transport",
+    era: 5,
+    cost: 180,
+    requires: ["computers"],
+    unlocks: ["launchsite"],
+  },
+  {
+    id: "aetherite",
+    name: "Aetherite (unidentified)",
+    description: "Found by the Moon base: a mineral nobody can name. It hums, and it is never warm or cold. Buildings can now be Aetherite-laced, the best improvement there is.",
+    branch: "energy",
+    era: 5,
+    cost: 200,
+    requires: ["rocketry"],
+  },
   ...LATER_NODES.map(
     ([id, name, branch, era, cost, requires, description]): TreeNode => ({
       id,
@@ -1197,6 +1709,37 @@ export const ADVANCEMENT_GOALS: Record<string, Goal[]> = {
   printing: [{ label: "Have a University", kind: "have", building: "university", amount: 1 }],
   quarantine: [{ label: "Have Healer's Huts", kind: "have", building: "healer", amount: 2 }],
   navigation: [{ label: "Have Fishing Spots", kind: "have", building: "fishing", amount: 2 }],
+  steam: [
+    { label: "Have a Guild Hall", kind: "have", building: "guildhall", amount: 1 },
+    { label: "Grow your town", kind: "population", amount: 80 },
+  ],
+  railways: [{ label: "Have Factories", kind: "have", building: "factory", amount: 2 }],
+  electricity: [{ label: "Have Factories", kind: "have", building: "factory", amount: 3 }],
+  steel: [{ label: "Quarry stone", kind: "tally", key: "stone", amount: 150 }],
+  hydropower: [{ label: "Have a Watermill", kind: "have", building: "watermill", amount: 1 }],
+  renewables: [{ label: "Have Windmills", kind: "have", building: "windmill", amount: 2 }],
+  solar: [{ label: "Have Wind Farms", kind: "have", building: "windfarm", amount: 2 }],
+  publichealth: [{ label: "Have Healer's Huts", kind: "have", building: "healer", amount: 3 }],
+  cleanair: [{ label: "Have City Parks", kind: "have", building: "park", amount: 2 }],
+  seawalls: [{ label: "Have Apartment Blocks", kind: "have", building: "apartments", amount: 1 }],
+  computers: [{ label: "Have a University", kind: "have", building: "university", amount: 1 }],
+  tanks: [
+    { label: "Have a Castle", kind: "have", building: "castle", amount: 1 },
+    { label: "Have Factories", kind: "have", building: "factory", amount: 2 },
+  ],
+  uranium: [{ label: "Have a power plant", kind: "have", building: "coalplant", amount: 1 }],
+  plutonium: [{ label: "Have Nuclear Plants", kind: "have", building: "nuclear", amount: 2 }],
+  ai: [{ label: "Have a University", kind: "have", building: "university", amount: 1 }],
+  automation: [{ label: "Have Data Centers", kind: "have", building: "datacenter", amount: 1 }],
+  purpose: [{ label: "Grow your city", kind: "population", amount: 170 }],
+  verticalfarms: [{ label: "Have Farmland", kind: "have", building: "farm", amount: 6 }],
+  arcology: [{ label: "Have Apartment Blocks", kind: "have", building: "apartments", amount: 2 }],
+  fusion: [{ label: "Have a Data Center", kind: "have", building: "datacenter", amount: 1 }],
+  rewilding: [{ label: "Plant saplings", kind: "tally", key: "planted", amount: 4 }],
+  oceans: [{ label: "Have Fishing Spots", kind: "have", building: "fishing", amount: 1 }],
+  "mineral-x": [{ label: "Have Ocean Clean-ups", kind: "have", building: "oceancleaner", amount: 2 }],
+  rocketry: [{ label: "Save up coins", kind: "stored", resource: "currency", amount: 800 }],
+  aetherite: [{ label: "Build the Moon base (Space)", kind: "tally", key: "moonbase", amount: 1 }],
 };
 
 // Elder Ama's guided step right after each advancement. With `build`, the hand
@@ -1240,6 +1783,32 @@ export const AFTER_STEPS: Record<string, AfterStep> = {
   printing: { text: "Books can be printed instead of copied by hand, hundreds at a time. +30% Knowledge and +15 literacy." },
   quarantine: { text: "Ships wait offshore before they land, and the sick are kept apart. Sickness from overseas will do far less harm." },
   navigation: { build: "shipyard", text: "Build a Shipyard on the coast, then press Ship below: our ships will find islands overseas, meet the kingdoms and bring back trade." },
+  steam: { text: "Steam engines! Once the plague has passed and we are 90 people, we can enter the Industrial era and build Factories. Watch the goal at the top of the screen." },
+  railways: { build: "station", text: "Build a Railway Station: trains carry goods across the island, and markets and factories make more coins." },
+  electricity: { build: "coalplant", text: "Power! Build a Coal Power Plant: +40 power for the grid. Watch the power meter. But coal puts carbon into the air, and it stays there for good." },
+  steel: { build: "apartments", text: "Steel frames! Build an Apartment Block: room for 40 people on one tile. It needs power to light and heat it." },
+  hydropower: { build: "hydrodam", text: "Build a Hydro Dam on the river: 30 clean power, no smoke. But the valley behind it floods, and the fish can't swim past." },
+  renewables: { build: "windfarm", text: "Build a Wind Farm: 12 clean power from the wind. Costly at first, but no smoke and no carbon." },
+  solar: { build: "solarfarm", text: "Build a Solar Farm: 10 clean power from the sun. Every one is a coal plant we don't need." },
+  publichealth: { build: "park", text: "Build a City Park near homes: it clears the smog. Hospitals heal the sick and help us through heatwaves." },
+  cleanair: { text: "Clean Air Laws: every chimney makes half the smog. The streets can breathe again." },
+  seawalls: { build: "seawall", text: "Build a Sea Wall on the shore: floods stay off the low land behind it. The sea is rising." },
+  computers: { text: "Computers! +30% Knowledge. After the climate crisis, with 150 people, we can enter the Future." },
+  uranium: { build: "nuclear", text: "Build a Nuclear Plant by the water: 60 power and no carbon at all. But its waste stays dangerous for thousands of years, and the land pays for each one." },
+  plutonium: { text: "Breeder reactors: every Nuclear Plant now makes 90 power instead of 60, and leaves half as much waste again." },
+  ai: { build: "datacenter", text: "Build a Data Center: Knowledge day and night. It needs 12 power, so keep the grid ahead." },
+  automation: { text: "The robots are working: farms, factories, quarries and woodcutters make 30% more. But people without work feel lost: −10 happiness. A Shorter Work Week fixes that." },
+  purpose: { text: "Everyone works fewer days now, and spends the rest learning and making. No more lost purpose, and more of us read and study." },
+  verticalfarms: { build: "vfarm", text: "Build a Vertical Farm: 3 food on one tile. Then you can sell old fields and plant forest there instead." },
+  arcology: { build: "arcology", text: "Build an Arcology: room for 100 people in one green tower, so the city needs less land." },
+  fusion: { build: "fusion", text: "Build a Fusion Reactor: 100 clean power. Clean power is what takes us to Type I." },
+  capture: { build: "aircapture", text: "Build an Air Capture Plant: it takes carbon back out of the air. Run it on clean power: on coal power it catches much less." },
+  rewilding: { text: "Rewilding: standing forest now takes twice as much carbon from the air, and young forest grows back twice as fast. Plant!" },
+  oceans: { build: "oceancleaner", text: "Build an Ocean Clean-up on the shore: a healthier sea, and the fish come back." },
+  "mineral-x": { text: "Mineral X-7 carries power with almost no loss: everything that needs power now needs a quarter less." },
+  rocketry: { build: "launchsite", text: "Build a Launch Site, then press Space in the bar below to launch satellites, a telescope, a power satellite and a Moon base." },
+  aetherite: { text: "Aetherite! Click any improved building and press Improve: it can now be Aetherite-laced, the best there is." },
+  tanks: { text: "Engines go to war: every warrior fights five times as hard. The other nations are watching." },
 };
 
 // Event cards are trade-offs: every choice gains something and costs something.
@@ -1787,6 +2356,18 @@ export const ERA_INTROS: Record<number, { id: string; title: string; text: strin
     text: "We beat Rome, and our coins travel far. Our village is becoming a town, and towns need clean water, drains and roads. Traders will come from across the sea. But the old stories warn of a great drought that comes once in a lifetime. Dig wells, store grain and keep the forests standing.",
     sdg: "SDG 11.3: plan towns and cities that can last",
   },
+  4: {
+    id: "era-4",
+    title: "Welcome to the Industrial age",
+    text: "Steam, coal and iron! Our town is becoming a city: factories, railways, crowded streets. Coal gives cheap power, but its smoke chokes the streets and its carbon stays in the air for good, slowly warming the whole world. Clean power costs more at first. The kingdoms across the sea are nations now, and their scientists are as worried as ours about the weather to come.",
+    sdg: "SDG 7: clean energy, and SDG 13: climate action",
+  },
+  5: {
+    id: "era-5",
+    title: "Welcome to the Future",
+    text: "We came through the crisis, but the carbon we burned is still in the air. Scientists warn of a tipping point: if the air isn't cleaner soon, the frozen north will thaw and warm the world further on its own. Pull carbon back out of the air, let the forests return, and power everything cleanly. Our goal: Type I on the Kardashev scale, a whole planet run on clean energy, with the land still healthy.",
+    sdg: "SDG 13: climate action, and SDG 7: clean energy for all",
+  },
   3: {
     id: "era-3",
     title: "Welcome to the Middle Ages",
@@ -2242,6 +2823,286 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     itemX: 62,
     lines: ["Our fourth ship came back with strange fruit and stories.", "Islands, coasts and peoples nobody here had seen.", "The map keeps growing, and so do we."],
   },
+  // ---- Industrial & Modern era ----
+  steam: {
+    bg: "day",
+    actors: ["person", "person"],
+    props: [
+      { icon: "campfire", x: 44 },
+      { icon: "amphora", x: 44, y: 26, size: 36, until: 1 },
+      { icon: "mill", x: 54, from: 1, size: 44 },
+      { icon: "rock", x: 62, from: 2, size: 36 },
+    ],
+    item: "factory",
+    itemFrom: 2,
+    itemX: 78,
+    lines: ["Water boiling in a sealed pot pushed its lid up hard.", "Steam, held in iron, could push a wheel round and round.", "Fed with coal, one engine did the work of a hundred hands."],
+  },
+  railways: {
+    bg: "day",
+    actors: ["person", "person"],
+    props: [
+      { icon: "mud", x: 50, y: 6, until: 1, size: 96 },
+      { icon: "cart", x: 50, y: 9, until: 1 },
+    ],
+    item: "train",
+    itemX: 60,
+    lines: ["Carts dragged our goods along muddy roads, slowly.", "Iron rails, and a steam engine to pull a long train.", "Now a day's walk takes an hour."],
+  },
+  electricity: {
+    bg: "night",
+    actors: ["person", "elder"],
+    props: [
+      { icon: "storm", x: 74, y: 62, until: 1, size: 56 },
+      { icon: "powerplant", x: 48, from: 1, size: 44 },
+    ],
+    item: "bulb",
+    itemFrom: 2,
+    itemX: 70,
+    lines: ["Lightning has always lit up the night sky.", "Spun by an engine, coils of wire make the same power, tamed.", "Down a wire, it lights a bulb in every window."],
+  },
+  steel: {
+    bg: "day",
+    actors: ["person", "person"],
+    props: [
+      { icon: "ore", x: 44, until: 2, size: 40 },
+      { icon: "flame", x: 54, from: 1, until: 2, size: 40 },
+    ],
+    item: "insula",
+    itemFrom: 2,
+    lines: ["Iron is strong, but it snaps when it is pulled too hard.", "With just a little carbon in it, it becomes steel.", "Steel frames let our buildings rise higher than any wall."],
+  },
+  hydropower: {
+    bg: "day",
+    actors: ["person"],
+    river: true,
+    props: [
+      { icon: "mill", x: 44, until: 1, size: 44 },
+      { icon: "fish", x: 40, y: 8, from: 2, size: 32 },
+    ],
+    item: "dam",
+    itemX: 66,
+    lines: ["The river has turned our millwheels for centuries.", "A wall across it makes a lake, and the falling water spins a turbine.", "Power with no smoke. But the fish can't swim past the wall."],
+  },
+  renewables: {
+    bg: "day",
+    actors: ["person"],
+    props: [
+      { icon: "windmill", x: 44, size: 44 },
+      { icon: "leaf", x: 56, from: 2, size: 32 },
+    ],
+    item: "turbine",
+    itemX: 70,
+    lines: ["Windmills have ground our grain for hundreds of years.", "Taller, lighter blades can turn a generator instead of a millstone.", "Power from the wind: no smoke, and no carbon."],
+  },
+  solar: {
+    bg: "day",
+    actors: ["person", "person"],
+    item: "solar",
+    itemX: 62,
+    lines: ["Every day the sun pours down more power than we could ever use.", "Thin panels turn its light straight into power.", "Each one is a coal plant we don't need to build."],
+  },
+  publichealth: {
+    bg: "day",
+    actors: ["person", "elder"],
+    props: [
+      { icon: "insula", x: 40, until: 1 },
+      { icon: "ill", x: 50, until: 1, size: 36 },
+      { icon: "park", x: 46, from: 2 },
+    ],
+    item: "hospital",
+    itemX: 70,
+    lines: ["Sickness spread fastest in the crowded, smoky streets.", "Hospitals open to everyone, with nurses and clean water.", "And green parks, where people can breathe."],
+  },
+  cleanair: {
+    bg: "day",
+    actors: ["person"],
+    props: [
+      { icon: "factory", x: 42 },
+      { icon: "ill", x: 54, until: 2, size: 36 },
+      { icon: "smile", x: 54, from: 2, size: 36 },
+    ],
+    item: "scroll",
+    itemX: 70,
+    lines: ["The smoke hung so thick we could hardly see the sun.", "New laws: filters on the chimneys, and cleaner fuel.", "The air cleared, and the children stopped coughing."],
+  },
+  seawalls: {
+    bg: "sea",
+    actors: ["person", "elder"],
+    props: [
+      { icon: "flood", x: 46, y: 16, size: 48 },
+      { icon: "warning", x: 46, y: 40, from: 2, size: 28 },
+    ],
+    item: "seawall",
+    itemX: 68,
+    lines: ["Every year the high tides came further up the beach.", "A wall of concrete along the shore holds the sea back.", "But the sea is still rising. Walls only buy us time."],
+  },
+  computers: {
+    bg: "night",
+    actors: ["elder-sit", "person-sit"],
+    props: [
+      { icon: "book", x: 44, until: 1, size: 36 },
+      { icon: "book", x: 50, until: 1, size: 36 },
+      { icon: "bulb", x: 52, from: 2, size: 36 },
+    ],
+    item: "computer",
+    itemX: 70,
+    lines: ["Rooms full of clerks added up numbers all day.", "Then a machine that counts thousands of times faster.", "Now what one of us learns, everyone can know in a moment."],
+  },
+  tanks: {
+    bg: "dusk",
+    actors: ["person", "person"],
+    props: [
+      { icon: "horse", x: 44, until: 1 },
+      { icon: "mud", x: 56, y: 6, size: 80 },
+      { icon: "skull", x: 46, from: 2, size: 32 },
+    ],
+    item: "tank",
+    itemX: 66,
+    lines: ["Horses could not cross the mud and wire of the new battlefields.", "Armoured machines on tracks could.", "Wars grew deadlier than ever before."],
+  },
+  // ---- Nuclear power (Industrial), and the Future & Space ----
+  uranium: {
+    bg: "day",
+    actors: ["person", "person"],
+    props: [
+      { icon: "uranium", x: 44, size: 44 },
+      { icon: "flame", x: 56, from: 1, until: 2, size: 40 },
+    ],
+    item: "reactor",
+    itemFrom: 2,
+    lines: ["A heavy grey rock that made our instruments click.", "Uranium: split inside a reactor, it gives off great heat.", "Power with no smoke. But its waste must be guarded for thousands of years."],
+  },
+  plutonium: {
+    bg: "night",
+    actors: ["person", "person"],
+    props: [
+      { icon: "reactor", x: 44, size: 48 },
+      { icon: "uranium", x: 58, until: 1, size: 36 },
+      { icon: "flame", x: 58, from: 1, size: 36 },
+    ],
+    item: "bulb",
+    itemFrom: 2,
+    lines: ["Inside the reactors, the spare uranium was changing.", "It had become plutonium, and that could be burned too.", "Half as much power again. Half as much waste again."],
+  },
+  ai: {
+    bg: "night",
+    actors: ["person-sit", "person-sit"],
+    props: [
+      { icon: "computer", x: 42, size: 40 },
+      { icon: "datacenter", x: 56, from: 1, size: 44 },
+    ],
+    item: "robot",
+    itemFrom: 2,
+    lines: ["Our computers began to learn from what they saw.", "Halls full of them, thinking day and night.", "Artificial intelligence: a mind we built ourselves."],
+  },
+  automation: {
+    bg: "day",
+    actors: ["person", "person"],
+    props: [
+      { icon: "wheat", x: 44, until: 1, size: 40 },
+      { icon: "factory", x: 44, from: 1, size: 44 },
+      { icon: "sad", x: 58, from: 2, size: 36 },
+    ],
+    item: "robot",
+    itemFrom: 0,
+    lines: ["The robots learned to sow, to build and to dig.", "Factories ran with hardly anyone inside.", "More of everything. But many of us had no work to go to."],
+  },
+  purpose: {
+    bg: "dawn",
+    actors: ["person-sit", "person"],
+    props: [
+      { icon: "robot", x: 42, size: 40 },
+      { icon: "book", x: 56, from: 1, size: 36 },
+    ],
+    item: "smile",
+    itemFrom: 2,
+    lines: ["The robots kept working while we rested.", "We worked three days, and spent the rest learning and making.", "We had found a purpose again."],
+  },
+  verticalfarms: {
+    bg: "day",
+    actors: ["person", "person"],
+    props: [
+      { icon: "wheat", x: 44, until: 2, size: 40 },
+      { icon: "sapling", x: 44, from: 2, size: 40 },
+    ],
+    item: "vfarm",
+    lines: ["Our fields covered half the island.", "So we grew crops indoors, floor upon floor, under lights.", "The old fields can be forest again."],
+  },
+  arcology: {
+    bg: "dusk",
+    actors: ["person", "person"],
+    props: [
+      { icon: "insula", x: 42, until: 1, size: 40 },
+      { icon: "insula", x: 52, until: 1, size: 40 },
+      { icon: "sapling", x: 46, from: 2, size: 36 },
+    ],
+    item: "arcology",
+    lines: ["The city kept spreading over the land.", "So we built up instead: a whole town in one tower.", "Gardens on every level, and the land around it left wild."],
+  },
+  fusion: {
+    bg: "night",
+    actors: ["person", "person"],
+    props: [
+      { icon: "sun", x: 46, y: 50, until: 1, size: 40 },
+      { icon: "bulb", x: 52, from: 2, size: 36 },
+    ],
+    item: "fusion",
+    lines: ["The Sun shines by pressing hydrogen together.", "In a ring of magnets, we did the same.", "Clean power, from water and patience."],
+  },
+  capture: {
+    bg: "day",
+    actors: ["person", "person"],
+    props: [
+      { icon: "factory", x: 44, until: 1, size: 44 },
+      { icon: "rock", x: 52, from: 2, size: 36 },
+    ],
+    item: "capture",
+    lines: ["The carbon we burned was still up in the air.", "Great fans pulled the air through filters that caught it.", "And it went back under the ground, where it came from."],
+  },
+  rewilding: {
+    bg: "dawn",
+    actors: ["person", "person"],
+    props: [
+      { icon: "stump", x: 44, until: 1, size: 40 },
+      { icon: "sapling", x: 44, from: 1, size: 40 },
+      { icon: "bird", x: 58, y: 48, from: 2, size: 32 },
+    ],
+    item: "leaf",
+    itemFrom: 2,
+    lines: ["Old fields and cut forests stood empty.", "We let them go wild again.", "The forest came back, and drank the carbon from the air."],
+  },
+  oceans: {
+    bg: "sea",
+    actors: ["person", "person"],
+    props: [{ icon: "fish", x: 58, from: 2, size: 36 }],
+    item: "cleaner",
+    lines: ["The sea was full of plastic and lost nets.", "Boats with long booms swept it all out.", "And the fish came back."],
+  },
+  "mineral-x": {
+    bg: "night",
+    actors: ["person", "person"],
+    props: [
+      { icon: "cleaner", x: 44, size: 40 },
+      { icon: "bulb", x: 58, from: 2, size: 32 },
+    ],
+    item: "mineralx",
+    lines: ["Our clean-up divers went deeper than ever.", "Under the sea floor: a mineral that matches nothing we know.", "Power flows through it with almost no loss. Nobody knows why."],
+  },
+  rocketry: {
+    bg: "dusk",
+    actors: ["person", "person"],
+    props: [{ icon: "satellite", x: 56, y: 62, from: 2, size: 32 }],
+    item: "rocket",
+    lines: ["We built rockets taller than any tower.", "Fire, smoke and thunder: one rose all the way to orbit.", "Now satellites circle the planet, and the Moon is in reach."],
+  },
+  aetherite: {
+    bg: "night",
+    actors: ["person", "person"],
+    props: [{ icon: "moon", x: 50, y: 58, size: 40 }],
+    item: "aetherite",
+    lines: ["On the Moon, our miners dug into the grey dust.", "They found a crystal that hums, and is never warm or cold.", "We call it Aetherite. Nobody knows what it is."],
+  },
 };
 
 // Ticks between two lessons, so they never pile up.
@@ -2362,7 +3223,7 @@ export const COLLAPSE = { level: 20, ticks: 80 };
 export const NEXT_ERA_POPULATION = 15;
 // Improving buildings with stone and new ores: each level makes `boost` more
 // (output, or room in a home) from the same land. Level 2 needs Toolmaking,
-// 3 Bronze, 4 Iron Tools, 5 Steelmaking. `stone` and `currency` are what each
+// 3 Bronze, 4 Iron Tools, 5 Steelmaking, 6 Aetherite (from the Moon). `stone` and `currency` are what each
 // level costs (by the level it goes up to).
 export const IMPROVE = {
   boost: 0.25,
@@ -2371,10 +3232,11 @@ export const IMPROVE = {
     { level: 3, name: "Bronze-fitted", requires: "bronze", color: "#b08d57" },
     { level: 4, name: "Iron-bound", requires: "iron-tools", color: "#4a4f55" },
     { level: 5, name: "Steel-framed", requires: "steelmaking", color: "#c9ccd1" },
+    { level: 6, name: "Aetherite-laced", requires: "aetherite", color: "#4fd8c4" },
   ],
-  stone: [0, 0, 12, 20, 30, 45],
-  currency: [0, 0, 0, 10, 25, 40],
-  buildings: ["woodcutter", "gatherer", "farm", "fishing", "quarry", "pen", "elder", "school", "hut", "house", "townhouse"],
+  stone: [0, 0, 12, 20, 30, 45, 60],
+  currency: [0, 0, 0, 10, 25, 40, 120],
+  buildings: ["woodcutter", "gatherer", "farm", "fishing", "quarry", "pen", "elder", "school", "hut", "house", "townhouse", "university", "factory", "apartments", "vfarm", "datacenter"],
 };
 // Beliefs: shrines and temples (each counts up to `max`), the yearly festival
 // at a shrine (every `every` ticks: `mood` happiness for `food` food; skipped
@@ -2649,6 +3511,90 @@ export const LEARNING = { universityLiteracy: 20, printingKnowledge: 1.3, printi
 // takes over the whole time, by difficulty: [with nothing ready, fully ready
 // (`maxProtection`)]. Readiness in between scales it; an open harbour full of
 // ships (negative readiness) makes it worse still.
+// ---- Industrial & Modern era ----
+// Into the Industrial era: the plague over, Steam & Coal, and this many people.
+// Into the Future: the climate crisis over, Computers, and this many.
+export const INDUSTRIAL_POPULATION = 90;
+export const FUTURE_POPULATION = 150;
+// Carbon in the air, in parts per million: 280 before industry. Every chimney
+// adds its `carbon` each tick, for good; standing forest takes a little back
+// (`forestSink` a tick at full cover). Warming in degrees C rises with it,
+// about +1.2 at 420 ppm.
+export const CARBON = { start: 280, forestSink: 0.025, warmingPerPpm: 0.0085 };
+// The power grid: supply from plants, demand from what needs power. Short of
+// power, those buildings work only as well as the supply covers them. With
+// Electricity each factory needs `factoryNeed` and makes `factoryBoost` more.
+export const POWER = { factoryNeed: 10, factoryBoost: 0.5, darkFlatsMood: 6 };
+// Smog: each smoky building spreads its `smog` over the homes within `range`;
+// a park clears it within `parkRange`. Every point of smog over the town costs
+// `mood` happiness and makes sickness start and spread `sickness` faster.
+// Clean Air Laws halve it.
+export const SMOG = { range: 2, parkRange: 2, mood: 1, sickness: 0.05, cleanAir: 0.5, max: 12 };
+// Hospitals: each (up to `max`) helps this share of the sick recover a tick, as well as the power covers it.
+export const HOSPITAL = { recover: 0.03, max: 3 };
+// Railway stations: markets, factories and trading posts make `boost` more coins each (up to `max` stations).
+export const STATION = { boost: 0.15, max: 3 };
+// The climate crisis: warned of when the year comes, it strikes `warnTicks`
+// later and lasts `ticks`: heatwaves, storms and coastal floods together.
+// `deaths`: the share of the town it takes over its course, by how much warmer
+// the world is (degrees C, in between is interpolated), before readiness.
+// Crops fail by `cropLoss` per degree while it lasts.
+export const CLIMATE = {
+  warnYear: 1985,
+  warnTicks: 90,
+  ticks: 150,
+  deaths: [
+    [0.5, 0.02],
+    [1.0, 0.04],
+    [1.5, 0.08],
+    [2.0, 0.14],
+    [3.0, 0.24],
+  ] as [number, number][],
+  cropLoss: 0.12,
+  maxReady: 0.85,
+  ready: { seawall: 0.08, seawallsMax: 3, hospital: 0.07, hospitalsMax: 3, park: 0.04, parksMax: 3, cleanPower: 0.15, forest: 0.1 },
+};
+
+// ---- Future & Space ----
+// The Kardashev scale rates a civilisation by the power it uses (Carl Sagan's
+// version: humanity is roughly 0.7 today; Type I uses about as much power as
+// reaches its whole planet). In the game the rating climbs from `start` to 1
+// as clean power (no coal) grows to `clean`. The game ends at Type I, if the
+// land is still at least `minLand` Sustainability and the tipping point is past.
+export const KARDASHEV = { start: 0.73, clean: 600, minLand: 40 };
+// The climate tipping point: `afterTicks` into the Future the scientists warn
+// that the frozen north is thawing; the air has `ticks` to get back down to
+// `safe` ppm (350 is the level some climate scientists call safe). If it does,
+// it holds; if not, the climate tips: for good, the land loses `sustain` and
+// fields grow `food` less.
+export const TIPPING = { afterTicks: 80, ticks: 400, safe: 350, sustain: 15, food: 0.15 };
+// Nuclear power: each plant's waste costs `waste` Sustainability for good
+// (plutonium breeders: `breeder` times the power and the waste).
+export const NUCLEAR = { breeder: 1.5 };
+// Automation: `boost` more from farms, factories, quarries and woodcutters;
+// `mood` less happiness until the Shorter Work Week (which adds `literacy`).
+export const AUTOMATION = { boost: 0.3, mood: 10, literacy: 6, buildings: ["farm", "factory", "quarry", "woodcutter", "vfarm"] };
+// Rewilding: forest takes `sink` times as much carbon, and grows back `growth` times as fast.
+export const REWILDING = { sink: 2, growth: 2 };
+// Ocean clean-up: Sustainability each, up to `max`.
+export const OCEAN = { sustain: 3, max: 3 };
+// Mineral X-7: power needed is cut by this share.
+export const MINERAL_X = { saving: 0.25 };
+// Space: what each launch from the Launch Site costs and does. `carbon`: ppm
+// each launch adds (rocket fuel).
+export const SPACE = {
+  carbon: 1,
+  projects: [
+    { id: "satellites", name: "Weather Satellites", icon: "satellite", cost: { currency: 300 }, text: "Forecasts from orbit: farmers sow and harvest at the right time. Fields grow 10% more food." },
+    { id: "telescope", name: "Space Telescope", icon: "spyglass", cost: { currency: 450 }, text: "A telescope above the air: +30% Knowledge." },
+    { id: "solarsat", name: "Solar Power Satellite", icon: "solar", cost: { currency: 900, stone: 150 }, text: "Sunlight collected in orbit, where it is never night, and beamed down: +80 clean power." },
+    { id: "moonbase", name: "Moon Base", icon: "moon", cost: { currency: 1200, stone: 200 }, text: "A base on the Moon. Its miners find something nobody can name (unlocks Aetherite)." },
+  ],
+  fieldBoost: 0.1,
+  knowledgeBoost: 0.3,
+  solarPower: 80,
+} as const;
+
 export const PLAGUE = {
   // It reached Europe's ports in 1347. The warning comes `warnTicks` before
   // (90 ticks x 0.6 years = 54 years earlier on the in-game calendar).

@@ -5,6 +5,8 @@ import { useFrame } from "@react-three/fiber";
 import type { Mesh } from "three";
 import { Part } from "./part";
 import { MEDIEVAL_MODELS } from "./medieval-models";
+import { INDUSTRIAL_MODELS } from "./industrial-models";
+import { FUTURE_MODELS } from "./future-models";
 
 interface ModelProps {
   opacity: number;
@@ -1150,4 +1152,6 @@ export const MODELS: Record<string, (props: ModelProps) => JSX.Element> = {
   shrine: ShrineModel,
   temple: TempleModel,
   ...MEDIEVAL_MODELS,
+  ...INDUSTRIAL_MODELS,
+  ...FUTURE_MODELS,
 };
