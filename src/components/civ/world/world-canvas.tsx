@@ -307,6 +307,7 @@ export function WorldCanvas() {
         plague={plagueOn}
         shadowSize={fancy ? 2048 : 1024}
         alwaysDay={daylight === "day"}
+        realClock={!!state.realTimeFrom}
       />
       <Sea home={home} />
       <Clouds home={home} storm={storm} />

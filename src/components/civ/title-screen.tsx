@@ -35,6 +35,7 @@ export function TitleScreen({
   });
   const [culture, setCulture] = useState<CultureId>("balanced");
   const [nation, setNation] = useState("");
+  const [realistic, setRealistic] = useState(false);
   // Someone who has never started a game here gets First-time mode by default.
   const [difficulty, setDifficulty] = useState<DifficultyId>(() => {
     try {
@@ -137,16 +138,28 @@ export function TitleScreen({
               })}
             </div>
 
+            <label className="mt-4 flex items-center gap-2 text-sm text-stone-700">
+              <input
+                type="checkbox"
+                checked={realistic}
+                onChange={(e) => setRealistic(e.target.checked)}
+                className="h-4 w-4 accent-emerald-600"
+                data-testid="realistic-time"
+              />
+              <span>
+                <span className="font-semibold">Realistic time</span> (a joke): the calendar runs in real time, with hours and seasons.
+              </span>
+            </label>
             <button
               type="button"
-              onClick={() => start({ nation })}
+              onClick={() => start({ nation, ...(realistic ? { realTimeFrom: Date.now() } : {}) })}
               className="pixel-btn font-pixel mt-6 w-full bg-emerald-600 py-3 text-xl font-semibold text-white hover:bg-emerald-500"
             >
               {canContinue ? "Start a new game" : "Start"}
             </button>
             <button
               type="button"
-              onClick={() => start({ nation, skipTutorial: true })}
+              onClick={() => start({ nation, skipTutorial: true, ...(realistic ? { realTimeFrom: Date.now() } : {}) })}
               className="pixel-btn font-pixel mt-2 w-full bg-white py-2 text-base text-stone-700 hover:bg-stone-50"
               data-testid="start-skip-tutorial"
             >

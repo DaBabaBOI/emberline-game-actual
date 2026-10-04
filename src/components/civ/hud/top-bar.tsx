@@ -4,6 +4,7 @@ import { HOME } from "@/lib/home";
 import { ERAS, SETTLERS, XP, chiefTitle, formatYear, xpToReach } from "@/game/content";
 import { useGame } from "@/components/civ/game-provider";
 import { nextEraPopulation, nextYear, settlersReady, warnings } from "@/game/engine";
+import { realCalendar } from "@/game/calendar";
 import type { GameState } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { PixelIcon } from "@/components/civ/pixel-icon";
@@ -219,7 +220,7 @@ export function TopBar() {
           <span className={"text-[11px] uppercase tracking-wide " + (state.era >= 1 ? "text-orange-300" : "text-amber-300")}>
             {era.name}
           </span>
-          <RollingYear />
+          {state.realTimeFrom ? <RealCalendar /> : <RollingYear />}
         </div>
         <ChiefXp state={state} />
         <span className="hidden h-6 w-px bg-white/20 md:block" />
@@ -279,6 +280,29 @@ export function TopBar() {
         <GameMenu />
       </div>
     </div>
+  );
+}
+
+// Realistic time (a joke mode): today's date and the real time, in 50,000 BCE.
+function RealCalendar() {
+  const { state } = useGame();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const c = realCalendar(state, now);
+  return (
+    <span
+      className="font-num flex flex-col text-xs leading-tight"
+      data-testid="real-calendar"
+      title={`Realistic time: the calendar runs in real time. The Ancient era is about ${c.yearsToNext.toLocaleString()} real years away. Good luck.`}
+    >
+      <span>{c.date}</span>
+      <span className="text-[11px] text-white/70">
+        {c.time} · {c.season}
+      </span>
+    </span>
   );
 }
 

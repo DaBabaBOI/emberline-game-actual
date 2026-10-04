@@ -5,6 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import { BackSide, Color, DirectionalLight, Fog, Group, HemisphereLight, Mesh, MeshStandardMaterial, PointLight, ShaderMaterial, Vector3 } from "three";
 import type { Tile } from "@/game/types";
 import { dayClock } from "@/components/civ/hud/time-of-day";
+import { realTimeOfDay } from "@/game/calendar";
 
 // ---- The time of day --------------------------------------------------------
 // A day is DAY_TICKS game ticks (3 minutes at normal speed), so it pauses with
@@ -201,6 +202,7 @@ export function DaySky({
   plague = false,
   shadowSize,
   alwaysDay = false,
+  realClock = false,
 }: {
   home: Tile;
   tick: number;
@@ -213,6 +215,8 @@ export function DaySky({
   plague?: boolean;
   shadowSize: number;
   alwaysDay?: boolean;
+  // Realistic time: the sky follows the player's real clock.
+  realClock?: boolean;
 }) {
   const sun = useRef<DirectionalLight>(null);
   const hemi = useRef<HemisphereLight>(null);
@@ -227,7 +231,11 @@ export function DaySky({
     if (tick !== lastTick.current.tick) lastTick.current = { tick, at: now };
     const frac = running ? Math.min(0.999, (now - lastTick.current.at) / (msPerTick / 1000)) : 0;
     // "Always day" (Menu) holds the sun at late morning.
-    const t = alwaysDay ? ALWAYS_DAY : (((tick + frac) / DAY_TICKS + DAY_START + dayClock.offset) % 1 + 1) % 1;
+    const t = alwaysDay
+      ? ALWAYS_DAY
+      : realClock
+        ? (realTimeOfDay(Date.now()) + dayClock.offset) % 1
+        : (((tick + frac) / DAY_TICKS + DAY_START + dayClock.offset) % 1 + 1) % 1;
     dayClock.t = t;
     lookAt(t, LOOK);
 

@@ -223,6 +223,8 @@ export interface NewGameOptions {
   dev?: boolean;
   // "I've played before": start with the tutorial already done.
   skipTutorial?: boolean;
+  // Realistic time (a joke): when the real-time calendar starts (ms since 1970).
+  realTimeFrom?: number;
   startEra?: number;
   nation?: string;
 }
@@ -274,6 +276,7 @@ export function newGame(
     flags: { rocket: false, scouted: false },
     scoutsSent: 0,
     dev: Boolean(options.dev),
+    ...(options.realTimeFrom ? { realTimeFrom: options.realTimeFrom } : {}),
     tutorialStep: 0,
     event: null,
     nextEventTick: 90,
@@ -1555,6 +1558,9 @@ export interface Warning {
 // tutorial ends; the Ancient one when the Roman legion is beaten.
 export function behindTicksLeft(state: GameState): number | null {
   if (state.phase !== "playing" || state.debrief || state.tutorialStep < TUTORIAL.length) return null;
+  // Realistic time: the next era is tens of thousands of real years away, so
+  // there is no deadline.
+  if (state.realTimeFrom) return null;
   if (readyForNextEra(state)) return null;
   if (state.era === 0) {
     const deadline = ERA_DEADLINE[state.difficulty] ?? ERA_DEADLINE.normal;
