@@ -14,6 +14,8 @@ export const metadata: Metadata = {
   title: "Emberline",
   description:
     "SHISTECH hackathon project: a civilization builder from the first fire to the stars, built around the UN Sustainable Development Goals.",
+  // The pixel flame (made from src/game/sprites.ts by scripts/export-site.mjs).
+  icons: { icon: { url: `${process.env.BASE_PATH ?? ""}/site/icons/flame.svg`, type: "image/svg+xml" } },
 };
 
 export default function RootLayout({

@@ -1,8 +1,8 @@
 # Emberline
 
-**A sustainability trade-off game.** Grow a tribe from the Stone Age into a
-Classical town without destroying the land that feeds it. Every house, fire,
-woodcutter and smithy helps your people now and costs the land later. Made for
+**A sustainability trade-off game.** Lead your people from the first campfire
+to the stars, through six eras, without destroying the land that feeds them.
+Every hut, farm and power plant helps your people now and costs the land later. Made for
 the SHISTECH Hacktrack hackathon (UN Sustainable Development Goals theme), built
 around **SDG 11: Sustainable Cities and Communities**.
 
@@ -13,6 +13,10 @@ No install needed. It runs in the browser, on a laptop or a phone.
 ---
 
 ![A Stone Age village](docs/images/04-village-stone.png)
+
+| Medieval | Industrial | Future |
+| --- | --- | --- |
+| ![A Medieval town](public/site/shots/medieval.jpg) | ![An Industrial city](public/site/shots/industrial.jpg) | ![A Future city](public/site/shots/future.jpg) |
 
 **Judges:** the full documentation, mapped to each judging criterion, is in
 [`docs/`](docs/README.md): [game design](docs/design.md),
@@ -103,22 +107,23 @@ stumps and bare ground, quarried pits, smoke over the fires, fewer deer to hunt.
 
 ### How it maps to the SDGs
 
-**SDG 11 (Sustainable Cities and Communities)** is the core. The game's lessons
-and events also link to these goals:
+**SDG 11 (Sustainable Cities and Communities)** is the core. Three more goals
+are built into how the game works:
 
 | Goal | In the game |
 | --- | --- |
-| **11 · Sustainable Cities & Communities** | Shelter, crowding, planning growth, pollution from fires and smithies |
-| 15 · Life on Land | Sustainability is the forest left standing; deforestation, lost wildlife, failing rains, worn-out and salty soil, quarried hills, replanting |
-| 7 · Affordable & Clean Energy | Warmth costs wood and smoke; clothes are the efficient alternative |
-| 12 · Responsible Consumption | Food waste, overhunting, charcoal eating the forest |
-| 4 · Quality Education | Literacy is a meter; elders and scribe schools |
-| 9 · Industry, Innovation & Infrastructure | The advancement tree: each technology opens new buildings and new trade-offs |
+| **11 · Sustainable Cities & Communities** | Shelter, crowding, clean water and sanitation, planning growth, pollution |
+| 13 · Climate Action | Smoke and coal raise the carbon in the air; in the last era you must bring it back down before the climate tips |
+| 15 · Life on Land | Sustainability is the forest left standing; deforestation, lost wildlife, failing rains, worn-out soil, replanting |
+| 7 · Affordable & Clean Energy | From campfires to coal plants to wind, sun and water; clean power is how the last era is won |
+
+Event cards and Elder Ama's lessons also link to other goals where they fit
+(for example 12 for food waste and 4 for schools).
 
 ## What you can do
 
 - **Explore hex islands** of grassland, forest, dry steppe, marsh and hills.
-- **Build 19 kinds of buildings** across two eras, with a see-through preview and
+- **Build 57 kinds of buildings** across six eras, with a see-through preview and
   a trade-off card first. Sell any of them back for half.
 - **Balance six meters**: Food, Shelter, Happiness, Literacy, Energy and
   Sustainability.
@@ -151,32 +156,53 @@ and events also link to these goals:
 - **Survive the great drought** that ends the Classical era: the elders warn you
   three minutes ahead, then the rain almost stops for three minutes. Water,
   full granaries and standing forests get you through.
+- **Grow a Medieval kingdom**: castles, guild halls, windmills, a university,
+  and two neighbouring kingdoms to trade with, gift or raid. Unhappy people can
+  rebel. The era ends with the great sickness (the plague).
+- **Industrialise**: factories, railways, coal plants, dams, wind and solar
+  farms, apartments and hospitals. Coal is cheap and fast; the carbon it puts in
+  the air brings a climate crisis.
+- **Reach the Future**: air capture plants, vertical farms, arcologies, fusion.
+  Get the air back to a safe level before the climate tips for good, reach
+  Type I on the Kardashev scale with clean power, and launch into space.
+- **Learn 79 advancements**, each doing something different (from Basketry and
+  Tamed Dogs to Rewilding and Automation). Some unlock only after a goal.
+- **Trade** with passing traders from the start: currency buys food, wood and
+  stone, so you can spare your own forest.
+- **Mind the workload**: every building needs hands. With more jobs than
+  people, everyone gets tired, makes less and is less happy.
+- **Explore**: pick where your scouts walk and where your canoes paddle, and
+  watch them go and come back.
+- **Play together** online with up to 4 players (bots fill empty seats): race
+  for the most Chief XP, or team up in co-op. Send gifts, or raid each other.
 - **Name your people**, pick a culture and a difficulty, and play on a laptop or
   a phone. A guided tutorial with a pointing hand teaches the basics. New
   players start in **First time** mode: a slower clock and a gentler start.
 - **Track your progress**: a chief level that only goes up, and a goal line that
   says what to aim for next.
-- **Five ways to lose**: famine, unrest (people too unhappy for too long), land
-  collapse (Sustainability too low for too long), conquest by the legion, or
+- **Six ways to lose**: famine, unrest (people too unhappy for too long), land
+  collapse (Sustainability too low for too long), conquest, the plague, or
   being left behind (taking too long to reach the next era). Every one gives
   you a countdown first.
 
 The game autosaves in your browser, and you can save to the cloud with a code to
-carry on elsewhere. There is a leaderboard and a feedback form in the menu. An
+carry on elsewhere. There is a leaderboard, a feedback form and a **How to
+play** guide in the menu. An
 **Updates** bar at the top of the project page and the title screen lists what's
 new.
 
 ## Roadmap
 
-**The Stone Age, the Ancient era and the Classical era are complete and
-playable**, from the first campfire through the Roman legion to the great
-drought and a final debrief. Next we plan to carry the same trade-offs further:
+**All six eras are complete and playable**, from the first campfire through
+the Roman legion, the great drought, the plague and the climate crisis to the
+tipping point and space. Online multiplayer works too. Ideas for after the
+hackathon:
 
 | Next | What it adds to the trade-off |
 | --- | --- |
-| Medieval & Renaissance | Being designed now |
-| Later eras | Industry and the choice between dirty and clean energy, up to a space age. One idea we want to explore: the Kardashev scale, which ranks a civilization by how much energy it can use |
-| Multiplayer | Neighbouring nations run by other players instead of the computer |
+| Shared map multiplayer | Neighbours on the same sea, so one player's smoke and clear-cutting reaches the others |
+| Classroom mode | A teacher picks the era and the crises, and sees how each group chose |
+| More languages | So more schools can play it |
 
 ## What went wrong and how we adapted
 
@@ -186,8 +212,10 @@ drought and a final debrief. Next we plan to carry the same trade-offs further:
 - **We cut multiplayer to ship.** We had built multiplayer rooms on a hosted
   database. When we moved to free static hosting on GitHub Pages there was no
   server to run it, so we removed it and saved games in the browser instead.
-  Later we brought a small hosted database back (Supabase) just for cloud
-  saves, a leaderboard and feedback; the game itself still runs in the browser.
+  Later we brought a small hosted database back (Supabase) for cloud saves, a
+  leaderboard and feedback, and then for multiplayer rooms: every player runs
+  the game in their own browser, and only scores, gifts and raids go through
+  the database.
 - **Emojis made it look cheap.** The first HUD used emoji icons. We replaced every
   one with hand-drawn 12×12 pixel sprites and a pixel-style interface.
 - **People walked through mountains.** Villagers clipped into terrain and
