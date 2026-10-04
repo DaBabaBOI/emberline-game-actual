@@ -37,6 +37,9 @@ export interface Tile {
   dug?: number;
   // 0–1: how worn out the building on this tile is (Hard only; 1 = broken).
   worn?: number;
+  // How far the building has been improved (1 or missing: as built; 2 Stone-built,
+  // 3 Bronze-fitted, 4 Iron-bound, 5 Steel-framed: see IMPROVE).
+  level?: number;
   // 0–1: cracks from an earthquake, and rubble from a landslide. Both fade.
   cracked?: number;
   rubble?: number;
@@ -161,6 +164,8 @@ export interface BuildingDef {
   needsWaterNeighbor?: boolean;
   // Must touch the river (fresh water), not just the sea.
   needsRiver?: boolean;
+  // Extra ground it may go on when it touches the river (a Fishing Spot on the bank).
+  riverTerrain?: Terrain[];
   requires?: string;
   // A landmark (see LANDMARKS): built in stages, one of each.
   landmark?: boolean;
@@ -212,7 +217,8 @@ export type TallyKey =
   | "disasters"
   | "landslides"
   | "gifts"
-  | "ships";
+  | "ships"
+  | "canoes";
 
 // One thing to do before an advancement can be researched.
 export interface Goal {
@@ -251,6 +257,8 @@ export interface EventChoice {
     clearForest?: number;
     // Protect this many of the oldest forest tiles near the village for good.
     protectForest?: number;
+    // Beliefs: honour the river (no mills or aqueducts) or tame it.
+    river?: "honour" | "tame";
     // How each kingdom feels about it (Medieval era).
     mood?: Partial<Record<KingdomId, number>>;
     // Chance (0–1) that sickness breaks out because of this choice.
@@ -306,6 +314,8 @@ export interface GameState {
   // Ships out exploring or trading (from a Shipyard), and the islands found
   // overseas where we may build a few things.
   ships?: { start: number; back: number }[];
+  // Canoes out: exploring for the Southern Isles, or fishing the open sea.
+  canoes?: { start: number; back: number; kind: "explore" | "fish" }[];
   outposts?: number[];
   // We raided a kingdom: its revenge army lands by `tick`. And when we last
   // raided (our warriors need time before the next).
@@ -353,6 +363,30 @@ export interface GameState {
   // and who wandered into the fog and when they come back.
   helpers?: Record<number, number>;
   inFog?: { name: string; back: number }[];
+  // Happiness lost to grief: people the player dropped into a fire or the sea
+  // (GRIEF in content.ts). Fades every tick. Missing in older saves.
+  grief?: number;
+  // Scouts out exploring: the tile they head for, and the tick they come back.
+  scouting?: { tile: number; back: number };
+  // Unrest that may turn into a rebellion (REBELLION in content.ts): brewing
+  // until riseTick, then risen (rebels on the map) until crushed, paid or sackTick.
+  rebellion?: { stage: "brewing" | "risen"; riseTick: number; rebels: number; tile: number; sackTick: number } | null;
+  // No new rebellion before this tick.
+  rebellionCalm?: number;
+  // Population control: the tribe stops growing at this many people (null or
+  // missing: it grows freely).
+  popLimit?: number | null;
+  // Elder Ama's one-line hints (src/game/hints.ts): the one showing, and every
+  // one already shown (each comes once a game).
+  hint?: { id: string; tick: number } | null;
+  hintsSeen?: string[];
+  hintTick?: number;
+  // Beliefs: what the people decided about the river, and the next festival.
+  riverChoice?: "honour" | "tame";
+  // Realistic time (a joke mode): the calendar runs in real time from this
+  // moment (ms since 1970), and the sky follows the real clock.
+  realTimeFrom?: number;
+  nextFestivalTick?: number;
   // Chief XP (only goes up) and level (missing in older saves: 0 and 1).
   xp?: number;
   chiefLevel?: number;

@@ -1,25 +1,31 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
 import { clearSave, loadGame, newGame, type NewGameOptions } from "@/game/engine";
 import type { CultureId, DifficultyId, GameState } from "@/game/types";
 import { cn } from "@/lib/utils";
+import { useCompact } from "@/lib/use-compact";
 import { GameProvider, useGame } from "./game-provider";
 import { TitleScreen } from "./title-screen";
 import { IntroStory } from "./intro-story";
 import { TopBar } from "./hud/top-bar";
-import { SideMeters } from "./hud/side-meters";
+import { MeterStrip, SideMeters } from "./hud/side-meters";
 import { BottomBar } from "./hud/bottom-bar";
 import { TreeOverlay } from "./hud/tree-overlay";
-import { GuideOverlay } from "./hud/guide-overlay";
+import { GuideOverlay, useGuide } from "./hud/guide-overlay";
 import { Debrief, GoalLine, NextEraPrompt } from "./hud/debrief";
 import { DiscoveryScene } from "./hud/discovery-scene";
+import { Letterbox, useShot } from "./hud/letterbox";
+import { HintPanel } from "./hud/hints";
+import { GameAudio } from "./hud/game-audio";
+import { setMusicScene, unlockAudio } from "@/lib/audio";
 import { KingdomsPanel, LandmarkPicker } from "./hud/medieval";
 import {
   DevPanel,
   ElderLesson,
   EventModal,
+  KonamiFireworks,
   RaidBanner,
   Toasts,
   TutorialPanel,
@@ -34,8 +40,16 @@ const WorldCanvas = dynamic(
 
 function Hud({ onRestart }: { onRestart: () => void }) {
   const { panel, setSelected } = useGame();
-  // The Advancements tree fills the screen: Elder Ama steps down to the corner.
+  // The Advancements tree fills the screen: Elder Ama moves out of the way.
   const treeOpen = panel === "tree";
+  const { target } = useGuide();
+  const shot = useShot();
+  const stack = useRef<HTMLDivElement>(null);
+  const elder = useRef<HTMLDivElement>(null);
+  const spot = useSpotInTree(treeOpen, stack, elder, target?.kind === "ui" ? target.ids : []);
+  const compact = useCompact();
+  const root = useRef<HTMLDivElement>(null);
+  useHudEdges(root);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -46,56 +60,92 @@ function Hud({ onRestart }: { onRestart: () => void }) {
   }, [setSelected]);
 
   return (
-    <div className="pointer-events-none absolute inset-0">
-      <TopBar />
-      <SideMeters side="left" />
-      <SideMeters side="right" />
-      {/* Everything that pops up under the top bar lives in stacks, so panels
-          queue up instead of drawing over each other. Wide screens get three
-          columns (panels left, notices centre, messages right); smaller
-          screens get one column. */}
-      <div
-        className={cn(
-          "absolute left-11 right-11 top-24 flex max-h-[calc(100dvh-22rem)] flex-col gap-2 overflow-y-auto md:left-16 md:right-auto md:top-20 md:max-h-[calc(100dvh-17rem)] md:w-80 lg:contents",
-          treeOpen && "bottom-10 top-auto md:left-auto md:right-6 md:top-auto",
+    <>
+      {/* During a camera shot the HUD fades away, leaving the film. */}
+      <div ref={root} className={cn("pointer-events-none absolute inset-0 transition-opacity duration-700", shot && "invisible opacity-0")}>
+        {/* Phones: the meters sit in a strip under the top bar. */}
+        <TopBar>{compact && <MeterStrip />}</TopBar>
+        {!compact && (
+          <>
+            <SideMeters side="left" />
+            <SideMeters side="right" />
+          </>
         )}
-      >
-        <div className="flex flex-col items-center gap-2 lg:absolute lg:left-[25rem] lg:right-[21rem] lg:top-20">
-          <GoalLine />
-          <NextEraPrompt />
-          <LandmarkPicker />
-          <RaidBanner />
-        </div>
-        {/* Elder Ama's panels stay above the tutorial's dimmed overlay, so what
-            she is waiting for can always be read. */}
+        {/* Everything that pops up under the top bar lives in stacks, so panels
+            queue up instead of drawing over each other. Wide screens get three
+            columns (panels left, notices centre, messages right); smaller
+            screens get one column. */}
         <div
+          ref={stack}
+          // Below 1024 px the stack starts under the top bar (and the meter
+          // strip) and ends above the bottom bar, however tall they are.
+          style={treeOpen ? spot : { top: "calc(var(--hud-top, 6rem) + 0.5rem)", maxHeight: "calc(100dvh - var(--hud-top, 6rem) - var(--hud-bottom, 10rem) - 1rem)" }}
           className={cn(
-            "relative z-[26] flex flex-col gap-2 lg:absolute lg:left-16 lg:top-20 lg:max-h-[calc(100dvh-16rem)] lg:w-80 lg:overflow-y-auto",
-            treeOpen && "lg:bottom-12 lg:left-auto lg:right-8 lg:top-auto",
+            "absolute flex flex-col gap-2 overflow-y-auto md:right-auto md:w-80 lg:contents",
+            compact ? "left-2 right-2 md:left-3" : "left-11 right-11 md:left-16",
+            treeOpen && "bottom-[var(--spot-bottom)] top-[var(--spot-top)] max-h-[var(--spot-max)] md:left-auto md:right-6",
           )}
         >
-          <DevPanel />
-          <TutorialPanel />
-          <CoachPanel />
-          <ElderLesson />
+          <div className="flex flex-col items-center gap-2 lg:absolute lg:left-[25rem] lg:right-[21rem] lg:top-20">
+            <GoalLine />
+            <NextEraPrompt />
+            <LandmarkPicker />
+            <RaidBanner />
+          </div>
+          {/* Elder Ama's panels stay above the tutorial's dimmed overlay, so what
+              she is waiting for can always be read. */}
+          <div
+            ref={elder}
+            className={cn(
+              "relative z-[26] flex flex-col gap-2 lg:absolute lg:w-80 lg:overflow-y-auto",
+              treeOpen
+                ? "lg:bottom-[var(--spot-bottom)] lg:right-8 lg:top-[var(--spot-top)] lg:max-h-[var(--spot-max)]"
+                : "lg:left-16 lg:top-20 lg:max-h-[calc(100dvh-16rem)]",
+            )}
+          >
+            <DevPanel />
+            <TutorialPanel />
+            <CoachPanel />
+            <ElderLesson />
+          <HintPanel />
+          </div>
+          <div className="flex flex-col items-end lg:absolute lg:right-16 lg:top-20 lg:w-64">
+            <Toasts />
+          </div>
         </div>
-        <div className="flex flex-col items-end lg:absolute lg:right-16 lg:top-20 lg:w-64">
-          <Toasts />
-        </div>
+        <Warnings />
+        <BottomBar />
+        {panel === "tree" && <TreeOverlay />}
+        {panel === "kingdoms" && <KingdomsPanel />}
+        <GuideOverlay />
+        <EventModal />
+        <DiscoveryScene />
+        <Debrief onRestart={onRestart} />
       </div>
-      <Warnings />
-      <BottomBar />
-      {panel === "tree" && <TreeOverlay />}
-      {panel === "kingdoms" && <KingdomsPanel />}
-      <GuideOverlay />
-      <EventModal />
-      <DiscoveryScene />
-      <Debrief onRestart={onRestart} />
-    </div>
+      <Letterbox />
+      <GameAudio />
+      <KonamiFireworks />
+    </>
   );
 }
 
+// Browsers allow sound only after a click or key press: the first one starts
+// the music (the Stone Age theme on the title screen, then the game's own).
+function useUnlockAudio() {
+  useEffect(() => {
+    setMusicScene({ playing: true, era: 0, night: 0, tension: false });
+    const unlock = () => unlockAudio();
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
+}
+
 export function GameScreen() {
+  useUnlockAudio();
   const [game, setGame] = useState<GameState | null>(null);
   const [saved, setSaved] = useState<GameState | null>(() => loadGame());
   // A new game opens with a short story (not when continuing, and not in dev starts).
@@ -145,4 +195,76 @@ export function GameScreen() {
       </GameProvider>
     </div>
   );
+}
+
+// Where the top bar ends and the bottom bar begins (CSS --hud-top and
+// --hud-bottom on the HUD), so the panels in between fit whatever their size.
+function useHudEdges(root: RefObject<HTMLDivElement | null>) {
+  useEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    const measure = () => {
+      const top = el.querySelector('[data-hud="top"]')?.getBoundingClientRect();
+      const bottom = el.querySelector('[data-hud="bottom"]')?.getBoundingClientRect();
+      if (top) el.style.setProperty("--hud-top", `${Math.round(top.bottom)}px`);
+      if (bottom) el.style.setProperty("--hud-bottom", `${Math.round(window.innerHeight - bottom.top)}px`);
+    };
+    const watch = new ResizeObserver(measure);
+    el.querySelectorAll("[data-hud]").forEach((n) => watch.observe(n));
+    window.addEventListener("resize", measure);
+    measure();
+    return () => {
+      watch.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [root]);
+}
+
+// With Advancements open, Elder Ama's panels sit between the tree's header and
+// its details bar, so they never cover the Research button or the description:
+// just above the details bar, or just under the header when what she is
+// pointing at is down there. Below 1024 px the whole stack moves; above, only
+// her column (the stack is `display: contents` there).
+function useSpotInTree(
+  open: boolean,
+  stack: RefObject<HTMLDivElement | null>,
+  elder: RefObject<HTMLDivElement | null>,
+  targetIds: string[],
+): CSSProperties | undefined {
+  const [spot, setSpot] = useState<CSSProperties>();
+  const ids = targetIds.join(" ");
+  useEffect(() => {
+    if (!open) return;
+    const gap = 8;
+    const place = () => {
+      const area = document.querySelector("[data-tree-area]")?.getBoundingClientRect();
+      const details = document.querySelector("[data-tree-details]")?.getBoundingClientRect();
+      const box = (window.innerWidth >= 1024 ? elder.current : stack.current)?.getBoundingClientRect();
+      if (!area || !details || !box) return;
+      const room = Math.max(120, details.top - area.top - 2 * gap);
+      const height = Math.min(box.height, room);
+      // Where she would be, just above the details bar.
+      const low = { top: details.top - gap - height, bottom: details.top - gap };
+      const target = ids
+        .split(" ")
+        .map((id) => document.querySelector(`[data-guide="${id}"]`)?.getBoundingClientRect())
+        .find((r) => r && r.width > 0);
+      const inTheWay = !!target && target.left < box.right && box.left < target.right && target.top < low.bottom && low.top < target.bottom;
+      const next = {
+        "--spot-top": inTheWay ? `${Math.round(area.top + gap)}px` : "auto",
+        "--spot-bottom": inTheWay ? "auto" : `${Math.round(window.innerHeight - details.top + gap)}px`,
+        "--spot-max": `${Math.round(room)}px`,
+      } as CSSProperties;
+      setSpot((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+    };
+    const first = requestAnimationFrame(place);
+    const timer = window.setInterval(place, 250);
+    window.addEventListener("resize", place);
+    return () => {
+      cancelAnimationFrame(first);
+      window.clearInterval(timer);
+      window.removeEventListener("resize", place);
+    };
+  }, [open, stack, elder, ids]);
+  return open ? spot : undefined;
 }

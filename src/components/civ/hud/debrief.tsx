@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import type { ReactNode } from "react";
+import { HOME } from "@/lib/home";
+import { useState, type ReactNode } from "react";
 import { ERAS, formatYear, LESSONS, METERS, METER_SDG, MIN_SUSTAINABILITY_FOR_BEST_ENDING } from "@/game/content";
 import { clearSave, currentGoal, makeDebrief, readyForNextEra, secs } from "@/game/engine";
 import type { Debrief as DebriefData } from "@/game/types";
@@ -9,6 +9,7 @@ import { useGame } from "@/components/civ/game-provider";
 import { LeaderboardPanel } from "./online";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { cn } from "@/lib/utils";
+import { useCompact } from "@/lib/use-compact";
 
 const TIERS: Record<DebriefData["tier"], { title: string; text: string; tone: string }> = {
   thriving: {
@@ -227,9 +228,9 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
               >
                 New game
               </button>
-              <Link href="/" className="pixel-btn font-pixel bg-white px-4 py-2">
+              <a href={HOME} className="pixel-btn font-pixel bg-white px-4 py-2">
                 Home
-              </Link>
+              </a>
             </>
           )}
         </div>
@@ -244,8 +245,24 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
 // guided step is already telling the player).
 export function GoalLine() {
   const { state } = useGame();
+  const compact = useCompact();
+  const [full, setFull] = useState(false);
   const goal = currentGoal(state);
   if (!goal) return null;
+  if (compact)
+    // Phones: one line; tap to read it all.
+    return (
+      <button
+        type="button"
+        onClick={() => setFull(!full)}
+        aria-expanded={full}
+        className="pixel-panel-dark font-pixel pointer-events-auto flex w-full items-start gap-1 px-2 py-1 text-left text-xs"
+        data-testid="goal-line"
+      >
+        <span className={cn("flex-1", !full && "line-clamp-1")}>{goal}</span>
+        <span className="text-amber-300">{full ? "▴" : "▾"}</span>
+      </button>
+    );
   return (
     <div className="pointer-events-none flex justify-center">
       <span className="pixel-panel-dark font-pixel max-w-[min(92vw,640px)] px-3 py-1 text-center text-xs" data-testid="goal-line">

@@ -7,8 +7,12 @@ import { hexDistance } from "@/game/hex";
 import type { Tile } from "@/game/types";
 import { Figures, type Agent } from "./figures";
 import { makeGround } from "./ground";
+import { grabStore, type Walker } from "./villagers";
+import { goldenDeer } from "@/components/civ/hud/eggs";
+import { GOLDEN_DEER_CHANCE } from "@/game/easter";
 
-type Kind = "deer" | "boar";
+// A golden deer turns up very rarely (an easter egg: a feast when hunted).
+type Kind = "deer" | "boar" | "golden";
 
 interface Animal {
   id: number;
@@ -29,20 +33,22 @@ interface Motion {
 // Legs hang from a pivot at the hip so they can swing while walking.
 type Legs = React.RefObject<(Group | null)[]>;
 
-function Deer({ legs }: { legs: Legs }) {
+function Deer({ legs, gold = false }: { legs: Legs; gold?: boolean }) {
+  // The golden deer shines a little (the bloom makes it glow).
+  const coat = (c: string) => (gold ? { color: "#f2c14e", emissive: "#b8860b", emissiveIntensity: 0.6, metalness: 0.4, roughness: 0.35 } : { color: c });
   return (
     <group>
       <mesh castShadow position={[0, 0.2, 0]}>
         <boxGeometry args={[0.12, 0.12, 0.28]} />
-        <meshStandardMaterial color="#9c6a3c" />
+        <meshStandardMaterial {...coat("#9c6a3c")} />
       </mesh>
       <mesh castShadow position={[0, 0.3, 0.13]} rotation={[0.6, 0, 0]}>
         <cylinderGeometry args={[0.03, 0.04, 0.14, 6]} />
-        <meshStandardMaterial color="#9c6a3c" />
+        <meshStandardMaterial {...coat("#9c6a3c")} />
       </mesh>
       <mesh castShadow position={[0, 0.37, 0.19]}>
         <boxGeometry args={[0.07, 0.07, 0.11]} />
-        <meshStandardMaterial color="#8a5c33" />
+        <meshStandardMaterial {...coat("#8a5c33")} />
       </mesh>
       {[-1, 1].map((s) => (
         <group key={s}>
@@ -60,7 +66,7 @@ function Deer({ legs }: { legs: Legs }) {
         <group key={i} position={[x, 0.16, z]} ref={(el) => void (legs.current[i] = el)}>
           <mesh castShadow position={[0, -0.08, 0]}>
             <cylinderGeometry args={[0.012, 0.01, 0.16, 5]} />
-            <meshStandardMaterial color="#6b4a2b" />
+            <meshStandardMaterial {...coat("#6b4a2b")} />
           </mesh>
         </group>
       ))}
@@ -114,7 +120,7 @@ function AnimalView({ animal, motion }: { animal: Animal; motion: React.RefObjec
     last.current.x = m.x;
     last.current.z = m.z;
     const walking = m.downAt === null && moved > 0.0005 && moved < 0.5;
-    if (walking) last.current.step += Math.min(delta, 0.1) * (animal.kind === "deer" ? 11 : 14);
+    if (walking) last.current.step += Math.min(delta, 0.1) * (animal.kind === "boar" ? 14 : 11);
     const swing = walking ? Math.sin(last.current.step) * 0.55 : 0;
     legs.current.forEach((leg, i) => {
       if (leg) leg.rotation.x = i === 0 || i === 3 ? swing : -swing;
@@ -128,11 +134,27 @@ function AnimalView({ animal, motion }: { animal: Animal; motion: React.RefObjec
       g.rotation.z = 0;
     }
   });
-  return <group ref={ref}>{animal.kind === "deer" ? <Deer legs={legs} /> : <Boar legs={legs} />}</group>;
+  return <group ref={ref}>{animal.kind === "boar" ? <Boar legs={legs} /> : <Deer legs={legs} gold={animal.kind === "golden"} />}</group>;
 }
 
-// Deer and boar roam the forests. Every so often a hunter walks out from the
-// village, brings one down, and returns with food.
+// Who goes hunting: a grown-up who is well, free (not working, carried or out
+// already) and on the map. Whoever is closest to a gatherer's camp, if there
+// are any; otherwise anyone free.
+function pickHunter(camps: Tile[]): Walker | null {
+  const free = grabStore.walkers.filter(
+    (w) => !w.child && !w.held && !w.goneUntil && !w.hunting && !w.workAt && w.tunic === (w.baseTunic ?? w.tunic),
+  );
+  if (!free.length) return null;
+  if (!camps.length) return free[Math.floor(Math.random() * free.length)];
+  const near = (w: Walker) => Math.min(...camps.map((c) => Math.hypot(c.x - w.x, c.z - w.z)));
+  return free.reduce((a, b) => (near(a) <= near(b) ? a : b));
+}
+
+// Deer and boar roam the forests. Every so often one of the villagers goes
+// hunting (someone at a gatherer's camp if there is one, otherwise someone with
+// nothing to do), brings an animal down, and walks back with the food to where
+// they set out from. They are one of the tribe the whole time: they never
+// appear from or vanish into the fire.
 export function Wildlife({
   tiles,
   homeTile,
@@ -152,13 +174,22 @@ export function Wildlife({
   const nextId = useRef(0);
   const motion = useRef(new Map<number, Motion>());
   const hunter = useRef<Agent[]>([]);
-  const hunt = useRef<{ target: number; phase: "out" | "back"; nextAt: number }>({ target: -1, phase: "out", nextAt: 15 });
+  const hunt = useRef<{
+    target: number;
+    phase: "out" | "back";
+    nextAt: number;
+    // The villager out hunting, and where they set out from.
+    who: Walker | null;
+    from: { x: number; z: number };
+  }>({ target: -1, phase: "out", nextAt: 15, who: null, from: { x: 0, z: 0 } });
+  const camps = useMemo(() => tiles.filter((t) => t.building === "gatherer"), [tiles]);
 
   useFrame(({ clock }, delta) => {
     const now = clock.elapsedTime;
     const dt = Math.min(delta, 0.1);
 
-    if (animals.length < wanted && forests.length && Math.random() < 0.02) {
+    // The dev panel can call up the golden deer at once.
+    if ((animals.length < wanted || goldenDeer.wanted) && forests.length && (goldenDeer.wanted || Math.random() < 0.02)) {
       const home = forests[Math.floor(Math.random() * forests.length)];
       const id = nextId.current++;
       motion.current.set(id, {
@@ -170,7 +201,9 @@ export function Wildlife({
         wait: Math.random() * 3,
         downAt: null,
       });
-      setAnimals((list) => [...list, { id, kind: Math.random() < 0.65 ? "deer" : "boar", home }]);
+      const golden = goldenDeer.wanted || Math.random() < GOLDEN_DEER_CHANCE;
+      goldenDeer.wanted = false;
+      setAnimals((list) => [...list, { id, kind: golden ? "golden" : Math.random() < 0.65 ? "deer" : "boar", home }]);
     }
 
     for (const animal of animals) {
@@ -201,21 +234,26 @@ export function Wildlife({
         const prey = animals
           .filter((a) => motion.current.get(a.id)?.downAt === null && hexDistance(a.home, homeTile) <= 8)
           .sort((a, b) => hexDistance(a.home, homeTile) - hexDistance(b.home, homeTile))[0];
-        if (prey) {
+        const who = prey ? pickHunter(camps) : null;
+        if (prey && who) {
           h.target = prey.id;
           h.phase = "out";
+          h.who = who;
+          h.from = { x: who.x, z: who.z };
+          who.hunting = true;
           hunter.current = [
             {
-              x: homeTile.x,
-              y: homeTile.height,
-              z: homeTile.z,
-              heading: 0,
+              x: who.x,
+              y: who.y,
+              z: who.z,
+              heading: who.heading,
               moving: true,
-              scale: 1.4,
-              tunic: "#556b2f",
-              skin: "#c68642",
-              hair: "#2b1b10",
-              phase: 0,
+              scale: who.scale,
+              tunic: who.tunic,
+              skin: who.skin,
+              hair: who.hair,
+              phase: who.phase,
+              crown: who.crown,
             },
           ];
         } else {
@@ -231,13 +269,25 @@ export function Wildlife({
       h.nextAt = now + 20;
       return;
     }
+    // Hand the villager back, standing where the hunter is.
+    const done = () => {
+      const w = h.who;
+      if (w) Object.assign(w, { x: man.x, z: man.z, y: man.y, tx: man.x, tz: man.z, heading: man.heading, wait: 2, hunting: false });
+      h.who = null;
+      h.target = -1;
+      hunter.current = [];
+    };
+    if (!h.who) {
+      done();
+      h.nextAt = now + 20;
+      return;
+    }
     const preyInfo = animals.find((a) => a.id === h.target);
     const prey = preyInfo ? motion.current.get(preyInfo.id) : undefined;
-    // The walk home never depends on the prey: it is cleared away a few seconds
-    // after the kill, and the hunter used to vanish mid-walk when it was. If the
-    // prey is gone before he reaches it, he just heads home.
+    // The walk back never depends on the prey: it is cleared away a few seconds
+    // after the kill. If the prey is gone before they reach it, they just head back.
     if (h.phase === "out" && (!preyInfo || !prey || prey.downAt !== null)) h.phase = "back";
-    const goal = h.phase === "out" && prey ? prey : { x: homeTile.x, z: homeTile.z };
+    const goal = h.phase === "out" && prey ? prey : h.from;
     const dx = goal.x - man.x;
     const dz = goal.z - man.z;
     const d = Math.hypot(dx, dz);
@@ -245,21 +295,26 @@ export function Wildlife({
       if (h.phase === "out" && prey && preyInfo) {
         prey.downAt = now;
         h.phase = "back";
-        onHunt(preyInfo.kind);
+        onHunt(preyInfo.kind === "golden" ? "golden deer" : preyInfo.kind);
         setTimeout(() => {
           motion.current.delete(preyInfo.id);
           setAnimals((list) => list.filter((a) => a.id !== preyInfo.id));
         }, 4000);
       } else {
-        h.target = -1;
+        done();
         h.nextAt = now + 25 + Math.random() * 20;
       }
       return;
     }
+    // Straight there if the way is clear; otherwise veer a little either side
+    // (round a building, a fire or the water) until it is.
     const s = Math.min(d, 0.9 * dt);
-    man.x += (dx / d) * s;
-    man.z += (dz / d) * s;
-    man.heading = Math.atan2(dx, dz);
+    const aim = Math.atan2(dx, dz);
+    const clear = (a: number) => ground.walkable(man.x + Math.sin(a) * 0.3, man.z + Math.cos(a) * 0.3);
+    const heading = d < 0.6 || !ground.walkable(man.x, man.z) ? aim : [0, 0.5, -0.5, 1, -1, 1.5, -1.5, 2.2, -2.2].map((k) => aim + k).find(clear) ?? aim;
+    man.x += Math.sin(heading) * s;
+    man.z += Math.cos(heading) * s;
+    man.heading = heading;
     const under = ground.tileAt(man.x, man.z);
     man.y += (ground.heightAt(man.x, man.z) + (under?.terrain === "mountain" ? 0.55 : 0) - man.y) * Math.min(1, dt * 12);
   });

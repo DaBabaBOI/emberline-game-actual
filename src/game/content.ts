@@ -188,17 +188,18 @@ export const BUILDINGS: BuildingDef[] = [
   },
   {
     id: "watchfire",
-    name: "Watch Fire",
+    name: "Watch Tower",
     icon: "beacon",
-    description: "A fire kept burning on the shore. Raiders are seen sooner, and the lookouts add a little defense.",
-    gain: "Raiders seen 12 s sooner, +1 defense (up to 2 watch fires)",
-    landCost: "Burns wood day and night, and adds smoke",
+    description: "A tall lookout tower on the shore. Raiders are seen sooner, and the lookouts add a little defense.",
+    gain: "Raiders seen 12 s sooner, +1 defense (up to 2 watch towers)",
+    landCost: "Built from the biggest logs in the forest",
     landImpact: 1,
     era: 0,
     cost: { wood: 12 },
-    terrain: ["beach", "grass", "steppe"],
+    // On the beach, where the lookouts can see boats coming.
+    terrain: ["beach"],
     needsWaterNeighbor: true,
-    requires: "spears",
+    requires: "firekeeping",
     produces: { wood: -0.03 },
   },
   {
@@ -220,16 +221,32 @@ export const BUILDINGS: BuildingDef[] = [
     overseas: true,
     name: "Fishing Spot",
     icon: "fish",
-    description: "Food from the sea. Must touch water; bonus near fish.",
-    gain: "Food from the sea",
+    description: "Food from the sea or the river. On a beach, or on the river bank; bonus near fish.",
+    gain: "Food from the sea or the river",
     landCost: "A small chance of sickness from the catch",
     landImpact: 0,
     era: 0,
     cost: { wood: 10 },
     terrain: ["beach"],
+    riverTerrain: ["grass", "steppe", "marsh", "forest"],
     needsWaterNeighbor: true,
     requires: "fishing",
     produces: { food: 0.7 },
+  },
+  {
+    id: "dock",
+    name: "Canoe Dock",
+    icon: "boat",
+    description: "A jetty where canoes are hollowed out of tree trunks. Each dock keeps one canoe.",
+    gain: "A canoe: find the Southern Isles and build there, or fish the open sea",
+    landCost: "Every canoe is cut from one big old tree",
+    landImpact: 1,
+    era: 0,
+    cost: { wood: 20 },
+    // On the sea shore, like a Fishing Spot (not by the river).
+    terrain: ["beach"],
+    needsWaterNeighbor: true,
+    requires: "fishing",
   },
   {
     id: "quarry",
@@ -279,7 +296,7 @@ export const BUILDINGS: BuildingDef[] = [
     name: "Livestock Pen",
     icon: "sheep",
     description: "Goats and sheep behind a fence. A little milk and meat, and later their hides and wool make warm clothes.",
-    gain: "A little food; with Warm Clothes researched, clothing for 6 people so fewer fires are needed",
+    gain: "A little food; with Warm Clothes researched, clothing for 10 people so they need no fire",
     landCost: "Grazing animals wear down the grass around them",
     landImpact: 1,
     era: 0,
@@ -356,6 +373,31 @@ export const BUILDINGS: BuildingDef[] = [
     cost: { wood: 15, stone: 10 },
     terrain: ["grass", "steppe"],
     requires: "pottery",
+  },
+  {
+    // Beliefs (invented, never a real religion): the people's own traditions.
+    id: "shrine",
+    name: "Shrine",
+    icon: "dove",
+    description: "A carved spirit pole and an offering stone where the people give thanks. Once a year the whole village holds a festival here.",
+    gain: "+4 happiness (up to 2 shrines), and a yearly festival: +8 happiness",
+    landCost: "Each festival's feast eats 15 food from the stores",
+    landImpact: 0,
+    era: 1,
+    cost: { wood: 15, stone: 10 },
+    terrain: ["grass", "steppe", "hills", "forest"],
+  },
+  {
+    id: "temple",
+    name: "Temple",
+    icon: "column",
+    description: "A stone hall for the town's festivals and teachings. Its keepers write down the stories and teach the young to read.",
+    gain: "+6 happiness and +8 literacy (up to 2 temples)",
+    landCost: "Stone cut from the hills for its walls and columns",
+    landImpact: 1,
+    era: 2,
+    cost: { stone: 40, wood: 20 },
+    terrain: ["grass", "steppe", "hills"],
   },
   {
     id: "forester",
@@ -791,7 +833,11 @@ export const BRANCHES: { id: Branch; name: string; color: string }[] = [
 type NodeSeed = [id: string, name: string, branch: Branch, era: number, cost: number, requires: string[], description: string];
 
 const LATER_NODES: NodeSeed[] = [
+  ["uranium", "Uranium", "energy", 4, 0, ["steam"], "A heavy, faintly glowing ore. Huge power, and a danger that lasts thousands of years."],
+  ["plutonium", "Plutonium", "energy", 4, 0, ["uranium"], "Made from uranium inside reactors. Even more power, even more danger."],
   ["ai", "Artificial Intelligence", "knowledge", 5, 0, ["electricity", "computers"], "Data centers and automated labs."],
+  ["aetherite", "Aetherite (unidentified)", "energy", 5, 0, ["fusion"], "A mineral nobody can name. It hums, and it is never warm or cold."],
+  ["mineral-x", "Mineral X-7 (unidentified)", "knowledge", 5, 0, ["aetherite"], "Found deep under the sea floor. It doesn't match anything we know."],
   ["arcology", "Arcologies", "construction", 5, 0, ["steel"], "Cities in a single tower."],
   ["fusion", "Fusion Power", "energy", 5, 0, ["steam"], "Near-limitless clean energy."],
   ["rocketry", "Orbital Rocketry", "transport", 5, 0, ["railways"], "Reach orbit. Unlocks the space view."],
@@ -837,6 +883,7 @@ export const TREE: TreeNode[] = [
     era: 0,
     cost: 6,
     requires: ["fire"],
+    unlocks: ["watchfire"],
   },
   {
     id: "fishing",
@@ -846,7 +893,7 @@ export const TREE: TreeNode[] = [
     era: 0,
     cost: 8,
     requires: ["fire"],
-    unlocks: ["fishing"],
+    unlocks: ["fishing", "dock"],
   },
   {
     id: "early-farming",
@@ -861,12 +908,11 @@ export const TREE: TreeNode[] = [
   {
     id: "spears",
     name: "Hunting Spears",
-    description: "+15% food. Warriors can carry spears: train new spearmen, or give your warriors spears, to fight 50% harder. Unlocks the Watch Fire.",
+    description: "+15% food. Warriors can carry spears: train new spearmen, or give your warriors spears, to fight 50% harder.",
     branch: "military",
     era: 0,
     cost: 6,
     requires: ["toolmaking"],
-    unlocks: ["watchfire"],
   },
   {
     id: "herbalism",
@@ -891,7 +937,7 @@ export const TREE: TreeNode[] = [
   {
     id: "hide-clothing",
     name: "Warm Clothes",
-    description: "Sew hides and wool into warm clothes. Each Livestock Pen keeps 6 people warm without a fire.",
+    description: "Sew hides and wool into warm clothes. Each Livestock Pen keeps 10 people warm without a fire, and families cook at small hearths in their homes: no campfire needed.",
     branch: "energy",
     era: 0,
     cost: 12,
@@ -1085,6 +1131,16 @@ export const TREE: TreeNode[] = [
     requires: ["bronze-arms"],
   },
   {
+    // Ores: iron and steel let buildings be improved further (see IMPROVE).
+    id: "iron-tools",
+    name: "Iron Tools",
+    description: "Iron ore smelted into ploughs, axes and nails. Buildings can now be Iron-bound: even more from the same land.",
+    branch: "construction",
+    era: 2,
+    cost: 30,
+    requires: ["bronze"],
+  },
+  {
     id: "silk-secret",
     name: "Jade Road",
     description: "Secret: send 5 caravans. +10 knowledge and +10 happiness.",
@@ -1122,6 +1178,15 @@ export const TREE: TreeNode[] = [
     cost: 60,
     requires: ["three-field"],
     unlocks: ["windmill"],
+  },
+  {
+    id: "steelmaking",
+    name: "Steelmaking",
+    description: "Iron refined in hotter furnaces into steel, hard and springy. Buildings can now be Steel-framed, the best there is.",
+    branch: "construction",
+    era: 3,
+    cost: 50,
+    requires: ["iron-tools"],
   },
   {
     id: "castles",
@@ -1420,13 +1485,13 @@ export const ADVANCEMENT_GOALS: Record<string, Goal[]> = {
 export const AFTER_STEPS: Record<string, AfterStep> = {
   storytelling: { build: "elder", text: "Now our elders can teach. Build an Elder's Hut: the children will learn from it, and we will gain Knowledge every day." },
   toolmaking: { build: "quarry", text: "Sharp stone tools! Place a Stone Quarry on the hills. Remember: it cuts the hill away for good, and its dust spoils crops nearby." },
-  firekeeping: { text: "We know how to bank a fire now: every campfire burns 1.5 times as long (50% longer) before it needs more wood. Less wood cut, less smoke." },
-  fishing: { build: "fishing", text: "Rafts! Place a Fishing Spot on the shore, next to the water. Fish near the coast give even more." },
+  firekeeping: { text: "We know how to bank a fire now: every campfire burns 1.5 times as long (50% longer) before it needs more wood. Less wood cut, less smoke. We can also build a Watch Tower on the shore, to see raiders coming sooner." },
+  fishing: { build: "fishing", text: "Rafts! Place a Fishing Spot on the shore, next to the water. Fish near the coast give even more. A Canoe Dock lets us paddle out to the islands to the south, but every canoe costs one big tree." },
   "early-farming": { build: "farm", text: "We can plant grain. Place Farmland on open grass: it feeds many, but it takes the land from the wild." },
   spears: { upgrade: true, text: "Stone-tipped spears! Our hunters bring back more food. Give a warrior a spear with the Spear button: in a fight, a spearman counts as 1.5 warriors (a warrior without one counts as 1). Every warrior you train from now on gets a spear." },
   herbalism: { build: "healer", text: "We know which plants heal. Build a Healer's Hut: the sick get better faster, and sickness spreads less." },
   herding: { build: "pen", text: "We can keep goats and sheep. Place a Livestock Pen: steady food, but grazing wears down the grass." },
-  "hide-clothing": { text: "Warm clothes from hides and wool: each Livestock Pen now keeps 6 people warm without a fire. Fewer fires, less wood, less smoke." },
+  "hide-clothing": { text: "Warm clothes from hides and wool: each Livestock Pen now keeps 10 people warm, and families cook at small hearths in their homes. With enough pens you need no campfires at all: less wood, less smoke." },
   agriculture: { text: "We are farmers now. Grow the tribe to 15 people and we can enter the Ancient era. Watch the goal at the top of the screen." },
   writing: { build: "school", text: "Marks on clay that everyone can read! Build a Scribe School: more literacy, and Knowledge every day." },
   pottery: { build: "granary", text: "Jars that keep grain dry. Build a Granary so less of our food rots away." },
@@ -1542,6 +1607,22 @@ export const EVENTS: EventCard[] = [
       { label: "Cut it down (+40 wood, you lose the grove)", effect: { clearForest: 4, resources: { wood: 40 }, happiness: -4 } },
     ],
     realWorld: "Many cultures have protected sacred groves, and some of them still stand today as islands of old forest.",
+  },
+  {
+    // Beliefs: shown once, before any mill or aqueduct is built on the river.
+    id: "river-spirits",
+    era: 2,
+    title: "The spirits of the river",
+    icon: "drop",
+    body: "The elders say the river is alive and gives us everything. Now the builders want to dam it for mills and draw it off in aqueducts. What do we believe?",
+    choices: [
+      {
+        label: "Honour the river: no mills or aqueducts on it (+4 Sustainability for good, +6 happiness)",
+        effect: { river: "honour", happiness: 6 },
+      },
+      { label: "Tame the river: build what we need (some are upset: −4 happiness)", effect: { river: "tame", happiness: -4 } },
+    ],
+    realWorld: "Many peoples have treated rivers as sacred, and some countries now give rivers legal rights to protect them.",
   },
   {
     id: "thinning-herds",
@@ -1797,8 +1878,9 @@ export const GROWTH_PRESSURE = {
   foodRots: 0.015,
   // Each lit campfire warms this many people; the rest are cold.
   peoplePerFire: 10,
-  // With Warm Clothes, each Livestock Pen clothes this many people warmly.
-  peoplePerPen: 6,
+  // With Warm Clothes, each Livestock Pen clothes this many people warmly (as
+  // many as a fire warms, so a pen can replace a fire).
+  peoplePerPen: 10,
   // Raiders come in bigger groups the bigger (richer) the tribe: +1 per this many people.
   raidersPerPeople: 10,
 };
@@ -1815,7 +1897,7 @@ export const PLANT_COST = { food: 4 };
 export const TUTORIAL_FAREWELL = {
   id: "farewell",
   title: "You are ready, chief",
-  text: "You have warmth, wood, homes, food, guards and fields. From here the choices are yours. Raiders, sickness and hard years will come, so keep food stored and fires lit. And watch the forest: once it is gone, it takes a lifetime to return. I will speak up when I see something you should know.",
+  text: "A War Camp and one warrior now guard us. Keep food stored, fires lit, and the forest standing. The rest is up to you.",
   sdg: "SDG 11: make cities and communities inclusive, safe, resilient and sustainable",
 };
 
@@ -2272,6 +2354,22 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     itemFrom: 2,
     lines: ["A new ore, heated hotter than bronze ever needed.", "Hammered while glowing, it became iron.", "Iron swords are harder still. But they eat charcoal."],
   },
+  "iron-tools": {
+    bg: "day",
+    actors: ["person", "person"],
+    props: [{ icon: "campfire", x: 42 }, { icon: "rock", x: 52, until: 1 }, { icon: "hammer", x: 52, from: 1 }],
+    item: "pickaxe",
+    itemFrom: 2,
+    lines: ["Red rock from the hills, burned in the hottest fire.", "Out came iron, hammered into ploughs and nails.", "With iron, every building can be made stronger."],
+  },
+  steelmaking: {
+    bg: "dusk",
+    actors: ["person", "person"],
+    props: [{ icon: "campfire", x: 40 }, { icon: "hammer", x: 52 }],
+    item: "sword",
+    itemFrom: 2,
+    lines: ["The furnace was built taller, the bellows pumped harder.", "The iron came out finer: hard, and springy too.", "Steel. Our buildings can be framed with it now."],
+  },
   "silk-secret": {
     bg: "sea",
     actors: ["person"],
@@ -2601,7 +2699,17 @@ export const LEFT_BEHIND_WARN = 200;
 // A person dropped on a working building helps there: +`helpBoost` output for
 // `helpTicks`. One who wanders into the fog comes back after `fogTicks`, with
 // news of new land only `fogLuck` of the time (5%: scouting is the real way to explore), revealing `fogReveal` tiles around.
-export const DROP = { helpBoost: 0.5, helpTicks: 20, fogTicks: 20, fogLuck: 0.05, fogReveal: 2, mood: 6 };
+export const DROP = { helpBoost: 0.5, helpTicks: 20, fogTicks: 20, fogLuck: 0.05, fogReveal: 2 };
+// Someone dropped into a fire or the open sea dies, and the tribe grieves: each
+// death costs `happiness`, taken off after the 0-100 cap so it always shows. It
+// adds up with every death (to `max`) and fades over `ticks` (3 minutes). Two
+// close together can tip a tribe into unrest: killing people never pays.
+export const GRIEF = { happiness: 35, ticks: 120, max: 100 };
+// People with no roof over their heads (more people than homes have room
+// for): each costs `mood` happiness (up to `maxMood`), and each adds `outbreak`
+// to the chance of sickness breaking out every tick, on top of the crowding
+// that already spreads it faster.
+export const HOMELESS = { mood: 2, maxMood: 15, outbreak: 0.004 };
 export const PEOPLE_NAMES = ["Aru", "Mira", "Tok", "Ena", "Bram", "Kaya", "Oro", "Lin", "Senu", "Tavi", "Ilo", "Deka", "Runa", "Pim"];
 
 // Chief level: XP only ever goes up, so progress is always easy to see. Each
@@ -2660,7 +2768,8 @@ export const RAID_KINDS: Record<
 // `tributePerRaider` each; they leave but come back `tributeSooner` ticks sooner).
 export const RAID_RESPONSE = { fightTicks: 7, tributePerRaider: 4, tributeSooner: 60, hideMood: 4 };
 
-// A watch fire on the shore sees raiders earlier and adds a little defense.
+// A watch tower on the shore sees raiders earlier and adds a little defense
+// (`smoke`: what its big logs cost the land, in Sustainability).
 export const WATCH_FIRE = { warnTicks: 8, defense: 1, maxDefense: 2, smoke: 1 };
 
 // Famine is hard but you can come back from it: while the stores are empty about
@@ -2688,6 +2797,37 @@ export const COLLAPSE = { level: 20, ticks: 80 };
 
 // Leaving the Stone Age: research Agriculture and grow to this many people.
 export const NEXT_ERA_POPULATION = 15;
+// Improving buildings with stone and new ores: each level makes `boost` more
+// (output, or room in a home) from the same land. Level 2 needs Toolmaking,
+// 3 Bronze, 4 Iron Tools, 5 Steelmaking. `stone` and `currency` are what each
+// level costs (by the level it goes up to).
+export const IMPROVE = {
+  boost: 0.25,
+  tiers: [
+    { level: 2, name: "Stone-built", requires: "toolmaking", color: "#9c968f" },
+    { level: 3, name: "Bronze-fitted", requires: "bronze", color: "#b08d57" },
+    { level: 4, name: "Iron-bound", requires: "iron-tools", color: "#4a4f55" },
+    { level: 5, name: "Steel-framed", requires: "steelmaking", color: "#c9ccd1" },
+  ],
+  stone: [0, 0, 12, 20, 30, 45],
+  currency: [0, 0, 0, 10, 25, 40],
+  buildings: ["woodcutter", "gatherer", "farm", "fishing", "quarry", "pen", "elder", "school", "hut", "house", "townhouse"],
+};
+// Beliefs: shrines and temples (each counts up to `max`), the yearly festival
+// at a shrine (every `every` ticks: `mood` happiness for `food` food; skipped
+// when the stores are too low), and what honouring the river is worth to the land.
+export const BELIEFS = {
+  shrineMood: 4,
+  templeMood: 6,
+  templeLiteracy: 8,
+  templeSustain: 2,
+  max: 2,
+  festival: { every: 200, food: 15, mood: 8 },
+  riverSustain: 4,
+};
+// Population control: families can set off to start a village of their own
+// (`size` at a time, never leaving fewer than `keep`).
+export const SETTLERS = { size: 4, keep: 5 };
 
 // The best ending needs the land to still be healthy: growth can't just ignore
 // the damage it does. Used for every debrief's ending tier.
@@ -2726,6 +2866,40 @@ export const TEACHING = { extra: 0.5, buildings: ["elder", "school", "academy"] 
 // The secret found by building 2 Elder's Huts.
 export const CAVE_PAINTINGS_KNOWLEDGE = 8;
 export const SCOUT_KNOWLEDGE = { bigTrip: 20, trips: 5 };
+// A scouting trip takes this long (18 s at normal speed) before the new land
+// is mapped. During the tutorial it is instant (the clock stands still there).
+export const SCOUT_TRIP = { ticks: 12 };
+// Canoes (Rafts & Fishing, from a Canoe Dock): a trip takes `ticks` (45 s).
+// The first finds the Southern Isles (island 3), where outposts can then be
+// built; after that a trip fishes the open sea (+`fish` food). Every trip
+// needs a new canoe, cut from one big tree (`tree` growth off the biggest
+// forest near home); with no big tree left there are no canoes. Canoes can't
+// reach the kingdoms or the Misty Isle: that takes Ocean Ships. Each building
+// on an outpost island costs `fragile` Sustainability: small islands recover
+// slowly.
+export const CANOE = { cost: { wood: 15, food: 10 }, ticks: 30, fish: 25, tree: 0.35, bigTree: 0.5, island: 3, fragile: 2 };
+// Rebellions, from the Medieval era (`era`). If happiness is under `mood`,
+// unrest brews for `warnTicks` (90 s); if it climbs back over `mood` by then it
+// dies down. If not, a `share` of the people (at least `min`) take up arms.
+// Crush them with warriors (each rebel fights at `strength`; people die on both
+// sides and happiness drops `crushMood`), or meet their demands (`demand` per
+// rebel; they go home and happiness rises `demandMood`). Left alone for
+// `sackTicks` (2 minutes) they sack the stores (`sack` of food and coins) and
+// leave for good. None again for `cooldown` ticks after one ends.
+export const REBELLION = {
+  era: 3,
+  mood: 30,
+  warnTicks: 60,
+  share: 0.15,
+  min: 3,
+  strength: 1,
+  crushMood: 12,
+  demand: { currency: 15, food: 8 },
+  demandMood: 20,
+  sackTicks: 80,
+  sack: 0.3,
+  cooldown: 300,
+};
 
 // Gatherers live off the wild, and the wild only has so much. The first camp
 // makes full food; each extra camp adds only `extraCamp` of a camp's food. Every
@@ -2996,14 +3170,44 @@ export const AFTER_TUTORIAL_RESERVE: Partial<Resources> = { food: 40, wood: 10 }
 export const TUTORIAL_START_FOOD = 20;
 
 // `buys` lists what the step pays for: building ids, "scout", "train" or an
-// advancement id. The starting resources are worked out from it.
-export const TUTORIAL: { text: string; done: string; unlocks: string[]; buys: string[] }[] = [
-  { text: "Welcome, chief. Our people are cold and tired after the long walk. First, warmth: pick the Campfire below and place it on open grass. Look at what it gives us, and what it costs.", done: "campfire", unlocks: ["campfire"], buys: ["campfire"] },
-  { text: "Feel that warmth! But a fire eats wood, and so will everything we build. Put a Woodcutter in the forest. See the little tree stumps in the corner of each building below? They show how hard it is on the land: the more stumps, the more harm. A leaf means it is gentle. The Woodcutter has three, because every tree it cuts takes many years to grow back.", done: "woodcutter", unlocks: ["woodcutter"], buys: ["woodcutter"] },
-  { text: "Wood is coming in. Now our people need a roof. Build a Wooden House, and more families can join us. Not right beside the fire, though: sparks can set wood alight. Leave a patch of ground between them.", done: "hut", unlocks: ["hut"], buys: ["hut"] },
-  { text: "A roof over our heads, but empty bellies. Place a Gatherer's Camp to collect wild food. Berry bushes give more.", done: "gatherer", unlocks: ["gatherer"], buys: ["gatherer"] },
-  { text: "Food is coming. But we don't know what lies beyond these hills. Press Scout and send our young ones to look.", done: "scout", unlocks: ["scout"], buys: ["scout"] },
-  { text: "The scouts saw smoke from other camps, and not everyone out there is friendly. Build a War Camp, then train our first warrior.", done: "train", unlocks: ["warcamp", "train"], buys: ["warcamp", "train"] },
-  { text: "With a guard at the camp, we can think about tomorrow. Every first thing we do teaches us something: the first fire, the first hut, the first time our tribe grows. That learning is Knowledge, the bulb at the top, and one day an Elder's Hut will help the children learn faster. Now, I have noticed wild grain sprouting wherever seeds fall. What if we planted them ourselves? Open Advancements and spend our Knowledge on Early Farming.", done: "early-farming", unlocks: ["advancements"], buys: ["early-farming"] },
-  { text: "Now we know how to plant. Place Farmland on open grass. Fields feed many, but they take the land from the wild, and the forest beside them. Fewer trees, less rain. Everything has a price, chief. Choosing which to pay is up to you.", done: "farm", unlocks: ["farm"], buys: ["farm"] },
+// advancement id. The starting resources are worked out from it. `text` is one
+// short line (the hand shows where to click); `more` is the why, behind "Tell
+// me more". Everything else is learned by playing: the goal line, the coach
+// after each advancement, and Elder Ama when something new happens.
+export const TUTORIAL: { text: string; more: string; done: string; unlocks: string[]; buys: string[] }[] = [
+  {
+    text: "Our people are cold. Place a Campfire on open grass.",
+    more: "A fire keeps people warm and cooks their food. Every building shows what it gives us and what it costs the land.",
+    done: "campfire",
+    unlocks: ["campfire"],
+    buys: ["campfire"],
+  },
+  {
+    text: "Fires need wood. Place a Woodcutter in the forest.",
+    more: "The stumps in a building's corner show how hard it is on the land: more stumps, more harm. A tree takes years to grow back and a moment to cut.",
+    done: "woodcutter",
+    unlocks: ["woodcutter"],
+    buys: ["woodcutter"],
+  },
+  {
+    text: "Now a roof. Build a Wooden House, away from the fire.",
+    more: "More homes let more families join us. Sparks can set wood alight, so leave a patch of ground between a house and a fire.",
+    done: "hut",
+    unlocks: ["hut"],
+    buys: ["hut"],
+  },
+  {
+    text: "Hungry bellies. Place a Gatherer's Camp for wild food.",
+    more: "Berry bushes give more. The wild only has so much to give, so too many camps hunt the animals faster than they can have young.",
+    done: "gatherer",
+    unlocks: ["gatherer"],
+    buys: ["gatherer"],
+  },
+  {
+    text: "Open Advancements and learn Early Farming.",
+    more: "Every first thing we do teaches us something: that is Knowledge, the bulb at the top. Spend it in Advancements to learn new things.",
+    done: "early-farming",
+    unlocks: ["advancements"],
+    buys: ["early-farming"],
+  },
 ];

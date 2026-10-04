@@ -131,8 +131,9 @@ and events also link to these goals:
   play, not five minutes.
 - **Defend against raiders.** When raiders land you choose: fight, hide in the
   houses, or pay them off with food. Your warriors march out and fight on the
-  map. After Hunting Spears you can arm them (spearmen count as 1.5 warriors) and
-  build a Watch Fire on the shore to see raiders coming sooner.
+  map. After Hunting Spears you can arm them (spearmen count as 1.5 warriors), and
+  after Firekeeping you can build a Watch Tower on the shore to see raiders coming
+  sooner.
 - **Pick your people up** and drop them somewhere: on a building to help out, on
   a cold campfire to relight it. Drop them in a fire, the sea or the unexplored
   fog and you may lose them.
@@ -315,9 +316,15 @@ src/
     online.ts           Cloud saves, leaderboard and feedback (Supabase)
     utils.ts            Shared helpers
   app/
-    page.tsx            Project page (for judges and visitors)
     play/page.tsx       The game
     not-found.tsx       Custom 404 page
+public/
+  index.html            Project page (for judges and visitors): plain HTML
+  site/style.css        Its look: plain CSS
+  site/site.js          Its "What's new" bar and Settings button
+  site/fonts/           The two pixel fonts (also used by the game)
+scripts/
+  export-site.mjs       Makes the project page's icons and update list from the game's code
 ```
 
 ## Working on it
@@ -337,8 +344,9 @@ use the live link at the top.
 
 | Script | What it does |
 | --- | --- |
-| `npm run dev` | Dev server with hot reload |
+| `npm run dev` | Dev server with hot reload (project page at `/`, game at `/play`) |
 | `npm run build` | Static build into `out/` |
+| `npm run site` | Remake the project page's icons and "What's new" list (dev and build do this for you) |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | TypeScript check |
 | `npm run format` | Prettier |

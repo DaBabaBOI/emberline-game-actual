@@ -2,39 +2,9 @@
 
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Color, Fog, type Mesh } from "three";
+import type { Mesh } from "three";
 import type { Tile } from "@/game/types";
 import { Flame } from "./building-models";
-
-const CLEAN_SKY = new Color("#a8dcf5");
-const SMOG = new Color("#8f8b80");
-const DUST = new Color("#e2cc93");
-const STORM = new Color("#5d6873");
-
-// Wood smoke: with many fires burning, a haze settles over the valley.
-// `dust` (0–1): the great drought fills the air with a warm, dusty haze.
-// `storm` (0–1): dark storm clouds close in.
-export function Haze({ fires, dust = 0, storm = 0 }: { fires: number; dust?: number; storm?: number }) {
-  const goal = useMemo(() => {
-    const dirty = Math.min(0.6, Math.max(0, (fires - 2) / 10));
-    return {
-      near: 60 - dirty * 45 - dust * 20 - storm * 30,
-      far: 160 - dirty * 110 - dust * 40 - storm * 60,
-      color: CLEAN_SKY.clone().lerp(SMOG, dirty).lerp(DUST, dust * 0.7).lerp(STORM, storm * 0.8),
-    };
-  }, [fires, dust, storm]);
-
-  useFrame(({ scene }) => {
-    if (!(scene.fog instanceof Fog)) scene.fog = new Fog(CLEAN_SKY, 60, 160);
-    const fog = scene.fog as Fog;
-    fog.near += (goal.near - fog.near) * 0.03;
-    fog.far += (goal.far - fog.far) * 0.03;
-    fog.color.lerp(goal.color, 0.03);
-    if (scene.background instanceof Color) scene.background.copy(fog.color);
-  });
-
-  return null;
-}
 
 export function Plume({ x, y, z, strength, seed }: { x: number; y: number; z: number; strength: number; seed: number }) {
   const puffs = useRef<(Mesh | null)[]>([]);

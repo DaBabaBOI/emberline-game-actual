@@ -1,6 +1,6 @@
 "use client";
 
-import { BUILDINGS_BY_ID, FIRE_SCARE, LANDMARKS, QUARRY_DUST, SMOG, WEAR } from "@/game/content";
+import { BUILDINGS_BY_ID, FIRE_SCARE, IMPROVE, LANDMARKS, QUARRY_DUST, SMOG, WEAR } from "@/game/content";
 import {
   dusty,
   rainfall,
@@ -25,6 +25,9 @@ import {
   repairCost,
   tended,
   upgradeFor,
+  improveNext,
+  homeRoom,
+  levelOf,
   wearFactor,
   wearsOut,
   woodcutterYield,
@@ -283,6 +286,47 @@ export function BuildingInfo({
                 . {next.landCost}.
               </span>
             </button>
+          </div>
+        );
+      })()}
+
+      {/* Improving it with stone and new ores: more from the same land. */}
+      {(() => {
+        const next = improveNext(state, tile);
+        const level = levelOf(tile);
+        if (!next && level === 1) return null;
+        const now = IMPROVE.tiers.find((t) => t.level === level);
+        return (
+          <div className="mt-2 border-t-2 border-stone-300 pt-1.5" data-testid="improve">
+            {now && (
+              <p className="text-[11px] text-stone-700">
+                {now.name}: {def.housing ? `room for ${homeRoom(tile)} people` : `makes ${Math.round(IMPROVE.boost * 100 * (level - 1))}% more`}.
+              </p>
+            )}
+            {next &&
+              (next.needs ? (
+                <p className="text-[11px] text-stone-600">Next: {next.name}, once we learn {next.needs} (Advancements).</p>
+              ) : (
+                <button
+                  type="button"
+                  disabled={!canAfford(state, next.cost)}
+                  onClick={() => dispatch({ type: "improve", tileId })}
+                  className="pixel-btn mt-1 w-full bg-emerald-600 px-2 py-1 text-left text-white disabled:opacity-50"
+                  data-testid="improve-btn"
+                >
+                  <span className="font-semibold">Improve: {next.name}</span>
+                  <span className="block text-[11px] text-white/90">
+                    {def.housing
+                      ? `Room for ${Math.floor(def.housing * (1 + IMPROVE.boost * (next.level - 1))) - homeRoom(tile)} more people, on the same land.`
+                      : `+${Math.round(IMPROVE.boost * 100)}% from the same land, with no more of it cleared.`}{" "}
+                    Costs{" "}
+                    {Object.entries(next.cost)
+                      .map(([k, v]) => `${v} ${k === "currency" ? "coins" : k}`)
+                      .join(", ")}
+                    .
+                  </span>
+                </button>
+              ))}
           </div>
         );
       })()}

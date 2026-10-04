@@ -25,6 +25,20 @@ These were decided with the project owner. Do not change them without being aske
 - Unexplored land is hidden under cloud tiles; **the sea is always blue**.
   Scouts reveal land, and only scouts: placing a building never uncovers the
   clouds next to it (it used to, which made scouting pointless).
+  **Fishing Spots** go on a beach, or on the river bank (`riverTerrain`:
+  grass, steppe, marsh or forest touching the river).
+  **Canoes** (`CANOE`, Canoe Dock from Rafts & Fishing, on a beach): one
+  canoe per dock; each trip fells one big tree near home (`bigTree()`, -0.35
+  growth; none left = no canoes) and takes 45 s. The first finds the Southern
+  Isles (island 3) as an outpost; later trips fish the open sea (+25 food).
+  A dock links outposts home like a Shipyard. Each building on an outpost
+  island costs 2 Sustainability ("small islands are fragile"). Canoes never
+  reach the kingdoms or the Misty Isle (Ocean Ships do). Multiplayer will use
+  canoes for trade and raids between players.
+  A scouting trip takes `SCOUT_TRIP.ticks` (12, 18 s): paid when sent
+  (`state.scouting`), land mapped when they return (`scoutsReturn()`), a
+  "Scouts exploring" marker on the map and a countdown on the button. One trip
+  at a time. Instant during the tutorial, where the clock stands still.
 - Forests spread and regrow over time; woodcutters thin them out.
 
 **Time**
@@ -80,8 +94,17 @@ These were decided with the project owner. Do not change them without being aske
 - **Tutorial budget:** Elder Ama hands over each step's exact cost when the step
   starts (`tutorialBudget(state, [step])` in `advanceTutorial`), plus
   `TUTORIAL_START_FOOD` (20) at the start and the rest of `AFTER_TUTORIAL_RESERVE`
-  (40 food, 10 wood in all) at the goodbye. There is never a big pile. When you
+  (40 food, 10 wood in all) at the goodbye, plus the cost of the building the
+  last step's coach asks for. There is never a big pile. When you
   add or change a tutorial step, fill in its `buys`.
+- **The tutorial is short: five one-line steps** (fire, woodcutter, house,
+  gatherer, Early Farming). Each step's `text` is one short sentence; the why
+  goes in `more` ("Tell me more"). Everything else is learned by playing: when
+  it ends, a War Camp with one warrior is handed over, Elder Ama coaches the
+  Farmland (`AFTER_STEPS`), and then says a one-line goodbye
+  (`farewellAfterCoach`). "I've played before" on the title screen starts with
+  the tutorial skipped (`NewGameOptions.skipTutorial`). Keep new tutorial and
+  coach text to one line; players found long text tiring to read.
 - **People on the map are representative:** at most 20 figures at once
   (`MAX_FIGURES` / `figureCounts()` in `world/villagers.tsx`), roughly one per
   three people and one per two warriors. Food use still scales with the real
@@ -94,6 +117,15 @@ These were decided with the project owner. Do not change them without being aske
   shows `sustainabilityBreakdown()` (every part pushing it down or up) and the
   trend over the last minute. A new building or mechanic that affects the land
   must add its own line to the breakdown and its own gain/cost text.
+  Each part that costs the land should also carry a `fix` (what exactly to do
+  about it, with counts); "What should I fix?" in that panel lists the three
+  costliest parts that have one.
+- **Every meter explains itself** (`meterBreakdown()` / `meterFixes()` in the
+  engine, `MeterPanel` in `hud/side-meters.tsx`). Its parts must add up to what
+  `computeMeters()` gives, so a change to a meter's formula must change its
+  breakdown too. A part that holds the meter back gets a `fix` and a `gain`
+  (roughly how much the fix adds); suggestions only name buildings the player
+  can build now, or the advancement that unlocks them.
 - **Sustainable alternatives exist for the big choices.** Clicking a building
   opens its info panel (`world/building-info.tsx`). Woodcutters can
   **clear-cut** (full wood, strips the forest) or log **selectively** (half the
@@ -143,6 +175,50 @@ These were decided with the project owner. Do not change them without being aske
   up in yellow with a marker overhead (`highlight.group`, `Figures group=`) and
   says how many people each figure stands for. New crowds of people on the
   map must pass a `group` so they light up too.
+- **Realistic time** (a joke mode, title screen checkbox; `realTimeFrom`,
+  `src/game/calendar.ts`): the game plays as normal, but the top bar shows
+  today's real date and time in 50,000 BCE, with the season, and the year only
+  turns over after a real year. The sky follows the real clock, and there is no
+  "left behind" deadline (`behindTicksLeft()`). The engine's own `year` is
+  untouched, so everything that runs on it still works.
+- **Beliefs are invented, never a real religion** (`BELIEFS`), and they're
+  trade-offs like everything else:
+  - **Stone Age:** spirits of the forest (the sacred grove event).
+  - **Ancient:** the Shrine (+4 happiness each, up to 2) and its yearly festival
+    (`festival()`: +8 happiness for 15 food, put off when food is short).
+  - **Classical:** the Temple (+6 happiness, +8 literacy, −2 Sustainability for
+    its stone, up to 2), and the river card "Honour or tame the river".
+    Honouring it bans mills and aqueducts for good (`riverChoice`) for +4
+    Sustainability.
+  - **Medieval:** the cathedral landmark.
+
+  Never rank or name real faiths.
+- **Improving buildings** (`IMPROVE`, `improveNext()`, `Tile.level`): each
+  level costs stone (and coins from level 3) and needs its ore researched
+  (Toolmaking, Bronze, Iron Tools, Steelmaking). It adds `IMPROVE.boost` to a
+  building's output, or to a home's room (`homeRoom()`), on the same land; a
+  woodcutter fells no more trees for it. Only buildings that make something
+  or house people are in `IMPROVE.buildings`. Placing a building resets its
+  level. Later ores (uranium, plutonium, the unidentified minerals) are
+  coming-soon nodes until those eras exist.
+- **Phones get the compact HUD** (`useCompact()`: narrower than 768 px, or
+  shorter than 500 px). The meters are a strip under the top bar
+  (`MeterStrip`) instead of side columns, the goal is one line, and only the
+  newest message shows. The top bar is two rows below 1024 px. Panels between
+  the bars place themselves with `--hud-top` and `--hud-bottom` (measured in
+  `useHudEdges()`), never a fixed offset, so anything new in either bar keeps
+  them clear. Only one copy of each meter is ever rendered, so test ids stay
+  unique.
+- **The build bar can be hidden** (▼ Hide). It comes back on its own whenever
+  something needs it: the tutorial, a guided step, a tool in hand, or a hint.
+- **Discovery scenes show the era** (`ERA_BACKDROPS` in
+  `hud/discovery-scene.tsx`): one row per era. A new era needs a row.
+- **People keep out of harm's way** (`ground.walkable()`): never into the sea,
+  the fog, mountains, buildings (fires included) or a burning wildfire tile. Anyone
+  walking to a goal on their own (like the hunter) steers round what blocks the way.
+- **Nobody appears or vanishes.** A figure doing a job away from the crowd
+  (like the hunter in `world/wildlife.tsx`) borrows a real villager (`Walker.hunting`),
+  leaves from where they stand and hands them back where the job ends.
 - **How to get Knowledge is always one click away** (`knowledgeSources()` in
   engine.ts, `hud/knowledge-help.tsx`): the bulb counter in the top bar opens a
   panel listing the one-time firsts still to come (new kinds of building,
@@ -171,9 +247,21 @@ These were decided with the project owner. Do not change them without being aske
   someone into a fire or the open sea by click or Enter needs a second click on
   the same spot within `CONFIRM_MS` ("Click again to really drop them there");
   a drag there is deliberate and drops at once.
+- **The year rolls** (`RollingYear` in `top-bar.tsx`, `nextYear()`): between
+  ticks the top bar counts towards next tick's year using the provider's
+  `clock` ({ running, msPerTick }), and holds while time is stopped. Outside
+  the deadline-driven calendars the year slows over the last `YEAR_EASE` (50)
+  years and settles one year before the next era's first year.
+- **No roof hurts** (`HOMELESS`, `homelessCount()` / `homelessMood()`): each
+  person over the housing room costs 2 happiness (up to 15; 4/30 tipped bot
+  towns into unrest, since towns grow up to 15% past their housing) after the
+  tutorial, and adds 0.4% a tick to the chance of an outbreak ("People
+  sleeping out in the cold fell sick"; not in the calm start or the plague;
+  the player's doing, so it doesn't wait for a quiet moment). The roof warning
+  and the Happiness tip say what it costs.
 - **Small moments** (`SMALL_MOMENTS`, `MOMENTS` / `smallMoment()` in engine.ts):
   every 20-40 ticks (30-60 s) after the tutorial, one little thing happens,
-  picked from those that fit the island right now (a deer herd if the forest
+  picked from those that fit the island right now (birds if the forest
   stands, dust if it's gone, mice in a big store without a granary, wind blowing
   out one of several fires, a baby when there's food and room...). Each is a
   log line (toast) with a small effect; never over an event, raid or the legion,
@@ -182,6 +270,12 @@ These were decided with the project owner. Do not change them without being aske
   happens (`where` picks the tile; `state.moment`; `world/moments.tsx`) for
   `MOMENT_TICKS`, with a short label over the spot: a new moment needs a
   `where`, a scene and a label. Dev: "Moment", or pick one in "Moment...".
+  A scene must stay on its own tile, as seen from the camera: anything flying
+  goes just above what's on the tile (birds at ~1.1, over treetops at ~0.85),
+  since height pushes it up the screen over the tile behind. No rain or deer moment
+  (the owner found them random / useless): good rainfall shows as the "grow" moment, the
+  field's own wheat shooting up. Birds circle a tile deep in the forest
+  (`deepForest()`).
 - **Phones are supported.** Layouts use `md:` breakpoints (bars stack and
   scroll on small screens). There is no hover on touch: the first tap on a tile
   previews (ghost + trade-off card), the second tap builds. Never rely on Esc or
@@ -249,7 +343,9 @@ These were decided with the project owner. Do not change them without being aske
   Quarries also cost −3 Sustainability each (the hillside is gone for good).
 - **Livestock and clothing:** Herding unlocks the Livestock Pen (a little food,
   grazing wears the land: −2 Sustainability each). Warm Clothes (research) makes each pen
-  keep `peoplePerPen` (6) people warm without a fire, so fewer fires are needed
+  keep `peoplePerPen` (10, as many as a fire) people warm without a fire, and
+  families then cook at home hearths (no raw-food penalty, `eatingRaw()`), so
+  with enough pens no campfire is needed at all
   (less wood cut, less smoke). A trade-off, not a free upgrade.
 - **Growing is as hard as surviving** (`GROWTH_PRESSURE`): stored food above 100
   rots (no preservation yet), each lit campfire warms only 10 people (the
@@ -277,8 +373,15 @@ These were decided with the project owner. Do not change them without being aske
   the engine, `DROP`): after the tutorial, with no tool selected, the player can
   grab a villager and drop them anywhere. A ring and label under them say what
   will happen. Open ground: nothing. A working building: they help (+50% output
-  for 20 ticks). A cold campfire: they relight it. A lit fire or the open sea:
-  they die (-1 person, happiness -6, counted as fire / accident in the debrief).
+  for 20 ticks), working what the building works (`ground.workSpot()`): at a
+  woodcutter they walk out to a tree it is felling (in `LAND.woodcutterReach`,
+  biggest first) and chop at its trunk, or split logs at the chopping block if
+  no trees are left; elsewhere they work beside the building, facing it. A cold campfire: they relight it. A lit fire or the open sea:
+  they die (-1 person, counted as fire / accident in the debrief) and the
+  tribe grieves (`GRIEF`, `state.grief`): -35 happiness each, taken off
+  *after* the 0-100 cap so it always shows, adding up to -100 and fading over
+  3 minutes. Two in a row tip an ordinary tribe into unrest: killing people to
+  save food must never pay. The happiness tip says "Grieving". Dev: "Grief".
   Shallow water or a mountain: they get sick. Cloud (unexplored land): they
   vanish and come back only 5% of the time, with a little new map; this must
   stay rare so scouting is still worth buying. Dev: "Back from fog".
@@ -308,9 +411,10 @@ These were decided with the project owner. Do not change them without being aske
   warrior can still tip it), **Hide** (nobody dies, they take a smaller share)
   or **Pay tribute** (4 food per raider, they leave but the next raid comes 60
   ticks sooner). Each War Camp holds `WARRIORS_PER_CAMP` (6); the Train button
-  says "+1 camp = +6" when full. **Watch Fire** (after Hunting Spears, on the
-  shore): raiders seen 8 ticks sooner, +1 defense (max 2), burns wood, -1
-  Sustainability. Warriors patrol around camps and watch fires, recruits walk
+  says "+1 camp = +6" when full. **Watch Tower** (id `watchfire`, kept for
+  saves; after Firekeeping, beach only): raiders seen 8 ticks sooner, +1
+  defense (max 2), built from big logs, -1 Sustainability. Warriors patrol
+  around camps and watch towers, recruits walk
   out of a camp, and warriors take at most 40% of the figures. The legion's base
   is 8 (was 6) to match the bigger armies. Dev: "Raid: band / party / fire".
 - **Famine is recoverable** (`FAMINE`, `famineOptions()`): with the stores empty,
@@ -450,7 +554,17 @@ These were decided with the project owner. Do not change them without being aske
     between scales it (`plagueToll`). The banner shows each part of the
     readiness and the harbour button. On the map: grey light, rats round
     homes, ships held offshore while the harbour is closed.
-  - Dev: Plague soon/now/end, Ship back, kingdom moods +/-40.
+  - Rebellions (`REBELLION`, `updateRebellion`, `state.rebellion`, from the
+    Medieval era): happiness under 30 (one big moment at a time) starts
+    unrest with a 90 s countdown; back over 30 and it dies down. Still under:
+    15% of the people (at least 3) take up arms round a building near the
+    middle (`world/rebels.tsx`). Crush them with warriors (`crushOdds`: our
+    defense against 1 per rebel; deaths both sides, -12 happiness; losing
+    means a sack) or meet their demands (15 coins + 8 food each; they come
+    home, +20 happiness). Left alone 2 minutes they sack 30% of food and
+    coins and leave. 5 minutes' calm after one ends. Below 15 happiness the
+    old unrest (people leave) still comes first: 15-30 is the rebellion band.
+  - Dev: Plague soon/now/end, Ship back, Unrest, Rebellion, kingdom moods +/-40.
 - **Natural disasters** (`DISASTERS`, `DISASTER_HITS`, `updateDisasters` /
   `strike` in the engine, `world/disasters.tsx`): the first about 10 minutes
   after the tutorial, then one every 10–17 minutes; never over a raid, the
@@ -586,7 +700,19 @@ These were decided with the project owner. Do not change them without being aske
   numerous (tiles, trees, people). Moving instanced meshes need `frustumCulled={false}`.
 - The site is a **static export** (`output: "export"`) deployed to GitHub Pages
   under a base path. No API routes, no server code, no dynamic routes, no env
-  secrets. Use `next/link` for internal links so the base path is applied.
+  secrets. Use `next/link` for links between Next.js pages so the base path is
+  applied; link to the project page with `<a href={HOME}>` (`src/lib/home.ts`).
+- **The project page is plain HTML + CSS** (`public/index.html`,
+  `public/site/style.css`, `public/site/site.js`) so everyone on the team can
+  read and edit it. No React or Tailwind there, and keep its links relative
+  (`play/`, `site/...`) for the base path. Its icons (`site/icons/*.svg`) and
+  "What's new" list (`site/updates.js`) are made from `sprites.ts` and
+  `updates.ts` by `scripts/export-site.mjs` before every dev/build (they're
+  gitignored; never edit them). That script also stops the build if the page's
+  trade-off lines no longer match the buildings' `gain` / `landCost` text.
+  Colours for light, dark and high contrast are variables at the top and
+  bottom of `style.css`; the settings use the same storage key as the game
+  (`emberline-accessibility-settings`).
 - **Online features are optional** (`src/lib/online.ts`, Supabase project
   `shistech-hackathon`): playtest feedback (Menu > Feedback), the leaderboard
   (on the end-of-story debrief; lost games aren't listed) and cloud saves
@@ -607,7 +733,77 @@ These were decided with the project owner. Do not change them without being aske
   along an angle). Angles use the arms' convention: 0 = straight down,
   -PI/2 = straight ahead, -PI = straight up; figures face +z. Check new poses
   side-on in a browser before shipping.
+- **The look of the world** (`world/sky.tsx`, `water.tsx`, `effects.tsx`,
+  `cinematic.tsx`):
+  - **Day and night:** a day is `DAY_TICKS` (120) ticks, so it pauses and
+    speeds up with the game. `LOOKS` sets the sky, sun, sky light and fog for
+    each time of day. Keep sunset and night bright enough to play: players
+    found a dark sunset hard to see. "Day and night" off (Menu) holds it at
+    late morning.
+  - **Lights:** the sun (or moon) is the only shadow light. Firelight at night
+    is a fixed pool of 6 point lights (adding or removing lights rebuilds every
+    material).
+  - **Sea and clouds:** the sea is a see-through surface at `SEA_LEVEL` with
+    waves drawn in its lighting. Clouds turn invisible when the camera is among
+    them but keep casting shadows.
+  - **Graphics** (`src/lib/graphics.ts`): "fancy" adds the film look
+    (`@react-three/postprocessing`: ambient occlusion, bloom, per-era grade,
+    vignette, ACES tone mapping), firelight and 2048 shadows. "fast" is the
+    default on phones, and a game under 24 fps drops to it by itself.
+  - **Camera shots:** the fly-in at a new game and a turn round the village at
+    each new era, with black bars, a title and a fading HUD
+    (`hud/letterbox.tsx`). A click or key skips them, and none play for
+    reduced-motion players.
+  - **Rules:** shared materials and per-frame scratch objects are module-level
+    (the React compiler forbids mutating hook values in `useFrame`). Code the
+    HUD needs (shot store, time of day) lives outside `world/`, so the HUD
+    doesn't load three.js.
+- **Sound** (`src/lib/audio.ts`, `hud/game-audio.tsx`): music, ambience and
+  sound effects are all made live with Web Audio, with no sound files and no
+  library.
+  - **Unlocking:** browsers block sound until the first click or key press, so
+    `unlockAudio()` runs on the first one (title screen included).
+  - **Music:** each era has its own key, scale, instruments and tempo
+    (`ERA_MUSIC`). It is calmer at night, and drums pick up during a raid,
+    the legion, a rebellion or a disaster.
+  - **Effects:** `GameAudio` watches the state and plays one effect per change,
+    the most important first.
+  - **Settings:** music and sound volumes plus mute, saved under
+    `emberline-audio` (Menu > Sound, and the speaker in the top bar).
+  - **Loudness:** keep the music around -20 to -26 dB RMS (measured with an
+    analyser), or it is hard to hear on laptop speakers.
+- **Every feature is introduced when it first matters** (`src/game/hints.ts`,
+  `hud/hints.tsx`). The tutorial only teaches the basics; everything else gets
+  one line from Elder Ama the first time it applies (a woodcutter cut off by
+  the sacred grove: sell it; scouting affordable: what it costs; a meter low:
+  click it). Each hint shows once a game (`hintsSeen`), one at a time, at least
+  `HINT.gapTicks` apart, never over the tutorial, events, lessons, guided steps,
+  raids or camera shots. The button it talks about glows (`target`). When you add
+  a feature the tutorial doesn't cover, add its hint, in order of importance.
+- **Population control** (click the population counter): "Hold at N" sets
+  `popLimit`, which stops births and newcomers (`belowLimit()`), and "Send
+  settlers" lets `SETTLERS.size` people leave peacefully (never below
+  `SETTLERS.keep`). Event cards the player accepts can still add people. The
+  panel warns when the limit is below what the next era needs. Players must
+  never need to harm villagers to keep numbers down.
+- **Easter eggs** (`src/game/easter.ts`): the rules and texts. Each one found
+  counts once as a secret (`egg-<id>` in `secretsFound`, "Secrets found" in
+  Advancements) through the `easterEgg` action. The eggs are:
+  - team cameos (a people named after a team member, or "SHISTECH", get them
+    crowned with a name tag);
+  - Elder Ama poked 10 times;
+  - the Konami code (fireworks);
+  - a rare golden deer;
+  - a rare message-in-a-bottle moment;
+  - a palm islet out at sea, found by clicking it once you have a canoe.
+
+  Keep their jokes kind; they name real teammates. Dev buttons: Fireworks,
+  Golden deer, and the Moment picker's "bottle".
 - Keep the tutorial (`TUTORIAL` in `content.ts`) working when you change buildings.
+- **Elder Ama never covers what she asks for:** with Advancements open her
+  panels sit between the tree's header and its details bar (`useSpotInTree()`
+  in `game-screen.tsx`, using `data-tree-area` / `data-tree-details`): just
+  above the bar, or under the header when the guide's target is down there.
 - During guided steps the camera may turn and zoom but not slide (`enablePan`
   off), and the guide overlay forwards right-button presses, touches and the
   wheel to the map's outer element (`[data-world-map]`), where drei's controls

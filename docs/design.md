@@ -104,7 +104,7 @@ not a special case.
 | Farmland | Steady food | Clears the nearest forest for good; less forest, less rain for every field | Replant elsewhere, Forester's Lodge |
 | Gatherer's Camp | Food, best on berries | Past 2 camps: little extra food and overhunting (−2 Sustainability each); 30% less food right beside a fire | Farms and fishing instead of more camps |
 | Stone Quarry | Stone | Cuts the hill down for good; dust cuts food from farms, camps and pens within 2 hexes by 40% | Put it far from the fields (the tutorial hand does) |
-| Livestock Pen | Food; with Warm Clothes, keeps 6 people warm | Grazing wears the land (−2 each) | Fewer fires needed, so less wood cut |
+| Livestock Pen | Food; with Warm Clothes, keeps 10 people warm (no campfire needed) | Grazing wears the land (−2 each) | Fewer fires needed, so less wood cut |
 | Bronze Smithy (Ancient) | +20% food and wood per smithy (up to 3) | Burns charcoal (wood) every tick, −4 Sustainability | Forester's Lodge to keep up with the wood |
 | Irrigation Canal (Ancient) | Next-door farms +50% | Salts the soil (−3) | Fewer, well-placed canals |
 | Event cards (12) | Each choice gains something | …and costs something | You pick which price to pay |

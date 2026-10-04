@@ -5,6 +5,8 @@ import { UPDATES } from "@/game/updates";
 import type { GameState } from "@/game/types";
 import { useGame } from "@/components/civ/game-provider";
 import { AccessibilityMenuSection } from "@/components/accessibility-settings";
+import { setDaylight, setGraphics, useDaylight, useGraphics } from "@/lib/graphics";
+import { SoundOptions } from "./game-audio";
 import { FEEDBACK_LIMITS, postScore, saveToCloud, scoreFor, sendFeedback, topScores, type ScoreRow } from "@/lib/online";
 
 const VERSION = UPDATES[0]?.date ?? "dev";
@@ -140,12 +142,53 @@ export function GameMenu() {
             <span className="font-semibold text-amber-300">Feedback</span>
             <FeedbackForm state={state} />
           </div>
+          <SoundOptions />
+          <GraphicsOption />
           <div className="flex flex-col gap-1">
             <span className="font-semibold text-amber-300">Accessibility</span>
             <AccessibilityMenuSection />
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Fancy: the film look, firelight at night, sharper shadows. Fast: for phones
+// and older computers.
+function GraphicsOption() {
+  const graphics = useGraphics();
+  const daylight = useDaylight();
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="font-semibold text-amber-300">Graphics</span>
+      <div className="grid grid-cols-2 gap-2">
+        {(["fancy", "fast"] as const).map((g) => (
+          <button
+            key={g}
+            type="button"
+            onClick={() => setGraphics(g)}
+            aria-pressed={graphics === g}
+            data-testid={`graphics-${g}`}
+            className={"pixel-btn px-2 py-1 text-xs font-semibold " + (graphics === g ? "bg-amber-300 text-[#2b2119]" : "bg-[#4a3b2e] text-white")}
+          >
+            {g === "fancy" ? "Fancy" : "Fast"}
+          </button>
+        ))}
+      </div>
+      <span className="text-white/60">{graphics === "fancy" ? "Film look and firelight at night." : "Smoother on phones and older computers."}</span>
+      <label className="mt-1 flex items-center justify-between gap-3 text-white">
+        <span>Day and night</span>
+        <input
+          type="checkbox"
+          checked={daylight === "cycle"}
+          onChange={(e) => setDaylight(e.target.checked ? "cycle" : "day")}
+          aria-label="Toggle day and night (off keeps it always day)"
+          data-testid="daylight-toggle"
+          className="h-4 w-4 accent-emerald-600"
+        />
+      </label>
+      <span className="text-white/60">{daylight === "cycle" ? "The sun rises and sets." : "Always day."}</span>
     </div>
   );
 }

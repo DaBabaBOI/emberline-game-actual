@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { goldenDeer, launchFireworks, useKonami } from "./eggs";
+import { HINTS } from "@/game/hints";
+import { playShot } from "./letterbox";
+import { playSfx } from "@/lib/audio";
+import { useCompact } from "@/lib/use-compact";
+import { setTimeOfDay } from "./time-of-day";
 import { AFTER_STEPS, DISASTERS, DISCOVERIES, DROUGHT, ERA_INTROS, ERAS, EVENTS, KINGDOMS, LESSONS, RAID_KINDS, RAID_RESPONSE, TREE_BY_ID, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
 import {
   canAfford,
@@ -20,34 +26,110 @@ import { useGame } from "@/components/civ/game-provider";
 import { Countdown } from "./countdown";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { useGuide } from "./guide-overlay";
-import { PlagueBanner } from "./medieval";
+import { PlagueBanner, RebellionBanner } from "./medieval";
 import { ClimateBanner } from "./industrial";
 
+// An easter egg: poke Elder Ama's picture and she gets grumpier; the tenth poke
+// earns a secret.
+const AMA_LINES: Record<number, string> = {
+  3: "Yes, child?",
+  5: "I am listening, I promise.",
+  7: "Please stop poking me.",
+  9: "I am 74 years old, child.",
+};
+let amaPokes = 0;
+
+function AmaFace() {
+  const { dispatch } = useGame();
+  const [line, setLine] = useState<string | null>(null);
+  const hide = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (hide.current) clearTimeout(hide.current);
+  }, []);
+  const say = (text: string) => {
+    setLine(text);
+    if (hide.current) clearTimeout(hide.current);
+    hide.current = setTimeout(() => setLine(null), 2500);
+  };
+  return (
+    <span className="relative inline-flex">
+      <button
+        type="button"
+        aria-label="Elder Ama"
+        data-testid="ama-face"
+        onClick={() => {
+          amaPokes++;
+          if (amaPokes >= 10) {
+            amaPokes = 0;
+            dispatch({ type: "easterEgg", id: "ama" });
+            playSfx("discover");
+            say("Fine. Here is a secret for you.");
+          } else if (AMA_LINES[amaPokes]) {
+            playSfx("ama");
+            say(AMA_LINES[amaPokes]);
+          }
+        }}
+      >
+        <PixelIcon name="elder" size={28} />
+      </button>
+      {line && (
+        <span className="pixel-panel font-pixel absolute left-9 top-0 z-10 whitespace-nowrap px-2 py-0.5 text-xs" data-testid="ama-line">
+          {line}
+        </span>
+      )}
+    </span>
+  );
+}
+
+// The Konami code sets off fireworks over the village (an easter egg).
+export function KonamiFireworks() {
+  const { dispatch } = useGame();
+  const fire = useCallback(() => {
+    launchFireworks();
+    dispatch({ type: "easterEgg", id: "fireworks" });
+  }, [dispatch]);
+  useKonami(fire);
+  return null;
+}
+
+// One short line per step; the why is behind "Tell me more".
 export function TutorialPanel() {
   const { state, dispatch } = useGame();
   const { waiting } = useGuide();
   const step = TUTORIAL[state.tutorialStep];
+  // Which step's "more" is open (it closes by itself on the next step).
+  const [moreFor, setMoreFor] = useState<number | null>(null);
   if (!step) return null;
+  const more = moreFor === state.tutorialStep;
   return (
-    <div className="pixel-panel pointer-events-auto relative z-[26] w-full p-2.5 text-xs md:p-3 md:text-sm">
+    <div className="pixel-panel pointer-events-auto relative z-[26] w-full p-2.5 md:p-3" data-testid="tutorial">
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="font-pixel flex items-center gap-2 text-base font-semibold">
-          <PixelIcon name="elder" size={28} />
+          <AmaFace />
           Elder Ama
         </span>
-        <span className="text-[11px] text-amber-800/70">
+        <span className="font-num text-xs text-amber-800/70">
           {state.tutorialStep + 1}/{TUTORIAL.length}
         </span>
       </div>
-      <p>{step.text}</p>
+      <p className="text-sm font-semibold leading-snug md:text-base" data-testid="tutorial-text">
+        {step.text}
+      </p>
       {waiting && <p className="mt-1 text-xs italic text-amber-800">{waiting}</p>}
-      <button
-        type="button"
-        onClick={() => dispatch({ type: "skipTutorial" })}
-        className="mt-2 text-xs text-stone-500 underline"
-      >
-        Skip tutorial
-      </button>
+      {more && <p className="mt-1.5 text-xs leading-relaxed text-stone-600">{step.more}</p>}
+      <div className="mt-2 flex items-center justify-between gap-2 text-xs">
+        <button
+          type="button"
+          onClick={() => setMoreFor(more ? null : state.tutorialStep)}
+          className="text-amber-800 underline"
+          data-testid="tutorial-more"
+        >
+          {more ? "Less" : "Tell me more"}
+        </button>
+        <button type="button" onClick={() => dispatch({ type: "skipTutorial" })} className="text-stone-500 underline">
+          Skip tutorial
+        </button>
+      </div>
     </div>
   );
 }
@@ -63,7 +145,7 @@ export function CoachPanel() {
   return (
     <div className="pixel-panel pointer-events-auto relative z-[26] w-full p-2.5 text-xs md:p-3 md:text-sm" data-testid="coach">
       <div className="mb-1 flex items-center gap-2">
-        <PixelIcon name="elder" size={28} />
+        <AmaFace />
         <span className="font-pixel flex flex-col leading-tight">
           <span className="text-[11px] text-amber-800/80">New: {TREE_BY_ID[state.coach!.node]?.name}</span>
           <span className="text-base font-semibold">Elder Ama</span>
@@ -103,7 +185,7 @@ export function ElderLesson() {
       data-testid="elder-lesson"
     >
       <div className="mb-1 flex items-center gap-2">
-        <PixelIcon name="elder" size={28} />
+        <AmaFace />
         <span className="font-pixel flex flex-col leading-tight">
           <span className="text-[11px] text-amber-800/80">{farewell || intro ? "Elder Ama" : "Elder Ama\u2019s lesson"}</span>
           <span className="text-base font-semibold">{lesson.title}</span>
@@ -166,6 +248,7 @@ const MAX_TOASTS = 2;
 // so the screen never fills with messages.
 export function Toasts() {
   const { state } = useGame();
+  const compact = useCompact();
   const [toasts, setToasts] = useState<{ id: number; text: string }[]>([]);
   const seen = useRef(state.log);
   const nextId = useRef(0);
@@ -199,7 +282,8 @@ export function Toasts() {
 
   return (
     <div className="pointer-events-none flex w-full flex-col items-end gap-1">
-      {toasts.map((t, i) => (
+      {/* Phones show only the newest message. */}
+      {(compact ? toasts.slice(0, 1) : toasts).map((t, i) => (
         <div
           key={t.id}
           className="pixel-panel-dark font-pixel px-2.5 py-1 text-xs"
@@ -324,6 +408,7 @@ function DisasterBanner() {
 export function RaidBanner() {
   const { state, dispatch } = useGame();
   if (state.climate && !state.raid) return <ClimateBanner />;
+  if (state.rebellion && !state.raid) return <RebellionBanner />;
   if (state.plague && !state.raid) return <PlagueBanner />;
   if (state.disaster && !state.raid) return <DisasterBanner />;
   if (state.drought && !state.raid) return <DroughtBanner />;
@@ -453,7 +538,12 @@ export function Warnings() {
   if (list.length === 0) return null;
   const shown = open ? list : list.slice(0, 1);
   return (
-    <div data-testid="warnings" className="pointer-events-none absolute bottom-48 left-11 right-11 flex flex-col gap-1.5 md:bottom-32 md:left-3 md:right-auto md:max-w-72">
+    // Just above the bottom bar, however tall it is (--hud-bottom: game-screen.tsx).
+    <div
+      data-testid="warnings"
+      style={{ bottom: "calc(var(--hud-bottom, 12rem) + 0.5rem)" }}
+      className="pointer-events-none absolute left-2 right-2 flex flex-col gap-1.5 md:left-3 md:right-auto md:max-w-72"
+    >
       {shown.map((w) => (
         <div
           key={w.id}
@@ -529,6 +619,75 @@ export function DevPanel() {
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devPeople" })}>
           +10 people
         </button>
+        {(
+          [
+            ["Dawn", 0.245],
+            ["Noon", 0.5],
+            ["Sunset", 0.755],
+            ["Night", 0.95],
+          ] as const
+        ).map(([label, t]) => (
+          <button key={label} type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => setTimeOfDay(t)}>
+            {label}
+          </button>
+        ))}
+        <button
+          type="button"
+          className="pixel-btn bg-[#4a3b2e] px-2 py-1"
+          onClick={() => {
+            // The next of Elder Ama's hints that applies, without waiting for its turn.
+            const h = HINTS.find((x) => !(state.hintsSeen ?? []).includes(x.id) && x.when(state));
+            if (h) dispatch({ type: "showHint", id: h.id });
+          }}
+          title="Shows the next hint that applies now"
+        >
+          Hint
+        </button>
+        <button
+          type="button"
+          className="pixel-btn bg-[#4a3b2e] px-2 py-1"
+          onClick={() => {
+            launchFireworks();
+            dispatch({ type: "easterEgg", id: "fireworks" });
+          }}
+        >
+          Fireworks
+        </button>
+        <button
+          type="button"
+          className="pixel-btn bg-[#4a3b2e] px-2 py-1"
+          onClick={() => {
+            goldenDeer.wanted = true;
+          }}
+          title="The next animal in the forest is the golden deer"
+        >
+          Golden deer
+        </button>
+        <button
+          type="button"
+          className="pixel-btn bg-[#4a3b2e] px-2 py-1"
+          onClick={() => (["build", "discover", "step", "event", "raid", "battle", "era", "win", "lose"] as const).forEach((k, i) => setTimeout(() => playSfx(k), i * 1400))}
+          title="Plays every sound effect in turn"
+        >
+          Sounds
+        </button>
+        <button
+          type="button"
+          className="pixel-btn bg-[#4a3b2e] px-2 py-1"
+          onClick={() => playShot({ kind: "intro", title: state.nation ?? "The Emberfolk", subtitle: ERAS[state.era].name, seconds: 6 })}
+        >
+          Intro shot
+        </button>
+        <button
+          type="button"
+          className="pixel-btn bg-[#4a3b2e] px-2 py-1"
+          onClick={() => playShot({ kind: "era", title: ERAS[state.era].name, subtitle: "Era shot", seconds: 9 })}
+        >
+          Era shot
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devGrief" })} title="As if someone was dropped into a fire">
+          Grief
+        </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devFiresOut" })}>
           Fires out
         </button>
@@ -540,6 +699,9 @@ export function DevPanel() {
         </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devXp" })}>
           +100 XP
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devOres" })} title="Learn every ore, +300 stone, +200 coins">
+          Ores
         </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devMoment" })}>
           Moment
@@ -631,6 +793,12 @@ export function DevPanel() {
             Plague {when}
           </button>
         ))}
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devRebellion", when: "soon" })}>
+          Unrest
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devRebellion", when: "now" })}>
+          Rebellion
+        </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devShipBack" })}>
           Ship back
         </button>

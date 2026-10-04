@@ -204,10 +204,27 @@ export function GathererModel({ opacity }: ModelProps) {
   );
 }
 
+// Buildings are drawn this much bigger on the map, and turned by a sixth of a
+// circle per tile id (world-canvas.tsx), so each one faces its own way.
+export const BUILDING_SCALE = 1.55;
+export const buildingTurn = (tileId: number) => (tileId % 6) * (Math.PI / 3);
+
+// Where a point in a building's model is on the map (y ignored).
+export function onBuilding(tile: { id: number; x: number; z: number }, x: number, z: number) {
+  const a = buildingTurn(tile.id);
+  return {
+    x: tile.x + (x * Math.cos(a) + z * Math.sin(a)) * BUILDING_SCALE,
+    z: tile.z + (-x * Math.sin(a) + z * Math.cos(a)) * BUILDING_SCALE,
+  };
+}
+
+// The woodcutter's chopping block (the stump with the axe in it), in the model.
+export const CHOPPING_BLOCK = { x: 0.25, z: 0.2, r: 0.13 };
+
 export function WoodcutterModel({ opacity }: ModelProps) {
   return (
     <group>
-      <Part color="#7d5a3c" opacity={opacity} position={[0.25, 0.07, 0.2]}>
+      <Part color="#7d5a3c" opacity={opacity} position={[CHOPPING_BLOCK.x, 0.07, CHOPPING_BLOCK.z]}>
         <cylinderGeometry args={[0.11, 0.13, 0.14, 10]} />
       </Part>
       <Part color="#c9a77a" opacity={opacity} position={[0.25, 0.145, 0.2]}>
@@ -236,6 +253,40 @@ export function WoodcutterModel({ opacity }: ModelProps) {
       <Part color="#8a6440" opacity={opacity} position={[-0.3, 0.12, 0.25]} rotation={[0, 0.4, 0]}>
         <boxGeometry args={[0.2, 0.24, 0.02]} />
       </Part>
+    </group>
+  );
+}
+
+// A jetty on posts, a finished dugout canoe tied alongside, and a trunk on the
+// bank being hollowed into the next one.
+export function DockModel({ opacity }: ModelProps) {
+  return (
+    <group>
+      {[-0.08, 0.08].map((x) => (
+        <Part key={x} color="#9b7650" opacity={opacity} position={[x, 0.08, 0.2]}>
+          <boxGeometry args={[0.14, 0.03, 0.75]} />
+        </Part>
+      ))}
+      {[0, 0.28, 0.56].flatMap((z) =>
+        [-0.15, 0.15].map((x) => <Log key={`${x}${z}`} opacity={opacity} position={[x, 0.02, z - 0.08]} rotation={[0, 0, 0]} length={0.2} radius={0.018} />),
+      )}
+      {/* The canoe tied up by the jetty. */}
+      <group position={[0.3, 0.05, 0.3]}>
+        <Part color="#6b4a2b" opacity={opacity} scale={[0.8, 0.45, 4]}>
+          <sphereGeometry args={[0.09, 10, 6]} />
+        </Part>
+        <Part color="#3e2a17" opacity={opacity} position={[0, 0.025, 0]} scale={[0.6, 0.2, 3.4]}>
+          <sphereGeometry args={[0.09, 10, 6]} />
+        </Part>
+        <Log opacity={opacity} position={[-0.06, 0.07, -0.1]} rotation={[0.3, 0, 0.9]} length={0.3} radius={0.01} />
+      </group>
+      {/* A trunk on the bank, half hollowed out. */}
+      <group position={[-0.25, 0.07, -0.25]} rotation={[0, 0.5, 0]}>
+        <Log opacity={opacity} position={[0, 0, 0]} rotation={[Math.PI / 2, 0, 0]} length={0.5} radius={0.07} />
+        <Part color="#d9b67a" opacity={opacity} position={[0, 0.055, 0]}>
+          <boxGeometry args={[0.07, 0.02, 0.32]} />
+        </Part>
+      </group>
     </group>
   );
 }
@@ -427,36 +478,143 @@ export function WarCampModel({ opacity }: ModelProps) {
 }
 
 // A log lookout tower on the shore with a fire kept burning on top.
-export function WatchFireModel({ opacity }: ModelProps) {
-  const legs: [number, number][] = [
-    [-0.13, -0.13],
-    [0.13, -0.13],
-    [-0.13, 0.13],
-    [0.13, 0.13],
+// A watch tower on the shore: four tall legs with cross braces, a ladder, a
+// railed platform under a thatched roof, and a lookout keeping watch.
+export function WatchTowerModel({ opacity }: ModelProps) {
+  const corners: [number, number][] = [
+    [-0.11, -0.11],
+    [0.11, -0.11],
+    [-0.11, 0.11],
+    [0.11, 0.11],
   ];
   return (
     <group>
-      {legs.map(([x, z]) => (
-        <Log key={`${x}${z}`} opacity={opacity} position={[x, 0.36, z]} rotation={[0, 0, 0]} length={0.72} radius={0.018} />
+      {corners.map(([x, z]) => (
+        <Log key={`leg${x}${z}`} opacity={opacity} position={[x, 0.45, z]} rotation={[0, 0, 0]} length={0.9} radius={0.018} />
       ))}
-      {[0.2, 0.46].map((y) => (
-        <group key={y}>
-          <Log opacity={opacity} position={[0, y, -0.13]} rotation={[0, 0, Math.PI / 2]} length={0.3} radius={0.01} />
-          <Log opacity={opacity} position={[0, y, 0.13]} rotation={[0, 0, Math.PI / 2]} length={0.3} radius={0.01} />
+      {/* Cross braces on two sides. */}
+      {[-0.11, 0.11].map((z) => (
+        <group key={`brace${z}`}>
+          <Log opacity={opacity} position={[0, 0.32, z]} rotation={[0, 0, 0.98]} length={0.3} radius={0.008} />
+          <Log opacity={opacity} position={[0, 0.62, z]} rotation={[0, 0, -0.98]} length={0.3} radius={0.008} />
         </group>
       ))}
-      <Part color="#7a5534" opacity={opacity} position={[0, 0.72, 0]}>
-        <boxGeometry args={[0.38, 0.04, 0.38]} />
+      {/* The platform and its railing. */}
+      <Part color="#7a5534" opacity={opacity} position={[0, 0.9, 0]}>
+        <boxGeometry args={[0.34, 0.035, 0.34]} />
       </Part>
-      <Part color="#5f656b" opacity={opacity} position={[0, 0.77, 0]}>
-        <cylinderGeometry args={[0.1, 0.08, 0.06, 7]} />
-      </Part>
-      <Flame opacity={opacity} position={[0, 0.8, 0]} scale={0.8} />
-      {[0.12, 0.24, 0.36, 0.48, 0.6].map((y) => (
-        <Log key={y} opacity={opacity} position={[0, y, 0.2]} rotation={[0, 0, Math.PI / 2]} length={0.14} radius={0.007} />
+      {[
+        [0, -0.16, 0],
+        [0, 0.16, 0],
+        [-0.16, 0, Math.PI / 2],
+        [0.16, 0, Math.PI / 2],
+      ].map(([x, z, r]) => (
+        <Log key={`rail${x}${z}`} opacity={opacity} position={[x, 0.98, z]} rotation={[0, r, Math.PI / 2]} length={0.32} radius={0.007} />
       ))}
-      <Log opacity={opacity} position={[-0.07, 0.36, 0.2]} rotation={[0, 0, 0]} length={0.72} radius={0.008} />
-      <Log opacity={opacity} position={[0.07, 0.36, 0.2]} rotation={[0, 0, 0]} length={0.72} radius={0.008} />
+      {/* Roof posts and a thatched roof. */}
+      {corners.map(([x, z]) => (
+        <Log key={`post${x}${z}`} opacity={opacity} position={[x * 1.3, 1.04, z * 1.3]} rotation={[0, 0, 0]} length={0.24} radius={0.008} />
+      ))}
+      <Part color="#c9a24a" opacity={opacity} position={[0, 1.23, 0]}>
+        <coneGeometry args={[0.27, 0.2, 6]} />
+      </Part>
+      {/* The lookout. */}
+      <Part color="#8e5a3a" opacity={opacity} position={[0.04, 0.98, 0.02]}>
+        <cylinderGeometry args={[0.025, 0.03, 0.09, 6]} />
+      </Part>
+      <Part color="#c68642" opacity={opacity} position={[0.04, 1.05, 0.02]}>
+        <sphereGeometry args={[0.025, 8, 6]} />
+      </Part>
+      {/* The ladder up the front. */}
+      {[0.12, 0.24, 0.36, 0.48, 0.6, 0.72, 0.84].map((y) => (
+        <Log key={y} opacity={opacity} position={[0, y, 0.17]} rotation={[0, 0, Math.PI / 2]} length={0.12} radius={0.006} />
+      ))}
+      <Log opacity={opacity} position={[-0.06, 0.45, 0.17]} rotation={[0, 0, 0]} length={0.9} radius={0.007} />
+      <Log opacity={opacity} position={[0.06, 0.45, 0.17]} rotation={[0, 0, 0]} length={0.9} radius={0.007} />
+    </group>
+  );
+}
+
+// Beliefs: a shrine. A carved spirit pole painted in bands, an offering stone
+// with fruit on it, and a ring of small stones round them.
+export function ShrineModel({ opacity }: ModelProps) {
+  const bands = ["#8b5a2b", "#c0392b", "#8b5a2b", "#2f6fa8", "#8b5a2b"];
+  return (
+    <group>
+      {Array.from({ length: 10 }, (_, i) => {
+        const a = (i / 10) * Math.PI * 2;
+        return (
+          <Part key={`ring${i}`} color="#8d8780" opacity={opacity} position={[Math.cos(a) * 0.36, 0.025, Math.sin(a) * 0.36]}>
+            <dodecahedronGeometry args={[0.035, 0]} />
+          </Part>
+        );
+      })}
+      {bands.map((c, i) => (
+        <Part key={`band${i}`} color={c} opacity={opacity} position={[0, 0.08 + i * 0.11, -0.05]}>
+          <cylinderGeometry args={[0.055, 0.06, 0.11, 8]} />
+        </Part>
+      ))}
+      {/* The carved face at the top, with a pair of wings. */}
+      <Part color="#d9b45a" opacity={opacity} position={[0, 0.67, -0.05]}>
+        <boxGeometry args={[0.13, 0.12, 0.12]} />
+      </Part>
+      {[-1, 1].map((side) => (
+        <Part key={`wing${side}`} color="#d9b45a" opacity={opacity} position={[side * 0.13, 0.6, -0.05]} rotation={[0, 0, side * 0.5]}>
+          <boxGeometry args={[0.14, 0.03, 0.06]} />
+        </Part>
+      ))}
+      <Part color="#2b2119" opacity={opacity} position={[0, 0.68, 0.012]}>
+        <boxGeometry args={[0.07, 0.02, 0.01]} />
+      </Part>
+      {/* The offering stone, with fruit. */}
+      <Part color="#9c968f" opacity={opacity} position={[0, 0.05, 0.18]}>
+        <boxGeometry args={[0.22, 0.1, 0.14]} />
+      </Part>
+      {[
+        ["#d62d4a", -0.05],
+        ["#ffd23f", 0.02],
+        ["#3fa34d", 0.07],
+      ].map(([c, x]) => (
+        <Part key={`fruit${x}`} color={c as string} opacity={opacity} position={[x as number, 0.125, 0.18]}>
+          <sphereGeometry args={[0.025, 8, 6]} />
+        </Part>
+      ))}
+    </group>
+  );
+}
+
+// Beliefs: a temple. A stepped stone base, columns front and back, and a
+// low pitched roof.
+export function TempleModel({ opacity }: ModelProps) {
+  const stone = "#e6dcc3";
+  return (
+    <group>
+      <Part color="#cfc4a8" opacity={opacity} position={[0, 0.03, 0]}>
+        <boxGeometry args={[0.78, 0.06, 0.56]} />
+      </Part>
+      <Part color={stone} opacity={opacity} position={[0, 0.08, 0]}>
+        <boxGeometry args={[0.7, 0.05, 0.48]} />
+      </Part>
+      {/* The hall inside the columns. */}
+      <Part color="#d8cdb0" opacity={opacity} position={[0, 0.27, 0]}>
+        <boxGeometry args={[0.46, 0.34, 0.28]} />
+      </Part>
+      {[-0.28, -0.14, 0, 0.14, 0.28].flatMap((x) =>
+        [-0.2, 0.2].map((z) => (
+          <Part key={`col${x}${z}`} color={stone} opacity={opacity} position={[x, 0.29, z]}>
+            <cylinderGeometry args={[0.025, 0.028, 0.38, 8]} />
+          </Part>
+        )),
+      )}
+      <Part color={stone} opacity={opacity} position={[0, 0.5, 0]}>
+        <boxGeometry args={[0.72, 0.05, 0.5]} />
+      </Part>
+      {/* The roof: two tiled slopes meeting along the ridge. */}
+      {[-1, 1].map((side) => (
+        <Part key={`roof${side}`} color="#b5653a" opacity={opacity} position={[0, 0.6, side * 0.12]} rotation={[side * 0.42, 0, 0]}>
+          <boxGeometry args={[0.76, 0.03, 0.29]} />
+        </Part>
+      ))}
     </group>
   );
 }
@@ -983,12 +1141,15 @@ export const MODELS: Record<string, (props: ModelProps) => JSX.Element> = {
   gatherer: GathererModel,
   woodcutter: WoodcutterModel,
   fishing: FishingModel,
+  dock: DockModel,
   quarry: QuarryModel,
   elder: ElderModel,
   healer: HealerModel,
   farm: FarmModel,
   warcamp: WarCampModel,
-  watchfire: WatchFireModel,
+  watchfire: WatchTowerModel,
+  shrine: ShrineModel,
+  temple: TempleModel,
   ...MEDIEVAL_MODELS,
   ...INDUSTRIAL_MODELS,
 };

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import { Plane, Raycaster, Vector2, Vector3 } from "three";
-import { BUILDINGS_BY_ID, DROP, TICK_SECONDS } from "@/game/content";
+import { BUILDINGS_BY_ID, DROP, GRIEF, TICK_SECONDS } from "@/game/content";
 import { dropOutcome, type Action, type DropOutcome } from "@/game/engine";
 import { isLand } from "@/game/map";
 import type { GameState, Tile } from "@/game/types";
@@ -133,6 +133,7 @@ export function PickUp({
       w.sitting = false;
       w.working = false;
       w.workAt = null;
+      w.faceAt = null;
       w.sitAt = null;
       carry.current.origin = { x: w.x, z: w.z };
       el.style.cursor = "grabbing";
@@ -323,6 +324,7 @@ export function PickUp({
           {armed && DEADLY.includes(target.outcome) && (
             <span className="block text-[11px] font-bold text-amber-200" data-testid="drop-confirm">
               Click again to really drop them there
+              <span className="block font-normal text-white">They die, and the tribe grieves: −{GRIEF.happiness} happiness</span>
             </span>
           )}
           {carrying && <span className="block text-[10px] text-white/80">Click or Enter: put down · Arrows: move · Esc: put back</span>}
@@ -373,7 +375,13 @@ function land(w: Walker, outcome: DropOutcome, tile: Tile | null, tiles: Tile[],
         w.workAt = tile;
         w.workUntil = performance.now() + DROP.helpTicks * TICK_SECONDS * 1000;
         w.workTool = tile.building === "woodcutter" ? "axe" : tile.building === "quarry" ? "pick" : "hoe";
-        w.heading = Math.atan2(tile.x - w.x, tile.z - w.z);
+        // A woodcutter's helper walks out to a tree; the others work where
+        // they land, facing the building.
+        const spot = w.workTool === "axe" ? ground.workSpot(tile, "axe") : { x: w.x, z: w.z, face: { x: tile.x, z: tile.z } };
+        w.tx = spot.x;
+        w.tz = spot.z;
+        w.faceAt = spot.face;
+        w.heading = Math.atan2(spot.face.x - w.x, spot.face.z - w.z);
         w.wait = 3;
       } else w.wait = 1.5;
     }

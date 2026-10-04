@@ -420,3 +420,29 @@ html[data-in-game] .accessibility-floating {
 @media (prefers-reduced-motion: reduce) {
   .scene-walk, .scene-bob, .scene-pop, .scene-rays, .scene-line, .scene-twinkle, .scene-waves { animation: none; }
 }
+
+/* Camera shots (world/cinematic.tsx): black bars slide in, the title fades up. */
+@keyframes letterbox-in {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+@keyframes letterbox-title {
+  0%, 25% { opacity: 0; letter-spacing: 0.5em; }
+  100% { opacity: 1; }
+}
+.letterbox-bar:first-child { transform-origin: top; animation: letterbox-in 0.6s ease-out both; }
+.letterbox-bar:nth-child(2) { transform-origin: bottom; animation: letterbox-in 0.6s ease-out both; }
+.letterbox-title { animation: letterbox-title 1.6s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .letterbox-bar, .letterbox-title { animation: none; }
+}
+
+/* Elder Ama's hints point at a button by making it glow (hud/hints.tsx). */
+@keyframes hint-glow {
+  0%, 100% { box-shadow: 0 0 0 2px #ffd23f, 0 0 10px 2px rgba(255, 210, 63, 0.6); }
+  50% { box-shadow: 0 0 0 3px #ffd23f, 0 0 18px 6px rgba(255, 210, 63, 0.9); }
+}
+.hint-glow { animation: hint-glow 1.2s ease-in-out infinite; position: relative; z-index: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .hint-glow { animation: none; box-shadow: 0 0 0 3px #ffd23f; }
+}

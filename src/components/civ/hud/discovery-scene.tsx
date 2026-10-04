@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { DISCOVERIES, TREE_BY_ID, type SceneSky } from "@/game/content";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
+import type { IconId } from "@/game/sprites";
 
 // How long each line stays before the next one (ms).
 const LINE_MS = 2600;
@@ -17,6 +18,19 @@ const SKIES: Record<SceneSky, { sky: string; ground: string; hills: string; far:
   // Inside a cave: dark rock all round, a flat wall to paint on.
   cave: { sky: "linear-gradient(#3b2f28, #5a4637 80%)", ground: "#2e241e", hills: "#4a3a2e", far: "#6b5644" },
 };
+
+// Far off on the hills behind each scene, what the island looks like in this
+// era: huts in the Stone Age, columns and aqueducts in the Classical era,
+// castles and windmills, then factories, then rockets. `haze` tints the sky
+// (factory smoke; the glow of the future).
+const ERA_BACKDROPS: { skyline: [IconId, number][]; haze?: string; planet?: boolean }[] = [
+  { skyline: [["hut", 14], ["mammoth", 36], ["hut", 58], ["sapling", 84]] },
+  { skyline: [["hut", 12], ["bricks", 30], ["well", 50], ["amphora", 66], ["hut", 86]] },
+  { skyline: [["column", 10], ["aqueduct", 28], ["insula", 50], ["baths", 68], ["column", 88]] },
+  { skyline: [["windmill", 10], ["castle", 32], ["church", 56], ["mill", 74], ["windmill", 90]] },
+  { skyline: [["factory", 12], ["mill", 30], ["factory", 48], ["factory", 70], ["cart", 88]], haze: "linear-gradient(rgba(96,84,72,0.45), rgba(96,84,72,0) 65%)" },
+  { skyline: [["rocket", 12], ["insula", 30], ["windmill", 48], ["insula", 64], ["rocket", 88]], haze: "linear-gradient(rgba(70,40,150,0.45), rgba(70,40,150,0) 70%)", planet: true },
+];
 
 // A short pixel scene of the moment an advancement was discovered. It plays
 // when one is researched (or a secret found); the game waits meanwhile.
@@ -38,6 +52,9 @@ export function DiscoveryScene() {
   const node = TREE_BY_ID[id];
   const secret = !!node?.secret;
   const sky = SKIES[scene.bg];
+  const backdrop = ERA_BACKDROPS[Math.min(state.era, ERA_BACKDROPS.length - 1)];
+  // Out in the open (not in a cave or at sea), the era shows on the hills.
+  const outdoors = scene.bg !== "cave" && scene.bg !== "sea";
   const done = lines >= scene.lines.length;
   const close = () => dispatch({ type: "dismissCutscene" });
 
@@ -62,6 +79,13 @@ export function DiscoveryScene() {
           className="scene-stage relative block aspect-[5/2] w-full overflow-hidden border-[3px] border-[#2b2119]"
           style={{ background: sky.sky }}
         >
+          {outdoors && backdrop.haze && <span className="absolute inset-0" style={{ background: backdrop.haze }} />}
+          {outdoors && backdrop.planet && (
+            // A ringed planet low in the sky.
+            <span className="absolute left-[22%] top-[10%] h-6 w-6 rounded-full bg-[#c9a6e8] opacity-80">
+              <span className="absolute left-[-35%] top-[40%] h-[20%] w-[170%] rotate-[-15deg] rounded-full bg-[#efe1ff]/70" />
+            </span>
+          )}
           {scene.bg === "cave" && (
             // The rock wall, lit warm by the torch.
             <span className="absolute inset-x-[10%] bottom-[28%] top-[12%] rounded-t-[40%]" style={{ background: "radial-gradient(circle at 30% 60%, #a5805a, #6b5644 70%)" }} />
@@ -80,6 +104,20 @@ export function DiscoveryScene() {
                 <PixelIcon name={scene.bg === "night" ? "moon" : "sun"} size={34} />
               </span>
               <span className="absolute inset-x-[-5%] bottom-[28%] h-[30%] rounded-t-[50%]" style={{ background: sky.far }} />
+              {outdoors && (
+                // The era's buildings, faded by distance, on the far hills.
+                <span className="absolute inset-x-0 bottom-[47%] h-[16%]" data-testid="scene-era" data-era={state.era}>
+                  {backdrop.skyline.map(([icon, x], i) => (
+                    <span
+                      key={i}
+                      className="absolute bottom-0 -translate-x-1/2"
+                      style={{ left: `${x}%`, bottom: `${(i % 2) * 8}%`, opacity: scene.bg === "night" ? 0.45 : 0.75, filter: "saturate(0.55)" }}
+                    >
+                      <PixelIcon name={icon} size={36} />
+                    </span>
+                  ))}
+                </span>
+              )}
               <span className="absolute bottom-[26%] left-[-10%] h-[26%] w-[70%] rounded-t-[60%]" style={{ background: sky.hills }} />
               <span className="absolute bottom-[26%] right-[-15%] h-[20%] w-[60%] rounded-t-[60%]" style={{ background: sky.hills }} />
             </>

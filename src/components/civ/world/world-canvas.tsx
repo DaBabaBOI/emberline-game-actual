@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Vector3 } from "three";
-import { Html, MapControls } from "@react-three/drei";
-import { BUILDINGS_BY_ID, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL, WEAR, SMOG } from "@/game/content";
+import { Html, MapControls, PerformanceMonitor } from "@react-three/drei";
+import { BUILDINGS_BY_ID, ERAS, formatYear, IMPROVE, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL, WEAR, SMOG } from "@/game/content";
 import {
   buildingCost,
   DEMOLISH_TOOL,
@@ -18,6 +18,7 @@ import {
   rainfall,
   spearmenOf,
   residents,
+  tallyOf,
   fireScareNote,
   gatherNote,
   inDrought,
@@ -34,18 +35,29 @@ import {
 import { BuildingInfo } from "./building-info";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
-import { SmallMoment } from "./moments";
+import { ScoutMarker, SmallMoment } from "./moments";
+import { Rebels } from "./rebels";
 import { tileAnchor } from "@/components/civ/guide";
 import { useGuide } from "@/components/civ/hud/guide-overlay";
 import type { Tile } from "@/game/types";
 import { BiomeDetails, Deposits, Forests, HexTerrain, Mountains, tileTop, treeSpots } from "./hex-terrain";
-import { MODELS } from "./building-models";
+import { BUILDING_SCALE, MODELS, buildingTurn } from "./building-models";
 import { BattleScene, FireVictims, Raiders, Villagers, Warriors } from "./villagers";
 import { PickUp } from "./pick-up";
 import { SeaTraffic, TradeShips, WaitingShips } from "./trade";
 import { Cracks, DisasterDust, disasterView, FloodWater, QuakeShake, Rubble, StormRain } from "./disasters";
 import { Wildlife } from "./wildlife";
-import { CampfireSmoke, Haze, Wildfire, ChimneySmoke } from "./atmosphere";
+import { CampfireSmoke, ChimneySmoke, Wildfire } from "./atmosphere";
+import { Clouds, DaySky, FireLights } from "./sky";
+import { Sea } from "./water";
+import { FilmLook } from "./effects";
+import { CinematicCamera } from "./cinematic";
+import { Fireworks } from "./fireworks";
+import { Islet } from "./islet";
+import { useFireworks } from "@/components/civ/hud/eggs";
+import { cameosFor } from "@/game/easter";
+import { playShot, useShot } from "@/components/civ/hud/letterbox";
+import { useDaylight, useGraphics } from "@/lib/graphics";
 import { UnderConstruction } from "./medieval-models";
 import { Mice } from "./moments";
 import { hexDistance } from "@/game/hex";
@@ -122,8 +134,38 @@ function GuideAnchor({ tile }: { tile: Tile | null }) {
   return null;
 }
 
+// "The Stone Age", "The Ancient Era", "The Medieval & Renaissance Era".
+function eraTitle(name: string) {
+  return name.endsWith("Age") ? `The ${name}` : `The ${name} Era`;
+}
+
 export function WorldCanvas() {
-  const { state, dispatch, selected, setSelected, panel } = useGame();
+  const { state, dispatch, selected, setSelected, panel, clock } = useGame();
+  const graphics = useGraphics();
+  // A computer that can't keep up with the film look (under 24 frames a
+  // second for a few seconds) drops to "fast" for the rest of this visit.
+  const [struggling, setStruggling] = useState(false);
+  const fancy = graphics === "fancy" && !struggling;
+  const daylight = useDaylight();
+  const shot = useShot();
+  const fireworksAt = useFireworks();
+  const cameos = useMemo(() => cameosFor(state.nation).map((m) => m.name), [state.nation]);
+  // Camera shots: the fly-in when a new game starts, a turn round the village
+  // when a new era begins.
+  const shownEra = useRef(state.era);
+  useEffect(() => {
+    if (state.tick === 0 && state.tutorialStep === 0 && !state.dev) {
+      playShot({ kind: "intro", title: state.nation ?? "The Emberfolk", subtitle: `${ERAS[0].name} · ${formatYear(state.year)}`, seconds: 6 });
+    }
+    // Only on the first render of this game.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (state.era > shownEra.current) {
+      playShot({ kind: "era", title: eraTitle(ERAS[state.era].name), subtitle: formatYear(state.year), seconds: 9 });
+    }
+    shownEra.current = state.era;
+  }, [state.era, state.year]);
   const [rawHovered, setHovered] = useState<number | null>(null);
   // Tall phone screens start further out so more of the island fits.
   const [portrait] = useState(() => typeof window !== "undefined" && window.innerHeight > window.innerWidth);
@@ -245,7 +287,10 @@ export function WorldCanvas() {
     <Canvas
       // The tutorial overlay forwards camera turns and zooms here (guide-overlay.tsx).
       data-world-map=""
-      shadows
+      // Plain PCF shadows: three.js dropped the soft kind.
+      shadows="percentage"
+      // Phones on "fast" graphics draw fewer pixels.
+      dpr={fancy ? [1, 2] : [1, 1.25]}
       // A landmark under construction is cut off at its current height.
       onCreated={({ gl }) => {
         gl.localClippingEnabled = true;
@@ -262,32 +307,33 @@ export function WorldCanvas() {
       }}
     >
       <color attach="background" args={["#a8dcf5"]} />
-      <Haze fires={burning.length + 2 * buildings.filter((t) => t.building === "smithy").length} dust={dry >= 1 ? 1 : 0} storm={storm} />
-      {/* The Ancient era is a touch warmer and more golden, so the change of era shows. */}
-      {/* The plague's grey gloom, the drought's gold, or the era's own light. */}
-      <hemisphereLight
-        args={[plagueOn ? "#c9c3cf" : dry >= 1 ? "#ffe2a8" : state.era >= 1 ? "#ffeccc" : "#d6f1ff", "#6f8f4e", 0.75 - storm * 0.3 - (plagueOn ? 0.12 : 0)]}
+      {/* The sky, the sun and moon, the fog: the time of day, with wood smoke,
+          the drought's dust, storms and the plague's gloom on top. */}
+      <DaySky
+        home={home}
+        tick={state.tick}
+        running={clock.running}
+        msPerTick={clock.msPerTick}
+        era={state.era}
+        fires={
+          burning.length +
+          2 * buildings.filter((t) => t.building === "smithy").length +
+          // Industrial smoke: coal plants, factories and stations (half with Clean Air Laws).
+          Math.round(
+            buildings.reduce((n, t) => n + (t.building === "coalplant" ? 3 : t.building === "factory" ? 2 : t.building === "station" ? 1 : 0), 0) *
+              (state.researched.includes("cleanair") ? 0.5 : 1),
+          )
+        }
+        dust={dry >= 1 ? 1 : 0}
+        storm={storm}
+        plague={plagueOn}
+        shadowSize={fancy ? 2048 : 1024}
+        alwaysDay={daylight === "day"}
+        realClock={!!state.realTimeFrom}
       />
-      <directionalLight
-        position={[home.x + 25, 40, home.z + 15]}
-        intensity={1.5}
-        color={state.era >= 1 ? "#fff0d2" : "#ffffff"}
-        castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-bias={-0.0004}
-        shadow-camera-left={-60}
-        shadow-camera-right={60}
-        shadow-camera-top={60}
-        shadow-camera-bottom={-60}
-        shadow-camera-far={150}
-      >
-        <object3D attach="target" position={[home.x, 0, home.z]} />
-      </directionalLight>
-
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]} receiveShadow raycast={() => null}>
-        <planeGeometry args={[600, 600]} />
-        <meshStandardMaterial color="#1a5f93" roughness={0.3} />
-      </mesh>
+      <Sea home={home} />
+      <Clouds home={home} storm={storm} />
+      {fancy && <FireLights fires={[...burning, ...buildings.filter((t) => t.building === "watchfire" || t.building === "smithy")]} home={home} />}
 
       <HexTerrain
         tiles={state.tiles}
@@ -313,8 +359,8 @@ export function WorldCanvas() {
           <group
             key={t.id}
             position={[t.x, t.height, t.z]}
-            rotation={[broken ? 0.12 : 0, (t.id % 6) * (Math.PI / 3), broken ? 0.1 : 0]}
-            scale={1.55}
+            rotation={[broken ? 0.12 : 0, buildingTurn(t.id), broken ? 0.1 : 0]}
+            scale={BUILDING_SCALE}
           >
             {state.landmark?.tile === t.id && !landmarkDone(state) ? (
               // The landmark rises stage by stage inside its scaffolding.
@@ -324,6 +370,7 @@ export function WorldCanvas() {
             ) : (
               <Model opacity={1} lit={t.building !== "campfire" || burningIds.includes(t.id)} />
             )}
+            {(t.level ?? 1) >= 2 && <Plinth level={t.level!} />}
           </group>
         );
       })}
@@ -343,6 +390,8 @@ export function WorldCanvas() {
 
       {/* Small moments play out where they happen. */}
       <SmallMoment state={state} />
+      <ScoutMarker state={state} />
+      <Rebels state={state} />
       <Villagers
         tiles={state.tiles}
         population={state.population}
@@ -351,6 +400,7 @@ export function WorldCanvas() {
         litFires={burningIds}
         sick={state.population > 0 ? (state.sick ?? 0) / state.population : 0}
         era={state.era}
+        cameos={cameos}
       />
       <PickUp state={state} dispatch={dispatch} enabled={canPickUp} onHolding={setHolding} />
       <Warriors
@@ -390,6 +440,14 @@ export function WorldCanvas() {
         tiles={state.tiles}
         homeTile={home}
         onHunt={(animal) => dispatch({ type: "hunt", animal })}
+      />
+      <Fireworks home={home} startedAt={fireworksAt} />
+      <Islet
+        tiles={state.tiles}
+        home={home}
+        canReach={tallyOf(state, "canoes") > 0 || (state.outposts ?? []).length > 0}
+        found={state.secretsFound.includes("egg-islet")}
+        onFind={() => dispatch({ type: "easterEgg", id: "islet" })}
       />
       <CampfireSmoke fires={[...burning, ...buildings.filter((t) => t.building === "smithy")]} />
       {!guide.target &&
@@ -450,7 +508,7 @@ export function WorldCanvas() {
         </Html>
       )}
       {hoverTile && Ghost && (
-        <group position={[hoverTile.x, tileTop(hoverTile), hoverTile.z]} scale={1.55}>
+        <group position={[hoverTile.x, tileTop(hoverTile), hoverTile.z]} scale={BUILDING_SCALE}>
           <Ghost opacity={0.45} />
           <Html
             // In the tutorial the card sits above the dimming so it can be read.
@@ -554,10 +612,15 @@ export function WorldCanvas() {
 
       <GuideAnchor tile={guideTile === null ? null : state.tiles[guideTile]} />
 
+      <PerformanceMonitor bounds={() => [24, 50]} onDecline={() => setStruggling(true)} />
+      <CinematicCamera home={home} battleTick={state.battle?.tick ?? null} />
+      {fancy && <FilmLook era={state.era} cinematic={!!shot} />}
+
       <MapControls
+        makeDefault
         // During guided steps the camera still turns and zooms, but doesn't
         // slide, so a click on the highlighted spot can't turn into a drag.
-        enabled={!holding}
+        enabled={!holding && !shot}
         enablePan={!guide.target}
         target={target}
         enableDamping
@@ -569,5 +632,26 @@ export function WorldCanvas() {
         screenSpacePanning={false}
       />
     </Canvas>
+  );
+}
+
+// An improved building stands on a footing of its material: stone, bronze,
+// iron or steel (IMPROVE.tiers), with a band of metal on the higher levels.
+function Plinth({ level }: { level: number }) {
+  const tier = IMPROVE.tiers.find((t) => t.level === level) ?? IMPROVE.tiers[0];
+  const stone = IMPROVE.tiers[0].color;
+  return (
+    <group>
+      <mesh position={[0, 0.04, 0]} receiveShadow castShadow>
+        <cylinderGeometry args={[0.48, 0.52, 0.1, 6]} />
+        <meshStandardMaterial color={level === 2 ? tier.color : stone} roughness={0.9} flatShading />
+      </mesh>
+      {level >= 3 && (
+        <mesh position={[0, 0.1, 0]}>
+          <cylinderGeometry args={[0.5, 0.5, 0.035, 6]} />
+          <meshStandardMaterial color={tier.color} metalness={0.6} roughness={0.35} flatShading />
+        </mesh>
+      )}
+    </group>
   );
 }

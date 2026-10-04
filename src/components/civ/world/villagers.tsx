@@ -2,6 +2,8 @@
 
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
+import { Html } from "@react-three/drei";
+import type { Group } from "three";
 import { TICK_SECONDS } from "@/game/content";
 import { hexDistance } from "@/game/hex";
 import { isLand } from "@/game/map";
@@ -10,6 +12,7 @@ import { Figures, HAIRS, SKINS, type Agent } from "./figures";
 import { makeGround, type Ground } from "./ground";
 import { MAX_FIGURES, figureCounts } from "./crowd";
 import { tileTop } from "./hex-terrain";
+import { BUILDING_SCALE } from "./building-models";
 import { KINGDOM_LOOK } from "./trade";
 
 // Stone Age: hides and furs. Ancient era: dyed linen and wool.
@@ -37,8 +40,13 @@ export interface Walker extends Agent {
   // work a spot, then move to another on the same tile.
   workAt?: Tile | null;
   workUntil?: number;
+  // What they face while working there (a tree, or the building).
+  faceAt?: { x: number; z: number } | null;
   // Gone (dropped in a fire, the sea or the fog) until this time (performance.now ms).
   goneUntil?: number;
+  // Out hunting: the hunter (wildlife.tsx) walks in their place and hands them
+  // back where the hunt ends, so nobody appears or vanishes.
+  hunting?: boolean;
 }
 
 // Shared with the pick-up tool: the villagers on the map, and who is being carried.
@@ -77,7 +85,7 @@ function makeWalker(i: number, at: Tile, ground: Ground, look: Partial<Walker> =
 }
 
 // Radius of the log seats around a campfire (model radius × building scale).
-const FIRE_SEAT = 0.5 * 1.55;
+const FIRE_SEAT = 0.5 * BUILDING_SCALE;
 // Model angles of the log seats (must match CampfireModel in building-models.tsx).
 const FIRE_SEATS = [0, 1.3, 2.6, 3.9, 5.2];
 
@@ -122,6 +130,8 @@ function stepWalker(w: Walker, dt: number, ground: Ground, pickTarget: () => Til
   const dist = Math.hypot(dx, dz);
   if (dist < 0.05) {
     w.moving = false;
+    // At work: face the tree being cut, or the field being hoed.
+    if (w.workAt && w.faceAt) w.heading = Math.atan2(w.faceAt.x - w.x, w.faceAt.z - w.z);
     if (w.sitAt && !w.sitting) {
       w.sitting = true;
       w.heading = Math.atan2(w.sitAt.x - w.x, w.sitAt.z - w.z);
@@ -129,10 +139,11 @@ function stepWalker(w: Walker, dt: number, ground: Ground, pickTarget: () => Til
     }
     w.wait -= dt;
     if (w.wait <= 0 && w.workAt && performance.now() < (w.workUntil ?? 0)) {
-      // Done with this patch: on to the next one on the same field.
-      const spot = ground.spotOn(w.workAt);
+      // Done with this patch (or tree): on to the next one.
+      const spot = ground.workSpot(w.workAt, w.workTool);
       w.tx = spot.x;
       w.tz = spot.z;
+      w.faceAt = spot.face;
       w.wait = 2.5 + Math.random() * 2;
       return;
     }
@@ -140,6 +151,7 @@ function stepWalker(w: Walker, dt: number, ground: Ground, pickTarget: () => Til
       w.sitting = false;
       w.working = false;
       w.workAt = null;
+      w.faceAt = null;
       retarget(w, ground, pickTarget);
       w.wait = 1 + Math.random() * 3;
     }
@@ -177,7 +189,10 @@ export function Villagers({
   litFires,
   sick = 0,
   era = 0,
+  cameos = [],
 }: {
+  // Team members who joined the tribe (an easter egg): crowned, with a name tag.
+  cameos?: string[];
   // Clothes change with the era.
   era?: number;
   tiles: Tile[];
@@ -209,6 +224,9 @@ export function Villagers({
 
   const ground = useMemo(() => makeGround(tiles), [tiles]);
   const count = figureCounts(population, soldiers).villagers;
+  // The cameos are the first grown-ups (every fourth figure is a child).
+  const cameoAt = cameos.map((_, k) => k + Math.floor(k / 3)).filter((i) => i < count);
+  const tags = useRef<(Group | null)[]>([]);
   const sickFigures = Math.min(count, Math.round(count * sick + (sick > 0 ? 0.49 : 0)));
 
   useFrame((_, delta) => {
@@ -223,6 +241,13 @@ export function Villagers({
           tunic: child ? childTunicFor(era) : tunicsFor(era)[i % TUNICS.length],
         }),
       );
+    }
+    // Fewer people: the last ones go, but never someone out hunting (they would
+    // vanish mid-walk). Swap them in front first.
+    for (let i = count; i < list.length; i++) {
+      if (!list[i].hunting) continue;
+      const stay = list.findIndex((w, j) => j < count && !w.hunting);
+      if (stay >= 0) [list[stay], list[i]] = [list[i], list[stay]];
     }
     list.length = count;
     list.forEach((w, i) => {
@@ -245,7 +270,7 @@ export function Villagers({
         const spot = ground.spotOn(pick(spots.all));
         Object.assign(w, { x: spot.x, z: spot.z, tx: spot.x, tz: spot.z, goneUntil: undefined });
       }
-      if (w.held || w.goneUntil) continue;
+      if (w.held || w.goneUntil || w.hunting) continue;
       stepWalker(w, dt, ground, () => {
         if (spots.fires.length && Math.random() < 0.45) return pick(spots.fires);
         if (w.child && spots.school.length && Math.random() < 0.6) return pick(spots.school);
@@ -253,11 +278,35 @@ export function Villagers({
         return Math.random() < 0.4 ? pick(spots.wander) : pick(spots.all);
       });
     }
-    shown.current = list.filter((w) => !w.goneUntil);
+    shown.current = list.filter((w) => !w.goneUntil && !w.hunting);
     grabStore.walkers = shown.current;
+    // The cameos' crowns and name tags (hidden while they're away).
+    list.forEach((w, i) => {
+      w.crown = cameoAt.includes(i);
+    });
+    cameoAt.forEach((i, k) => {
+      const tag = tags.current[k];
+      const w = list[i];
+      if (!tag || !w) return;
+      tag.visible = !w.goneUntil && !w.hunting;
+      tag.position.set(w.x, w.y + 0.95 * w.scale, w.z);
+    });
   });
 
-  return <Figures agents={shown} max={MAX_FIGURES} colorKey={`${sickFigures}|${era}`} group="people" />;
+  return (
+    <>
+      <Figures agents={shown} max={MAX_FIGURES} colorKey={`${sickFigures}|${era}`} group="people" />
+      {cameoAt.map((_, k) => (
+        <group key={cameos[k]} ref={(el) => void (tags.current[k] = el)}>
+          <Html zIndexRange={[12, 0]} center style={{ pointerEvents: "none" }}>
+            <span className="font-pixel whitespace-nowrap rounded-sm bg-[#2b2119]/80 px-1 text-[10px] text-amber-200" data-testid="cameo-tag">
+              {cameos[k]}
+            </span>
+          </Html>
+        </group>
+      ))}
+    </>
+  );
 }
 
 export function Warriors({
@@ -291,7 +340,7 @@ export function Warriors({
     const list = tiles.filter((t) => t.building === "warcamp");
     return list.length ? list : [homeTile];
   }, [tiles, homeTile]);
-  // Warriors patrol the ground around their camps and the watch fires, and stand
+  // Warriors patrol the ground around their camps and the watch towers, and stand
   // watch at the fires, instead of all milling about on one tile.
   const patrol = useMemo(() => {
     const posts = [...camps, ...tiles.filter((t) => t.building === "watchfire")];

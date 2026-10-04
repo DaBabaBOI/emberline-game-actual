@@ -1339,6 +1339,36 @@ export const SPRITES = {
     "............",
     "............",
   ],
+  // Sound on (the speaker in the top bar).
+  speaker: [
+    "............",
+    ".....kk.....",
+    "....kcck..w.",
+    "kkkkccck...w",
+    "kcccccck.w.w",
+    "kcccccck.w.w",
+    "kcccccck.w.w",
+    "kcccccck.w.w",
+    "kkkkccck...w",
+    "....kcck..w.",
+    ".....kk.....",
+    "............",
+  ],
+  // Sound off.
+  speakerOff: [
+    "............",
+    ".....kk.....",
+    "....kcck....",
+    "kkkkccck....",
+    "kcccccck....",
+    "kcccccck.r.r",
+    "kcccccck..r.",
+    "kcccccck.r.r",
+    "kkkkccck....",
+    "....kcck....",
+    ".....kk.....",
+    "............",
+  ],
 } satisfies Record<string, string[]>;
 
 export type IconId = keyof typeof SPRITES;
