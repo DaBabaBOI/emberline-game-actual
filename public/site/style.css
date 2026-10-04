@@ -362,7 +362,7 @@ h1 {
   padding: 0 1rem 3rem;
 }
 
-#tradeoffs {
+#eras {
   padding-top: 3rem;
 }
 
@@ -450,6 +450,40 @@ h2 {
 
 .card p {
   margin-top: 0.25rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+/* Pixelify joins "fi" into one glyph, so "fire" read as "Are". */
+*,
+*::before,
+*::after {
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "clig" 0;
+}
+
+/* Screenshots, one per era: two by two on wider screens. */
+.shots {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.shot {
+  margin: 0;
+  padding: 0.5rem;
+}
+
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 5 / 3;
+  object-fit: cover;
+}
+
+.shot figcaption {
+  margin-top: 0.5rem;
   font-size: 0.875rem;
   line-height: 1.25rem;
 }
@@ -555,6 +589,7 @@ footer {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .shots,
   .sdgs,
   .features {
     grid-template-columns: repeat(2, minmax(0, 1fr));
