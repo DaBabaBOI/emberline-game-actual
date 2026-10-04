@@ -47,7 +47,8 @@ export function MultiplayerLobby({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [open, setOpen] = useState<Room[]>([]);
+  // null: still looking.
+  const [open, setOpen] = useState<Room[] | null>(null);
 
   // The open rooms, refreshed while choosing.
   useEffect(() => {
@@ -119,25 +120,32 @@ export function MultiplayerLobby({
               Join
             </button>
           </div>
-          {open.length > 0 && (
-            <div className="flex flex-col gap-1" data-testid="mp-open-rooms">
-              <span className="text-xs text-stone-600">Open rooms:</span>
-              {open.map((r) => (
-                <button
-                  key={r.code}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => enter(() => joinRoom(r.code, who))}
-                  className="pixel-btn flex items-center justify-between bg-white px-3 py-1.5 text-left text-sm"
-                >
-                  <span>
-                    <span className="font-pixel font-semibold">{r.host_name}</span> · {r.mode === "race" ? "Race" : "Co-op"} · {r.speed}
-                  </span>
-                  <span className="font-pixel tracking-widest">{r.code}</span>
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Always shown, so it's clear when nobody is waiting. */}
+          <div className="flex flex-col gap-1" data-testid="mp-open-rooms">
+            <span className="flex items-center justify-between text-xs text-stone-600">
+              <span className="font-pixel font-semibold">Open rooms</span>
+              <span>{open === null ? "Looking..." : "Updates every few seconds"}</span>
+            </span>
+            {open !== null && open.length === 0 && (
+              <span className="border-2 border-dashed border-stone-300 px-3 py-2 text-xs text-stone-600" data-testid="mp-no-rooms">
+                No open rooms right now. Make one below (leave &quot;List it under Open rooms&quot; ticked), or ask a friend for their code.
+              </span>
+            )}
+            {(open ?? []).map((r) => (
+              <button
+                key={r.code}
+                type="button"
+                disabled={busy}
+                onClick={() => enter(() => joinRoom(r.code, who))}
+                className="pixel-btn flex items-center justify-between bg-white px-3 py-1.5 text-left text-sm"
+              >
+                <span>
+                  <span className="font-pixel font-semibold">{r.host_name}</span> · {r.mode === "race" ? "Race" : "Co-op"} · {r.speed}
+                </span>
+                <span className="font-pixel tracking-widest">{r.code}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="pixel-panel flex flex-col gap-3 p-4">
