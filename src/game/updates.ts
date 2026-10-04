@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Clearer text: the pixel font no longer joins letters together, so \"fire\" stops looking like \"Are\" and \"fills\" like \"Alls\".",
       "New era: Industrial & Modern. Come through the Black Death, learn Steam & Coal and grow to 90 people. Factories, railways, apartment blocks and a power grid; coal is cheap but its carbon stays in the air for good and its smog makes people ill. Switch to water, wind, sun or nuclear power (its waste lasts thousands of years). The era ends in a climate crisis: heat, storms and floods at once, worse the more carbon you burned.",
       "New era: Future & Space, the last one. A climate tipping point: get the air back down to 350 ppm in time with Air Capture Plants, forests and Rewilding, or the climate tips for good. AI, automation (more of everything, but people lose their jobs until a Shorter Work Week), vertical farms, arcologies, fusion, ocean clean-up, and a Launch Site with a view of the planet from orbit: satellites, a space telescope, power from orbit and a Moon base. The game ends at Type I on the Kardashev scale: the whole planet on clean energy, with the land still healthy.",
       "Uranium, plutonium and two minerals nobody can name are real now: nuclear power and breeder reactors in the Industrial era; Mineral X-7 (power with almost no loss) and Aetherite from the Moon (the best building improvement) in the Future.",
