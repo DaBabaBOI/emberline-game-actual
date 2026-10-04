@@ -306,10 +306,15 @@ export function Wildlife({
       }
       return;
     }
+    // Straight there if the way is clear; otherwise veer a little either side
+    // (round a building, a fire or the water) until it is.
     const s = Math.min(d, 0.9 * dt);
-    man.x += (dx / d) * s;
-    man.z += (dz / d) * s;
-    man.heading = Math.atan2(dx, dz);
+    const aim = Math.atan2(dx, dz);
+    const clear = (a: number) => ground.walkable(man.x + Math.sin(a) * 0.3, man.z + Math.cos(a) * 0.3);
+    const heading = d < 0.6 || !ground.walkable(man.x, man.z) ? aim : [0, 0.5, -0.5, 1, -1, 1.5, -1.5, 2.2, -2.2].map((k) => aim + k).find(clear) ?? aim;
+    man.x += Math.sin(heading) * s;
+    man.z += Math.cos(heading) * s;
+    man.heading = heading;
     const under = ground.tileAt(man.x, man.z);
     man.y += (ground.heightAt(man.x, man.z) + (under?.terrain === "mountain" ? 0.55 : 0) - man.y) * Math.min(1, dt * 12);
   });

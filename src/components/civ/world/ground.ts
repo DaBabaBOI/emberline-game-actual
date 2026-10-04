@@ -20,6 +20,8 @@ export interface Ground {
 }
 
 const BUILDING_CLEARANCE = 0.62;
+// A tile this scorched is still on fire (as atmosphere.tsx's Wildfire draws it).
+const BURNING = 0.8;
 
 export function makeGround(tiles: Tile[]): Ground {
   const byKey = new Map(tiles.map((t) => [hexKey(t.q, t.r), t]));
@@ -35,6 +37,8 @@ export function makeGround(tiles: Tile[]): Ground {
     walkable(x, z) {
       const t = tileAt(x, z);
       if (!t || !t.revealed || !isLand(t.terrain) || t.terrain === "mountain") return false;
+      // Nobody walks into a burning wildfire.
+      if (t.scorch > BURNING) return false;
       if (t.building && Math.hypot(x - t.x, z - t.z) < BUILDING_CLEARANCE) return false;
       return true;
     },
