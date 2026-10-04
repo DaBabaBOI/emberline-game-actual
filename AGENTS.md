@@ -201,6 +201,7 @@ These were decided with the project owner. Do not change them without being aske
   or house people are in `IMPROVE.buildings`. Placing a building resets its
   level. Later ores (uranium, plutonium, the unidentified minerals) are
   coming-soon nodes until those eras exist.
+- **No font ligatures** (`globals.css`): Pixelify joins "fi" into one glyph, so "fire" read as "Are". Keep `font-variant-ligatures: none` on everything.
 - **Phones get the compact HUD** (`useCompact()`: narrower than 768 px, or
   shorter than 500 px). The meters are a strip under the top bar
   (`MeterStrip`) instead of side columns, the goal is one line, and only the

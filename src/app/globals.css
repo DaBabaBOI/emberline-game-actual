@@ -446,3 +446,19 @@ html[data-in-game] .accessibility-floating {
 @media (prefers-reduced-motion: reduce) {
   .hint-glow { animation: none; box-shadow: 0 0 0 3px #ffd23f; }
 }
+
+/* The pixel font joins "fi" and "fl" into one glyph, so "fire" reads like
+   "Are" and "fills" like "Alls". Letters stay separate everywhere, with a
+   touch of space between them for small text. */
+html,
+body,
+.font-pixel,
+input,
+textarea,
+button {
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "clig" 0;
+}
+.font-pixel {
+  letter-spacing: 0.02em;
+}
