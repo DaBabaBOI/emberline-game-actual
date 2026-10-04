@@ -1,8 +1,9 @@
 # Emberline: project documentation
 
 **Emberline** is a browser game about sustainability trade-offs. The player
-grows a Stone Age tribe into the Ancient era. Every building helps the people
-now and costs the land later. It was made by Prithu Sharma, Aarav Kumar,
+leads a people through six eras, from the first campfire to space. Every
+building helps the people now and costs the land later. Up to four people can
+play together online. It was made by Prithu Sharma, Aarav Kumar,
 Vagisha Sinha and Aaradhya Verma for the SHISTECH Hacktrack hackathon (theme:
 the UN Sustainable Development Goals, with SDG 11 as our focus).
 
@@ -12,16 +13,28 @@ the UN Sustainable Development Goals, with SDG 11 as our focus).
 
 ![The village in the Stone Age](images/04-village-stone.png)
 
+## What we submit (checklist)
+
+| Item | Where it is | Status |
+| --- | --- | --- |
+| Working project | The live link above; code in this repository | Done |
+| **Project schematic** | (the team is making it) | **Team** |
+| Code, documented and organized | `src/game/` (rules), `src/components/civ/` (screen and 3D), comments in the code, [`AGENTS.md`](../AGENTS.md) (every design rule) | Done |
+| Design evidence | [`design.md`](design.md), the [screenshots](#screenshots), the [process and testing log](process.md) | Done |
+| Presentation deck (5–10 min) | (the team is making it) | **Team** |
+| Video of the game being played | (the team is making it; link it here and in the main README) | **Team** |
+| Photos of the team working | `docs/images/` | **Team: add 2–3** |
+
 ## Where to find what (by judging criterion)
 
 | Criterion | Where to look |
 | --- | --- |
 | **1. Innovation & Impact** (creativity, relevance) | [Game design: the idea and why it matters](design.md#1-the-idea) and [SDG links](design.md#5-links-to-the-sdgs) |
-| **2. Technical Execution** (runs smoothly, complexity) | [Architecture and schematics](architecture.md) and [Testing](process.md#3-how-we-test) |
+| **2. Technical Execution** (runs smoothly, complexity) | [Architecture](architecture.md) and [testing](process.md#3-how-we-test) |
 | **3. Design & Presentation** (clarity, looks, usability) | [Look and usability](design.md#6-look-and-usability), the [screenshots](#screenshots) and the [presentation plan](presentation.md) |
 | **4. Problem-Solving & Thinking** (logic, adaptability) | [Process: problems we hit and how we adapted](process.md) |
 | **5. Implementation of the chosen feature** (clean, cohesive) | [The trade-off system: how it is built and how it fits](design.md#3-the-chosen-feature-trade-offs-you-can-see) |
-| **6. Documentation & Completeness** | This folder, the [main README](../README.md), [`AGENTS.md`](../AGENTS.md) (every design rule), and in-code comments |
+| **6. Documentation & Completeness** (code & schematics; supporting materials) | This folder, the project schematic, the [main README](../README.md), [`AGENTS.md`](../AGENTS.md) (every design rule), in-code comments, screenshots, and the gameplay video |
 
 ## The documents
 
@@ -47,6 +60,8 @@ The village pictures come from a game played by our test bot (see
 | ![Sustainability breakdown](images/05-sustainability.png) **Sustainability breakdown.** Click the leaf meter to see every part pushing it down, and the trend. | ![Advancements](images/06-advancements.png) **Advancements.** Each one has a goal you must meet first (for example "Hunt animals 0/3"). |
 | ![Ancient era](images/07-village-ancient.png) **Ancient era.** Dyed clothes, worn paths, warmer light, bronze trim on the top bar. | ![Legion warning](images/10-legion-warning.png) **The era's climax.** A Roman legion is coming (shown here with the dev panel open). |
 | ![Debrief](images/11-debrief.png) **Debrief.** What you achieved next to what it cost, each meter linked to an SDG target. | ![Phone](images/08-phone.png) **On a phone.** Bars stack, tap once to preview and twice to build. |
+| ![Medieval town](../public/site/shots/medieval.jpg) **Medieval.** Castles, markets, windmills, an aqueduct; neighbouring kingdoms and the plague. | ![Industrial city](../public/site/shots/industrial.jpg) **Industrial.** Factories and power plants: coal or wind, sun and water. |
+| ![Future city](../public/site/shots/future.jpg) **Future.** Air capture, vertical farms, arcologies; beat the tipping point, then space. | ![Stone Age camp](../public/site/shots/stone.jpg) **Where it starts.** The same island, many centuries earlier. |
 
-**Still to add (the team):** a short gameplay video or GIF, and photos of the
-team working. Put them in `docs/images/` and link them here.
+**Still to add (the team):** the gameplay video link and photos of the team
+working (see the checklist at the top).
