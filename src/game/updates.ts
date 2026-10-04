@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "A How to play guide: the whole game on one page, from the title screen or the in-game Menu.",
       "People get tired when there are more jobs than workers: tired people make less and are less happy. Warriors help with the work half the time. Learn Rest Days to recover faster.",
       "Eight new advancements: Basketry, Smoking Fish, Seed Saving, Tamed Dogs, Kilns, Star Charts, Rest Days and Town Watch. Each does something different (food that keeps, faster canoes, earlier raid warnings and more).",
       "The Roman legion is bigger, and a small band of Roman scouts lands first to test your defences.",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { HowToPlay } from "@/components/civ/how-to-play";
 import { HOME } from "@/lib/home";
 import { UpdatesBar } from "@/components/updates-bar";
 import { CULTURES, DIFFICULTIES, ERAS } from "@/game/content";
@@ -55,12 +56,14 @@ export function TitleScreen({
     }
     onStart(culture, difficulty, options);
   };
+  const [guide, setGuide] = useState(false);
   const [cloudCode, setCloudCode] = useState("");
   const [cloudStatus, setCloudStatus] = useState<"idle" | "loading" | "missing" | "old">("idle");
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-sky-200 via-sky-50 to-[#fbf7ef] text-stone-900">
       <UpdatesBar />
+      {guide && <HowToPlay onClose={() => setGuide(false)} />}
       <div className="flex flex-1 items-center justify-center p-4">
         <div className="w-full max-w-3xl">
           <div className="mb-8 text-center">
@@ -74,6 +77,9 @@ export function TitleScreen({
             <p className="mt-3 text-stone-600">
               Grow a Stone Age tribe without destroying the land that feeds it.
             </p>
+            <button type="button" onClick={() => setGuide(true)} className="font-pixel mt-2 text-sm text-amber-800 underline" data-testid="title-how-to-play">
+              How to play
+            </button>
           </div>
 
           {canContinue && (
