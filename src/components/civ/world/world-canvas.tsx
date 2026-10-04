@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Vector3 } from "three";
 import { Html, MapControls, PerformanceMonitor } from "@react-three/drei";
-import { BUILDINGS_BY_ID, ERAS, formatYear, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL, WEAR } from "@/game/content";
+import { BUILDINGS_BY_ID, ERAS, formatYear, IMPROVE, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL, WEAR } from "@/game/content";
 import {
   buildingCost,
   DEMOLISH_TOOL,
@@ -348,6 +348,7 @@ export function WorldCanvas() {
             ) : (
               <Model opacity={1} lit={t.building !== "campfire" || burningIds.includes(t.id)} />
             )}
+            {(t.level ?? 1) >= 2 && <Plinth level={t.level!} />}
           </group>
         );
       })}
@@ -602,5 +603,26 @@ export function WorldCanvas() {
         screenSpacePanning={false}
       />
     </Canvas>
+  );
+}
+
+// An improved building stands on a footing of its material: stone, bronze,
+// iron or steel (IMPROVE.tiers), with a band of metal on the higher levels.
+function Plinth({ level }: { level: number }) {
+  const tier = IMPROVE.tiers.find((t) => t.level === level) ?? IMPROVE.tiers[0];
+  const stone = IMPROVE.tiers[0].color;
+  return (
+    <group>
+      <mesh position={[0, 0.04, 0]} receiveShadow castShadow>
+        <cylinderGeometry args={[0.48, 0.52, 0.1, 6]} />
+        <meshStandardMaterial color={level === 2 ? tier.color : stone} roughness={0.9} flatShading />
+      </mesh>
+      {level >= 3 && (
+        <mesh position={[0, 0.1, 0]}>
+          <cylinderGeometry args={[0.5, 0.5, 0.035, 6]} />
+          <meshStandardMaterial color={tier.color} metalness={0.6} roughness={0.35} flatShading />
+        </mesh>
+      )}
+    </group>
   );
 }

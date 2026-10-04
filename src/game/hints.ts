@@ -6,13 +6,14 @@
 // `done` hides the hint early once the player has done it.
 //
 // List them in order of importance: the first one that applies is shown.
-import { GROWTH_PRESSURE, LAND, PLANT_COST, TUTORIAL, WEAR } from "./content";
+import { GROWTH_PRESSURE, IMPROVE, LAND, PLANT_COST, TUTORIAL, WEAR } from "./content";
 import {
   affordableResearch,
   canAfford,
   countBuildings,
   forestCover,
   housingCapacity,
+  improveNext,
   isLit,
   loggingMode,
   scoutCost,
@@ -98,6 +99,16 @@ export const HINTS: Hint[] = [
     when: (s) => s.researched.includes("early-farming") && forestCover(s) < 0.92,
     text: () => `Cut forest can grow back: press Plant, then click a thinned forest patch (${costText(PLANT_COST)} each).`,
     target: guide("tool-plant"),
+  },
+  {
+    id: "improve",
+    // A building that could be improved right now.
+    when: (s) => s.tiles.some((t) => {
+      const next = improveNext(s, t);
+      return !!next && !next.needs && canAfford(s, next.cost);
+    }),
+    text: () => `Buildings can be improved with stone, and later bronze, iron and steel: click a Farm or Woodcutter and press Improve. Each level makes ${Math.round(IMPROVE.boost * 100)}% more from the same land.`,
+    done: (s) => s.tiles.some((t) => (t.level ?? 1) >= 2),
   },
   {
     id: "logging",

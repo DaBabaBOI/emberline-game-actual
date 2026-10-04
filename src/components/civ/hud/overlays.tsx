@@ -690,6 +690,9 @@ export function DevPanel() {
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devXp" })}>
           +100 XP
         </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devOres" })} title="Learn every ore, +300 stone, +200 coins">
+          Ores
+        </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devMoment" })}>
           Moment
         </button>

@@ -37,6 +37,9 @@ export interface Tile {
   dug?: number;
   // 0–1: how worn out the building on this tile is (Hard only; 1 = broken).
   worn?: number;
+  // How far the building has been improved (1 or missing: as built; 2 Stone-built,
+  // 3 Bronze-fitted, 4 Iron-bound, 5 Steel-framed: see IMPROVE).
+  level?: number;
   // 0–1: cracks from an earthquake, and rubble from a landslide. Both fade.
   cracked?: number;
   rubble?: number;
