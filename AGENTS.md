@@ -193,6 +193,16 @@ These were decided with the project owner. Do not change them without being aske
   - **Medieval:** the cathedral landmark.
 
   Never rank or name real faiths.
+- **Improving buildings** (`IMPROVE`, `improveNext()`, `Tile.level`): each
+  level costs stone (and coins from level 3) and needs its ore researched
+  (Toolmaking, Bronze, Iron Tools, Steelmaking). It adds `IMPROVE.boost` to a
+  building's output, or to a home's room (`homeRoom()`), on the same land; a
+  woodcutter fells no more trees for it. Only buildings that make something
+  or house people are in `IMPROVE.buildings`. Placing a building resets its
+  level. Later ores (uranium, plutonium, the unidentified minerals) are
+  coming-soon nodes until those eras exist.
+- **Discovery scenes show the era** (`ERA_BACKDROPS` in
+  `hud/discovery-scene.tsx`): one row per era. A new era needs a row.
 - **People keep out of harm's way** (`ground.walkable()`): never into the sea,
   the fog, mountains, buildings (fires included) or a burning wildfire tile. Anyone
   walking to a goal on their own (like the hunter) steers round what blocks the way.

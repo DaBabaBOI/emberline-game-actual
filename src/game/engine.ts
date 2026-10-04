@@ -63,6 +63,7 @@ import {
   WALL_DEFENSE,
   MIN_SUSTAINABILITY_FOR_BEST_ENDING,
   NEXT_ERA_POPULATION,
+  IMPROVE,
   BELIEFS,
   SETTLERS,
   GROWTH_PRESSURE,
@@ -165,6 +166,7 @@ export type Action =
   | { type: "dropPerson"; tileId: number | null }
   | { type: "devFogBack" }
   | { type: "devXp" }
+  | { type: "devOres" }
   | { type: "raidResponse"; choice: RaidResponse }
   | { type: "devRaidKind"; kind: RaidKind }
   | { type: "setKeeper"; tileId: number; on: boolean }
@@ -208,6 +210,7 @@ export type Action =
   | { type: "setLogging"; tileId: number; mode: "clear" | "selective" }
   | { type: "plant"; tileId: number }
   | { type: "upgrade"; tileId: number }
+  | { type: "improve"; tileId: number }
   | { type: "relight"; tileId: number }
   | { type: "devEra"; era: number }
   | { type: "devReveal" }
@@ -475,6 +478,31 @@ export function woodcutterYield(state: GameState, tile: Tile) {
 
 export const PLANT_TOOL = "__plant";
 
+// Improving a building with stone and ores: its level (1 as built) and how
+// much more it makes for it (output, or room in a home).
+export function levelOf(tile: Tile) {
+  return Math.max(1, tile.level ?? 1);
+}
+export function improveFactor(tile: Tile) {
+  return 1 + IMPROVE.boost * (levelOf(tile) - 1);
+}
+// How many people a home holds: an improved one has a little more room
+// (rounded down).
+export function homeRoom(tile: Tile) {
+  return tile.building ? Math.floor((BUILDINGS_BY_ID[tile.building]?.housing ?? 0) * improveFactor(tile)) : 0;
+}
+// The next level this building can be improved to, what it costs, and (when the
+// ore isn't known yet) the advancement it waits for. Null: can't be improved.
+export function improveNext(state: GameState, tile: Tile) {
+  if (!tile.building || !IMPROVE.buildings.includes(tile.building)) return null;
+  const tier = IMPROVE.tiers.find((t) => t.level === levelOf(tile) + 1);
+  if (!tier) return null;
+  const cost: Partial<Resources> = { stone: IMPROVE.stone[tier.level] };
+  if (IMPROVE.currency[tier.level]) cost.currency = IMPROVE.currency[tier.level];
+  const known = state.researched.includes(tier.requires);
+  return { ...tier, cost, needs: known ? null : TREE_BY_ID[tier.requires]?.name ?? tier.requires };
+}
+
 // What a building can be upgraded into in the current era (e.g. Hut → House).
 export function upgradeFor(state: GameState, buildingId: string): BuildingDef | null {
   const next = buildingId === "hut" ? BUILDINGS_BY_ID.house : buildingId === "house" ? BUILDINGS_BY_ID.townhouse : null;
@@ -620,10 +648,10 @@ export function placementError(state: GameState, tile: Tile, def: BuildingDef): 
 // one at a time (so 8 people in 3 huts is 3, 3, 2); anyone left over when
 // every home is full sleeps in the open camp (BASE_HOUSING).
 export function residents(state: GameState, tile: Tile): { living: number; room: number } | null {
-  const room = tile.building ? BUILDINGS_BY_ID[tile.building]?.housing ?? 0 : 0;
+  const room = homeRoom(tile);
   if (!room) return null;
   const homes = state.tiles
-    .map((t) => ({ id: t.id, cap: t.building ? BUILDINGS_BY_ID[t.building]?.housing ?? 0 : 0, living: 0 }))
+    .map((t) => ({ id: t.id, cap: homeRoom(t), living: 0 }))
     .filter((h) => h.cap > 0);
   let left = Math.min(Math.floor(state.population), homes.reduce((sum, h) => sum + h.cap, 0));
   while (left > 0) {
@@ -649,7 +677,7 @@ export function homelessMood(state: GameState) {
 export function housingCapacity(state: GameState) {
   let room = BASE_HOUSING;
   for (const t of state.tiles) {
-    const housing = t.building ? BUILDINGS_BY_ID[t.building]?.housing ?? 0 : 0;
+    const housing = homeRoom(t);
     // Hard mode: a broken-down home only holds half its people.
     room += (t.worn ?? 0) >= 1 ? Math.floor(housing / 2) : housing;
   }
@@ -1393,9 +1421,11 @@ export function production(state: GameState): Resources {
     const share =
       (tile.building === "gatherer" ? gathererShare(state) : teachingShare(state, tile.building)) *
       (state.tick < (state.helpers?.[tile.id] ?? 0) ? 1 + DROP.helpBoost : 1);
+    // An improved building (stone, bronze, iron, steel) makes more from the same land.
+    const better = improveFactor(tile);
     for (const [k, v] of Object.entries(def.produces ?? {}))
       // Costs (a bathhouse burning wood) don't shrink as it wears; output does.
-      out[k as keyof Resources] += (v ?? 0) * factor * share * (k === "food" ? dust : 1) * ((v ?? 0) > 0 ? worn : 1);
+      out[k as keyof Resources] += (v ?? 0) * factor * share * (k === "food" ? dust : 1) * ((v ?? 0) > 0 ? worn * better : 1);
     if (def.depositBonus && tile.deposit === def.depositBonus.deposit) {
       for (const [k, v] of Object.entries(def.depositBonus.amount))
         out[k as keyof Resources] += (v ?? 0) * share;
@@ -4388,7 +4418,7 @@ function step(state: GameState, action: Action): GameState {
       const ploughed = def.id === "farm" && tile.terrain === "forest";
       const tiles = state.tiles.map((t) =>
         t.id === tile.id
-          ? { ...t, building: def.id, worn: 0, ...(ploughed ? { terrain: "grass" as const, height: terrainHeight("grass"), growth: 0 } : {}) }
+          ? { ...t, building: def.id, worn: 0, level: undefined, ...(ploughed ? { terrain: "grass" as const, height: terrainHeight("grass"), growth: 0 } : {}) }
           : t.id === cleared?.id
             ? { ...t, terrain: "grass" as const, height: terrainHeight("grass"), growth: 0 }
             : t,
@@ -4655,6 +4685,21 @@ function step(state: GameState, action: Action): GameState {
         resources: spend(state.resources, buildingCost(state, target)),
         log: [`Upgraded to a ${target.name}.`, ...state.log].slice(0, 30),
         stats: { ...(state.stats ?? emptyStats()), built: (state.stats?.built ?? 0) + 1 },
+      });
+    }
+
+    case "improve": {
+      const tile = state.tiles[action.tileId];
+      const next = tile ? improveNext(state, tile) : null;
+      if (!tile || !next || next.needs || !canAfford(state, next.cost)) return state;
+      return withMeters({
+        ...state,
+        tiles: state.tiles.map((t) => (t.id === tile.id ? { ...t, level: next.level } : t)),
+        resources: spend(state.resources, next.cost),
+        log: [
+          `The ${BUILDINGS_BY_ID[tile.building!].name} is now ${next.name}: ${BUILDINGS_BY_ID[tile.building!].housing ? `room for ${homeRoom({ ...tile, level: next.level })} people` : `it makes ${Math.round(IMPROVE.boost * 100 * (next.level - 1))}% more`}.`,
+          ...state.log,
+        ].slice(0, 30),
       });
     }
 
@@ -5083,6 +5128,17 @@ function step(state: GameState, action: Action): GameState {
     case "devXp":
       if (!state.dev) return state;
       return addXp(state, 100);
+
+    case "devOres": {
+      // Every ore for improving buildings is known, with stone and coins to spend.
+      if (!state.dev) return state;
+      const ores = IMPROVE.tiers.map((t) => t.requires).filter((id) => !state.researched.includes(id));
+      return {
+        ...state,
+        researched: [...state.researched, ...ores],
+        resources: { ...state.resources, stone: state.resources.stone + 300, currency: state.resources.currency + 200 },
+      };
+    }
 
     case "devMoment":
       if (!state.dev) return state;

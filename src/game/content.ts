@@ -688,7 +688,11 @@ const LATER_NODES: NodeSeed[] = [
   ["railways", "Railways", "transport", 4, 0, ["navigation"], "Trains link the whole island."],
   ["tanks", "Mechanized Armies", "military", 4, 0, ["knights"], "Tanks, planes and radar."],
   ["computers", "Computers", "culture", 4, 0, ["printing"], "The information age begins."],
+  ["uranium", "Uranium", "energy", 4, 0, ["steam"], "A heavy, faintly glowing ore. Huge power, and a danger that lasts thousands of years."],
+  ["plutonium", "Plutonium", "energy", 4, 0, ["uranium"], "Made from uranium inside reactors. Even more power, even more danger."],
   ["ai", "Artificial Intelligence", "knowledge", 5, 0, ["electricity", "computers"], "Data centers and automated labs."],
+  ["aetherite", "Aetherite (unidentified)", "energy", 5, 0, ["fusion"], "A mineral nobody can name. It hums, and it is never warm or cold."],
+  ["mineral-x", "Mineral X-7 (unidentified)", "knowledge", 5, 0, ["aetherite"], "Found deep under the sea floor. It doesn't match anything we know."],
   ["arcology", "Arcologies", "construction", 5, 0, ["steel"], "Cities in a single tower."],
   ["fusion", "Fusion Power", "energy", 5, 0, ["steam"], "Near-limitless clean energy."],
   ["rocketry", "Orbital Rocketry", "transport", 5, 0, ["railways"], "Reach orbit. Unlocks the space view."],
@@ -982,6 +986,16 @@ export const TREE: TreeNode[] = [
     requires: ["bronze-arms"],
   },
   {
+    // Ores: iron and steel let buildings be improved further (see IMPROVE).
+    id: "iron-tools",
+    name: "Iron Tools",
+    description: "Iron ore smelted into ploughs, axes and nails. Buildings can now be Iron-bound: even more from the same land.",
+    branch: "construction",
+    era: 2,
+    cost: 30,
+    requires: ["bronze"],
+  },
+  {
     id: "silk-secret",
     name: "Jade Road",
     description: "Secret: send 5 caravans. +10 knowledge and +10 happiness.",
@@ -1019,6 +1033,15 @@ export const TREE: TreeNode[] = [
     cost: 60,
     requires: ["three-field"],
     unlocks: ["windmill"],
+  },
+  {
+    id: "steelmaking",
+    name: "Steelmaking",
+    description: "Iron refined in hotter furnaces into steel, hard and springy. Buildings can now be Steel-framed, the best there is.",
+    branch: "construction",
+    era: 3,
+    cost: 50,
+    requires: ["iron-tools"],
   },
   {
     id: "castles",
@@ -2032,6 +2055,22 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     itemFrom: 2,
     lines: ["A new ore, heated hotter than bronze ever needed.", "Hammered while glowing, it became iron.", "Iron swords are harder still. But they eat charcoal."],
   },
+  "iron-tools": {
+    bg: "day",
+    actors: ["person", "person"],
+    props: [{ icon: "campfire", x: 42 }, { icon: "rock", x: 52, until: 1 }, { icon: "hammer", x: 52, from: 1 }],
+    item: "pickaxe",
+    itemFrom: 2,
+    lines: ["Red rock from the hills, burned in the hottest fire.", "Out came iron, hammered into ploughs and nails.", "With iron, every building can be made stronger."],
+  },
+  steelmaking: {
+    bg: "dusk",
+    actors: ["person", "person"],
+    props: [{ icon: "campfire", x: 40 }, { icon: "hammer", x: 52 }],
+    item: "sword",
+    itemFrom: 2,
+    lines: ["The furnace was built taller, the bellows pumped harder.", "The iron came out finer: hard, and springy too.", "Steel. Our buildings can be framed with it now."],
+  },
   "silk-secret": {
     bg: "sea",
     actors: ["person"],
@@ -2321,6 +2360,22 @@ export const COLLAPSE = { level: 20, ticks: 80 };
 
 // Leaving the Stone Age: research Agriculture and grow to this many people.
 export const NEXT_ERA_POPULATION = 15;
+// Improving buildings with stone and new ores: each level makes `boost` more
+// (output, or room in a home) from the same land. Level 2 needs Toolmaking,
+// 3 Bronze, 4 Iron Tools, 5 Steelmaking. `stone` and `currency` are what each
+// level costs (by the level it goes up to).
+export const IMPROVE = {
+  boost: 0.25,
+  tiers: [
+    { level: 2, name: "Stone-built", requires: "toolmaking", color: "#9c968f" },
+    { level: 3, name: "Bronze-fitted", requires: "bronze", color: "#b08d57" },
+    { level: 4, name: "Iron-bound", requires: "iron-tools", color: "#4a4f55" },
+    { level: 5, name: "Steel-framed", requires: "steelmaking", color: "#c9ccd1" },
+  ],
+  stone: [0, 0, 12, 20, 30, 45],
+  currency: [0, 0, 0, 10, 25, 40],
+  buildings: ["woodcutter", "gatherer", "farm", "fishing", "quarry", "pen", "elder", "school", "hut", "house", "townhouse"],
+};
 // Beliefs: shrines and temples (each counts up to `max`), the yearly festival
 // at a shrine (every `every` ticks: `mood` happiness for `food` food; skipped
 // when the stores are too low), and what honouring the river is worth to the land.
