@@ -6,7 +6,7 @@ criterion it answers.
 
 ## Before you start
 
-- Open https://dabababoi.github.io/shistech-hackathon/ in one tab.
+- Open https://dabababoi.github.io/emberline-game-actual/ in one tab.
 - In a second tab, open `/play/?dev` and load a Stone Age game, so the demo can skip waiting.
 - Keep the screenshots in `docs/images/` ready as a backup if the Wi-Fi or
   the projector struggles with 3D.

@@ -214,6 +214,7 @@ These were decided with the project owner. Do not change them without being aske
 - **Project page motion** (`public/site/style.css` section 9, `setUpReveal` in `site.js`): decoration only, CSS animations, everything off under `prefers-reduced-motion`. Cards are hidden for the reveal only when `html.js` is set, so nothing stays hidden without the script.
 - **First-time calm** (`GENTLE`, `firstStoneAge`): in First-time mode's Stone Age there are no raids or disasters and big moments are spaced `quietFactor`× further. Check with `calm.js` (count per 20-minute game): about 4 big moments, not 10.
 - **Build to Last mode** (`state.mode === "last"`, `LAST`, `applyLastStart`, `lastProblems`, `updateLast`): Industrial start with a built town; win by holding the three problems solved for `LAST.hold` ticks. In this mode advancements have no goals, there are no lessons, raids, story or discovery scenes. The 30 short Industrial advancements use `boost` (see `boostOf`), which works in every mode. Check with the solver bot (`solve.js`).
+- **Every choice has a cost**: helpful actions (sending settlers, the river choice) must show what they cost next to what they give, in the button's own text.
 - **No font ligatures** (`globals.css` and `public/site/style.css`): Pixelify joins "fi" into one glyph, so "fire" read as "Are". Keep `font-variant-ligatures: none` on everything.
 - **Phones get the compact HUD** (`useCompact()`: narrower than 768 px, or
   shorter than 500 px). The meters are a strip under the top bar

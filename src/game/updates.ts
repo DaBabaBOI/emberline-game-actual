@@ -9,6 +9,8 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Sending settlers now has a price: each one takes 15 food and 5 wood for the road, you lose their work, and the families left behind are sadder for a while.",
+      "Build to Last, tidier: the starting town is laid out in districts (homes in the middle, farms around them, industry together on one side), the build bar leaves out Stone Age buildings and the army, scouts and ships, and a short card explains the three problems before the clock starts. Click any of the three problems at the top to see how to solve it. The river choice now says what each side gains and gives up.",
       "New game mode, Build to Last: start in 1850 with a smoky industrial town and solve three big problems (clear the air, clean power, a home and food for 120 with the forest standing). 30 new short advancements, no tutorial and no lessons.",
       "First-time mode is calmer: in the Stone Age there are no raids or natural disasters, big moments are three times further apart, and lessons and small moments come half as often. Event cards stay spaced out for the first half hour.",
       "Cutscenes move like the opening fly-in: a new era sweeps down from high over the sea to your town, and discovery scenes open with the camera moving in.",

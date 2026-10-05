@@ -7,8 +7,8 @@ play together online. It was made by Prithu Sharma, Aarav Kumar,
 Vagisha Sinha and Aaradhya Verma for the SHISTECH Hacktrack hackathon (theme:
 the UN Sustainable Development Goals, with SDG 11 as our focus).
 
-- **Play:** https://dabababoi.github.io/shistech-hackathon/ (no install, laptop or phone)
-- **Dev mode, for testing any feature quickly:** https://dabababoi.github.io/shistech-hackathon/play/?dev
+- **Play:** https://dabababoi.github.io/emberline-game-actual/ (no install, laptop or phone)
+- **Dev mode, for testing any feature quickly:** https://dabababoi.github.io/emberline-game-actual/play/?dev
 - **Code:** this repository. The rules are in `src/game/`; the screen and 3D world are in `src/components/civ/`.
 
 ![The village in the Stone Age](images/04-village-stone.png)

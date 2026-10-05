@@ -2006,10 +2006,10 @@ export const EVENTS: EventCard[] = [
     body: "The elders say the river is alive and gives us everything. Now the builders want to dam it for mills and draw it off in aqueducts. What do we believe?",
     choices: [
       {
-        label: "Honour the river: no mills or aqueducts on it (+4 Sustainability for good, +6 happiness)",
+        label: "Honour the river: +4 Sustainability for good, +6 happiness, but never any Watermills or Aqueducts (less food, no water in a drought)",
         effect: { river: "honour", happiness: 6 },
       },
-      { label: "Tame the river: build what we need (some are upset: −4 happiness)", effect: { river: "tame", happiness: -4 } },
+      { label: "Tame the river: Watermills and Aqueducts for more food and water through the great drought, but some are upset (−4 happiness)", effect: { river: "tame", happiness: -4 } },
     ],
     realWorld: "Many peoples have treated rivers as sacred, and some countries now give rivers legal rights to protect them.",
   },
@@ -3456,7 +3456,9 @@ export const BELIEFS = {
 };
 // Population control: families can set off to start a village of their own
 // (`size` at a time, never leaving fewer than `keep`).
-export const SETTLERS = { size: 4, keep: 5 };
+// Settlers take food and wood for the road, and the families who stay behind
+// miss them (a fading happiness loss, like grief but smaller).
+export const SETTLERS = { size: 4, keep: 5, food: 15, wood: 5, missed: 8 };
 
 // The best ending needs the land to still be healthy: growth can't just ignore
 // the damage it does. Used for every debrief's ending tier.
@@ -3910,11 +3912,16 @@ export const TUTORIAL: { text: string; more: string; done: string; unlocks: stri
 export const LAST = {
   startYear: 1850,
   population: 60,
-  resources: { food: 400, wood: 250, stone: 250, knowledge: 150, currency: 300 },
-  town: ["townhouse", "townhouse", "townhouse", "latrine", "latrine", "well", "well", "farm", "farm", "farm", "farm", "farm", "farm", "farm", "granary", "woodcutter", "quarry", "factory", "coalplant", "market", "university", "temple"],
+  resources: { food: 400, wood: 250, stone: 250, knowledge: 30, currency: 200 },
+  // A smoky industrial town that runs on coal: factories and flats on the grid.
+  town: ["townhouse", "townhouse", "townhouse", "apartments", "apartments", "latrine", "latrine", "well", "well", "farm", "farm", "farm", "farm", "farm", "farm", "farm", "granary", "woodcutter", "quarry", "factory", "factory", "coalplant", "coalplant", "market", "university", "temple"],
+  // Already known in 1850 (on top of every earlier era).
+  known: ["electricity", "railways"],
+  // Old buildings left off the build bar in this mode, to keep it short.
+  hidden: ["campfire", "hut", "gatherer", "warcamp", "watchfire", "elder", "healer", "pen", "house", "school", "smithy", "canal", "shrine", "walls", "dock", "fishing"],
   hold: 60,
   cleanShare: 0.7,
   people: 120,
-  meter: 55,
+  meter: 50,
   forest: 0.35,
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { BUILDINGS, CANOE, ERAS, SPACE, TRADE, LOW_WOOD_AFTER_BUY, PLANT_COST, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL, WARRIORS_PER_CAMP } from "@/game/content";
+import { BUILDINGS, CANOE, ERAS, LAST, SPACE, TRADE, LOW_WOOD_AFTER_BUY, PLANT_COST, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL, WARRIORS_PER_CAMP } from "@/game/content";
 import {
   affordableResearch,
   buildingCost,
@@ -213,7 +213,9 @@ export function BottomBar() {
   const { state, dispatch, selected, setSelected, setPanel } = useGame();
   const prod = production(state);
   const net = prod.food - consumption(state) - foodSpoiling(state);
-  const eraBuildings = BUILDINGS.filter((b) => b.era <= state.era);
+  // Build to Last keeps the bar short: no Stone Age buildings, no army, scouts or ships.
+  const last = state.mode === "last";
+  const eraBuildings = BUILDINGS.filter((b) => b.era <= state.era && !(last && LAST.hidden.includes(b.id)));
   const inTutorial = state.tutorialStep < TUTORIAL.length;
   const counts = countBuildings(state);
   const affordable = affordableResearch(state);
@@ -368,8 +370,8 @@ export function BottomBar() {
               <Cost cost={PLANT_COST} />
             </ToolButton>
           )}
-          <ArmyButton />
-          {state.researched.includes("spears") && spearmenOf(state) < state.soldiers && (
+          {!last && <ArmyButton />}
+          {!last && state.researched.includes("spears") && spearmenOf(state) < state.soldiers && (
             <ToolButton
               guide="tool-upgrade"
               icon="sword"
@@ -382,10 +384,10 @@ export function BottomBar() {
               <Cost cost={SPEAR_COST} />
             </ToolButton>
           )}
-          {state.researched.includes("barter-roads") && <CaravanButton />}
-          {(countBuildings(state).dock ?? 0) > 0 && <CanoeButton />}
-          {state.researched.includes("navigation") && <ShipButton />}
-          {state.kingdoms && (
+          {!last && state.researched.includes("barter-roads") && <CaravanButton />}
+          {!last && (countBuildings(state).dock ?? 0) > 0 && <CanoeButton />}
+          {!last && state.researched.includes("navigation") && <ShipButton />}
+          {!last && state.kingdoms && (
             <ToolButton
               guide="tool-kingdoms"
               icon="crown"
@@ -396,7 +398,7 @@ export function BottomBar() {
               tone="bg-purple-800 hover:bg-purple-700"
             />
           )}
-          <ToolButton
+          {!last && <ToolButton
             guide="tool-scout"
             locked={tutorialLocked(state, "scout")}
             icon="spyglass"
@@ -414,7 +416,7 @@ export function BottomBar() {
             ) : (
               <Cost cost={scoutCost(state)} bad={!canAfford(state, scoutCost(state))} tight={tight(scoutCost(state))} />
             )}
-          </ToolButton>
+          </ToolButton>}
           <ToolButton
             guide="tool-advancements"
             locked={tutorialLocked(state, "advancements")}

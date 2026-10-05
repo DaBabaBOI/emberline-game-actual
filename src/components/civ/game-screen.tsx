@@ -16,7 +16,7 @@ import { MeterStrip, SideMeters } from "./hud/side-meters";
 import { BottomBar } from "./hud/bottom-bar";
 import { TreeOverlay } from "./hud/tree-overlay";
 import { GuideOverlay, useGuide } from "./hud/guide-overlay";
-import { Debrief, GoalLine, NextEraPrompt } from "./hud/debrief";
+import { Debrief, GoalLine, LastIntro, NextEraPrompt } from "./hud/debrief";
 import { DiscoveryScene } from "./hud/discovery-scene";
 import { Letterbox, useShot } from "./hud/letterbox";
 import { HintPanel } from "./hud/hints";
@@ -132,6 +132,7 @@ function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null 
       </div>
       <Letterbox />
       <BattleCamera />
+      <LastIntro />
       <GameAudio />
       <KonamiFireworks />
     </>

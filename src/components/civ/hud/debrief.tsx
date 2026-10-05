@@ -287,21 +287,76 @@ export function GoalLine() {
   );
 }
 
+// Build to Last: what the game is about, before the clock starts. The game
+// waits (paused) until the player presses Start.
+export function LastIntro() {
+  const { state, dispatch } = useGame();
+  const [open, setOpen] = useState(() => state.mode === "last" && state.tick < 2);
+  if (!open) return null;
+  const close = () => {
+    setOpen(false);
+    dispatch({ type: "setSpeed", speed: 1 });
+  };
+  return (
+    <div className="pointer-events-auto fixed inset-0 z-[46] flex items-center justify-center bg-black/50 p-3" data-testid="last-intro">
+      <div className="pixel-panel w-[min(94vw,520px)] p-4">
+        <h2 className="font-pixel text-2xl font-bold">Build to Last</h2>
+        <p className="mt-1 text-sm text-stone-600">{formatYear(state.year)}. Your town runs on coal. Solve all three at once, and keep them solved.</p>
+        <ol className="mt-3 flex flex-col gap-2 text-sm">
+          {lastProblems(state).map((p, i) => (
+            <li key={p.id} className="flex gap-2">
+              <span className="font-pixel font-bold text-amber-700">{i + 1}.</span>
+              <span>
+                <span className="font-pixel font-semibold">{p.title}.</span> {p.how}
+              </span>
+            </li>
+          ))}
+        </ol>
+        <button type="button" onClick={close} className="pixel-btn font-pixel mt-4 w-full bg-emerald-600 py-2 text-lg font-semibold text-white" data-testid="last-start">
+          Start
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // Build to Last: the three big problems, each with a tick when solved.
 function ProblemsLine() {
   const { state } = useGame();
   const problems = lastProblems(state);
+  // Click a problem to read how to solve it; click again to hide it.
+  const [openId, setOpenId] = useState<string | null>(null);
+  const open = problems.find((p) => p.id === openId);
   return (
-    <div className="pointer-events-none flex justify-center">
-      <div className="pixel-panel-dark font-pixel flex max-w-[min(94vw,760px)] flex-wrap justify-center gap-x-4 gap-y-1 px-3 py-1 text-xs" data-testid="problems">
+    <div className="pointer-events-none flex flex-col items-center gap-1">
+      <div className="pixel-panel-dark font-pixel pointer-events-auto flex max-w-[min(94vw,760px)] flex-wrap justify-center gap-x-2 gap-y-1 px-2 py-1 text-xs" data-testid="problems">
         {problems.map((p) => (
-          <span key={p.id} className="flex items-center gap-1" title={p.status} data-testid={`problem-${p.id}`}>
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => setOpenId(openId === p.id ? null : p.id)}
+            aria-expanded={openId === p.id}
+            className={cn("flex items-center gap-1 px-1.5 py-0.5 hover:bg-white/10", openId === p.id && "bg-white/15")}
+            data-testid={`problem-${p.id}`}
+          >
             <span className={cn("inline-block h-3 w-3 border-2", p.done ? "border-emerald-300 bg-emerald-400" : "border-white/60")} />
             <span className={p.done ? "text-emerald-300" : ""}>{p.title}</span>
             <span className="text-white/60">· {p.status}</span>
-          </span>
+            <span className="text-amber-300">{openId === p.id ? "▴" : "?"}</span>
+          </button>
         ))}
       </div>
+      {open && (
+        <button
+          type="button"
+          onClick={() => setOpenId(null)}
+          className="pixel-panel font-pixel pointer-events-auto max-w-[min(94vw,520px)] px-3 py-2 text-left text-xs"
+          data-testid="problem-how"
+        >
+          <span className="font-semibold">How to solve {open.title}: </span>
+          {open.how}
+        </button>
+      )}
     </div>
   );
 }

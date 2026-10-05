@@ -6,7 +6,7 @@ Every hut, farm and power plant helps your people now and costs the land later. 
 the SHISTECH Hacktrack hackathon (UN Sustainable Development Goals theme), built
 around **SDG 11: Sustainable Cities and Communities**.
 
-### Play it: https://dabababoi.github.io/shistech-hackathon/
+### Play it: https://dabababoi.github.io/emberline-game-actual/
 
 No install needed. It runs in the browser, on a laptop or a phone.
 
@@ -370,8 +370,8 @@ scripts/
 ## Working on it
 
 ```bash
-git clone https://github.com/DaBabaBOI/shistech-hackathon.git
-cd shistech-hackathon
+git clone https://github.com/DaBabaBOI/emberline-game-actual.git
+cd emberline-game-actual
 npm install
 npm run dev        # http://localhost:3000, then open /play
 ```
@@ -399,7 +399,7 @@ have someone else review it. Commit messages are imperative ("add farmland", not
 "added farmland").
 
 **Dev mode:** open `/play/?dev`
-(https://dabababoi.github.io/shistech-hackathon/play/?dev). You can start in any
+(https://dabababoi.github.io/emberline-game-actual/play/?dev). You can start in any
 era with plenty of resources, and a dev panel lets you trigger every feature:
 wildfire, raid, the Roman legion, an outbreak, any event card or elder lesson
 (picked from a list), fires out, +10 people, "Goals on" (every advancement goal
