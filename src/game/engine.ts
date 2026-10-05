@@ -1090,6 +1090,28 @@ export function connectedPairs(state: GameState): [Tile, Tile, "water" | "path"]
   return out;
 }
 
+// Where a building reaches, for the map while placing it: `harm` areas are
+// tinted red, the rest green, and the buildings it affects (`hits`) stronger.
+export function effectAreas(building: string): { range: number; harm: boolean; hits: string[] }[] {
+  const homes = ["hut", "house", "townhouse", "apartments"];
+  const out: { range: number; harm: boolean; hits: string[] }[] = [];
+  const def = BUILDINGS_BY_ID[building];
+  if (building === "quarry") out.push({ range: QUARRY_DUST.range, harm: true, hits: QUARRY_DUST.hits });
+  if (building === "campfire") out.push({ range: FIRE_SCARE.range, harm: true, hits: ["gatherer", "hut", "house"] });
+  if (def?.smog) out.push({ range: SMOG.range, harm: true, hits: homes });
+  if (building === "aqueduct") out.push({ range: WATER.aqueductReach, harm: false, hits: ["farm"] });
+  if (building === "watermill") out.push({ range: WATER.millReach, harm: false, hits: ["farm"] });
+  if (building === "windmill") out.push({ range: FARMING.windmillReach, harm: false, hits: ["farm"] });
+  if (building === "park") out.push({ range: SMOG.parkRange, harm: false, hits: homes });
+  const partners = new Set<string>();
+  for (const c of CONNECTIONS) {
+    if (c.building === building) c.to.forEach((id) => partners.add(id));
+    if (c.to.includes(building)) partners.add(c.building);
+  }
+  if (partners.size) out.push({ range: 1, harm: false, hits: [...partners] });
+  return out;
+}
+
 // Is this tile within reach of a building of this kind?
 function near(state: GameState, tile: Tile, building: string, reach: number) {
   return state.tiles.some((t) => t.building === building && hexDistance(t, tile) <= reach);

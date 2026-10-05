@@ -35,6 +35,7 @@ import {
   placementError,
   townNote,
   connectionNote,
+  effectAreas,
 } from "@/game/engine";
 import { BuildingInfo } from "./building-info";
 import { useGame } from "@/components/civ/game-provider";
@@ -73,6 +74,38 @@ function HexOutline({ x, y, z, color }: { x: number; y: number; z: number; color
       <ringGeometry args={[0.8, 0.98, 6, 1, Math.PI / 6]} />
       <meshBasicMaterial color={color} transparent opacity={0.85} depthWrite={false} />
     </mesh>
+  );
+}
+
+// While placing a building: the tiles it would reach, red where it does harm
+// and green where it helps; the buildings it would affect stand out more.
+function ReachArea({ tiles, centre, building }: { tiles: Tile[]; centre: Tile; building: string }) {
+  const areas = effectAreas(building);
+  if (!areas.length) return null;
+  const range = Math.max(...areas.map((a) => a.range));
+  const shown = tiles.filter((t) => t.revealed && t.id !== centre.id && t.terrain !== "deep" && hexDistance(t, centre) <= range);
+  return (
+    <group>
+      {shown.map((t) => {
+        const d = hexDistance(t, centre);
+        const here = areas.filter((a) => d <= a.range);
+        if (!here.length) return null;
+        const harm = here.some((a) => a.harm);
+        const hit = !!t.building && here.some((a) => a.hits.includes(t.building!));
+        return (
+          <group key={t.id} position={[t.x, tileTop(t) + 0.09, t.z]} rotation={[-Math.PI / 2, 0, 0]}>
+            <mesh raycast={() => null} renderOrder={2}>
+              <circleGeometry args={[0.93, 6, Math.PI / 6]} />
+              <meshBasicMaterial color={harm ? "#ef4444" : "#22c55e"} transparent opacity={hit ? 0.55 : 0.3} depthWrite={false} />
+            </mesh>
+            <mesh raycast={() => null} renderOrder={2}>
+              <ringGeometry args={[0.86, 0.95, 6, 1, Math.PI / 6]} />
+              <meshBasicMaterial color={harm ? "#b91c1c" : "#15803d"} transparent opacity={0.9} depthWrite={false} />
+            </mesh>
+          </group>
+        );
+      })}
+    </group>
   );
 }
 
@@ -581,6 +614,7 @@ export function WorldCanvas() {
           }
         />
       )}
+      {hoverTile && def && !error && <ReachArea tiles={state.tiles} centre={hoverTile} building={def.id} />}
       {hoverTile && dwellers && (
         <Html zIndexRange={[15, 0]} center position={[hoverTile.x, tileTop(hoverTile) + 1.2, hoverTile.z]} style={{ pointerEvents: "none" }}>
           <div className="pixel-panel-dark font-pixel whitespace-nowrap px-2 py-1 text-xs" data-testid="home-label">
