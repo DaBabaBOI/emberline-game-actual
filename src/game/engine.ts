@@ -84,7 +84,6 @@ import {
   MP,
   TRADE,
   WORK,
-
   BELIEFS,
   SETTLERS,
   GROWTH_PRESSURE,
@@ -2583,7 +2582,7 @@ export function sustainabilityBreakdown(state: GameState): SustainPart[] {
       value: state.tipped ? -TIPPING.sustain : 0,
       hint: "The frozen north thawed and keeps warming the world on its own. This can't be undone.",
     },
-
+    {
       label: "Recent events",
       value: state.modifiers.sustainability,
       hint: "Fires and choices you made in events. This fades over time.",
@@ -3189,11 +3188,7 @@ export function computeMeters(state: GameState): Meters {
     (landmarkWorking(state, "library") ? LANDMARK.libraryLiteracy : 0) +
     (state.researched.includes("printing") ? LEARNING.printingLiteracy : 0) +
     Math.min(BELIEFS.max, counts.temple ?? 0) * BELIEFS.templeLiteracy +
-    (landmarkWorking(state, "library") ? LANDMARK.libraryLiteracy : 0) +
-    (state.researched.includes("printing") ? LEARNING.printingLiteracy : 0) +
-    Math.min(BELIEFS.max, counts.temple ?? 0) * BELIEFS.templeLiteracy +
     (state.researched.includes("purpose") ? AUTOMATION.literacy : 0) +
-
     (state.researched.length - 1) * 2;
 
   const happiness =

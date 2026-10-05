@@ -181,10 +181,6 @@ These were decided with the project owner. Do not change them without being aske
   turns over after a real year. The sky follows the real clock, and there is no
   "left behind" deadline (`behindTicksLeft()`). The engine's own `year` is
   untouched, so everything that runs on it still works.
-
-- **Beliefs are invented, never a real religion** (`BELIEFS`), and they're
-  trade-offs like everything else:
-  - **Stone Age:** spirits of the forest (the sacred grove event).
 - **Beliefs are invented, never a real religion** (`BELIEFS`), and they're
   trade-offs like everything else:
   - **Stone Age:** spirits of the forest (the sacred grove event).

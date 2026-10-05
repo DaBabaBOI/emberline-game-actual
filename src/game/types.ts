@@ -424,14 +424,9 @@ export interface GameState {
   hintTick?: number;
   // Beliefs: what the people decided about the river, and the next festival.
   riverChoice?: "honour" | "tame";
-  hintTick?: number;
   // Realistic time (a joke mode): the calendar runs in real time from this
   // moment (ms since 1970), and the sky follows the real clock.
   realTimeFrom?: number;
-  // Beliefs: what the people decided about the river, and the next festival.
-  riverChoice?: "honour" | "tame";
-  nextFestivalTick?: number;
-
   nextFestivalTick?: number;
   // Chief XP (only goes up) and level (missing in older saves: 0 and 1).
   xp?: number;

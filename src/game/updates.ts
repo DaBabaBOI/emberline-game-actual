@@ -9,9 +9,6 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
-  {
-    date: "2026-10-01",
-    items: [
       "New game mode, Build to Last: start in 1850 with a smoky industrial town and solve three big problems (clear the air, clean power, a home and food for 120 with the forest standing). 30 new short advancements, no tutorial and no lessons.",
       "First-time mode is calmer: in the Stone Age there are no raids or natural disasters, big moments are three times further apart, and lessons and small moments come half as often. Event cards stay spaced out for the first half hour.",
       "Cutscenes move like the opening fly-in: a new era sweeps down from high over the sea to your town, and discovery scenes open with the camera moving in.",
@@ -43,9 +40,7 @@ export const UPDATES: Update[] = [
       "Hide the build bar with the ▼ Hide button to see more of the island; ▲ Build brings it back. It comes back by itself when a hint or the tutorial needs it.",
       "Improve your buildings: click a farm, woodcutter, quarry, home and more, and press Improve. Stone-built first, then Bronze-fitted, Iron-bound (new: Iron Tools) and Steel-framed (new: Steelmaking). Each level makes 25% more from the same land, or gives a home more room. Uranium, plutonium and two minerals nobody can name wait in the Advancements for later eras.",
       "Discovery cutscenes now show the era in the background: huts, then columns and aqueducts, castles and windmills, smoky factories, and rockets under a ringed planet.",
-      "Realistic time (a joke, on the title screen): the calendar runs in real time, with today's date, the hour and the season, in 50,000 BCE. The next era is only about 47,000 real years away."
-    ]
-  }
+      "Realistic time (a joke, on the title screen): the calendar runs in real time, with today's date, the hour and the season, in 50,000 BCE. The next era is only about 47,000 real years away.",
       "Beliefs: in the Ancient era build a Shrine (a carved spirit pole): it cheers people up, and every year the village holds a festival that costs some food. In the Classical era a Temple adds happiness and teaches reading, and the people decide whether to honour the river (no mills or aqueducts, healthier land) or tame it.",
       "People keep away from danger: nobody walks into a burning wildfire, and hunters walk round buildings and fires instead of straight through them.",
       "The Watch Fire is now a Watch Tower: a tall lookout tower with a ladder, a thatched roof and a lookout on top. Same job (raiders seen sooner, a little defense), no fire.",
