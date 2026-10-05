@@ -9,12 +9,14 @@ import { prefersLessMotion } from "@/lib/graphics";
 // a new era begins. Black bars close in top and bottom while it plays; a click
 // or a key skips it. Players who ask for less motion get no shots.
 
-export type ShotKind = "intro" | "era";
+export type ShotKind = "intro" | "era" | "battle";
 export interface Shot {
   kind: ShotKind;
   title: string;
   subtitle: string;
   seconds: number;
+  // Where to look (a battle: the field where the warriors meet the raiders).
+  at?: { x: number; z: number; y?: number };
 }
 
 let shot: Shot | null = null;
@@ -25,6 +27,10 @@ export function playShot(next: Shot) {
   if (prefersLessMotion()) return;
   shot = next;
   notify();
+}
+
+export function currentShot() {
+  return shot;
 }
 
 export function endShot() {
