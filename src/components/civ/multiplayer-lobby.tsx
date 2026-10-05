@@ -1,18 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MP } from "@/game/content";
 import {
   BOT_NAMES,
+  CHAT,
+  chatLines,
+  cleanChat,
   createRoom,
+  getEvents,
   getRoom,
   getSeats,
   joinRoom,
   leaveRoom,
   openRooms,
   saveSession,
+  sendChat,
   shareLink,
   startRoom,
+  type ChatLine,
   type Mode,
   type Room,
   type Seat,
@@ -21,6 +27,7 @@ import {
 } from "@/lib/multiplayer";
 import { cn } from "@/lib/utils";
 import { PixelIcon } from "@/components/civ/pixel-icon";
+import { ChatBox } from "@/components/civ/hud/mp-chat";
 
 const SPEEDS: { id: Speed; label: string }[] = [
   { id: "quick", label: `Quick: ${MP.minutes.quick} min, 3x faster learning` },
@@ -208,12 +215,20 @@ function WaitingRoom({ session, onStart, onLeave }: { session: Session; onStart:
   const [seats, setSeats] = useState<Seat[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [chat, setChat] = useState<ChatLine[]>([]);
+  const lastEvent = useRef(0);
+  // The first read brings back the history, my own messages too (after a reload).
+  const first = useRef(true);
 
   useEffect(() => {
     let alive = true;
     const load = async () => {
-      const [r, s] = await Promise.all([getRoom(session.code), getSeats(session.code)]);
+      const [r, s, events] = await Promise.all([getRoom(session.code), getSeats(session.code), getEvents(session.code, lastEvent.current)]);
       if (!alive) return;
+      for (const e of events) lastEvent.current = Math.max(lastEvent.current, e.id);
+      const incoming = chatLines(events, session.seat, (n) => s.find((x) => x.seat === n)?.name ?? BOT_NAMES[n], first.current);
+      first.current = false;
+      if (incoming.length) setChat((c) => [...c, ...incoming].slice(-CHAT.keep));
       if (r) setRoom(r);
       setSeats(s.filter((x) => !x.gone));
       if (r?.status === "playing") onStart(r, session, s.filter((x) => !x.gone));
@@ -264,6 +279,18 @@ function WaitingRoom({ session, onStart, onLeave }: { session: Session; onStart:
               </div>
             );
           })}
+        </div>
+        <div className="pixel-panel flex flex-col gap-1 p-3">
+          <span className="font-pixel text-sm font-semibold">Chat</span>
+          <ChatBox
+            lines={chat}
+            onSend={async (text) => {
+              const r = await sendChat(session, text);
+              if (r.error) return r.error;
+              setChat((c) => [...c, { key: `me${Date.now()}`, from: session.name, text: cleanChat(text), mine: true }].slice(-CHAT.keep));
+              return null;
+            }}
+          />
         </div>
         {host ? (
           <button

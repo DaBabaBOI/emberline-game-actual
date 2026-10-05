@@ -196,7 +196,7 @@ A match, step by step:
 2. Others call `mp_join_room` with the code and get a seat and their own secret.
 3. The host calls `mp_start_room`; every browser sees the status change and starts the same island.
 4. About every 3 seconds each browser sends its score with `mp_update_player`, and reads the seats and any new events.
-5. A gift or a raid is `mp_send_event`; the other player's browser picks it up on its next read.
+5. A gift, a raid or a chat message is `mp_send_event` (chat goes to seat -1, everyone); the other browsers pick it up on their next read.
 
 Security: the tables are read-only to the public (row-level security), and every
 write goes through an `mp_*` function that checks the player's secret. Only the

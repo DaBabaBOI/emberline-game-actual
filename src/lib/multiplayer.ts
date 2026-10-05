@@ -196,3 +196,38 @@ export function botActions(seed: number, botSeats: number[], humanSeats: number[
   }
   return out.sort((a, b) => a.at - b.at);
 }
+
+// ---- Chat ------------------------------------------------------------------
+
+export const CHAT = { max: 140, keep: 40, quick: ["Hi!", "Good luck!", "Nice!", "Thanks!", "Watch out!", "Good game!"] };
+
+// A few common swear words, masked (this is played in schools). Not a full
+// filter: the 20-a-minute limit on the server keeps spam down too.
+const MASK = /\b(fuck\w*|shit\w*|bitch\w*|cunt\w*|dick\w*|asshole\w*|bastard\w*|slut\w*|whore\w*|piss\w*)\b/gi;
+
+export function cleanChat(text: string) {
+  return text.replace(/\s+/g, " ").trim().slice(0, CHAT.max).replace(MASK, (w) => w[0] + "*".repeat(w.length - 1));
+}
+
+export interface ChatLine {
+  key: string;
+  from: string;
+  text: string;
+  mine: boolean;
+}
+
+// Chat messages in a batch of events: to everyone (seat -1) or to me. My own
+// are left out (they show as soon as I send them) unless `withMine`: on the
+// first read, to bring back the history.
+export function chatLines(events: MpEvent[], mySeat: number, nameOf: (seat: number) => string, withMine = false): ChatLine[] {
+  return events
+    .filter((e) => e.kind === "chat" && (withMine || e.from_seat !== mySeat) && (e.to_seat === -1 || e.to_seat === mySeat || e.from_seat === mySeat))
+    .map((e) => ({ key: `e${e.id}`, from: nameOf(e.from_seat), text: cleanChat(String(e.payload.text ?? "")), mine: e.from_seat === mySeat }))
+    .filter((l) => l.text);
+}
+
+export async function sendChat(s: Session, text: string) {
+  const clean = cleanChat(text);
+  if (!clean) return { error: "Type a message first." };
+  return sendEvent(s, -1, "chat", { text: clean });
+}

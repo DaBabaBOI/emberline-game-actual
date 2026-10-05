@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Chat in multiplayer: talk in the waiting room and during the match (Chat in the side menu), with quick phrases for phones. New messages show a count and a short preview.",
       "The game and the project page have a little pixel flame in the browser tab.",
       "The project page shows the whole journey now: screenshots of a Stone Age camp, a Medieval town, an Industrial city and a Future city, and the four UN goals the game teaches most (Cities, Climate, Life on Land, Clean Energy).",
       "A How to play guide: the whole game on one page, from the title screen or the in-game Menu.",
