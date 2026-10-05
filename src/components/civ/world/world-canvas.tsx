@@ -36,6 +36,8 @@ import {
   townNote,
   connectionNote,
   effectAreas,
+  dusty,
+  scaredByFire,
   salvageOf,
   scrapClearCost,
   scrapEra,
@@ -109,6 +111,29 @@ function ReachArea({ tiles, centre, building }: { tiles: Tile[]; centre: Tile; b
           </group>
         );
       })}
+    </group>
+  );
+}
+
+// Buildings being harmed right now, so it's never a hidden rule: dust from a
+// quarry over fields and camps, or a fire scaring a gatherer's game. A dusty
+// haze over the tile and a thin red edge; the building's card says why.
+function HazardMarks({ state }: { state: GameState }) {
+  const hit = state.tiles.filter((t) => t.building && (dusty(state, t) || scaredByFire(state, t)));
+  return (
+    <group>
+      {hit.map((t) => (
+        <group key={t.id} position={[t.x, tileTop(t), t.z]} rotation={[-Math.PI / 2, 0, 0]}>
+          <mesh position={[0, 0, 0.5]} raycast={() => null} renderOrder={2}>
+            <circleGeometry args={[0.9, 6, Math.PI / 6]} />
+            <meshBasicMaterial color="#c8b48a" transparent opacity={0.35} depthWrite={false} />
+          </mesh>
+          <mesh position={[0, 0, 0.06]} raycast={() => null} renderOrder={2}>
+            <ringGeometry args={[0.86, 0.95, 6, 1, Math.PI / 6]} />
+            <meshBasicMaterial color="#dc2626" transparent opacity={0.8} depthWrite={false} />
+          </mesh>
+        </group>
+      ))}
     </group>
   );
 }
@@ -607,6 +632,7 @@ export function WorldCanvas() {
       <Cracks tiles={state.tiles} />
       <Links state={state} />
       <ScrapPiles state={state} />
+      <HazardMarks state={state} />
       <Rubble tiles={state.tiles} />
       <Wildlife
         tiles={state.tiles}

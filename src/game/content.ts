@@ -1139,7 +1139,7 @@ export const TREE: TreeNode[] = [
   {
     id: "coinage",
     name: "Coinage",
-    description: "Stamped silver coins replace barter. With the Roman legion beaten and 40 people, your people can enter the Classical era.",
+    description: "Stamped silver coins replace barter. With the Roman legion beaten and 35 people, your people can enter the Classical era.",
     branch: "culture",
     era: 1,
     cost: 60,
@@ -1391,7 +1391,7 @@ export const TREE: TreeNode[] = [
   {
     id: "steam",
     name: "Steam & Coal",
-    description: "Coal-fired steam engines drive machines. Unlocks the Factory. With 90 people, opens the Industrial era.",
+    description: "Coal-fired steam engines drive machines. Unlocks the Factory. With 75 people, opens the Industrial era.",
     branch: "energy",
     era: 3,
     cost: 80,
@@ -1490,7 +1490,7 @@ export const TREE: TreeNode[] = [
   {
     id: "computers",
     name: "Computers",
-    description: "Machines that calculate: +30% Knowledge. With 150 people after the climate crisis, opens the Future.",
+    description: "Machines that calculate: +30% Knowledge. With 125 people after the climate crisis, opens the Future.",
     branch: "knowledge",
     era: 4,
     cost: 120,
@@ -1866,7 +1866,7 @@ export const AFTER_STEPS: Record<string, AfterStep> = {
   irrigation: { build: "canal", text: "Place an Irrigation Canal next to your fields: they grow 50% more food, but watered soil slowly turns salty." },
   forestry: { build: "forester", text: "Build a Forester's Lodge near the woods: it tends young trees so the forest grows back faster." },
   "bronze-arms": { build: "walls", text: "Bronze spears and shields: every warrior fights twice as hard. Build Stone Walls to guard the village too." },
-  coinage: { text: "Silver coins! Traders take them anywhere. Once the Roman legion is beaten and we are 40 people, we can enter the Classical era. Watch the goal at the top of the screen." },
+  coinage: { text: "Silver coins! Traders take them anywhere. Once the Roman legion is beaten and we are 35 people, we can enter the Classical era. Watch the goal at the top of the screen." },
   hydraulics: { build: "well", text: "We can dig down to the water under our feet. Dig a Well: clean water for 12 people, even when the rain fails. But too many wells drain the ground dry." },
   watermill: { build: "watermill", text: "Place a Watermill on the river bank: the river turns the millstones, and the fields near it give more. Its dam blocks the fish." },
   concrete: { build: "aqueduct", text: "Stone and lime that sets even under water! Build an Aqueduct touching the river: it carries water to 40 people and out to the fields. The river pays for it." },
@@ -1888,7 +1888,7 @@ export const AFTER_STEPS: Record<string, AfterStep> = {
   printing: { text: "Books can be printed instead of copied by hand, hundreds at a time. +30% Knowledge and +15 literacy." },
   quarantine: { text: "Ships wait offshore before they land, and the sick are kept apart. Sickness from overseas will do far less harm." },
   navigation: { build: "shipyard", text: "Build a Shipyard on the coast, then press Ship below: our ships will find islands overseas, meet the kingdoms and bring back trade." },
-  steam: { text: "Steam engines! Once the plague has passed and we are 90 people, we can enter the Industrial era and build Factories. Watch the goal at the top of the screen." },
+  steam: { text: "Steam engines! Once the plague has passed and we are 75 people, we can enter the Industrial era and build Factories. Watch the goal at the top of the screen." },
   railways: { build: "station", text: "Build a Railway Station: trains carry goods across the island, and markets and factories make more coins." },
   electricity: { build: "coalplant", text: "Power! Build a Coal Power Plant: +40 power for the grid. Watch the power meter. But coal puts carbon into the air, and it stays there for good." },
   steel: { build: "apartments", text: "Steel frames! Build an Apartment Block: room for 40 people on one tile. It needs power to light and heat it." },
@@ -1898,7 +1898,7 @@ export const AFTER_STEPS: Record<string, AfterStep> = {
   publichealth: { build: "park", text: "Build a City Park near homes: it clears the smog. Hospitals heal the sick and help us through heatwaves." },
   cleanair: { text: "Clean Air Laws: every chimney makes half the smog. The streets can breathe again." },
   seawalls: { build: "seawall", text: "Build a Sea Wall on the shore: floods stay off the low land behind it. The sea is rising." },
-  computers: { text: "Computers! +30% Knowledge. After the climate crisis, with 150 people, we can enter the Future." },
+  computers: { text: "Computers! +30% Knowledge. After the climate crisis, with 125 people, we can enter the Future." },
   basketry: { text: "Baskets! Our Gatherer's Camps bring in 20% more." },
   smoking: { text: "Smoked fish and meat keep much longer: food rots 40% slower." },
   seedsaving: { text: "We keep the best seeds: every field grows 10% more." },
@@ -3593,7 +3593,7 @@ export const ROMAN_LEGION = { warningYear: -1600, warningTicks: 90, strengthEach
 
 // Leaving the Ancient era: beat the Roman legion, research Coinage and grow to
 // this many people.
-export const CLASSICAL_POPULATION = 40;
+export const CLASSICAL_POPULATION = 35;
 // After the legion is beaten the Ancient-era clock starts: reach the Classical
 // era within this many ticks or be left behind (40 ticks = a minute at 1x).
 export const ANCIENT_DEADLINE: Record<string, number> = { first: 30 * 40, easy: 25 * 40, normal: 20 * 40, hard: 15 * 40 };
@@ -3760,8 +3760,8 @@ export const LEARNING = { universityLiteracy: 20, printingKnowledge: 1.3, printi
 // ---- Industrial & Modern era ----
 // Into the Industrial era: the plague over, Steam & Coal, and this many people.
 // Into the Future: the climate crisis over, Computers, and this many.
-export const INDUSTRIAL_POPULATION = 90;
-export const FUTURE_POPULATION = 150;
+export const INDUSTRIAL_POPULATION = 75;
+export const FUTURE_POPULATION = 125;
 // Carbon in the air, in parts per million: 280 before industry. Every chimney
 // adds its `carbon` each tick, for good; standing forest takes a little back
 // (`forestSink` a tick at full cover). Warming in degrees C rises with it,
