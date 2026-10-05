@@ -2527,6 +2527,25 @@ export interface DiscoveryScene {
 // when they talk by the fire, people sitting when they sit, the thing itself
 // (not a stand-in) when it is discovered.
 export const DISCOVERIES: Record<string, DiscoveryScene> = {
+  // Not an advancement: someone getting better (see HEALED).
+  healed: {
+    bg: "dawn",
+    actors: ["person"],
+    props: [
+      { icon: "bed-sick", x: 56, y: 14, until: 3, size: 110 },
+      { icon: "bed-empty", x: 56, y: 14, from: 3, size: 110 },
+      { icon: "person", x: 74, from: 3, size: 52 },
+    ],
+    item: "herb",
+    itemFrom: 1,
+    itemX: 36,
+    lines: [
+      "Fever kept her in bed for days, too weak to work.",
+      "Her family brought remedies, clean water and plenty of rest.",
+      "This morning, the fever broke.",
+      "She got up, stretched, and walked out into the sun.",
+    ],
+  },
   storytelling: {
     bg: "night",
     actors: ["elder-sit", "person-sit"],
@@ -3748,6 +3767,9 @@ export const KNIGHTS = { strength: 4, food: 1.5 };
 // `salvage` of what the building cost; with Recycling it's free and saves more.
 export const SCRAP = { fromEra: 4, salvage: 0.3, recycled: 0.6, clearCost: { currency: 5 } };
 
+// The healing scene: the first time someone recovers, then at most once every `gap` ticks.
+export const HEALED = { gap: 800 };
+
 export const FALLOW = { tiredAfter: 240, restTicks: 40, tiredYield: 0.5 };
 
 export const FARMING = { plough: 1.25, rotation: 1.1, rotationStrain: 0.5, windmill: 0.2, windmillReach: 2, windmillEnergy: 10 };
@@ -3945,7 +3967,7 @@ export const TUTORIAL: { text: string; more: string; done: string; unlocks: stri
 // fed and housed (meters at least `meter`) with `forest` of the forest standing.
 export const LAST = {
   startYear: 1850,
-  population: 30,
+  population: 12,
   resources: { food: 300, wood: 300, stone: 300, knowledge: 30, currency: 500 },
   // Nothing built yet: the guide has the player build the town, so they know
   // what each building does. (Any listed here are placed in districts.)
@@ -3958,7 +3980,7 @@ export const LAST = {
   hidden: ["campfire", "hut", "gatherer", "warcamp", "watchfire", "elder", "healer", "pen", "house", "school", "smithy", "canal", "shrine", "walls", "dock", "fishing", "harbour", "shipyard", "tradingpost", "guildhall", "castle", "cathedral", "library", "academy"],
   hold: 60,
   cleanShare: 0.7,
-  people: 60,
+  people: 45,
   meter: 50,
   forest: 0.35,
   // No events, small moments or outbreaks for this many ticks (about 2.5

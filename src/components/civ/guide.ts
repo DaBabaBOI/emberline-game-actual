@@ -39,7 +39,8 @@ export function suggestTile(state: GameState, buildingId: string) {
       (far ? -d : d) -
       (def.depositBonus && t.deposit === def.depositBonus.deposit ? 2.5 : 0) +
       (d === 0 ? 1 : 0) +
-      placementHarm(state, t, buildingId) * 2;
+      // Never next to harm (smoke over homes, dust on fields): that costs a lot.
+      placementHarm(state, t, buildingId) * 3;
     if (!best || score < best.score) best = { id: t.id, score };
   }
   return best?.id ?? null;

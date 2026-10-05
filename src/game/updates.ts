@@ -17,6 +17,10 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "When someone gets over a sickness for the first time, a short scene shows them getting up from bed (and now and again after that).",
+      "Build to Last starts smaller: 12 people, and the goal is homes and food for 45.",
+      "The tutorial's pointing hand never picks a spot where the building would harm others: no coal plant or factory next to homes, no quarry by the fields.",
+      "Names with slurs are refused, and kept off the leaderboard and out of chat.",
       "Buildings that are being harmed now show it on the map: a dusty haze and a red edge on fields and camps under a quarry's dust or scared by a fire nearby.",
       "Shorter eras: the Classical era now needs 35 people (was 40), the Industrial era 75 (was 90) and the Future 125 (was 150).",
       "Build to Last, simpler: you build your own town with a short guide (homes, a farm, a coal plant, a factory, a university), the whole island is already explored, and there are no disasters, kingdoms, festivals, chief levels or climate crisis to distract from the three problems. The goals are easier too: 60 people and 70% clean power.",

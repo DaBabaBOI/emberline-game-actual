@@ -63,7 +63,7 @@ export function DiscoveryScene() {
       <div className="pixel-panel w-[min(94vw,760px)] p-3 md:p-4">
         <div className="font-pixel mb-2 flex items-center justify-between gap-2">
           <span className="text-lg font-bold md:text-xl">
-            <span className="text-amber-700">{secret ? "Secret found: " : "Discovered: "}</span>
+            <span className="text-amber-700">{id === "healed" ? "Back on her feet" : secret ? "Secret found: " : "Discovered: "}</span>
             {node?.name}
           </span>
           <button type="button" onClick={close} className="text-xs text-stone-500 underline">

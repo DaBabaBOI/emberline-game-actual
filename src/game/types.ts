@@ -336,6 +336,8 @@ export interface GameState {
   // Advancements the player has already seen become researchable (the rest
   // are marked "New" on the Advancements button).
   seenTech?: string[];
+  // The tick the healing scene last played (someone getting better).
+  healedAt?: number;
   fallow?: Record<number, number>;
   // The Roman legion on its way (seen by scouts), and whether it has been fought.
   legion?: { size: number; arriveTick: number; vanguard?: boolean } | null;

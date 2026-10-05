@@ -32,6 +32,7 @@ import {
   ERA_INTROS,
   WEAR,
   DISCOVERIES,
+  HEALED,
   LANDMARKS,
   LANDMARK,
   KINGDOMS,
@@ -490,6 +491,17 @@ export function newResearch(state: GameState): TreeNode[] {
       n.requires.every((r) => state.researched.includes(r)) &&
       notInventedYet(state, n.id) === null,
   );
+}
+
+// Someone got better: the first time,
+// and then now and again, a short scene of them getting up from bed.
+function maybeHealedScene(before: GameState, after: GameState): GameState {
+  if (after.mode === "last" || after.dev || after.cutscene || after.event || after.lesson) return after;
+  // A whole person more is over it (recovered people become immune), or the outbreak just ended.
+  const recovered =
+    (before.sick ?? 0) > 0 && (Math.floor(after.immune ?? 0) > Math.floor(before.immune ?? 0) || (after.sick ?? 0) === 0);
+  if (!recovered || after.raid || after.tick - (after.healedAt ?? -Infinity) < HEALED.gap) return after;
+  return { ...after, cutscene: "healed", healedAt: after.tick, lastBigTick: after.tick };
 }
 
 // Build to Last's guided start: move on from step `from` (if we're on it).
@@ -2118,6 +2130,11 @@ export function placementHarm(state: GameState, tile: Tile, building: string): n
     harm += 4 * state.tiles.filter((t) => t.building === "gatherer" && hexDistance(t, tile) <= FIRE_SCARE.range).length;
   if (building === "farm" && forestToClear(state, tile)) harm += 2;
   if (sparkNote(state, tile, building)) harm += 3;
+  // Smoke: a coal plant or factory by people's homes, or a home by the smoke.
+  const homes = ["hut", "house", "townhouse", "apartments"];
+  if (BUILDINGS_BY_ID[building]?.smog)
+    harm += 5 * state.tiles.filter((t) => t.building && homes.includes(t.building) && hexDistance(t, tile) <= SMOG.range).length;
+  if (homes.includes(building) && state.tiles.some((t) => t.building && BUILDINGS_BY_ID[t.building]?.smog && hexDistance(t, tile) <= SMOG.range)) harm += 5;
   return harm;
 }
 
@@ -4176,7 +4193,11 @@ function tickOnce(state: GameState): GameState {
     const sickened = maybeOutbreak(next, homeless * HOMELESS.outbreak, mulberry32(next.seed + next.tick * 37)(), "People sleeping out in the cold fell sick.");
     if (sickened !== next) next = { ...sickened, lastBigTick: next.tick };
   }
-  if (!inPlague(next)) next = stepDisease(next, housingCapacity(next), mulberry32(next.seed + next.tick * 31), dirt, bathsRecover(next));
+  if (!inPlague(next)) {
+    const before = next;
+    next = stepDisease(next, housingCapacity(next), mulberry32(next.seed + next.tick * 31), dirt, bathsRecover(next));
+    next = maybeHealedScene(before, next);
+  }
   next = bumpStats(next, (st) => {
     st.peakPopulation = Math.max(st.peakPopulation, next.population);
     st.deaths.famine += starved;
