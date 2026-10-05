@@ -488,6 +488,39 @@ h2 {
   line-height: 1.25rem;
 }
 
+/* The two ways to play: a screenshot, a few words and a start button each. */
+.mode {
+  display: flex;
+  flex-direction: column;
+}
+
+.mode figcaption {
+  flex: 1;
+}
+
+.mode-play {
+  display: block;
+  margin-top: 0.75rem;
+  padding: 0.6rem 1rem;
+  background: var(--play);
+  color: var(--play-text);
+  text-align: center;
+  font-weight: 600;
+}
+
+.mode-play:hover {
+  background: var(--play-hover);
+}
+
+.mode-play-last {
+  background: #0369a1;
+  color: #ffffff;
+}
+
+.mode-play-last:hover {
+  background: #0284c7;
+}
+
 /* The UN Sustainable Development Goals: a coloured number badge and a few words. */
 .sdgs {
   display: grid;

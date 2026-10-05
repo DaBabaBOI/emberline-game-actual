@@ -3458,6 +3458,13 @@ export const BELIEFS = {
 // (`size` at a time, never leaving fewer than `keep`).
 // Settlers take food and wood for the road, and the families who stay behind
 // miss them (a fading happiness loss, like grief but smaller).
+// When the stores hold plenty (`helpAbove` ticks of eating, about 4 minutes),
+// hunters leave the herds alone and gather wood at their camps; below
+// `huntBelow` (about 2 minutes) they hunt again. Two levels, so they don't
+// switch back and forth.
+// `foodKept`: the share of a camp's food that is gathering, not hunting.
+export const HUNTERS = { helpAbove: 160, huntBelow: 100, wood: 0.3, foodKept: 0.4 };
+
 export const SETTLERS = { size: 4, keep: 5, food: 15, wood: 5, missed: 8 };
 
 // The best ending needs the land to still be healthy: growth can't just ignore

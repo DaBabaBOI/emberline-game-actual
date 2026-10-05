@@ -86,6 +86,7 @@ import {
   WORK,
   BELIEFS,
   SETTLERS,
+  HUNTERS,
   GROWTH_PRESSURE,
   DISEASE,
   CAMPFIRE_BURN_TICKS,
@@ -258,7 +259,7 @@ export type Action =
 
 export interface NewGameOptions {
   dev?: boolean;
-  // "I've played before": start with the tutorial already done.
+  // Start with the tutorial already done (multiplayer; the tutorial also has its own Skip).
   skipTutorial?: boolean;
   // Realistic time (a joke): when the real-time calendar starts (ms since 1970).
   realTimeFrom?: number;
@@ -433,6 +434,22 @@ export function lastProblems(state: GameState) {
 }
 
 // All three solved, held for LAST.hold ticks in a row: the story ends well.
+// Hunters only hunt when the tribe needs the food; otherwise they help gather
+// wood (and the wild herds get a rest).
+function updateHunters(state: GameState): GameState {
+  const camps = countBuildings(state).gatherer ?? 0;
+  const helping = state.huntersHelping ?? false;
+  // How long the stored food would last, in ticks of eating.
+  const stored = state.resources.food / Math.max(consumption(state), 0.1);
+  // Not during the tutorial, while the stores are still filling up.
+  const want = camps > 0 && state.tutorialStep >= TUTORIAL.length && (helping ? stored >= HUNTERS.huntBelow : stored >= HUNTERS.helpAbove);
+  if (want === helping) return state;
+  const line = want
+    ? "Plenty of food in the stores: the hunters leave the herds alone and gather wood instead."
+    : "Food is running lower: the hunters go back out after the herds.";
+  return { ...state, huntersHelping: want, log: [line, ...state.log].slice(0, 30) };
+}
+
 function updateLast(state: GameState): GameState {
   if (state.mode !== "last" || state.phase !== "playing" || state.finished || state.debrief) return state;
   const solved = lastProblems(state).every((p) => p.done);
@@ -1990,9 +2007,13 @@ export function production(state: GameState): Resources {
       // Small advancements: seed saving for fields, baskets for gatherers.
       (tile.building === "farm" && state.researched.includes("seedsaving") ? 1.1 : 1) *
       (tile.building === "gatherer" && state.researched.includes("basketry") ? 1.2 : 1);
+    // Hunters with nothing to hunt for gather wood at their camp instead; the
+    // gathering of wild plants goes on.
+    const resting = tile.building === "gatherer" && state.huntersHelping;
+    if (resting) out.wood += HUNTERS.wood * factor * share * boost * worn * better;
     for (const [k, v] of Object.entries(def.produces ?? {}))
       // Costs (a bathhouse burning wood) don't shrink as it wears; output does.
-      out[k as keyof Resources] += (v ?? 0) * factor * share * boost * (k === "food" ? dust : 1) * ((v ?? 0) > 0 ? worn * better : 1);
+      out[k as keyof Resources] += (v ?? 0) * factor * share * boost * (k === "food" ? dust * (resting ? HUNTERS.foodKept : 1) : 1) * ((v ?? 0) > 0 ? worn * better : 1);
     if (def.depositBonus && tile.deposit === def.depositBonus.deposit) {
       for (const [k, v] of Object.entries(def.depositBonus.amount))
         out[k as keyof Resources] += (v ?? 0) * share;
@@ -3872,6 +3893,7 @@ function tickOnce(state: GameState): GameState {
   // No raids or events while a new player is still learning.
   if (!inTutorial) next = updateTipping(updateClimate(updateRebellion(updatePlague(updateDisasters(updateDrought(updateLegion(updateRaids(next))))))));
   next = updateLast(next);
+  next = updateHunters(next);
   next = updateCarbon(next);
   next = updateFatigue(next);
   if ((next.tradePrice ?? 1) > 1) next = { ...next, tradePrice: Math.max(1, (next.tradePrice ?? 1) - TRADE.ease) };
@@ -6265,6 +6287,7 @@ function step(state: GameState, action: Action): GameState {
       return withMeters(findEgg(state, action.id));
 
     case "hunt":
+      if (state.huntersHelping && action.animal !== "golden deer") return state;
       if (action.animal === "golden deer") {
         return findEgg(addTally({ ...state, resources: { ...state.resources, food: state.resources.food + GOLDEN_DEER_FOOD } }, "hunts", 1), "golden-deer");
       }

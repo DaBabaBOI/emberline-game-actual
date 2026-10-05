@@ -516,6 +516,7 @@ export function WorldCanvas() {
         tiles={state.tiles}
         homeTile={home}
         onHunt={(animal) => dispatch({ type: "hunt", animal })}
+        resting={state.huntersHelping ?? false}
       />
       <Fireworks home={home} startedAt={fireworksAt} />
       <Islet

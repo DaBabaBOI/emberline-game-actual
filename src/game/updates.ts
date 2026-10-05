@@ -9,6 +9,8 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Two main ways to play, side by side: From the Stone Age, or Build to Last from 1850. Both are on the title screen, the website and How to play. The title screen no longer has an \"I've played before\" button; skip the tutorial from the tutorial itself.",
+      "Hunters only hunt when the tribe needs food. When the stores are full, they gather wood at their camp instead, and the herds get a rest.",
       "Build to Last starts with 30 Knowledge, as intended: the town you start with no longer counts as \"firsts\" or a chief level-up, which used to double it in the first seconds.",
       "Sending settlers now has a price: each one takes 15 food and 5 wood for the road, you lose their work, and the families left behind are sadder for a while.",
       "Build to Last, tidier: the starting town is laid out in districts (homes in the middle, farms around them, industry together on one side), the build bar leaves out Stone Age buildings and the army, scouts and ships, and a short card explains the three problems before the clock starts. Click any of the three problems at the top to see how to solve it. The river choice now says what each side gains and gives up.",

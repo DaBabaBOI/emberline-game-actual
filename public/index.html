@@ -72,7 +72,34 @@
             benefit and a cost. Can your society grow and still last?
           </p>
           <a class="pixel-btn play-button" href="play/">Play now</a>
+          <p class="note">Two ways to play: <a href="#modes">from the Stone Age, or Build to Last from 1850</a>.</p>
           <p class="note">Runs in the browser, on a laptop or a phone.</p>
+        </div>
+      </section>
+
+      <!-- The two main ways to play, the same two cards as on the game's title
+           screen (src/components/civ/title-screen.tsx). Keep them in step. -->
+      <section class="block" id="modes">
+        <h2>Two ways to play</h2>
+        <p class="lead">A long journey through the ages, or a shorter race against the smoke.</p>
+        <div class="shots">
+          <figure class="pixel-panel shot mode">
+            <img src="site/shots/stone.jpg" alt="A Stone Age camp: huts, farm plots and campfires among the trees" width="1200" height="720" loading="lazy" />
+            <figcaption>
+              <b>From the Stone Age.</b> Grow a small tribe into a nation, era by era, without
+              wrecking the land that feeds it. Starts with a short guided tutorial.
+            </figcaption>
+            <a class="pixel-btn mode-play" href="play/">Start in the Stone Age</a>
+          </figure>
+          <figure class="pixel-panel shot mode">
+            <img src="site/shots/industrial.jpg" alt="An Industrial city with factories, smokestacks, solar panels and wind turbines" width="1200" height="720" loading="lazy" />
+            <figcaption>
+              <b>Build to Last.</b> It's 1850 and your town runs on coal. Clean the air, switch to
+              clean power, and house and feed 120 people, all at once. A shorter game, with 30 new
+              advancements.
+            </figcaption>
+            <a class="pixel-btn mode-play mode-play-last" href="play/">Start in 1850</a>
+          </figure>
         </div>
       </section>
 

@@ -319,6 +319,8 @@ export interface GameState {
   mode?: "last";
   // Build to Last: ticks in a row with all three problems solved.
   lastHeld?: number;
+  // Food is plentiful, so the hunters at the gatherer's camps gather wood instead.
+  huntersHelping?: boolean;
   // The Roman legion on its way (seen by scouts), and whether it has been fought.
   legion?: { size: number; arriveTick: number; vanguard?: boolean } | null;
   legionDone?: boolean;

@@ -17,8 +17,21 @@ const SECTIONS: Section[] = [
     title: "The goal",
     icon: "flame",
     items: [
-      { text: "Lead your people from a Stone Age camp to the Future." },
-      { text: "Grow food, homes and Knowledge without breaking the land or your people's spirits." },
+      { text: "There are two ways to play. From the Stone Age: lead your people from a campfire to the Future, era by era." },
+      { icon: "factory", text: "Build to Last: start in 1850 with a coal town and solve three big problems at once." },
+      { text: "Either way: grow food, homes and Knowledge without breaking the land or your people's spirits." },
+    ],
+  },
+  {
+    id: "last",
+    title: "Build to Last",
+    icon: "factory",
+    items: [
+      { text: "It's 1850. Your town has homes, farms, factories and coal power, and the smoke is building up." },
+      { icon: "leaf", text: "1. Clear the air: get carbon falling, not rising." },
+      { icon: "bulb", text: "2. Clean power: at least 70% of your power from clean sources, and enough of it." },
+      { icon: "person", text: "3. Homes and food for 120 people, with a third of the forest still standing." },
+      { icon: "star", text: "Click any problem at the top of the screen to see how to solve it. Solve all three together and keep them solved for a minute and a half to win." },
     ],
   },
   {
@@ -38,6 +51,7 @@ const SECTIONS: Section[] = [
       { icon: "wheat", text: "Secure food, materials, homes and warmth first." },
       { icon: "log", text: "Selective logging is slower but keeps the forest standing." },
       { icon: "person", text: "Too many jobs tire everyone and reduce output." },
+      { icon: "basket", text: "Hunters only hunt when food is needed. With plenty in store, they gather wood at their camp instead." },
     ],
   },
   {

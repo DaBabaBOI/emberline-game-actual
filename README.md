@@ -181,12 +181,18 @@ Event cards and Elder Ama's lessons also link to other goals where they fit
 - **Watch the fights**: when your warriors meet raiders, the camera goes in
   close over the battle. In multiplayer the raider gets a view of the fight,
   anyone else can choose to watch, and everyone hears how it ended.
-- **Build to Last** (a second game mode): start in 1850 with a smoky
+- **Two main ways to play**, side by side on the title screen and the landing
+  page: **From the Stone Age** (the full journey, era by era) and **Build to
+  Last**: start in 1850 with a smoky
   industrial town and solve three big problems at once: clear the air, run on
   clean power, and give 120 people a home and food with the forest still
-  standing. No tutorial and no lessons; advancements are one line each.
+  standing. No tutorial and no lessons; advancements are one line each. Click a
+  problem to see how to solve it.
+- **Hunters only hunt when food is needed**: with plenty in store they gather
+  wood at their camps instead, and the herds get a rest.
 - **Name your people**, pick a culture and a difficulty, and play on a laptop or
-  a phone. A guided tutorial with a pointing hand teaches the basics. New
+  a phone. A guided tutorial with a pointing hand teaches the basics (skip it from the
+  tutorial itself). New
   players start in **First time** mode: a slower clock, and a calm Stone Age
   with no raids or disasters and far fewer interruptions. A **How to play**
   guide is in the menu.

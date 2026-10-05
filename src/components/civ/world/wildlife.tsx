@@ -159,10 +159,13 @@ export function Wildlife({
   tiles,
   homeTile,
   onHunt,
+  resting = false,
 }: {
   tiles: Tile[];
   homeTile: Tile;
   onHunt: (animal: string) => void;
+  // Food is plentiful: no one goes hunting (they gather wood instead).
+  resting?: boolean;
 }) {
   const forests = useMemo(
     () => tiles.filter((t) => t.revealed && t.terrain === "forest" && !t.building && t.growth >= 0.8),
@@ -233,7 +236,7 @@ export function Wildlife({
     const h = hunt.current;
     if (h.target < 0) {
       hunter.current = [];
-      if (now > h.nextAt) {
+      if (now > h.nextAt && !resting) {
         const who = pickHunter(camps);
         // The nearest animal the hunter can actually walk to (not across a river).
         let prey: Animal | undefined;

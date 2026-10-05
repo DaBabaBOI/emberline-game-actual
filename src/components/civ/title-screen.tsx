@@ -11,6 +11,7 @@ import { SAVE_VERSION } from "@/game/engine";
 import { loadFromCloud } from "@/lib/online";
 import { cn } from "@/lib/utils";
 import { PixelIcon } from "@/components/civ/pixel-icon";
+import type { IconId } from "@/game/sprites";
 
 // Set once a game has been started in this browser (First time is then no longer the default).
 const PLAYED_KEY = "emberline-played";
@@ -75,7 +76,7 @@ export function TitleScreen({
               Emberline
             </h1>
             <p className="mt-3 text-stone-600">
-              Grow a Stone Age tribe without destroying the land that feeds it.
+              Build a civilisation that lasts, without destroying the land that feeds it.
             </p>
             <button type="button" onClick={() => setGuide(true)} className="font-pixel mt-2 text-sm text-amber-800 underline" data-testid="title-how-to-play">
               How to play
@@ -166,33 +167,32 @@ export function TitleScreen({
                 data-testid="realistic-time"
               />
               <span>
-                <span className="font-semibold">Realistic time</span> (a joke): the calendar runs in real time, with hours and seasons.
+                <span className="font-semibold">Realistic time</span> (a joke, Stone Age only): the calendar runs in real time, with hours and seasons.
               </span>
             </label>
-            <button
-              type="button"
-              onClick={() => start({ nation, ...(realistic ? { realTimeFrom: Date.now() } : {}) })}
-              className="pixel-btn font-pixel mt-6 w-full bg-emerald-600 py-3 text-xl font-semibold text-white hover:bg-emerald-500"
-            >
-              {canContinue ? "Start a new game" : "Start"}
-            </button>
-            <button
-              type="button"
-              onClick={() => start({ nation, skipTutorial: true, ...(realistic ? { realTimeFrom: Date.now() } : {}) })}
-              className="pixel-btn font-pixel mt-2 w-full bg-white py-2 text-base text-stone-700 hover:bg-stone-50"
-              data-testid="start-skip-tutorial"
-            >
-              I&apos;ve played before: skip the tutorial
-            </button>
-            <button
-              type="button"
-              onClick={() => start({ nation, mode: "last" })}
-              className="pixel-btn font-pixel mt-2 w-full bg-sky-700 py-2 text-base text-white hover:bg-sky-600"
-              data-testid="start-last"
-              title="Start in 1850 with a smoky industrial town. Solve three big problems and build something that lasts."
-            >
-              Build to Last: start in 1850, solve 3 big problems
-            </button>
+            <h2 className="font-pixel mb-3 mt-6 text-lg font-semibold">Choose a game</h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <ModeCard
+                icon="flame"
+                title="From the Stone Age"
+                blurb="Grow a small tribe into a nation, era by era, without wrecking the land that feeds it."
+                facts={["Starts with a short guided tutorial", "Six eras, from campfires to cities", "Play at your own pace, save any time"]}
+                tone="bg-emerald-600 hover:bg-emerald-500"
+                action={canContinue ? "Start a new game" : "Start"}
+                onClick={() => start({ nation, ...(realistic ? { realTimeFrom: Date.now() } : {}) })}
+                testId="start-stone"
+              />
+              <ModeCard
+                icon="factory"
+                title="Build to Last"
+                blurb="It's 1850 and your town runs on coal. Solve three big problems at once, and keep them solved."
+                facts={["Clean the air, switch to clean power, house and feed 120", "30 new advancements, short and simple", "A shorter game, no tutorial needed"]}
+                tone="bg-sky-700 hover:bg-sky-600"
+                action="Start in 1850"
+                onClick={() => start({ nation, mode: "last" })}
+                testId="start-last"
+              />
+            </div>
           </div>
 
           {devMode && (
@@ -254,6 +254,48 @@ export function TitleScreen({
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+// One of the two main ways to play, side by side on the title screen.
+function ModeCard({
+  icon,
+  title,
+  blurb,
+  facts,
+  tone,
+  action,
+  onClick,
+  testId,
+}: {
+  icon: IconId;
+  title: string;
+  blurb: string;
+  facts: string[];
+  tone: string;
+  action: string;
+  onClick: () => void;
+  testId: string;
+}) {
+  return (
+    <div className="pixel-btn flex flex-col bg-white p-3">
+      <div className="flex items-center gap-2">
+        <PixelIcon name={icon} size={32} />
+        <h3 className="font-pixel text-xl font-bold">{title}</h3>
+      </div>
+      <p className="mt-1 text-sm text-stone-600">{blurb}</p>
+      <ul className="mt-2 flex-1 space-y-0.5 text-xs text-stone-700">
+        {facts.map((f) => (
+          <li key={f} className="flex gap-1.5">
+            <span className="text-amber-600">▸</span>
+            {f}
+          </li>
+        ))}
+      </ul>
+      <button type="button" onClick={onClick} className={cn("pixel-btn font-pixel mt-3 w-full py-2.5 text-lg font-semibold text-white", tone)} data-testid={testId}>
+        {action}
+      </button>
     </div>
   );
 }

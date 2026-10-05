@@ -102,8 +102,8 @@ These were decided with the project owner. Do not change them without being aske
   goes in `more` ("Tell me more"). Everything else is learned by playing: when
   it ends, a War Camp with one warrior is handed over, Elder Ama coaches the
   Farmland (`AFTER_STEPS`), and then says a one-line goodbye
-  (`farewellAfterCoach`). "I've played before" on the title screen starts with
-  the tutorial skipped (`NewGameOptions.skipTutorial`). Keep new tutorial and
+  (`farewellAfterCoach`). Skipping happens only from the tutorial's own Skip
+  link; the title screen has no skip button. Keep new tutorial and
   coach text to one line; players found long text tiring to read.
 - **People on the map are representative:** at most 20 figures at once
   (`MAX_FIGURES` / `figureCounts()` in `world/villagers.tsx`), roughly one per
@@ -215,6 +215,9 @@ These were decided with the project owner. Do not change them without being aske
 - **First-time calm** (`GENTLE`, `firstStoneAge`): in First-time mode's Stone Age there are no raids or disasters and big moments are spaced `quietFactor`× further. Check with `calm.js` (count per 20-minute game): about 4 big moments, not 10.
 - **Build to Last mode** (`state.mode === "last"`, `LAST`, `applyLastStart`, `lastProblems`, `updateLast`): Industrial start with a built town; win by holding the three problems solved for `LAST.hold` ticks. In this mode advancements have no goals, there are no lessons, raids, story or discovery scenes. The 30 short Industrial advancements use `boost` (see `boostOf`), which works in every mode. Check with the solver bot (`solve.js`).
 - **Every choice has a cost**: helpful actions (sending settlers, the river choice) must show what they cost next to what they give, in the button's own text.
+- **Two main modes, equal on the title screen**: "From the Stone Age" and
+  "Build to Last" are side-by-side `ModeCard`s (`title-screen.tsx`), and both
+  appear on the landing page and in How to play. A new mode gets a card too.
 - **No font ligatures** (`globals.css` and `public/site/style.css`): Pixelify joins "fi" into one glyph, so "fire" read as "Are". Keep `font-variant-ligatures: none` on everything.
 - **Phones get the compact HUD** (`useCompact()`: narrower than 768 px, or
   shorter than 500 px). The meters are a strip under the top bar
