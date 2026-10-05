@@ -3458,6 +3458,23 @@ export const BELIEFS = {
 // (`size` at a time, never leaving fewer than `keep`).
 // Settlers take food and wood for the road, and the families who stay behind
 // miss them (a fading happiness loss, like grief but smaller).
+// Buildings that work better side by side (on touching tiles). `to` is what
+// `building` must touch; each one touching adds `bonus` to its output, up to
+// `max`. Drawn on the map as a short path between the two.
+export const CONNECTIONS: { building: string; to: string[]; bonus: number; max: number; why: string }[] = [
+  { building: "farm", to: ["granary"], bonus: 0.1, max: 0.1, why: "the harvest goes straight into the store" },
+  { building: "farm", to: ["watermill", "windmill"], bonus: 0.05, max: 0.05, why: "the grain is milled next door" },
+  { building: "woodcutter", to: ["forester"], bonus: 0.15, max: 0.15, why: "the forester's young trees are close by" },
+  { building: "quarry", to: ["smithy"], bonus: 0.15, max: 0.15, why: "the smith keeps the tools sharp" },
+  { building: "fishing", to: ["dock"], bonus: 0.2, max: 0.2, why: "boats land the catch right there" },
+  { building: "market", to: ["house", "townhouse", "apartments"], bonus: 0.1, max: 0.3, why: "homes next door bring shoppers" },
+  { building: "school", to: ["library", "academy", "university"], bonus: 0.1, max: 0.2, why: "teachers share books and ideas" },
+  { building: "academy", to: ["library", "school", "university"], bonus: 0.1, max: 0.2, why: "teachers share books and ideas" },
+  { building: "university", to: ["library", "school", "academy"], bonus: 0.1, max: 0.2, why: "teachers share books and ideas" },
+  { building: "factory", to: ["station"], bonus: 0.2, max: 0.2, why: "goods go straight onto the train" },
+  { building: "tradingpost", to: ["harbour", "dock"], bonus: 0.15, max: 0.15, why: "ships unload at the door" },
+];
+
 // When the stores hold plenty (`helpAbove` ticks of eating, about 4 minutes),
 // hunters leave the herds alone and gather wood at their camps; below
 // `huntBelow` (about 2 minutes) they hunt again. Two levels, so they don't
@@ -3586,7 +3603,7 @@ export const ANCIENT_DEADLINE: Record<string, number> = { first: 30 * 40, easy: 
 // for this many people. Past `wellsFree` wells the ground dries out (−`wellSustain`
 // Sustainability each). Aqueducts water fields within `aqueductReach` (+`aqueductFarm`);
 // watermills grind for fields within `millReach` (+`millFarm`).
-export const WATER = { base: 10, well: 12, aqueduct: 40, wellsFree: 4, wellSustain: 2, aqueductReach: 3, aqueductFarm: 0.2, millReach: 2, millFarm: 0.25 };
+export const WATER = { chainPeople: 10, base: 10, well: 12, aqueduct: 40, wellsFree: 4, wellSustain: 2, aqueductReach: 3, aqueductFarm: 0.2, millReach: 2, millFarm: 0.25 };
 
 // Towns: each Public Latrine keeps the streets clean for `latrine` people and each
 // Bathhouse for `baths`. With Town Houses standing, the share of people without

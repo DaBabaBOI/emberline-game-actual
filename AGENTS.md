@@ -218,6 +218,11 @@ These were decided with the project owner. Do not change them without being aske
 - **Two main modes, equal on the title screen**: "From the Stone Age" and
   "Build to Last" are side-by-side `ModeCard`s (`title-screen.tsx`), and both
   appear on the landing page and in How to play. A new mode gets a card too.
+- **Connections are a list, not special cases**: side-by-side bonuses live in
+  `CONNECTIONS` (content.ts) and are applied in `production()`, named on the
+  placement card (`connectionNote`) and the building panel, and drawn by
+  `world/links.tsx`. Aqueducts link in chains from the river
+  (`linkedAqueducts`); only linked ones bring water.
 - **No font ligatures** (`globals.css` and `public/site/style.css`): Pixelify joins "fi" into one glyph, so "fire" read as "Are". Keep `font-variant-ligatures: none` on everything.
 - **Phones get the compact HUD** (`useCompact()`: narrower than 768 px, or
   shorter than 500 px). The meters are a strip under the top bar

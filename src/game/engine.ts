@@ -86,6 +86,7 @@ import {
   WORK,
   BELIEFS,
   SETTLERS,
+  CONNECTIONS,
   HUNTERS,
   GROWTH_PRESSURE,
   DISEASE,
@@ -848,7 +849,11 @@ export function placementError(state: GameState, tile: Tile, def: BuildingDef): 
     );
     if (!touchesWater) return "Must touch water";
   }
-  if (def.needsRiver && !touchesRiver(state, tile)) return "Must touch the river";
+  if (def.needsRiver && !touchesRiver(state, tile)) {
+    // An aqueduct may instead join one that already brings river water.
+    const joins = def.id === "aqueduct" && linkedAqueducts(state).some((t) => hexDistance(t, tile) === 1);
+    if (!joins) return def.id === "aqueduct" ? "Must touch the river, or an aqueduct that does" : "Must touch the river";
+  }
   if (state.riverChoice === "honour" && (def.id === "aqueduct" || def.id === "watermill")) return "We promised to honour the river";
   if (!canAfford(state, buildingCost(state, def))) return "Not enough resources";
   return null;
@@ -1018,6 +1023,71 @@ export function inDrought(state: GameState) {
   return !!d && state.tick >= d.startTick && state.tick < d.endTick;
 }
 
+// ---- Connections -----------------------------------------------------------
+
+// Aqueducts carry river water: one touching the river, and every aqueduct
+// joined to it in a chain of touching tiles. Only these bring water.
+export function linkedAqueducts(state: GameState): Tile[] {
+  const all = state.tiles.filter((t) => t.building === "aqueduct");
+  const linked = all.filter((t) => touchesRiver(state, t));
+  const seen = new Set(linked.map((t) => t.id));
+  for (let i = 0; i < linked.length; i++)
+    for (const t of all)
+      if (!seen.has(t.id) && hexDistance(t, linked[i]) === 1) {
+        seen.add(t.id);
+        linked.push(t);
+      }
+  return linked;
+}
+
+// What a building here gets from the buildings it touches (CONNECTIONS).
+export function connections(state: GameState, tile: Tile, building = tile.building) {
+  const next = state.tiles.filter((t) => t.building && t.id !== tile.id && hexDistance(t, tile) === 1);
+  const out: { with: string[]; bonus: number; why: string }[] = [];
+  for (const c of CONNECTIONS) {
+    if (c.building !== building) continue;
+    const touching = next.filter((t) => c.to.includes(t.building!));
+    if (!touching.length) continue;
+    out.push({ with: [...new Set(touching.map((t) => t.building!))], bonus: Math.min(c.max, c.bonus * touching.length), why: c.why });
+  }
+  return out;
+}
+
+export function connectionBonus(state: GameState, tile: Tile) {
+  return connections(state, tile).reduce((sum, c) => sum + c.bonus, 0);
+}
+
+// For the placement card: what this building would connect to here.
+export function connectionNote(state: GameState, tile: Tile, building: string): string | null {
+  const parts = connections(state, tile, building).map(
+    (c) => `${c.with.map((id) => BUILDINGS_BY_ID[id]?.name ?? id).join(" and ")} next door: +${Math.round(c.bonus * 100)}% (${c.why})`,
+  );
+  // And what it would do for its neighbours.
+  const helps = [...new Set(state.tiles
+    .filter((t) => t.building && hexDistance(t, tile) === 1 && CONNECTIONS.some((c) => c.building === t.building && c.to.includes(building)))
+    .map((t) => BUILDINGS_BY_ID[t.building!]?.name ?? t.building!))];
+  if (helps.length) parts.push(`Helps the ${helps.join(" and ")} next door`);
+  if (building === "aqueduct" && !touchesRiver(state, tile) && linkedAqueducts(state).some((t) => hexDistance(t, tile) === 1))
+    parts.push(`Joins the aqueduct next to it and carries the river water further (+${WATER.chainPeople} people with water)`);
+  return parts.length ? `Connects: ${parts.join(". ")}.` : null;
+}
+
+// Pairs of touching buildings that help each other, for drawing the links.
+export function connectedPairs(state: GameState): [Tile, Tile, "water" | "path"][] {
+  const out: [Tile, Tile, "water" | "path"][] = [];
+  const linked = linkedAqueducts(state);
+  for (let i = 0; i < linked.length; i++)
+    for (let j = i + 1; j < linked.length; j++) if (hexDistance(linked[i], linked[j]) === 1) out.push([linked[i], linked[j], "water"]);
+  const built = state.tiles.filter((t) => t.building);
+  for (const a of built)
+    for (const c of CONNECTIONS)
+      if (c.building === a.building)
+        for (const b of built)
+          if (c.to.includes(b.building!) && hexDistance(a, b) === 1 && !out.some(([x, y]) => (x.id === b.id && y.id === a.id) || (x.id === a.id && y.id === b.id)))
+            out.push([a, b, "path"]);
+  return out;
+}
+
 // Is this tile within reach of a building of this kind?
 function near(state: GameState, tile: Tile, building: string, reach: number) {
   return state.tiles.some((t) => t.building === building && hexDistance(t, tile) <= reach);
@@ -1026,7 +1096,7 @@ function near(state: GameState, tile: Tile, building: string, reach: number) {
 // How much a field grows: rain, canals, aqueducts and mills, and seed grain eaten in a famine.
 export function farmFactor(state: GameState, tile: Tile) {
   const canal = state.tiles.some((t) => t.building === "canal" && hexDistance(t, tile) === 1) ? 1.5 : 1;
-  const watered = near(state, tile, "aqueduct", WATER.aqueductReach);
+  const watered = linkedAqueducts(state).some((t) => hexDistance(t, tile) <= WATER.aqueductReach);
   const mill = near(state, tile, "watermill", WATER.millReach) ? 1 + WATER.millFarm : 1;
   // In the drought, a field an aqueduct waters still gets most of its water.
   const water = watered && inDrought(state) ? Math.max(rainfall(state), DROUGHT.aqueductFarm) : rainfall(state);
@@ -1040,7 +1110,10 @@ export function farmFactor(state: GameState, tile: Tile) {
 // How many people have water in the drought: springs, wells and aqueducts.
 export function waterSupply(state: GameState) {
   const c = countBuildings(state);
-  return WATER.base + (c.well ?? 0) * WATER.well + (c.aqueduct ?? 0) * WATER.aqueduct;
+  const linked = linkedAqueducts(state);
+  // Aqueducts joined in a chain bring a little more water each.
+  const chained = linked.filter((a) => linked.some((b) => b.id !== a.id && hexDistance(a, b) === 1)).length;
+  return WATER.base + (c.well ?? 0) * WATER.well + linked.length * WATER.aqueduct + chained * WATER.chainPeople;
 }
 
 // Share of the town with no water (only in the drought; rain and the river are enough otherwise).
@@ -1073,7 +1146,7 @@ export function townNote(state: GameState, tile: Tile, building: string): string
       return `Grinds grain for ${n} field${n === 1 ? "" : "s"} within ${WATER.millReach} tiles.`;
     }
     case "farm":
-      return near(state, tile, "aqueduct", WATER.aqueductReach) ? "An aqueduct waters this field: +20%, and it keeps most of its harvest in a drought." : null;
+      return linkedAqueducts(state).some((t) => hexDistance(t, tile) <= WATER.aqueductReach) ? "An aqueduct waters this field: +20%, and it keeps most of its harvest in a drought." : null;
     case "well":
       return (counts.well ?? 0) >= WATER.wellsFree
         ? `Already ${counts.well} wells: each one past ${WATER.wellsFree} dries out the land (−${WATER.wellSustain} Sustainability).`
@@ -2006,7 +2079,9 @@ export function production(state: GameState): Resources {
       (tile.building === "farm" && spaceDone(state, "satellites") ? 1 + SPACE.fieldBoost : 1) *
       // Small advancements: seed saving for fields, baskets for gatherers.
       (tile.building === "farm" && state.researched.includes("seedsaving") ? 1.1 : 1) *
-      (tile.building === "gatherer" && state.researched.includes("basketry") ? 1.2 : 1);
+      (tile.building === "gatherer" && state.researched.includes("basketry") ? 1.2 : 1) *
+      // Touching the right neighbours (CONNECTIONS).
+      (1 + connectionBonus(state, tile));
     // Hunters with nothing to hunt for gather wood at their camp instead; the
     // gathering of wild plants goes on.
     const resting = tile.building === "gatherer" && state.huntersHelping;

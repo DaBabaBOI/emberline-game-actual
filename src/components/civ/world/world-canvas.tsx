@@ -34,6 +34,7 @@ import {
   plantError,
   placementError,
   townNote,
+  connectionNote,
 } from "@/game/engine";
 import { BuildingInfo } from "./building-info";
 import { useGame } from "@/components/civ/game-provider";
@@ -50,6 +51,7 @@ import { PickUp } from "./pick-up";
 import { SeaTraffic, TradeShips, WaitingShips } from "./trade";
 import { Cracks, DisasterDust, disasterView, FloodWater, QuakeShake, Rubble, StormRain } from "./disasters";
 import { Wildlife } from "./wildlife";
+import { Links } from "./links";
 import { CampfireSmoke, ChimneySmoke, Wildfire } from "./atmosphere";
 import { Clouds, DaySky, FireLights } from "./sky";
 import { Sea } from "./water";
@@ -287,6 +289,8 @@ export function WorldCanvas() {
   const dust = def && !error && hoverTile ? dustNote(state, hoverTile, def.id) : null;
   const gather = def?.id === "gatherer" && !error && hoverTile && !inTutorialNow ? gatherNote(state) : null;
   const town = def && !error && hoverTile ? townNote(state, hoverTile, def.id) : null;
+  // What it would connect to here, and the bonus (CONNECTIONS).
+  const link = def && !error && hoverTile ? connectionNote(state, hoverTile, def.id) : null;
   // Industrial: what it does to the grid, the air over the homes and the climate.
   const industry =
     def && !error && hoverTile && (def.power || def.smog || def.carbon)
@@ -511,6 +515,7 @@ export function WorldCanvas() {
       {storm > 0 && <StormRain centre={home} heavy={disaster.active} />}
       {(disaster.kind === "earthquake" || disaster.kind === "landslide") && disaster.active && <DisasterDust tiles={state.tiles} ids={disaster.tiles} />}
       <Cracks tiles={state.tiles} />
+      <Links state={state} />
       <Rubble tiles={state.tiles} />
       <Wildlife
         tiles={state.tiles}
@@ -664,6 +669,12 @@ export function WorldCanvas() {
                   <span className="flex items-start gap-1.5 text-amber-200">
                     <PixelIcon name="warning" size={12} />
                     {town}
+                  </span>
+                )}
+                {link && (
+                  <span className="flex items-start gap-1.5 text-emerald-300" data-testid="connect-note">
+                    <PixelIcon name="star" size={12} />
+                    {link}
                   </span>
                 )}
                 {lowWood && (

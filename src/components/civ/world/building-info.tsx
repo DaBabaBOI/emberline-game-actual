@@ -2,6 +2,7 @@
 
 import { BUILDINGS_BY_ID, FIRE_SCARE, IMPROVE, LANDMARKS, NUCLEAR, QUARRY_DUST, SMOG, WEAR } from "@/game/content";
 import {
+  connections,
   dusty,
   rainfall,
   residents,
@@ -94,6 +95,13 @@ export function BuildingInfo({
         <PixelIcon name={def.landImpact ? "stump" : "leaf"} size={12} />
         {def.landCost}
       </p>
+      {/* What it gets from the buildings it touches (CONNECTIONS). */}
+      {connections(state, tile).map((c) => (
+        <p key={c.why} className="mt-1 flex gap-1.5 text-emerald-700" data-testid="building-connection">
+          <PixelIcon name="star" size={12} />
+          Connected to the {c.with.map((id) => BUILDINGS_BY_ID[id]?.name ?? id).join(" and ")}: +{Math.round(c.bonus * 100)}% ({c.why})
+        </p>
+      ))}
 
       {/* Our landmark: its three stages, and the masons at work. */}
       {state.landmark?.tile === tile.id && (

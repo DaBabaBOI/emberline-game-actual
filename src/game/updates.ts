@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Buildings connect: aqueducts can join up in a chain to carry river water inland (each linked one waters the fields near it, and a chain brings water for more people), and some buildings work better side by side, joined by a short path: a farm by a granary, a market by homes, schools by libraries, a factory by a station and more. The placement card says what a spot connects to.",
       "Two main ways to play, side by side: From the Stone Age, or Build to Last from 1850. Both are on the title screen, the website and How to play. The title screen no longer has an \"I've played before\" button; skip the tutorial from the tutorial itself.",
       "Hunters only hunt when the tribe needs food. When the stores are full, they gather wood at their camp instead, and the herds get a rest.",
       "Build to Last starts with 30 Knowledge, as intended: the town you start with no longer counts as \"firsts\" or a chief level-up, which used to double it in the first seconds.",

@@ -51,6 +51,7 @@ const SECTIONS: Section[] = [
       { icon: "wheat", text: "Secure food, materials, homes and warmth first." },
       { icon: "log", text: "Selective logging is slower but keeps the forest standing." },
       { icon: "person", text: "Too many jobs tire everyone and reduce output." },
+      { icon: "aqueduct", text: "Some buildings work better side by side (a farm by a granary, a market by homes, a school by a library). The card says what a spot connects to, and a path joins them. Aqueducts can join up to carry river water inland." },
       { icon: "basket", text: "Hunters only hunt when food is needed. With plenty in store, they gather wood at their camp instead." },
     ],
   },

@@ -64,7 +64,7 @@ Slower, kinder options exist too: **selective logging** instead of clear-cutting
 
 - **Six eras, 57 buildings, 109 advancements**: Stone, Ancient, Classical, Medieval, Industrial, Future
 - **Six meters**: Food, Shelter, Happiness, Literacy, Energy, Sustainability
-- **Living map**: people walk to work, sit by fires, fall sick and hunt; paths wear into the ground; hunters only hunt when food is needed
+- **Living map**: people walk to work, sit by fires, fall sick and hunt; paths wear into the ground; hunters only hunt when food is needed; buildings that work together (a market by homes, a farm by a granary, chains of aqueducts) connect for a bonus
 - **Era set pieces**: Roman legion, the great drought, the plague, the climate crisis and the launch into space
 - **Raids**: fight, hide, or pay them off; arm warriors and build Watch Towers
 - **Trade** with passing traders, caravans and neighbouring kingdoms
