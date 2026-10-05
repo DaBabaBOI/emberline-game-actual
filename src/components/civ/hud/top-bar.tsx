@@ -207,7 +207,7 @@ export function TopBar({ children }: { children?: React.ReactNode }) {
     // itself takes clicks, not the full-width strip around it. Below 1024 px it
     // takes two rows: who and when, speed and Menu; then the stores.
     <div
-      className={cn("pointer-events-none absolute inset-x-0 top-1.5 flex flex-col items-center gap-1 px-1.5 lg:top-3 lg:px-3", panel !== "tree" && "z-[27]")}
+      className={cn("game-top-bar pointer-events-none absolute inset-x-0 top-1.5 flex flex-col items-center gap-1 px-1.5 lg:top-3 lg:px-3", panel !== "tree" && "z-[27]")}
       data-hud="top"
     >
       <div
