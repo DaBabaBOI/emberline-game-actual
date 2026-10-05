@@ -7,6 +7,12 @@ export interface Update {
 
 export const UPDATES: Update[] = [
   {
+    date: "2026-10-05",
+    items: [
+      "Accessibility has its own top-right box on the project page and in the app, including a saved master sound-volume slider. Town Houses now have a gabled roof and clearer window trim; Industrial Apartment Blocks have a quieter steel-and-glass facade.",
+    ],
+  },
+  {
     date: "2026-10-01",
     items: [
       "Build to Last follows real history: each invention arrives in the year it really did (hydropower in 1882, wind in 1887, solar and nuclear in 1954), and real events appear as the years pass, from the Great Stink of 1858 to the first Earth Day.",

@@ -125,23 +125,38 @@ export function CoalPlantModel({ opacity }: ModelProps) {
   );
 }
 
-// A tall block of flats with rows of lit windows.
+// A steel-framed apartment block with restrained glass and a rooftop lift core.
 export function ApartmentsModel({ opacity }: ModelProps) {
   return (
     <group>
-      <Part color="#c9b79c" opacity={opacity} position={[0, 0.55, 0]}>
+      <Part color="#adb8bd" opacity={opacity} position={[0, 0.55, 0]}>
         <boxGeometry args={[0.5, 1.1, 0.42]} />
       </Part>
       <Part color={CONCRETE_DARK} opacity={opacity} position={[0, 1.12, 0]}>
         <boxGeometry args={[0.54, 0.04, 0.46]} />
       </Part>
-      {[0.2, 0.4, 0.6, 0.8, 1.0].flatMap((y) =>
-        [-0.15, 0, 0.15].map((x) => (
-          <Part key={`${x}${y}`} color="#ffd36b" opacity={opacity} position={[x, y, 0.211]} emissive="#ffb000" emissiveIntensity={0.25}>
-            <boxGeometry args={[0.07, 0.08, 0.01]} />
+      {[-0.22, 0.22].map((x) => (
+        <Part key={x} color={STEEL} opacity={opacity} position={[x, 0.55, 0.215]}>
+          <boxGeometry args={[0.025, 1.04, 0.018]} />
+        </Part>
+      ))}
+      {[0.2, 0.4, 0.6, 0.8, 1.0].flatMap((y, row) =>
+        [-0.13, 0.13].map((x, col) => (
+          <Part
+            key={`${x}${y}`}
+            color={(row + col) % 3 === 0 ? "#d6bd82" : GLASS}
+            opacity={opacity}
+            position={[x, y, 0.213]}
+            emissive={(row + col) % 3 === 0 ? "#a37838" : "#27485a"}
+            emissiveIntensity={(row + col) % 3 === 0 ? 0.08 : 0.025}
+          >
+            <boxGeometry args={[0.085, 0.11, 0.012]} />
           </Part>
         )),
       )}
+      <Part color="#8d989d" opacity={opacity} position={[0, 1.18, -0.08]}>
+        <boxGeometry args={[0.2, 0.12, 0.2]} />
+      </Part>
       <Part color="#4a3526" opacity={opacity} position={[0, 0.06, 0.212]}>
         <boxGeometry args={[0.12, 0.12, 0.01]} />
       </Part>

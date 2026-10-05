@@ -7,6 +7,25 @@
 // carries into the game, and back.
 
 const SETTINGS_KEY = "emberline-accessibility-settings";
+const AUDIO_KEY = "emberline-audio";
+
+function loadMasterVolume() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(AUDIO_KEY) || "{}");
+    return typeof saved.master === "number" ? Math.round(Math.min(1, Math.max(0, saved.master)) * 100) : 100;
+  } catch {
+    return 100;
+  }
+}
+
+function saveMasterVolume(value) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(AUDIO_KEY) || "{}");
+    localStorage.setItem(AUDIO_KEY, JSON.stringify({ ...saved, master: Number(value) / 100, muted: false }));
+  } catch {
+    // Storage is blocked: the in-page value still updates.
+  }
+}
 
 // 1. Accessibility settings --------------------------------------------------
 
@@ -51,10 +70,14 @@ function setUpSettings() {
   const dark = panel.querySelector('input[name="dark"]');
   const highContrast = panel.querySelector('input[name="highContrast"]');
   const largeText = panel.querySelector('input[name="largeText"]');
+  const masterVolume = panel.querySelector('input[name="masterVolume"]');
+  const volumeValue = panel.querySelector(".volume-value");
   const fontButtons = panel.querySelectorAll(".font-choices button");
 
   // Show the saved choices in the panel.
   function showSettings(settings) {
+    masterVolume.value = String(loadMasterVolume());
+    volumeValue.value = `${masterVolume.value}%`;
     dark.checked = settings.theme === "dark";
     highContrast.checked = settings.highContrast;
     largeText.checked = settings.largeText;
@@ -81,7 +104,7 @@ function setUpSettings() {
 
   function close() {
     panel.hidden = true;
-    toggle.textContent = "Settings";
+    toggle.textContent = "Accessibility";
     toggle.setAttribute("aria-expanded", "false");
     toggle.setAttribute("aria-label", "Open accessibility settings");
   }
@@ -106,6 +129,10 @@ function setUpSettings() {
   dark.addEventListener("change", () => change("theme", dark.checked ? "dark" : "light"));
   highContrast.addEventListener("change", () => change("highContrast", highContrast.checked));
   largeText.addEventListener("change", () => change("largeText", largeText.checked));
+  masterVolume.addEventListener("input", () => {
+    volumeValue.value = `${masterVolume.value}%`;
+    saveMasterVolume(masterVolume.value);
+  });
   for (const button of fontButtons) {
     button.addEventListener("click", () => change("font", button.value));
   }
