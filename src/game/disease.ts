@@ -21,10 +21,15 @@ function crowding(state: GameState, housing: number) {
   return 1 + DISEASE.crowding * Math.max(0, state.population / Math.max(1, housing) - 0.8);
 }
 
+// Build to Last has no Healer's Huts: point at the Hospital instead.
+export function cureHint(state: GameState) {
+  return state.mode === "last" ? "Hospitals (from Public Health) help them recover" : "Healer's Huts help them recover";
+}
+
 export function outbreakMessage(state: GameState, source: string) {
   return diseaseName(state) === "curse"
     ? `A curse from the gods! ${source} People burn with fever, cough and are too weak to work. The elders don't know why.`
-    : `Sickness has broken out: fever, coughing and weakness. ${source} Healer's Huts help the sick recover.`;
+    : `Sickness has broken out: fever, coughing and weakness. ${source} ${cureHint(state)}.`;
 }
 
 // Start (or add to) an outbreak with the given chance.

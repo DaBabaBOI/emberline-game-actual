@@ -122,7 +122,7 @@ import {
   TUTORIAL_FAREWELL,
   WARRIORS_PER_CAMP,
 } from "./content";
-import { diseaseName, isCalm, maybeOutbreak, sickShare, stepDisease } from "./disease";
+import { cureHint, diseaseName, isCalm, maybeOutbreak, sickShare, stepDisease } from "./disease";
 import { hexDistance } from "./hex";
 import { generateMap, ISLANDS, isLand, revealAround, riverPath, terrainHeight } from "./map";
 import { mulberry32 } from "./noise";
@@ -342,13 +342,15 @@ export function newGame(
 // from the earlier eras learned, and three big problems to solve. No tutorial,
 // no lessons, no raids: just the problems.
 function applyLastStart(state: GameState): GameState {
-  const researched = TREE.filter((n) => !n.comingSoon && !n.secret && n.era < 4).map((n) => n.id);
+  const researched = [...TREE.filter((n) => !n.comingSoon && !n.secret && n.era < 4).map((n) => n.id), ...LAST.known];
   const home = state.tiles[state.startTile];
   // Explore the island around the town.
   for (const t of state.tiles) if (hexDistance(t, home) <= 6) t.revealed = true;
   let next: GameState = {
     ...devJumpToEra(state, 4),
     mode: "last",
+    // Paused until the player has read the three problems (LastIntro).
+    speed: 0,
     year: LAST.startYear,
     tutorialStep: TUTORIAL.length,
     researched: Array.from(new Set([...state.researched, ...researched])),
@@ -360,13 +362,31 @@ function applyLastStart(state: GameState): GameState {
     lastHeld: 0,
     log: [`${state.nation ?? DEFAULT_NATION}, ${LAST.startYear}: smoke over the town. Solve the three big problems and build something that lasts.`],
   };
-  // The town: each building on the nearest free spot that suits it.
+  // The town, laid out in districts so it reads at a glance: homes and services
+  // in the middle with room between them, farms on a ring further out, and
+  // industry together on one side, away from the homes (where the wind takes
+  // the smoke).
+  const district = (id: string) => (["factory", "coalplant", "quarry", "woodcutter"].includes(id) ? "industry" : id === "farm" ? "farm" : "town");
+  const ring: Record<string, [number, number]> = { town: [1, 2], farm: [2, 4], industry: [3, 4] };
+  const side = Math.atan2(1, 1);
+  const crowd = (t: Tile, tiles: Tile[]) => tiles.filter((n) => n.building && hexDistance(n, t) === 1).length;
   for (const id of LAST.town) {
     const def = BUILDINGS_BY_ID[id];
     if (!def) continue;
-    const spot = next.tiles
-      .filter((t) => t.revealed && !placementError(next, t, def))
-      .sort((a, b) => hexDistance(a, home) - hexDistance(b, home))[0];
+    const kind = district(id);
+    const [near, far] = ring[kind];
+    const score = (t: Tile) => {
+      const d = hexDistance(t, home);
+      const outside = d < near ? near - d : d > far ? d - far : 0;
+      // Industry clusters to one side of the town; everything else keeps away from it.
+      const angle = Math.atan2(t.z - home.z, t.x - home.x);
+      const off = Math.abs(Math.atan2(Math.sin(angle - side), Math.cos(angle - side)));
+      const lean = kind === "industry" ? off : kind === "farm" ? Math.max(0, 1.2 - off) : 0;
+      // Homes and services want space around them; industry may sit close together.
+      const room = kind === "industry" ? 0 : crowd(t, next.tiles) * 1.5;
+      return outside * 3 + lean + room + d * 0.1;
+    };
+    const spot = next.tiles.filter((t) => t.revealed && !placementError(next, t, def)).sort((a, b) => score(a) - score(b))[0];
     if (spot) next = { ...next, tiles: next.tiles.map((t) => (t.id === spot.id ? { ...t, building: id } : t)) };
   }
   return next;
@@ -384,18 +404,21 @@ export function lastProblems(state: GameState) {
     {
       id: "air",
       title: "Clear the air",
+      how: "Close coal plants and smoky factories, and keep the forest standing.",
       done: flow <= 0,
       status: flow <= 0 ? `Carbon falling (${flow.toFixed(1)} ppm/min)` : `Carbon rising ${flow.toFixed(1)} ppm/min`,
     },
     {
       id: "power",
       title: "Clean power",
+      how: "Learn Hydropower or Renewables, then build dams, wind and solar farms.",
       done: share >= LAST.cleanShare && cover >= 1,
       status: `${Math.round(share * 100)}% clean of ${Math.round(LAST.cleanShare * 100)}%${cover < 1 ? `, grid short (${Math.round(cover * 100)}%)` : ""}`,
     },
     {
       id: "people",
       title: `Home and food for ${LAST.people}`,
+      how: "Apartments for room, farms for food, parks to keep people happy.",
       done: pop >= LAST.people && m.food >= LAST.meter && m.shelter >= LAST.meter && forest >= LAST.forest,
       status: `${pop}/${LAST.people} people · food ${Math.round(m.food)} · homes ${Math.round(m.shelter)} · forest ${Math.round(forest * 100)}%/${Math.round(LAST.forest * 100)}%`,
     },
@@ -2294,7 +2317,7 @@ export function warnings(state: GameState): Warning[] {
       text:
         diseaseName(state) === "curse"
           ? `A curse from the gods: ${n} of your people lie with fever and coughing and can't work. The elders have no cure. Research Herbalism.`
-          : `${n} people are sick with fever and can't work. Healer's Huts help them recover and stop the spread.`,
+          : `${n} people are sick with fever and can't work. ${cureHint(state)} and stop the spread.`,
       severe: sickShare(state) > 0.2,
     });
   }
@@ -3577,6 +3600,16 @@ export function nextEraPopulation(state: GameState): number | null {
 // How many would leave with "Send settlers" right now (0: too few to spare).
 export function settlersReady(state: GameState) {
   return Math.max(0, Math.min(SETTLERS.size, Math.floor(state.population) - SETTLERS.keep));
+}
+
+// What a group of settlers takes with them.
+export function settlersCost(n: number) {
+  return { food: SETTLERS.food * n, wood: SETTLERS.wood * n };
+}
+
+export function settlersAffordable(state: GameState) {
+  const cost = settlersCost(settlersReady(state));
+  return state.resources.food >= cost.food && state.resources.wood >= cost.wood;
 }
 
 export function readyForNextEra(state: GameState) {
@@ -6210,11 +6243,14 @@ function step(state: GameState, action: Action): GameState {
 
     case "sendSettlers": {
       const n = settlersReady(state);
-      if (!n) return state;
+      if (!n || !settlersAffordable(state)) return state;
+      const cost = settlersCost(n);
       return withMeters({
         ...state,
         population: state.population - n,
-        log: [`${n} people set off to start a village of their own. Fewer mouths to feed here, and they promise to visit.`, ...state.log].slice(0, 30),
+        resources: { ...state.resources, food: state.resources.food - cost.food, wood: state.resources.wood - cost.wood },
+        grief: Math.min(GRIEF.max, (state.grief ?? 0) + SETTLERS.missed),
+        log: [`${n} people set off to start a village of their own, taking ${cost.food} food and ${cost.wood} wood for the road. Fewer mouths to feed, but fewer workers, and their families miss them (−${SETTLERS.missed} happiness for a while).`, ...state.log].slice(0, 30),
       });
     }
 

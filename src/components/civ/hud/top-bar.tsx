@@ -3,7 +3,7 @@
 import { HOME } from "@/lib/home";
 import { CARBON, ERAS, KARDASHEV, SETTLERS, XP, chiefTitle, formatYear, xpToReach } from "@/game/content";
 import { useGame } from "@/components/civ/game-provider";
-import { cleanPower, kardashev, nextEraPopulation, nextYear, powerCover, powerDemand, powerSupply, settlersReady, warming, warnings } from "@/game/engine";
+import { cleanPower, kardashev, nextEraPopulation, nextYear, powerCover, powerDemand, powerSupply, settlersAffordable, settlersCost, settlersReady, warming, warnings } from "@/game/engine";
 import { realCalendar } from "@/game/calendar";
 import type { GameState } from "@/game/types";
 import { cn } from "@/lib/utils";
@@ -110,6 +110,8 @@ function PopulationControl({ close }: { close: () => void }) {
   const limit = state.popLimit ?? null;
   const goal = nextEraPopulation(state);
   const leaving = settlersReady(state);
+  const cost = settlersCost(leaving || SETTLERS.size);
+  const affordable = settlersAffordable(state);
   const set = (n: number) => dispatch({ type: "setPopLimit", limit: Math.max(SETTLERS.keep, n) });
   return (
     <>
@@ -156,15 +158,18 @@ function PopulationControl({ close }: { close: () => void }) {
       )}
       <button
         type="button"
-        disabled={!leaving}
+        disabled={!leaving || !affordable}
         onClick={() => dispatch({ type: "sendSettlers" })}
         className="pixel-btn bg-[#4a3b2e] px-2 py-1 text-white disabled:opacity-40"
         data-testid="pop-settlers"
       >
         Send {leaving || SETTLERS.size} settlers to start a new village
       </button>
-      <span className="text-white/60">
-        {leaving ? "They leave happily: fewer mouths to feed here." : `At least ${SETTLERS.keep} people stay.`}
+      <span className="text-white/60" data-testid="pop-settlers-cost">
+        {!leaving
+          ? `At least ${SETTLERS.keep} people stay.`
+          : `Fewer mouths to feed, but they take ${cost.food} food and ${cost.wood} wood, you lose ${leaving} workers, and their families miss them (−${SETTLERS.missed} happiness for a while).`}
+        {leaving > 0 && !affordable && <span className="text-red-300"> Not enough food or wood to spare.</span>}
       </span>
     </>
   );
