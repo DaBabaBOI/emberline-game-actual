@@ -395,13 +395,33 @@ html[data-in-game] .accessibility-floating {
 .scene-walk { animation: scene-walk 1.6s steps(8) both; }
 .scene-bob { animation: scene-bob 0.5s steps(2) 5; }
 .scene-pop { animation: scene-pop 0.7s ease-out both; }
+.scene-reveal { animation: scene-reveal 0.9s steps(6) both; }
+@keyframes scene-reveal {
+  0% { opacity: 0; transform: translateY(12px) scale(0.72); filter: brightness(2); }
+  65% { opacity: 1; transform: translateY(-3px) scale(1.08); filter: brightness(1.25); }
+  100% { opacity: 1; transform: none; filter: none; }
+}
 .scene-rays {
-  background: repeating-conic-gradient(rgba(255, 230, 140, 0.55) 0 15deg, transparent 15deg 30deg);
+  background: repeating-conic-gradient(rgba(255, 230, 140, 0.42) 0 12deg, transparent 12deg 30deg);
   mask-image: radial-gradient(circle, black 30%, transparent 70%);
-  animation: scene-spin 8s linear infinite;
+  animation: scene-spin 18s linear infinite;
 }
 .scene-line { animation: scene-fade 0.6s ease-out both; }
 .scene-twinkle { animation: scene-twinkle 2s steps(2) infinite; }
+.scene-horizon { animation: scene-drift 12s ease-in-out infinite alternate; }
+@keyframes scene-drift {
+  from { transform: translateX(-1.25%); }
+  to { transform: translateX(1.25%); }
+}
+.scene-ground-shade { background: linear-gradient(transparent, rgba(30, 38, 22, 0.22)); }
+.scene-beat-wash {
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 240, 184, 0.14) 50%, transparent 70%);
+  animation: scene-beat-wash 0.75s steps(6) both;
+}
+@keyframes scene-beat-wash {
+  from { opacity: 1; transform: translateX(-25%); }
+  to { opacity: 0; transform: translateX(25%); }
+}
 .scene-waves {
   background: repeating-linear-gradient(90deg, #ffffff 0 6px, transparent 6px 24px);
   animation: scene-waves 1.5s steps(6) infinite;
@@ -410,12 +430,12 @@ html[data-in-game] .accessibility-floating {
 /* Discovery scenes open with the camera pushing in (the same easing as the fly-in). */
 .scene-camera { animation: scene-camera 2.4s cubic-bezier(0.65, 0, 0.35, 1) both; transform-origin: 50% 72%; }
 @keyframes scene-camera {
-  from { transform: scale(1.7) translateY(8%); filter: blur(1.5px) brightness(0.8); }
+  from { transform: scale(1.16) translateY(3%); filter: brightness(0.82); }
   60% { filter: none; }
   to { transform: none; filter: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .scene-walk, .scene-bob, .scene-pop, .scene-rays, .scene-line, .scene-twinkle, .scene-waves, .scene-camera { animation: none; }
+  .scene-walk, .scene-bob, .scene-pop, .scene-reveal, .scene-rays, .scene-line, .scene-twinkle, .scene-horizon, .scene-beat-wash, .scene-waves, .scene-camera { animation: none; }
 }
 
 /* Camera shots (world/cinematic.tsx): black bars slide in, the title fades up. */

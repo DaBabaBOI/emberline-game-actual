@@ -2494,8 +2494,8 @@ export const ERA_INTROS: Record<number, { id: string; title: string; text: strin
 
 // Discovery scenes: when an advancement (or a secret) is found, a short pixel
 // scene shows the moment people worked it out. `bg` sets the sky, `actors` walk
-// in, `item` is what they discover, and the three lines play one by one.
-// Keep them short, in the tribe's own voice, and modest about history.
+// in, `item` is what they discover, and four lines play one by one.
+// Keep them concise, in the tribe's own voice, and modest about history.
 export type SceneSky = "dawn" | "day" | "dusk" | "night" | "sea" | "cave";
 // Something in the scene besides the people: `x` is how far across (0-100) and
 // `y` how high up (0 = the bottom; the ground is about 18). It shows from line
@@ -2521,7 +2521,7 @@ export interface DiscoveryScene {
   props?: SceneProp[];
   // A river across the ground, or a dried-up streambed ("dry").
   river?: boolean | "dry";
-  lines: [string, string, string];
+  lines: [string, string, string, string];
 }
 // Every scene must show what its lines say, at the line that says it: a fire
 // when they talk by the fire, people sitting when they sit, the thing itself
@@ -2537,7 +2537,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     ],
     item: "bulb",
     itemFrom: 2,
-    lines: ["Night after night, the old ones talked by the fire.", "The children began to repeat the stories, word for word.", "What one person knew, now everyone could remember."],
+    lines: ["Night after night, the old ones talked by the fire.", "The children began to repeat the stories, word for word.", "What one person knew, now everyone could remember.", "Around the embers, our knowledge could travel farther than our footsteps."],
   },
   toolmaking: {
     bg: "day",
@@ -2545,7 +2545,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     props: [{ icon: "rock", x: 36 }, { icon: "hide", x: 52, from: 1, size: 44 }, { icon: "log", x: 60, from: 1, size: 44 }],
     item: "flint",
     itemFrom: 0,
-    lines: ["A stone struck another and a sharp flake broke off.", "It cut hide better than teeth, and wood better than hands.", "Soon every hunter carried a blade of stone."],
+    lines: ["A stone struck another and a sharp flake broke off.", "It cut hide better than teeth, and wood better than hands.", "Soon every hunter carried a blade of stone.", "One well-made edge saved time, effort, and a good piece of stone."],
   },
   firekeeping: {
     bg: "night",
@@ -2553,7 +2553,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     props: [{ icon: "log", x: 36, until: 1 }],
     item: "campfire",
     itemX: 40,
-    lines: ["The fire kept dying before dawn.", "Buried under ash, the embers stayed warm until morning.", "Now a fire can be kept alive with half the wood."],
+    lines: ["The fire kept dying before dawn.", "Buried under ash, the embers stayed warm until morning.", "Now a fire can be kept alive with half the wood.", "We learned to tend the heat instead of feeding it another log."],
   },
   fishing: {
     bg: "sea",
@@ -2561,7 +2561,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     props: [{ icon: "log", x: 62, y: 26, until: 1 }, { icon: "bird", x: 63, y: 36, until: 1, size: 44 }, { icon: "fish", x: 50, y: 24, from: 2 }],
     item: "boat",
     itemX: 66,
-    lines: ["Logs drifted past the shore, carrying birds on their backs.", "Tied together with vines, they carried people too.", "Out on the water, the fish could not hide."],
+    lines: ["Logs drifted past the shore, carrying birds on their backs.", "Tied together with vines, they carried people too.", "Out on the water, the fish could not hide.", "The shore was no longer the edge of our world."],
   },
   "early-farming": {
     bg: "dawn",
@@ -2569,7 +2569,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     props: [{ icon: "sprout", x: 40 }, { icon: "wheat", x: 50, from: 2 }, { icon: "wheat", x: 60, from: 2 }],
     item: "wheat",
     itemFrom: 2,
-    lines: ["Grain dropped by the camp last year had sprouted.", "What if we put the seeds in the ground ourselves?", "A handful of seeds became a field."],
+    lines: ["Grain dropped by the camp last year had sprouted.", "What if we put the seeds in the ground ourselves?", "A handful of seeds became a field.", "We would wait for the harvest, and care for the soil between seasons."],
   },
   spears: {
     bg: "day",
@@ -2578,7 +2578,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     item: "spear",
     itemFrom: 0,
     itemX: 42,
-    lines: ["A sharp stone, tied to a long stick.", "Now the hunter can strike from further away.", "The herds are easier to hunt, and the camp is easier to guard."],
+    lines: ["A sharp stone, tied to a long stick.", "Now the hunter can strike from further away.", "The herds are easier to hunt, and the camp is easier to guard.", "A longer reach gave the hunter a safer chance, not a certain one."],
   },
   herbalism: {
     bg: "day",
@@ -2587,7 +2587,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     item: "herb",
     itemFrom: 0,
     itemX: 60,
-    lines: ["The sick woman chewed a bitter leaf and slept.", "In the morning her fever was gone.", "We began to remember which plants heal."],
+    lines: ["The sick woman chewed a bitter leaf and slept.", "In the morning her fever was gone.", "We began to remember which plants heal.", "Each remedy was a clue; we watched carefully before trusting it again."],
   },
   herding: {
     bg: "day",
@@ -2596,14 +2596,14 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     item: "sheep",
     itemFrom: 0,
     itemX: 34,
-    lines: ["A lost lamb followed the children home.", "It grew, and more wild goats came to its call.", "Now the herd walks with us, and we don't have to chase it."],
+    lines: ["A lost lamb followed the children home.", "It grew, and more wild goats came to its call.", "Now the herd walks with us, and we don't have to chase it.", "In return for food close by, the animals need care and grazing land."],
   },
   "hide-clothing": {
     bg: "dusk",
     actors: ["person-sit", "person-sit"],
     props: [{ icon: "hide", x: 40, until: 1 }, { icon: "hide", x: 50, until: 1 }],
     item: "tunic",
-    lines: ["A sharp bone, a thread of sinew, two hides.", "Sewn together, they keep the wind out.", "Warm without a fire: less wood, less smoke."],
+    lines: ["A sharp bone, a thread of sinew, two hides.", "Sewn together, they keep the wind out.", "Warm without a fire: less wood, less smoke.", "A patient stitch made each hide last through another cold night."],
   },
   "cave-paintings": {
     bg: "cave",
@@ -2611,7 +2611,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     props: [{ icon: "torch", x: 34, y: 18 }],
     item: "mammoth",
     itemX: 62,
-    lines: ["By torchlight, a hand pressed red earth to the rock.", "A mammoth appeared on the cave wall.", "Our stories will be here long after we are gone."],
+    lines: ["By torchlight, a hand pressed red earth to the rock.", "A mammoth appeared on the cave wall.", "Our stories will be here long after we are gone.", "The painted herd held a memory still too large for words."],
   },
   agriculture: {
     bg: "dawn",
@@ -2619,7 +2619,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     props: [{ icon: "wheat", x: 46 }, { icon: "wheat", x: 54 }, { icon: "wheat", x: 62 }],
     item: "hut",
     itemFrom: 2,
-    lines: ["The fields fed us all winter.", "No more walking after the herds: we will stay.", "Here we build a village that will last."],
+    lines: ["The fields fed us all winter.", "No more walking after the herds: we will stay.", "Here we build a village that will last.", "A settled home brings security, and asks us to protect the land around it."],
   },
   writing: {
     bg: "day",
@@ -2627,21 +2627,21 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     props: [{ icon: "sheep", x: 50, from: 1, size: 44 }, { icon: "wheat", x: 58, from: 1, size: 44 }],
     item: "tablet",
     itemFrom: 0,
-    lines: ["A reed pressed into wet clay leaves a mark.", "One mark for a sheep, another for a sack of grain.", "Now words last longer than the one who spoke them."],
+    lines: ["A reed pressed into wet clay leaves a mark.", "One mark for a sheep, another for a sack of grain.", "Now words last longer than the one who spoke them.", "A record could cross the years, even when its keeper was gone."],
   },
   pottery: {
     bg: "day",
     actors: ["person"],
     props: [{ icon: "campfire", x: 38 }, { icon: "wheat", x: 56, from: 1, size: 44 }],
     item: "amphora",
-    lines: ["Clay left near the fire turned hard as stone.", "Shaped into jars, it kept the grain dry and the mice out.", "Food no longer rots before we can eat it."],
+    lines: ["Clay left near the fire turned hard as stone.", "Shaped into jars, it kept the grain dry and the mice out.", "Food no longer rots before we can eat it.", "A sound vessel turned a brief harvest into food for lean days."],
   },
   bronze: {
     bg: "night",
     actors: ["person", "person"],
     props: [{ icon: "campfire", x: 42 }, { icon: "ore", x: 54, until: 1 }],
     item: "hammer",
-    lines: ["Green stones melted in the hottest fire.", "Mixed with a little tin, the metal came out hard and bright.", "Bronze tools: stronger, and they can be mended."],
+    lines: ["Green stones melted in the hottest fire.", "Mixed with a little tin, the metal came out hard and bright.", "Bronze tools: stronger, and they can be mended.", "Copper and tin had to meet in the right measure before the alloy worked."],
   },
   irrigation: {
     bg: "day",
@@ -2649,28 +2649,28 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     river: true,
     props: [{ icon: "wheat", x: 46 }, { icon: "wheat", x: 56, from: 1 }],
     item: "drop",
-    lines: ["The river flooded the low field, and the crop grew tall.", "We dug a ditch to bring the water to the others.", "Every field near a canal grows more. But the water leaves salt behind."],
+    lines: ["The river flooded the low field, and the crop grew tall.", "We dug a ditch to bring the water to the others.", "Every field near a canal grows more. But the water leaves salt behind.", "We must guide the river with care, or the soil that feeds us will change."],
   },
   forestry: {
     bg: "day",
     actors: ["elder", "person"],
     props: [{ icon: "stump", x: 40 }, { icon: "stump", x: 50 }, { icon: "stump", x: 60 }, { icon: "sapling", x: 46, from: 2 }, { icon: "sapling", x: 56, from: 2 }],
     item: "sapling",
-    lines: ["Where the woodcutters worked, only stumps were left.", "An old woman planted acorns in the bare ground.", "Cut one tree, plant another: the forest can last."],
+    lines: ["Where the woodcutters worked, only stumps were left.", "An old woman planted acorns in the bare ground.", "Cut one tree, plant another: the forest can last.", "Saplings take time; selective cutting gives them room to grow."],
   },
   "bronze-arms": {
     bg: "dusk",
     actors: ["person", "person"],
     props: [{ icon: "hammer", x: 42 }, { icon: "spear", x: 54, from: 1 }],
     item: "shield",
-    lines: ["The smiths hammered bronze into spear points and shield rims.", "A bronze spear does not break against a wooden shield.", "Our warriors fight twice as hard."],
+    lines: ["The smiths hammered bronze into spear points and shield rims.", "A bronze spear does not break against a wooden shield.", "Our warriors fight twice as hard.", "The stronger arms protect our people, but every weapon takes skilled work."],
   },
   coinage: {
     bg: "day",
     actors: ["person", "elder"],
     props: [{ icon: "sheep", x: 44, until: 1 }, { icon: "amphora", x: 54, until: 1 }],
     item: "coin",
-    lines: ["Traders argued: how many sheep is a jar of oil worth?", "Small silver pieces, all the same weight, settled it.", "Now anything can be traded for coins."],
+    lines: ["Traders argued: how many sheep is a jar of oil worth?", "Small silver pieces, all the same weight, settled it.", "Now anything can be traded for coins.", "A shared measure made distant bargains easier to trust."],
   },
   hydraulics: {
     bg: "day",
@@ -2679,7 +2679,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     props: [{ icon: "pickaxe", x: 44, from: 1 }, { icon: "drop", x: 54, from: 1 }],
     item: "well",
     itemFrom: 2,
-    lines: ["The stream dried up, but the ground was still damp.", "We dug deeper and deeper, and water rose from below.", "A well: water close to home, even when the rain fails."],
+    lines: ["The stream dried up, but the ground was still damp.", "We dug deeper and deeper, and water rose from below.", "A well: water close to home, even when the rain fails.", "The water is nearer now, though the hidden source is not without limits."],
   },
   watermill: {
     bg: "day",
@@ -2687,7 +2687,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     river: true,
     props: [{ icon: "log", x: 48, y: 8, until: 1 }, { icon: "wheat", x: 40, from: 2, size: 44 }],
     item: "mill",
-    lines: ["The river pushed a floating log round and round.", "Fixed to a wheel, the river turned a millstone.", "Grain ground by water, not by hand."],
+    lines: ["The river pushed a floating log round and round.", "Fixed to a wheel, the river turned a millstone.", "Grain ground by water, not by hand.", "The mill freed hands for other work, while the river kept its own course."],
   },
   concrete: {
     bg: "day",
@@ -2695,7 +2695,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     props: [{ icon: "rock", x: 44 }, { icon: "drop", x: 52 }, { icon: "bricks", x: 48, from: 1 }],
     item: "aqueduct",
     itemFrom: 2,
-    lines: ["Lime, ash and water, mixed and left to dry.", "It set as hard as rock, even under water.", "Now we can build arches to carry a whole river."],
+    lines: ["Lime, ash and water, mixed and left to dry.", "It set as hard as rock, even under water.", "Now we can build arches to carry a whole river.", "A reliable mix let builders span distance without blocking the flow below."],
   },
   planning: {
     bg: "day",
@@ -2703,7 +2703,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     props: [{ icon: "hut", x: 40, until: 2 }, { icon: "hut", x: 52, y: 24, until: 2 }, { icon: "hut", x: 62, until: 2 }, { icon: "insula", x: 46, from: 2 }],
     item: "insula",
     itemFrom: 2,
-    lines: ["The town had grown into a tangle of huts and paths.", "The builders drew straight streets in the dust.", "Tall houses, side by side: more people on less land."],
+    lines: ["The town had grown into a tangle of huts and paths.", "The builders drew straight streets in the dust.", "Tall houses, side by side: more people on less land.", "Planning made room for neighbors, markets, and the water they all needed."],
   },
   sanitation: {
     bg: "day",
@@ -2711,14 +2711,14 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     props: [{ icon: "ill", x: 42, until: 2 }, { icon: "smile", x: 42, from: 2 }],
     river: true,
     item: "drop",
-    lines: ["Where the waste ran in the street, the fevers came.", "Channels of running water carried it away.", "A clean town is a healthy town."],
+    lines: ["Where the waste ran in the street, the fevers came.", "Channels of running water carried it away.", "A clean town is a healthy town.", "Shared drains only work when the whole neighborhood keeps them clear."],
   },
   wheel: {
     bg: "day",
     actors: ["person", "sheep"],
     props: [{ icon: "log", x: 42, until: 1 }, { icon: "rock", x: 50, until: 1 }, { icon: "market", x: 52, from: 2 }],
     item: "cart",
-    lines: ["A round log rolled a heavy stone down the hill.", "Cut into discs and fixed to a cart, it carried more than ten people could.", "Carts bring goods to market."],
+    lines: ["A round log rolled a heavy stone down the hill.", "Cut into discs and fixed to a cart, it carried more than ten people could.", "Carts bring goods to market.", "A smooth axle turns a hard journey into a steady trade route."],
   },
   "barter-roads": {
     bg: "sea",
@@ -2727,14 +2727,14 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     item: "boat",
     itemFrom: 0,
     itemX: 66,
-    lines: ["A strange ship came from the steppe across the water.", "They brought silk and spices, and wanted our grain and wood.", "Our caravans can sail to them now."],
+    lines: ["A strange ship came from the steppe across the water.", "They brought silk and spices, and wanted our grain and wood.", "Our caravans can sail to them now.", "Trade carries ideas both ways, along with the goods in each hold."],
   },
   roads: {
     bg: "day",
     actors: ["person", "person"],
     props: [{ icon: "mud", x: 46, y: 6, until: 1, size: 96 }, { icon: "cart", x: 46, y: 9, until: 1 }, { icon: "cart", x: 50, from: 2 }],
     item: "road",
-    lines: ["Carts sank in the mud every spring.", "Flat stones laid side by side made a road that never floods.", "Goods and news travel faster than ever."],
+    lines: ["Carts sank in the mud every spring.", "Flat stones laid side by side made a road that never floods.", "Goods and news travel faster than ever.", "The road links distant homes, but its stones must be laid and maintained."],
   },
   philosophy: {
     bg: "dusk",
@@ -2742,7 +2742,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     props: [{ icon: "column", x: 48 }, { icon: "column", x: 60 }],
     item: "bulb",
     itemFrom: 2,
-    lines: ["In the shade of the columns, a teacher asked: why?", "The students argued until the sun went down.", "Asking questions is how new knowledge begins."],
+    lines: ["In the shade of the columns, a teacher asked: why?", "The students argued until the sun went down.", "Asking questions is how new knowledge begins.", "A good answer could be challenged, tested, and improved by the next student."],
   },
   legions: {
     bg: "night",
@@ -2750,7 +2750,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     props: [{ icon: "campfire", x: 42 }, { icon: "rock", x: 52, until: 1 }, { icon: "hammer", x: 52, from: 1 }],
     item: "sword",
     itemFrom: 2,
-    lines: ["A new ore, heated hotter than bronze ever needed.", "Hammered while glowing, it became iron.", "Iron swords are harder still. But they eat charcoal."],
+    lines: ["A new ore, heated hotter than bronze ever needed.", "Hammered while glowing, it became iron.", "Iron swords are harder still. But they eat charcoal.", "The stronger metal asks for more fuel from the forests around us."],
   },
   "iron-tools": {
     bg: "day",
@@ -2758,7 +2758,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     props: [{ icon: "campfire", x: 42 }, { icon: "rock", x: 52, until: 1 }, { icon: "hammer", x: 52, from: 1 }],
     item: "pickaxe",
     itemFrom: 2,
-    lines: ["Red rock from the hills, burned in the hottest fire.", "Out came iron, hammered into ploughs and nails.", "With iron, every building can be made stronger."],
+    lines: ["Red rock from the hills, burned in the hottest fire.", "Out came iron, hammered into ploughs and nails.", "With iron, every building can be made stronger.", "A sharper tool can build more, and makes the hills' ore more valuable."],
   },
   steelmaking: {
     bg: "dusk",
@@ -2766,7 +2766,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     props: [{ icon: "campfire", x: 40 }, { icon: "hammer", x: 52 }],
     item: "sword",
     itemFrom: 2,
-    lines: ["The furnace was built taller, the bellows pumped harder.", "The iron came out finer: hard, and springy too.", "Steel. Our buildings can be framed with it now."],
+    lines: ["The furnace was built taller, the bellows pumped harder.", "The iron came out finer: hard, and springy too.", "Steel. Our buildings can be framed with it now.", "A little carbon changed the metal; careful heat made the difference."],
   },
   "silk-secret": {
     bg: "sea",
@@ -2775,7 +2775,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     item: "jade",
     itemFrom: 0,
     itemX: 40,
-    lines: ["Our fifth caravan came back with a strange green stone.", "Jade, they called it, from lands far to the east.", "The world is bigger than any of us thought."],
+    lines: ["Our fifth caravan came back with a strange green stone.", "Jade, they called it, from lands far to the east.", "The world is bigger than any of us thought.", "Every journey adds a place and a story to the map we share."],
   },
   // ---- Medieval era ----
   "heavy-plough": {
@@ -2790,7 +2790,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     ],
     item: "plough",
     itemX: 48,
-    lines: ["The old wooden plough only scratched the heavy, wet soil.", "An iron blade, a wheel, and a strong horse to pull it.", "Now it turns the earth over, deep and dark, and the seed takes."],
+    lines: ["The old wooden plough only scratched the heavy, wet soil.", "An iron blade, a wheel, and a strong horse to pull it.", "Now it turns the earth over, deep and dark, and the seed takes.", "The heavier tool opens new ground, but asks more from the team that pulls it."],
   },
   "three-field": {
     bg: "day",
@@ -2805,7 +2805,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     item: "wheat",
     itemFrom: 2,
     itemX: 78,
-    lines: ["The same field, sown every year, gave less and less.", "Grain here, beans there, and one field left to rest.", "Each year the fields take turns, and the soil comes back."],
+    lines: ["The same field, sown every year, gave less and less.", "Grain here, beans there, and one field left to rest.", "Each year the fields take turns, and the soil comes back.", "A harvest plan needs patience: the resting field earns its place too."],
   },
   windmills: {
     bg: "day",
@@ -2816,7 +2816,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
       { icon: "basket", x: 60, from: 2, size: 40 },
     ],
     item: "windmill",
-    lines: ["Across the open fields, the wind blew day and night.", "Sails on a tower, turning a millstone.", "Grain ground into flour by the wind, far from any river."],
+    lines: ["Across the open fields, the wind blew day and night.", "Sails on a tower, turning a millstone.", "Grain ground into flour by the wind, far from any river.", "The wind does the turning for free, but only when it blows."],
   },
   castles: {
     bg: "dusk",
@@ -2830,7 +2830,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
       { icon: "spear", x: 58, from: 2, size: 40 },
     ],
     item: "castle",
-    lines: ["Wooden fences burned, and earth banks were climbed.", "Stone walls, thick and high, with a keep inside.", "Behind them, a few can hold off many."],
+    lines: ["Wooden fences burned, and earth banks were climbed.", "Stone walls, thick and high, with a keep inside.", "Behind them, a few can hold off many.", "A strong refuge buys time; it cannot replace peace with our neighbors."],
   },
   knights: {
     bg: "day",
@@ -2845,7 +2845,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     item: "horse",
     itemFrom: 0,
     itemX: 62,
-    lines: ["Riders in iron, on horses bred to be strong.", "They charge faster than anyone can run.", "But a war horse eats as much as a family."],
+    lines: ["Riders in iron, on horses bred to be strong.", "They charge faster than anyone can run.", "But a war horse eats as much as a family.", "Speed on the field comes with a daily cost in food and care."],
   },
   guilds: {
     bg: "day",
@@ -2859,7 +2859,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     item: "scales",
     itemFrom: 1,
     itemX: 78,
-    lines: ["The weavers argued over prices, and the bakers over flour.", "They met in a hall and wrote down the rules of their craft.", "Masters teach apprentices, and the work gets better."],
+    lines: ["The weavers argued over prices, and the bakers over flour.", "They met in a hall and wrote down the rules of their craft.", "Masters teach apprentices, and the work gets better.", "A guild shares standards, while each learner brings a new hand to the craft."],
   },
   diplomacy: {
     bg: "sea",
@@ -2874,7 +2874,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     item: "dove",
     itemFrom: 2,
     itemX: 66,
-    lines: ["Envoys came from across the sea, carrying gifts.", "We sent our own back, with a letter sealed in wax.", "Words on a page can stop a war before it starts."],
+    lines: ["Envoys came from across the sea, carrying gifts.", "We sent our own back, with a letter sealed in wax.", "Words on a page can stop a war before it starts.", "Trust grows slowly: a promise matters only when both sides keep it."],
   },
   universities: {
     bg: "dusk",
@@ -2886,7 +2886,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     ],
     item: "scroll",
     itemFrom: 2,
-    lines: ["Students came from far away to hear the masters.", "They lived together, read together and argued late into the night.", "A town full of scholars learns faster than any one of them."],
+    lines: ["Students came from far away to hear the masters.", "They lived together, read together and argued late into the night.", "A town full of scholars learns faster than any one of them.", "Shared libraries let each new question begin where the last one ended."],
   },
   printing: {
     bg: "day",
@@ -2900,7 +2900,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     ],
     item: "press",
     itemX: 70,
-    lines: ["Copying a book by hand took a scribe a whole year.", "Metal letters, ink and a press: a page in a moment.", "Soon there were books in every town."],
+    lines: ["Copying a book by hand took a scribe a whole year.", "Metal letters, ink and a press: a page in a moment.", "Soon there were books in every town.", "More copies mean more readers, and more chances to disagree and learn."],
   },
   quarantine: {
     bg: "sea",
@@ -2913,7 +2913,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     ],
     item: "anchor",
     itemX: 70,
-    lines: ["The sickness always seemed to arrive with the ships.", "So ships had to wait offshore before anyone landed.", "The waiting kept the sickness out. Other ports copied the idea."],
+    lines: ["The sickness always seemed to arrive with the ships.", "So ships had to wait offshore before anyone landed.", "The waiting kept the sickness out. Other ports copied the idea.", "Careful arrival rules protect a harbor, though no measure removes every risk."],
   },
   navigation: {
     bg: "sea",
@@ -2924,7 +2924,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     ],
     item: "boat",
     itemX: 74,
-    lines: ["A needle that always points north, floating in a bowl of water.", "Deep hulls and tall sails that can cross the open sea.", "Now our ships can sail beyond the edge of the map."],
+    lines: ["A needle that always points north, floating in a bowl of water.", "Deep hulls and tall sails that can cross the open sea.", "Now our ships can sail beyond the edge of the map.", "Stars, wind, and compass together help crews find their way home."],
   },
   "far-shores": {
     bg: "sea",
@@ -2937,7 +2937,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     item: "spyglass",
     itemFrom: 2,
     itemX: 62,
-    lines: ["Our fourth ship came back with strange fruit and stories.", "Islands, coasts and peoples nobody here had seen.", "The map keeps growing, and so do we."],
+    lines: ["Our fourth ship came back with strange fruit and stories.", "Islands, coasts and peoples nobody here had seen.", "The map keeps growing, and so do we.", "A new shore is a meeting place, not an empty space waiting for us."],
   },
   // ---- Industrial & Modern era ----
   steam: {
@@ -2952,7 +2952,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     item: "factory",
     itemFrom: 2,
     itemX: 78,
-    lines: ["Water boiling in a sealed pot pushed its lid up hard.", "Steam, held in iron, could push a wheel round and round.", "Fed with coal, one engine did the work of a hundred hands."],
+    lines: ["Water boiling in a sealed pot pushed its lid up hard.", "Steam, held in iron, could push a wheel round and round.", "Fed with coal, one engine did the work of a hundred hands.", "The engine multiplies our strength, while its fuel leaves a mark on the air."],
   },
   railways: {
     bg: "day",
@@ -2963,7 +2963,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     ],
     item: "train",
     itemX: 60,
-    lines: ["Carts dragged our goods along muddy roads, slowly.", "Iron rails, and a steam engine to pull a long train.", "Now a day's walk takes an hour."],
+    lines: ["Carts dragged our goods along muddy roads, slowly.", "Iron rails, and a steam engine to pull a long train.", "Now a day's walk takes an hour.", "Fast travel ties distant towns together and carries smoke along the route."],
   },
   electricity: {
     bg: "night",
@@ -2975,7 +2975,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     item: "bulb",
     itemFrom: 2,
     itemX: 70,
-    lines: ["Lightning has always lit up the night sky.", "Spun by an engine, coils of wire make the same power, tamed.", "Down a wire, it lights a bulb in every window."],
+    lines: ["Lightning has always lit up the night sky.", "Spun by an engine, coils of wire make the same power, tamed.", "Down a wire, it lights a bulb in every window.", "A shared grid brings light farther than any one generator could reach."],
   },
   steel: {
     bg: "day",
@@ -2986,7 +2986,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     ],
     item: "insula",
     itemFrom: 2,
-    lines: ["Iron is strong, but it snaps when it is pulled too hard.", "With just a little carbon in it, it becomes steel.", "Steel frames let our buildings rise higher than any wall."],
+    lines: ["Iron is strong, but it snaps when it is pulled too hard.", "With just a little carbon in it, it becomes steel.", "Steel frames let our buildings rise higher than any wall.", "That height saves ground space, but demands careful design and strong foundations."],
   },
   hydropower: {
     bg: "day",
@@ -2998,7 +2998,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     ],
     item: "dam",
     itemX: 66,
-    lines: ["The river has turned our millwheels for centuries.", "A wall across it makes a lake, and the falling water spins a turbine.", "Power with no smoke. But the fish can't swim past the wall."],
+    lines: ["The river has turned our millwheels for centuries.", "A wall across it makes a lake, and the falling water spins a turbine.", "Power with no smoke. But the fish can't swim past the wall.", "Clean electricity still changes a river; its living paths matter too."],
   },
   renewables: {
     bg: "day",
@@ -3009,14 +3009,14 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     ],
     item: "turbine",
     itemX: 70,
-    lines: ["Windmills have ground our grain for hundreds of years.", "Taller, lighter blades can turn a generator instead of a millstone.", "Power from the wind: no smoke, and no carbon."],
+    lines: ["Windmills have ground our grain for hundreds of years.", "Taller, lighter blades can turn a generator instead of a millstone.", "Power from the wind: no smoke, and no carbon.", "When the wind rests, storage and other sources must keep the lights on."],
   },
   solar: {
     bg: "day",
     actors: ["person", "person"],
     item: "solar",
     itemX: 62,
-    lines: ["Every day the sun pours down more power than we could ever use.", "Thin panels turn its light straight into power.", "Each one is a coal plant we don't need to build."],
+    lines: ["Every day the sun pours down more power than we could ever use.", "Thin panels turn its light straight into power.", "Each one is a coal plant we don't need to build.", "The supply rises with the morning and fades again after sunset."],
   },
   publichealth: {
     bg: "day",
@@ -3028,7 +3028,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     ],
     item: "hospital",
     itemX: 70,
-    lines: ["Sickness spread fastest in the crowded, smoky streets.", "Hospitals open to everyone, with nurses and clean water.", "And green parks, where people can breathe."],
+    lines: ["Sickness spread fastest in the crowded, smoky streets.", "Hospitals open to everyone, with nurses and clean water.", "And green parks, where people can breathe.", "Health depends on care close at hand and on the places people share."],
   },
   cleanair: {
     bg: "day",
@@ -3040,7 +3040,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     ],
     item: "scroll",
     itemX: 70,
-    lines: ["The smoke hung so thick we could hardly see the sun.", "New laws: filters on the chimneys, and cleaner fuel.", "The air cleared, and the children stopped coughing."],
+    lines: ["The smoke hung so thick we could hardly see the sun.", "New laws: filters on the chimneys, and cleaner fuel.", "The air cleared, and the children stopped coughing.", "Cleaner air needs steady rules and repair, not a single day of effort."],
   },
   seawalls: {
     bg: "sea",
@@ -3051,7 +3051,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     ],
     item: "seawall",
     itemX: 68,
-    lines: ["Every year the high tides came further up the beach.", "A wall of concrete along the shore holds the sea back.", "But the sea is still rising. Walls only buy us time."],
+    lines: ["Every year the high tides came further up the beach.", "A wall of concrete along the shore holds the sea back.", "But the sea is still rising. Walls only buy us time.", "We must protect the people behind the wall and reduce the cause of the rise."],
   },
   computers: {
     bg: "night",
@@ -3063,7 +3063,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     ],
     item: "computer",
     itemX: 70,
-    lines: ["Rooms full of clerks added up numbers all day.", "Then a machine that counts thousands of times faster.", "Now what one of us learns, everyone can know in a moment."],
+    lines: ["Rooms full of clerks added up numbers all day.", "Then a machine that counts thousands of times faster.", "Now what one of us learns, everyone can know in a moment.", "A network shares knowledge quickly, but people still choose what to do with it."],
   },
   tanks: {
     bg: "dusk",
@@ -3075,7 +3075,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     ],
     item: "tank",
     itemX: 66,
-    lines: ["Horses could not cross the mud and wire of the new battlefields.", "Armoured machines on tracks could.", "Wars grew deadlier than ever before."],
+    lines: ["Horses could not cross the mud and wire of the new battlefields.", "Armoured machines on tracks could.", "Wars grew deadlier than ever before.", "The machine changed the battlefield, but offered no answer to the human cost."],
   },
   // ---- Nuclear power (Industrial), and the Future & Space ----
   uranium: {
@@ -3087,7 +3087,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     ],
     item: "reactor",
     itemFrom: 2,
-    lines: ["A heavy grey rock that made our instruments click.", "Uranium: split inside a reactor, it gives off great heat.", "Power with no smoke. But its waste must be guarded for thousands of years."],
+    lines: ["A heavy grey rock that made our instruments click.", "Uranium: split inside a reactor, it gives off great heat.", "Power with no smoke. But its waste must be guarded for thousands of years.", "A small amount holds enormous energy, and a responsibility that outlasts us."],
   },
   plutonium: {
     bg: "night",
@@ -3099,7 +3099,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     ],
     item: "bulb",
     itemFrom: 2,
-    lines: ["Inside the reactors, the spare uranium was changing.", "It had become plutonium, and that could be burned too.", "Half as much power again. Half as much waste again."],
+    lines: ["Inside the reactors, the spare uranium was changing.", "It had become plutonium, and that could be burned too.", "Half as much power again. Half as much waste again.", "Reusing fuel stretches a resource, but careful handling remains essential."],
   },
   ai: {
     bg: "night",
@@ -3110,7 +3110,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     ],
     item: "robot",
     itemFrom: 2,
-    lines: ["Our computers began to learn from what they saw.", "Halls full of them, thinking day and night.", "Artificial intelligence: a mind we built ourselves."],
+    lines: ["Our computers began to learn from what they saw.", "Halls full of them, thinking day and night.", "Artificial intelligence: a mind we built ourselves.", "It can find patterns at scale, but people must set its purpose and limits."],
   },
   automation: {
     bg: "day",
@@ -3122,7 +3122,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     ],
     item: "robot",
     itemFrom: 0,
-    lines: ["The robots learned to sow, to build and to dig.", "Factories ran with hardly anyone inside.", "More of everything. But many of us had no work to go to."],
+    lines: ["The robots learned to sow, to build and to dig.", "Factories ran with hardly anyone inside.", "More of everything. But many of us had no work to go to.", "Greater output is not progress if the gains leave people without a place."],
   },
   purpose: {
     bg: "dawn",
@@ -3133,7 +3133,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     ],
     item: "smile",
     itemFrom: 2,
-    lines: ["The robots kept working while we rested.", "We worked three days, and spent the rest learning and making.", "We had found a purpose again."],
+    lines: ["The robots kept working while we rested.", "We worked three days, and spent the rest learning and making.", "We had found a purpose again.", "Time shared more fairly gave people room to care, create, and belong."],
   },
   verticalfarms: {
     bg: "day",
@@ -3143,7 +3143,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
       { icon: "sapling", x: 44, from: 2, size: 40 },
     ],
     item: "vfarm",
-    lines: ["Our fields covered half the island.", "So we grew crops indoors, floor upon floor, under lights.", "The old fields can be forest again."],
+    lines: ["Our fields covered half the island.", "So we grew crops indoors, floor upon floor, under lights.", "The old fields can be forest again.", "Growing food upward returns space to nature, though it needs power and water."],
   },
   arcology: {
     bg: "dusk",
@@ -3154,7 +3154,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
       { icon: "sapling", x: 46, from: 2, size: 36 },
     ],
     item: "arcology",
-    lines: ["The city kept spreading over the land.", "So we built up instead: a whole town in one tower.", "Gardens on every level, and the land around it left wild."],
+    lines: ["The city kept spreading over the land.", "So we built up instead: a whole town in one tower.", "Gardens on every level, and the land around it left wild.", "Compact homes can spare the countryside when their shared systems work."],
   },
   fusion: {
     bg: "night",
@@ -3164,7 +3164,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
       { icon: "bulb", x: 52, from: 2, size: 36 },
     ],
     item: "fusion",
-    lines: ["The Sun shines by pressing hydrogen together.", "In a ring of magnets, we did the same.", "Clean power, from water and patience."],
+    lines: ["The Sun shines by pressing hydrogen together.", "In a ring of magnets, we did the same.", "Clean power, from water and patience.", "The reaction is brief; holding it steady is the work still ahead."],
   },
   capture: {
     bg: "day",
@@ -3174,7 +3174,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
       { icon: "rock", x: 52, from: 2, size: 36 },
     ],
     item: "capture",
-    lines: ["The carbon we burned was still up in the air.", "Great fans pulled the air through filters that caught it.", "And it went back under the ground, where it came from."],
+    lines: ["The carbon we burned was still up in the air.", "Great fans pulled the air through filters that caught it.", "And it went back under the ground, where it came from.", "Capturing carbon helps, but avoiding new emissions matters just as much."],
   },
   rewilding: {
     bg: "dawn",
@@ -3186,14 +3186,14 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     ],
     item: "leaf",
     itemFrom: 2,
-    lines: ["Old fields and cut forests stood empty.", "We let them go wild again.", "The forest came back, and drank the carbon from the air."],
+    lines: ["Old fields and cut forests stood empty.", "We let them go wild again.", "The forest came back, and drank the carbon from the air.", "Living forests also shelter animals, hold soil, and make room for renewal."],
   },
   oceans: {
     bg: "sea",
     actors: ["person", "person"],
     props: [{ icon: "fish", x: 58, from: 2, size: 36 }],
     item: "cleaner",
-    lines: ["The sea was full of plastic and lost nets.", "Boats with long booms swept it all out.", "And the fish came back."],
+    lines: ["The sea was full of plastic and lost nets.", "Boats with long booms swept it all out.", "And the fish came back.", "Cleanup can heal a shore, but stopping new waste keeps it from returning."],
   },
   "mineral-x": {
     bg: "night",
@@ -3203,28 +3203,28 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
       { icon: "bulb", x: 58, from: 2, size: 32 },
     ],
     item: "mineralx",
-    lines: ["Our clean-up divers went deeper than ever.", "Under the sea floor: a mineral that matches nothing we know.", "Power flows through it with almost no loss. Nobody knows why."],
+    lines: ["Our clean-up divers went deeper than ever.", "Under the sea floor: a mineral that matches nothing we know.", "Power flows through it with almost no loss. Nobody knows why.", "We have found a possibility, not a full explanation; the research continues."],
   },
   rocketry: {
     bg: "dusk",
     actors: ["person", "person"],
     props: [{ icon: "satellite", x: 56, y: 62, from: 2, size: 32 }],
     item: "rocket",
-    lines: ["We built rockets taller than any tower.", "Fire, smoke and thunder: one rose all the way to orbit.", "Now satellites circle the planet, and the Moon is in reach."],
+    lines: ["We built rockets taller than any tower.", "Fire, smoke and thunder: one rose all the way to orbit.", "Now satellites circle the planet, and the Moon is in reach.", "From orbit, our home looked small, bright, and worth protecting."],
   },
   aetherite: {
     bg: "night",
     actors: ["person", "person"],
     props: [{ icon: "moon", x: 50, y: 58, size: 40 }],
     item: "aetherite",
-    lines: ["On the Moon, our miners dug into the grey dust.", "They found a crystal that hums, and is never warm or cold.", "We call it Aetherite. Nobody knows what it is."],
+    lines: ["On the Moon, our miners dug into the grey dust.", "They found a crystal that hums, and is never warm or cold.", "We call it Aetherite. Nobody knows what it is.", "The strange signal raises new questions before it offers any answers."],
   },
   basketry: {
     bg: "day",
     actors: ["person-sit", "person"],
     props: [{ icon: "herb", x: 44, until: 1, size: 36 }],
     item: "basket",
-    lines: ["Reeds by the river, bent and woven.", "A basket that carries ten handfuls at once.", "The gatherers come home loaded."],
+    lines: ["Reeds by the river, bent and woven.", "A basket that carries ten handfuls at once.", "The gatherers come home loaded.", "A simple weave turns many small finds into one useful journey."],
   },
   smoking: {
     bg: "dusk",
@@ -3235,7 +3235,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     ],
     item: "meat",
     itemFrom: 2,
-    lines: ["Fish hung too close to the fire.", "Days later, it was still good to eat.", "Smoke keeps food from rotting."],
+    lines: ["Fish hung too close to the fire.", "Days later, it was still good to eat.", "Smoke keeps food from rotting.", "Preserving a catch carries its nourishment beyond the day it was found."],
   },
   seedsaving: {
     bg: "day",
@@ -3243,7 +3243,7 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     props: [{ icon: "wheat", x: 44, size: 40 }],
     item: "sprout",
     itemFrom: 2,
-    lines: ["Some plants grew taller than the rest.", "We kept their seeds for next spring.", "Every year, the fields grow a little better."],
+    lines: ["Some plants grew taller than the rest.", "We kept their seeds for next spring.", "Every year, the fields grow a little better.", "Choosing seed from a strong harvest shapes the next one."],
   },
   dogs: {
     bg: "dawn",
@@ -3251,21 +3251,21 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     props: [{ icon: "meat", x: 58, from: 2, size: 32 }],
     item: "sheep",
     itemFrom: 1,
-    lines: ["A young wolf followed the hunters home.", "It learned to track and to herd.", "Now the hunts bring back far more."],
+    lines: ["A young wolf followed the hunters home.", "It learned to track and to herd.", "Now the hunts bring back far more.", "Working alongside an animal changed the hunt into a partnership."],
   },
   kilns: {
     bg: "dusk",
     actors: ["person", "person"],
     props: [{ icon: "campfire", x: 44, size: 44 }, { icon: "bricks", x: 54, until: 1, size: 32 }],
     item: "amphora",
-    lines: ["Clay pots, fired in a closed oven.", "Hotter than any open fire, they came out hard as stone.", "Sealed tight, the grain stays dry for a year."],
+    lines: ["Clay pots, fired in a closed oven.", "Hotter than any open fire, they came out hard as stone.", "Sealed tight, the grain stays dry for a year.", "A hotter kiln makes stronger jars, but it takes fuel to fire them."],
   },
   starcharts: {
     bg: "night",
     actors: ["person-sit", "elder-sit"],
     props: [{ icon: "star", x: 50, y: 58, size: 28 }, { icon: "boat", x: 56, from: 2, size: 36 }],
     item: "scroll",
-    lines: ["The same stars rise in the same places every night.", "We marked them down, one by one.", "Now our canoes find their way in the dark."],
+    lines: ["The same stars rise in the same places every night.", "We marked them down, one by one.", "Now our canoes find their way in the dark.", "A remembered sky turns open water into a route we can follow."],
   },
   restdays: {
     bg: "dawn",
@@ -3273,14 +3273,14 @@ export const DISCOVERIES: Record<string, DiscoveryScene> = {
     props: [{ icon: "smile", x: 52, from: 2, size: 32 }],
     item: "sun",
     itemFrom: 1,
-    lines: ["Everyone worked every day, until they could not.", "So we chose a day to rest, for all of us.", "We came back stronger."],
+    lines: ["Everyone worked every day, until they could not.", "So we chose a day to rest, for all of us.", "We came back stronger.", "Rest is part of the work: people need time to recover and be together."],
   },
   townwatch: {
     bg: "night",
     actors: ["person", "person"],
     props: [{ icon: "torch", x: 44, size: 36 }, { icon: "road", x: 56, size: 36 }],
     item: "shield",
-    lines: ["Lamps along the roads, and watchmen beside them.", "They see the raiders long before the gates do.", "The whole town has time to get ready."],
+    lines: ["Lamps along the roads, and watchmen beside them.", "They see the raiders long before the gates do.", "The whole town has time to get ready.", "An early warning protects more lives than a wall can protect alone."],
   },
 };
 

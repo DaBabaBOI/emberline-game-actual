@@ -24,12 +24,12 @@ const SKIES: Record<SceneSky, { sky: string; ground: string; hills: string; far:
 // castles and windmills, then factories, then rockets. `haze` tints the sky
 // (factory smoke; the glow of the future).
 const ERA_BACKDROPS: { skyline: [IconId, number][]; haze?: string; planet?: boolean }[] = [
-  { skyline: [["hut", 14], ["mammoth", 36], ["hut", 58], ["sapling", 84]] },
-  { skyline: [["hut", 12], ["bricks", 30], ["well", 50], ["amphora", 66], ["hut", 86]] },
-  { skyline: [["column", 10], ["aqueduct", 28], ["insula", 50], ["baths", 68], ["column", 88]] },
-  { skyline: [["windmill", 10], ["castle", 32], ["church", 56], ["mill", 74], ["windmill", 90]] },
-  { skyline: [["factory", 12], ["mill", 30], ["factory", 48], ["factory", 70], ["cart", 88]], haze: "linear-gradient(rgba(96,84,72,0.45), rgba(96,84,72,0) 65%)" },
-  { skyline: [["rocket", 12], ["insula", 30], ["windmill", 48], ["insula", 64], ["rocket", 88]], haze: "linear-gradient(rgba(70,40,150,0.45), rgba(70,40,150,0) 70%)", planet: true },
+  { skyline: [["hut", 18], ["mammoth", 50], ["sapling", 82]] },
+  { skyline: [["bricks", 20], ["well", 50], ["hut", 80]] },
+  { skyline: [["aqueduct", 20], ["insula", 50], ["baths", 80]] },
+  { skyline: [["castle", 20], ["church", 50], ["windmill", 80]] },
+  { skyline: [["factory", 24], ["mill", 76]], haze: "linear-gradient(rgba(96,84,72,0.24), rgba(96,84,72,0) 65%)" },
+  { skyline: [["rocket", 26], ["insula", 74]], haze: "linear-gradient(rgba(43,116,134,0.28), rgba(43,116,134,0) 70%)", planet: true },
 ];
 
 // A short pixel scene of the moment an advancement was discovered. It plays
@@ -60,7 +60,7 @@ export function DiscoveryScene() {
 
   return (
     <div className="pointer-events-auto absolute inset-0 z-[45] flex items-center justify-center bg-black/55 p-3" data-testid="discovery-scene">
-      <div className="pixel-panel w-[min(94vw,600px)] p-3 md:p-4">
+      <div className="pixel-panel w-[min(94vw,760px)] p-3 md:p-4">
         <div className="font-pixel mb-2 flex items-center justify-between gap-2">
           <span className="text-lg font-bold md:text-xl">
             <span className="text-amber-700">{secret ? "Secret found: " : "Discovered: "}</span>
@@ -74,9 +74,9 @@ export function DiscoveryScene() {
         {/* The stage: sky, far hills, near hills, ground, people and the discovery. */}
         <button
           type="button"
-          aria-label="Next line"
+          aria-label={`Advance scene: ${node?.name ?? "discovery"}`}
           onClick={() => (done ? close() : setShown({ id, lines: lines + 1 }))}
-          className="scene-stage relative block aspect-[5/2] w-full overflow-hidden border-[3px] border-[#2b2119]"
+          className="scene-stage relative block aspect-[16/7] w-full overflow-hidden border-[3px] border-[#2b2119]"
           style={{ background: sky.sky }}
         >
           {/* The camera pushes in on the scene, like the fly-in at the start of a game. */}
@@ -105,17 +105,17 @@ export function DiscoveryScene() {
               <span className="absolute right-[8%] top-[8%]">
                 <PixelIcon name={scene.bg === "night" ? "moon" : "sun"} size={34} />
               </span>
-              <span className="absolute inset-x-[-5%] bottom-[28%] h-[30%] rounded-t-[50%]" style={{ background: sky.far }} />
+              <span className="scene-horizon absolute inset-x-[-5%] bottom-[28%] h-[30%] rounded-t-[50%]" style={{ background: sky.far }} />
               {outdoors && (
                 // The era's buildings, faded by distance, on the far hills.
-                <span className="absolute inset-x-0 bottom-[47%] h-[16%]" data-testid="scene-era" data-era={state.era}>
+                <span className="scene-horizon absolute inset-x-0 bottom-[45%] h-[18%]" data-testid="scene-era" data-era={state.era}>
                   {backdrop.skyline.map(([icon, x], i) => (
                     <span
                       key={i}
                       className="absolute bottom-0 -translate-x-1/2"
-                      style={{ left: `${x}%`, bottom: `${(i % 2) * 8}%`, opacity: scene.bg === "night" ? 0.45 : 0.75, filter: "saturate(0.55)" }}
+                      style={{ left: `${x}%`, bottom: `${(i % 2) * 8}%`, opacity: scene.bg === "night" ? 0.28 : 0.42, filter: "saturate(0.45)" }}
                     >
-                      <PixelIcon name={icon} size={36} />
+                      <PixelIcon name={icon} size={25} />
                     </span>
                   ))}
                 </span>
@@ -135,6 +135,7 @@ export function DiscoveryScene() {
               </span>
             )
           )}
+          <span className="scene-ground-shade pointer-events-none absolute inset-x-0 bottom-0 h-[38%]" />
 
           {/* What else is there: shown from its line, gone after its `until` line. */}
           {(scene.props ?? [])
@@ -142,11 +143,11 @@ export function DiscoveryScene() {
             .map((p, i) => (
               <span
                 key={`${p.icon}-${i}`}
-                className={(p.from ?? 0) > 0 ? "scene-pop absolute" : "absolute"}
+                className={(p.from ?? 0) > 0 ? "scene-prop scene-pop absolute" : "scene-prop absolute"}
                 style={{ left: `${p.x}%`, bottom: `${p.y ?? 18}%`, transform: "translateX(-50%)" }}
               >
                 <span className="block" style={p.flip ? { transform: "scaleX(-1)" } : undefined}>
-                  <PixelIcon name={p.icon} size={p.size ?? 52} />
+                  <PixelIcon name={p.icon} size={p.size ?? 40} />
                 </span>
               </span>
             ))}
@@ -174,21 +175,31 @@ export function DiscoveryScene() {
               className="absolute flex -translate-x-1/2 items-center justify-center"
               style={{ left: `${scene.itemX ?? 74}%`, bottom: scene.bg === "cave" ? "38%" : "20%" }}
             >
-              <span className="scene-rays absolute h-40 w-40 rounded-full" />
-              <span className="scene-pop relative block">
-                <PixelIcon name={scene.item} size={72} />
+              <span className="scene-rays absolute h-28 w-28 rounded-full" />
+              <span className="scene-reveal relative block">
+                <PixelIcon name={scene.item} size={80} />
               </span>
             </span>
           )}
+          <span key={`${id}-${lines}`} className="scene-beat-wash pointer-events-none absolute inset-0" aria-hidden="true" />
           </span>
         </button>
 
-        <div className="mt-3 min-h-[4.5rem] text-sm md:text-base" aria-live="polite">
+        <div className="mt-3 min-h-[5.5rem] text-sm md:text-base" aria-live="polite">
           {scene.lines.slice(0, lines).map((l, i) => (
             <p key={i} className={i === lines - 1 ? "scene-line" : "text-stone-500"}>
               {l}
             </p>
           ))}
+        </div>
+
+        <div className="mt-2 flex items-center gap-2" aria-label={`Scene beat ${lines} of ${scene.lines.length}`}>
+          <div className="flex flex-1 gap-1" aria-hidden="true">
+            {scene.lines.map((_, i) => (
+              <span key={i} className={`h-1 flex-1 ${i < lines ? "bg-amber-500" : "bg-stone-300"}`} />
+            ))}
+          </div>
+          <span className="font-num text-xs text-stone-500">{lines}/{scene.lines.length}</span>
         </div>
 
         <div className="mt-2 flex justify-end">

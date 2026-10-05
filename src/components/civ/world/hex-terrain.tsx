@@ -83,13 +83,14 @@ export function HexTerrain({
     if (!mesh) return;
     const dummy = new Object3D();
     const color = new Color();
-    // Ancient era: grass with two or more buildings next to it is a worn path.
+    // Paths become sparser in later eras so dense cities stay readable.
     const paths = new Set<number>();
     if (era >= 1) {
       const built = tiles.filter((t) => t.building);
+      const pathThreshold = era >= 5 ? 4 : era >= 4 ? 3 : 2;
       for (const t of tiles) {
         if (t.building || (t.terrain !== "grass" && t.terrain !== "steppe")) continue;
-        if (built.filter((b) => hexDistance(b, t) === 1).length >= 2) paths.add(t.id);
+        if (built.filter((b) => hexDistance(b, t) === 1).length >= pathThreshold) paths.add(t.id);
       }
     }
     for (const tile of tiles) {

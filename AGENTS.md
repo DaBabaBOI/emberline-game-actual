@@ -340,7 +340,8 @@ These were decided with the project owner. Do not change them without being aske
 - **Each era looks a little different** (subtle, no big UI): Ancient era =
   dyed-linen villager clothes, leather warriors, warmer sunlight, worn dirt paths
   on open ground between buildings, and a bronze trim on the top bar. New eras
-  should add their own touches.
+  should add their own touches. Path markings become sparser in the Industrial
+  era (3 neighboring buildings) and Future (4) to keep dense cities readable.
 - **Sparks** (`SPARKS`, `sparks()`): each lit campfire may spark onto a
   neighbouring tile: grass scorches; a Wooden House (the Stone Age home, id
   `hut`, log walls and bark roof since there's no thatch before farming) burns
@@ -595,8 +596,8 @@ These were decided with the project owner. Do not change them without being aske
   Flood, Earthquake, Landslide.
 - **Discovery scenes** (`DISCOVERIES` in content, `hud/discovery-scene.tsx`,
   `state.cutscene`): researching an advancement or finding a secret plays a
-  short pixel scene (sky, people walking in, the discovery appearing, three
-  lines of story). The clock waits until it's closed; it can be skipped or
+  short pixel scene (sky, people walking in, the discovery appearing, four
+  concise beats of story). The clock waits until it's closed; it can be skipped or
   sped up. Every new advancement needs a scene (lines in the tribe's voice,
   modest about history). Dev: pick one and press "Scene".
   The picture must match the words, line by line: whatever a line mentions is
