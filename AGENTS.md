@@ -207,6 +207,7 @@ These were decided with the project owner. Do not change them without being aske
 - **Tiredness** (`WORK`, `workload`/`updateFatigue`): jobs are 0.5 per producing building (2 for big ones), warriors count as half a worker. Tune with the bot (`full.js x 12`); fatigue should only build up when a town is badly overbuilt or over-armed, never in normal play.
 - **How to play** (`how-to-play.tsx`): keep it true to the game. When a control, meter or core system changes, update its section too.
 - **Project page screenshots** (`public/site/shots/`): real captures from the game (saved towns, HUD hidden), 1200×720 JPEG around 110 KB. Retake them if the look changes a lot; never use mock-ups.
+- **Multiplayer chat** (`mp-chat.tsx`, `chatLines`/`sendChat` in `lib/multiplayer.ts`): `chat` events to seat -1 (everyone). Text goes through `cleanChat` (140 characters, a few swear words masked); the server allows 20 events a minute. Typing must not trigger game shortcuts (the input stops key events).
 - **No font ligatures** (`globals.css` and `public/site/style.css`): Pixelify joins "fi" into one glyph, so "fire" read as "Are". Keep `font-variant-ligatures: none` on everything.
 - **Phones get the compact HUD** (`useCompact()`: narrower than 768 px, or
   shorter than 500 px). The meters are a strip under the top bar

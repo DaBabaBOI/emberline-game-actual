@@ -5,14 +5,20 @@ import { ERAS, MP } from "@/game/content";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { cn } from "@/lib/utils";
+import { ChatBox } from "./mp-chat";
 import {
   BOT_NAMES,
+  CHAT,
   botActions,
   botScore,
+  chatLines,
+  cleanChat,
   getEvents,
   getSeats,
   reportScore,
+  sendChat,
   sendEvent,
+  type ChatLine,
   type Room,
   type Seat,
   type Session,
@@ -42,6 +48,18 @@ export function MultiplayerPanel({ match }: { match: Match }) {
   const [picked, setPicked] = useState<number | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [raidSize, setRaidSize] = useState(3);
+  // The chat: the messages, whether it's open, how many came in while it was
+  // closed, and the newest one shown for a few seconds under the menu.
+  const [chat, setChat] = useState<ChatLine[]>([]);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
+  const [peek, setPeek] = useState<ChatLine | null>(null);
+  const chatOpenRef = useRef(false);
+  useEffect(() => {
+    chatOpenRef.current = chatOpen;
+  }, [chatOpen]);
+  // Messages from the waiting room are history, not news.
+  const firstSync = useRef(true);
   const lastEvent = useRef(0);
   const botDone = useRef<number | null>(null);
   const prevRaid = useRef(state.raid);
@@ -75,6 +93,16 @@ export function MultiplayerPanel({ match }: { match: Match }) {
       const [rows, events] = await Promise.all([getSeats(room.code), getEvents(room.code, lastEvent.current)]);
       if (!alive) return;
       if (rows.length) setSeats(rows);
+      const incoming = chatLines(events, session.seat, (n) => rows.find((r) => r.seat === n)?.name ?? BOT_NAMES[n], firstSync.current);
+      if (incoming.length) {
+        setChat((c) => [...c, ...incoming].slice(-CHAT.keep));
+        const news = incoming.filter((l) => !l.mine);
+        if (!firstSync.current && !chatOpenRef.current && news.length) {
+          setUnread((u) => u + news.length);
+          setPeek(news[news.length - 1]);
+        }
+      }
+      firstSync.current = false;
       for (const e of events) {
         lastEvent.current = Math.max(lastEvent.current, e.id);
         if (e.to_seat !== session.seat || e.from_seat === session.seat) continue;
@@ -135,6 +163,20 @@ export function MultiplayerPanel({ match }: { match: Match }) {
   const left = Math.max(0, Math.round((end - now) / 1000));
   const clock = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
 
+  // Hide the preview of a new message after a few seconds.
+  useEffect(() => {
+    if (!peek) return;
+    const id = setTimeout(() => setPeek(null), 6000);
+    return () => clearTimeout(id);
+  }, [peek]);
+
+  const say = async (text: string) => {
+    const r = await sendChat(session, text);
+    if (r.error) return r.error;
+    setChat((c) => [...c, { key: `me${Date.now()}`, from: session.name, text: cleanChat(text), mine: true }].slice(-CHAT.keep));
+    return null;
+  };
+
   const flash = (text: string) => {
     setNote(text);
     setTimeout(() => setNote(null), 3000);
@@ -180,6 +222,39 @@ export function MultiplayerPanel({ match }: { match: Match }) {
             {clock}
           </span>
         </button>
+        <div className="border-t-2 border-white/10 px-2 py-1">
+          <button
+            type="button"
+            onClick={() => {
+              setChatOpen(!chatOpen);
+              setUnread(0);
+              setPeek(null);
+            }}
+            className="flex w-full items-center justify-between gap-2 text-left"
+            aria-expanded={chatOpen}
+            data-testid="mp-chat-toggle"
+          >
+            <span className="flex items-center gap-1 font-semibold">
+              <PixelIcon name="speaker" size={14} />
+              Chat <span className="text-white/60">{chatOpen ? "▴" : "▾"}</span>
+            </span>
+            {unread > 0 && !chatOpen && (
+              <span className="bg-amber-400 px-1 text-[10px] font-bold text-[#2b2119]" data-testid="mp-chat-unread">
+                {unread}
+              </span>
+            )}
+          </button>
+          {peek && !chatOpen && (
+            <span className="mt-0.5 block truncate text-[10px] text-white/80" data-testid="mp-chat-peek">
+              <span className="text-sky-200">{peek.from}:</span> {peek.text}
+            </span>
+          )}
+          {chatOpen && (
+            <div className="mt-1">
+              <ChatBox dark lines={chat} onSend={say} />
+            </div>
+          )}
+        </div>
         {open && (
           <div className="flex flex-col border-t-2 border-white/10 px-2 py-1">
             {rows.map((r, i) => (
