@@ -246,6 +246,8 @@ export interface ChatLine {
   from: string;
   text: string;
   mine: boolean;
+  // News from the game (a battle's result), not something a player typed.
+  system?: boolean;
 }
 
 // Chat messages in a batch of events: to everyone (seat -1) or to me. My own
@@ -262,4 +264,69 @@ export async function sendChat(s: Session, text: string) {
   const clean = cleanChat(text);
   if (!clean) return { error: "Type a message first." };
   return sendEvent(s, -1, "chat", { text: clean });
+}
+
+// ---- Battle news -------------------------------------------------------------
+// When a raid on a player's town comes to blows, their browser tells the room
+// ("start"), then how it ended ("end"), so the attacker can watch, anyone else
+// can choose to, and everyone hears the result. They travel as chat events with
+// no text (the chat leaves those out), so the database needs nothing new.
+
+export interface Fight {
+  id: string;
+  att: string;
+  def: string;
+  attSeat: number;
+  defSeat: number;
+  raiders: number;
+  warriors: number;
+  // Set when it's over: the defenders held, or they never fought (hid or paid).
+  held?: boolean;
+  avoided?: boolean;
+}
+
+export function sendFight(s: Session, phase: "start" | "end", f: Fight) {
+  return sendEvent(s, -1, "chat", {
+    battle: phase,
+    id: f.id,
+    att: f.att.slice(0, 40),
+    def: f.def.slice(0, 40),
+    attSeat: f.attSeat,
+    defSeat: f.defSeat,
+    raiders: Math.round(f.raiders),
+    warriors: Math.round(f.warriors),
+    held: f.held ? 1 : 0,
+    avoided: f.avoided ? 1 : 0,
+  });
+}
+
+// The battle news in a batch of events (including my own: a raid I made on a bot).
+export function fightNews(events: MpEvent[]): { phase: "start" | "end"; fight: Fight }[] {
+  return events
+    .filter((e) => e.kind === "chat" && (e.payload.battle === "start" || e.payload.battle === "end"))
+    .map((e) => {
+      const p = e.payload;
+      return {
+        phase: p.battle as "start" | "end",
+        fight: {
+          id: String(p.id),
+          att: String(p.att),
+          def: String(p.def),
+          attSeat: Number(p.attSeat),
+          defSeat: Number(p.defSeat),
+          raiders: Number(p.raiders) || 0,
+          warriors: Number(p.warriors) || 0,
+          held: p.battle === "end" ? Number(p.held) === 1 : undefined,
+          avoided: Number(p.avoided) === 1,
+        },
+      };
+    });
+}
+
+// One line for the result, for the chat and the viewer.
+export function fightResult(f: Fight, mySeat: number) {
+  const att = f.attSeat === mySeat ? "Your" : `${f.att}'s`;
+  const def = f.defSeat === mySeat ? "you" : f.def;
+  if (f.avoided) return `${f.defSeat === mySeat ? "You" : f.def} didn't fight ${att === "Your" ? "your" : att} raiders (hid or paid them off).`;
+  return f.held ? `${f.defSeat === mySeat ? "You" : f.def} drove off ${att === "Your" ? "your" : att} raiders.` : `${att} raiders beat ${def}.`;
 }

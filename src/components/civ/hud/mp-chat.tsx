@@ -32,8 +32,12 @@ export function ChatBox({ lines, onSend, dark = false }: { lines: ChatLine[]; on
       <div ref={list} className={cn("flex max-h-36 min-h-12 flex-col gap-0.5 overflow-y-auto px-1 py-0.5 text-[11px]", dark ? "bg-black/25" : "border-2 border-stone-300 bg-white")}>
         {lines.length === 0 && <span className={dark ? "text-white/50" : "text-stone-500"}>No messages yet. Say hi!</span>}
         {lines.map((l) => (
-          <span key={l.key} className="break-words leading-snug" data-testid="mp-chat-line">
-            <span className={cn("font-semibold", l.mine ? (dark ? "text-amber-300" : "text-emerald-700") : dark ? "text-sky-200" : "text-indigo-700")}>{l.mine ? "You" : l.from}:</span>{" "}
+          <span key={l.key} className={cn("break-words leading-snug", l.system && (dark ? "italic text-amber-200" : "italic text-amber-800"))} data-testid="mp-chat-line">
+            {!l.system && (
+              <>
+                <span className={cn("font-semibold", l.mine ? (dark ? "text-amber-300" : "text-emerald-700") : dark ? "text-sky-200" : "text-indigo-700")}>{l.mine ? "You" : l.from}:</span>{" "}
+              </>
+            )}
             {l.text}
           </span>
         ))}

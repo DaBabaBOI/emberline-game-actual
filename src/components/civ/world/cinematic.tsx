@@ -74,6 +74,19 @@ export function CinematicCamera({ home, battleTick }: { home: Tile; battleTick: 
         const look = centre.clone().lerp(r.fromTarget, e);
         camera.position.set(look.x + Math.sin(angle) * dist, height, look.z + Math.cos(angle) * dist);
         camera.lookAt(look);
+      } else if (r.shot.kind === "battle" && r.shot.at) {
+        // In close over the fight, low, turning slowly round it. It lasts until
+        // the fight is over (the game ends the shot) or the player leaves it.
+        const at = r.shot.at;
+        const look = new Vector3(at.x, (at.y ?? 0.4) + 0.3, at.z);
+        const t = clock.elapsedTime - r.start;
+        const zoom = ease(Math.min(1, t / 1.6));
+        const angle = Math.atan2(r.fromPos.x - r.fromTarget.x, r.fromPos.z - r.fromTarget.z) + t * 0.12;
+        const dist = 22 + (6.5 - 22) * zoom;
+        const height = r.fromPos.y + (4.2 - r.fromPos.y) * zoom;
+        const aim = r.fromTarget.clone().lerp(look, zoom);
+        camera.position.set(aim.x + Math.sin(angle) * dist, height, aim.z + Math.cos(angle) * dist);
+        camera.lookAt(aim);
       } else {
         // A slow, low turn round the village.
         const angle = k * Math.PI * 1.2;

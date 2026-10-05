@@ -7,6 +7,7 @@ import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { cn } from "@/lib/utils";
 import { ChatBox } from "./mp-chat";
+import { BattleViewer } from "./battle-viewer";
 import {
   BOT_NAMES,
   CHAT,
@@ -16,12 +17,16 @@ import {
   botScore,
   chatLines,
   cleanChat,
+  fightNews,
+  fightResult,
   getEvents,
   getSeats,
   reportScore,
   sendChat,
   sendEvent,
+  sendFight,
   type ChatLine,
+  type Fight,
   type Room,
   type Seat,
   type Session,
@@ -63,6 +68,21 @@ export function MultiplayerPanel({ match }: { match: Match }) {
   }, [chatOpen]);
   // Messages from the waiting room are history, not news.
   const firstSync = useRef(true);
+  // Raids that came to blows: the one being watched, one offered to watch, and
+  // all we've heard of (to match each result with its start).
+  const [watch, setWatch] = useState<Fight | null>(null);
+  const [offer, setOffer] = useState<Fight | null>(null);
+  const fights = useRef(new Map<string, Fight>());
+  const raidSeq = useRef(0);
+  // A battle's result, as news in the chat (with the count and preview when closed).
+  const announce = (text: string, key: string) => {
+    const line: ChatLine = { key, from: "", text, mine: false, system: true };
+    setChat((c) => [...c, line].slice(-CHAT.keep));
+    if (!chatOpenRef.current) {
+      setUnread((u) => u + 1);
+      setPeek(line);
+    }
+  };
   const lastEvent = useRef(0);
   const botDone = useRef<number | null>(null);
   const prevRaid = useRef(state.raid);
@@ -105,6 +125,22 @@ export function MultiplayerPanel({ match }: { match: Match }) {
           setPeek(news[news.length - 1]);
         }
       }
+      // Battle news from the others (old news from before I joined is skipped).
+      if (!firstSync.current)
+        for (const { phase, fight } of fightNews(events.filter((e) => e.from_seat !== session.seat))) {
+          if (phase === "start") {
+            fights.current.set(fight.id, fight);
+            // The attacker watches straight away; anyone not in it may choose to.
+            if (fight.attSeat === session.seat) setWatch(fight);
+            else if (fight.defSeat !== session.seat) setOffer(fight);
+          } else {
+            const done = { ...(fights.current.get(fight.id) ?? fight), held: fight.held, avoided: fight.avoided };
+            fights.current.set(fight.id, done);
+            setWatch((w) => (w?.id === fight.id ? done : w));
+            setOffer((o) => (o?.id === fight.id ? null : o));
+            announce(fightResult(done, session.seat), `f${fight.id}`);
+          }
+        }
       firstSync.current = false;
       for (const e of events) {
         lastEvent.current = Math.max(lastEvent.current, e.id);
@@ -137,15 +173,43 @@ export function MultiplayerPanel({ match }: { match: Match }) {
     }
   }, [minutes, plan, session.seat, room.seed, dispatch]);
 
-  // A rival's raid on us is over: if they won, their warriors take loot home.
+  // A rival's raid on us comes to blows: tell the room, so they can watch.
+  const told = useRef<string | null>(null);
+  const fightOf = (r: NonNullable<typeof state.raid>): Fight => ({
+    id: `${session.seat}-${r.startTick}`,
+    att: r.rival ?? "Raiders",
+    def: session.name,
+    attSeat: r.rivalSeat ?? -1,
+    defSeat: session.seat,
+    raiders: Math.round(r.strength / MP.warriorStrength),
+    warriors: state.soldiers,
+  });
+  useEffect(() => {
+    const r = state.raid;
+    if (!r || r.rivalSeat === undefined || r.fightStart === undefined) return;
+    const f = fightOf(r);
+    if (told.current === f.id) return;
+    told.current = f.id;
+    fights.current.set(f.id, f);
+    sendFight(session, "start", f);
+  });
+
+  // A rival's raid on us is over: tell the room how it ended, and if they won,
+  // their warriors take loot home.
   useEffect(() => {
     const before = prevRaid.current;
     prevRaid.current = state.raid;
     if (before?.rivalSeat === undefined || state.raid) return;
+    const fought = before.fightStart !== undefined;
+    const f = { ...(fights.current.get(`${session.seat}-${before.startTick}`) ?? fightOf(before)), held: fought ? !!state.battle?.won : true, avoided: !fought };
+    sendFight(session, "end", f);
+    announce(fightResult(f, session.seat), `f${f.id}`);
     if (state.battle && !state.battle.won && humanSeats.includes(before.rivalSeat)) {
       const scale = 1 + state.era * 0.5;
       sendEvent(session, before.rivalSeat, "loot", { food: Math.round(MP.loot.food * scale), currency: Math.round(MP.loot.currency * scale) });
     }
+    // fightOf and announce only read refs and setters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.raid, state.battle, state.era, session, humanSeats]);
 
   // Time's up: the game stops.
@@ -209,6 +273,11 @@ export function MultiplayerPanel({ match }: { match: Match }) {
     } else {
       // Bots defend like an average town of their era.
       const won = n * MP.warriorStrength > 4 + to.era * 4;
+      // Show it, and tell the room.
+      const f: Fight = { id: `${session.seat}-bot-${now}-${raidSeq.current++}`, att: session.name, def: to.name, attSeat: session.seat, defSeat: to.seat, raiders: n, warriors: Math.round((4 + to.era * 4) / MP.warriorStrength), held: !won };
+      setWatch(f);
+      sendFight(session, "start", f).then(() => sendFight(session, "end", f));
+      setTimeout(() => announce(fightResult(f, session.seat), `f${f.id}`), 6000);
       if (won) {
         const scale = 1 + state.era * 0.5;
         dispatch({ type: "mpLoot", resources: { food: Math.round(MP.loot.food * scale), currency: Math.round(MP.loot.currency * scale) }, from: to.name });
@@ -318,6 +387,31 @@ export function MultiplayerPanel({ match }: { match: Match }) {
           </div>
         )}
       </div>
+      {offer && !watch && (
+        <div className="pixel-panel-dark font-pixel pointer-events-auto mt-1 flex w-56 items-center justify-between gap-1 px-2 py-1 text-[11px] text-white" data-testid="fight-offer">
+          <span className="flex items-center gap-1 truncate">
+            <PixelIcon name="sword" size={14} />
+            {offer.att} raids {offer.def}
+          </span>
+          <span className="flex shrink-0 gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                setWatch(offer);
+                setOffer(null);
+              }}
+              className="pixel-btn bg-amber-400 px-1.5 text-[10px] font-semibold text-[#2b2119]"
+              data-testid="fight-watch"
+            >
+              Watch
+            </button>
+            <button type="button" onClick={() => setOffer(null)} className="px-1 text-white/70" aria-label="Don't watch">
+              ×
+            </button>
+          </span>
+        </div>
+      )}
+      {watch && <BattleViewer key={watch.id} fight={watch} mySeat={session.seat} onClose={() => setWatch(null)} />}
       {over && <MatchResult rows={rows} mode={room.mode} target={COOP_TARGET[room.speed]} team={team} />}
     </>
   );
