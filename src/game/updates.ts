@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Cutscenes move like the opening fly-in: a new era sweeps down from high over the sea to your town, and discovery scenes open with the camera moving in.",
       "Tired people sweat: when your town is overworked, drops of sweat fly off your villagers' brows, more of them the more tired the town is.",
       "The project page moves: pixel clouds drift, embers rise, the title comes in line by line, the Play button glows, and the cards slide in as you scroll. It all stays still if your device asks for less motion.",
       "Watch the fights: when your warriors meet raiders, the camera goes in close over the battle (click to leave). In multiplayer, the raider gets a view of the fight, anyone else can choose to watch, and everyone hears how it ended.",

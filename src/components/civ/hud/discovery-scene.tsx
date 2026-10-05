@@ -79,6 +79,8 @@ export function DiscoveryScene() {
           className="scene-stage relative block aspect-[5/2] w-full overflow-hidden border-[3px] border-[#2b2119]"
           style={{ background: sky.sky }}
         >
+          {/* The camera pushes in on the scene, like the fly-in at the start of a game. */}
+          <span key={id} className="scene-camera absolute inset-0 block">
           {outdoors && backdrop.haze && <span className="absolute inset-0" style={{ background: backdrop.haze }} />}
           {outdoors && backdrop.planet && (
             // A ringed planet low in the sky.
@@ -178,6 +180,7 @@ export function DiscoveryScene() {
               </span>
             </span>
           )}
+          </span>
         </button>
 
         <div className="mt-3 min-h-[4.5rem] text-sm md:text-base" aria-live="polite">

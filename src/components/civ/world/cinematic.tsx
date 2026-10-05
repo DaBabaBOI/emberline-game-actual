@@ -61,9 +61,10 @@ export function CinematicCamera({ home, battleTick }: { home: Tile; battleTick: 
     } else if (r) {
       const k = Math.min(1, (clock.elapsedTime - r.start) / r.shot.seconds);
       const centre = new Vector3(home.x, 0.6, home.z);
-      if (r.shot.kind === "intro") {
-        // From high over the sea, sweeping round and down to the village.
-        // It ends exactly at the starting view, so there is no jump.
+      if (r.shot.kind === "intro" || r.shot.kind === "era") {
+        // From high over the sea, sweeping round and down to the village (the
+        // fly-in at the start, and again for each new era). It ends exactly at
+        // the player's view, so there is no jump.
         const e = ease(k);
         const endX = r.fromPos.x - r.fromTarget.x;
         const endZ = r.fromPos.z - r.fromTarget.z;
