@@ -1017,28 +1017,39 @@ export function WatermillModel({ opacity }: ModelProps) {
   );
 }
 
-// A tall block of flats: three storeys of windows under a red tile roof.
+// A compact row house: three storeys, framed windows and a proper gabled roof.
 export function TownHouseModel({ opacity }: ModelProps) {
   return (
     <group>
       <Part color="#e3cfa4" opacity={opacity} position={[0, 0.34, 0]}>
         <boxGeometry args={[0.66, 0.68, 0.5]} />
       </Part>
-      <Part color={ROOF_TILE} opacity={opacity} position={[0, 0.78, 0]} rotation={[0, Math.PI / 4, 0]} scale={[1, 1, 0.76]}>
-        <coneGeometry args={[0.5, 0.2, 4]} />
+      <Part color={ROOF_TILE} opacity={opacity} position={[-0.11, 0.78, 0]} rotation={[0, 0, 0.45]}>
+        <boxGeometry args={[0.42, 0.045, 0.58]} />
+      </Part>
+      <Part color="#9e4635" opacity={opacity} position={[0.11, 0.78, 0]} rotation={[0, 0, -0.45]}>
+        <boxGeometry args={[0.42, 0.045, 0.58]} />
+      </Part>
+      <Part color="#78372e" opacity={opacity} position={[0, 0.875, 0]}>
+        <boxGeometry args={[0.055, 0.045, 0.6]} />
       </Part>
       {[0.16, 0.36, 0.56].flatMap((y) =>
         [-0.2, 0, 0.2].map((x) => (
-          <Part key={`${x}${y}`} color="#4a3526" opacity={opacity} position={[x, y, 0.251]}>
-            <boxGeometry args={[0.08, 0.1, 0.01]} />
-          </Part>
+          <group key={`${x}${y}`} position={[x, y, 0.251]}>
+            <Part color="#d5b77e" opacity={opacity} position={[0, 0, -0.006]}>
+              <boxGeometry args={[0.105, 0.125, 0.018]} />
+            </Part>
+            <Part color="#496a78" opacity={opacity}>
+              <boxGeometry args={[0.075, 0.095, 0.02]} />
+            </Part>
+          </group>
         )),
       )}
       <Part color="#6b4a2b" opacity={opacity} position={[0, 0.07, 0.252]}>
         <boxGeometry args={[0.12, 0.14, 0.01]} />
       </Part>
-      <Part color="#d9c294" opacity={opacity} position={[0.33, 0.24, -0.1]}>
-        <boxGeometry args={[0.2, 0.48, 0.3]} />
+      <Part color="#d9c294" opacity={opacity} position={[0.32, 0.34, 0]}>
+        <boxGeometry args={[0.025, 0.68, 0.5]} />
       </Part>
     </group>
   );

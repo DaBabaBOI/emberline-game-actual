@@ -116,7 +116,7 @@ export function AccessibilitySettings() {
   return (
     // Hidden while a game is on screen (see globals.css): there the same options
     // are in the game's Menu, so this button doesn't cover the game's controls.
-    <div className="accessibility-floating fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">
+    <div className="accessibility-floating fixed right-4 top-4 z-50 flex flex-col items-end gap-2">
       <button
         type="button"
         aria-expanded={open}
@@ -128,7 +128,7 @@ export function AccessibilitySettings() {
         }}
         className="pixel-btn font-pixel bg-[#f8e7bd] px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-[#f5d98b]"
       >
-        {open ? "Close" : "Settings"}
+        {open ? "Close" : "Accessibility"}
       </button>
 
       {open && (

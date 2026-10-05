@@ -8,6 +8,7 @@ Thanks for helping improve Emberline.
 - Keep the project aligned with the game vision: sustainable civilization
   building, bright low-poly aesthetics, and strong trade-off mechanics.
 - Prefer small, focused changes that are easy to review.
+- Create another branch, not in main
 
 ## Development setup
 

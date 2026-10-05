@@ -7,6 +7,12 @@ export interface Update {
 
 export const UPDATES: Update[] = [
   {
+    date: "2026-10-05",
+    items: [
+      "Accessibility has its own top-right box on the project page and in the app, including a saved master sound-volume slider. Town Houses now have a gabled roof and clearer window trim; Industrial Apartment Blocks have a quieter steel-and-glass facade.",
+    ],
+  },
+  {
     date: "2026-10-01",
     items: [
       "Buildings connect: aqueducts can join up in a chain to carry river water inland (each linked one waters the fields near it, and a chain brings water for more people), and some buildings work better side by side, joined by a short path: a farm by a granary, a market by homes, schools by libraries, a factory by a station and more. The placement card says what a spot connects to.",

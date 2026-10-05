@@ -59,6 +59,49 @@
             <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
           </span>
         </div>
+        <div class="settings">
+          <button
+            type="button"
+            class="pixel-btn settings-toggle"
+            aria-expanded="false"
+            aria-controls="settings-panel"
+            aria-label="Open accessibility settings"
+          >
+            Accessibility
+          </button>
+          <div class="pixel-panel settings-panel" id="settings-panel" role="dialog" aria-label="Accessibility settings" hidden>
+            <div class="settings-head">
+              <div class="settings-title">Accessibility</div>
+              <button type="button" class="pixel-btn settings-close" aria-label="Close accessibility settings">X</button>
+            </div>
+            <div class="settings-options">
+              <label class="settings-volume">
+                <span>Sound volume <output class="volume-value" for="master-volume">100%</output></span>
+                <input id="master-volume" type="range" name="masterVolume" min="0" max="100" value="100" aria-label="Overall sound volume" />
+              </label>
+              <label>
+                <span>Dark mode</span>
+                <input type="checkbox" name="dark" aria-label="Toggle dark mode" />
+              </label>
+              <div>
+                <div class="font-label">Font</div>
+                <div class="font-choices">
+                  <button type="button" class="pixel-btn" value="pixel">Pixel</button>
+                  <button type="button" class="pixel-btn" value="sans">Sans</button>
+                  <button type="button" class="pixel-btn" value="serif">Serif</button>
+                </div>
+              </div>
+              <label>
+                <span>High contrast</span>
+                <input type="checkbox" name="highContrast" aria-label="Toggle high contrast mode" />
+              </label>
+              <label>
+                <span>Larger text</span>
+                <input type="checkbox" name="largeText" aria-label="Toggle larger text" />
+              </label>
+            </div>
+          </div>
+        </div>
         <div class="hero-inner">
           <p class="eyebrow">SHISTECH · Hacktrack · SDG 11</p>
           <h1>
@@ -259,47 +302,5 @@
       </footer>
     </main>
 
-    <!-- Accessibility settings, in the bottom-right corner: the same options as
-         the Menu inside the game, saved in the same place, so a choice made
-         here carries into the game. site/site.js makes them work. -->
-    <div class="settings">
-      <button
-        type="button"
-        class="pixel-btn settings-toggle"
-        aria-expanded="false"
-        aria-controls="settings-panel"
-        aria-label="Open accessibility settings"
-      >
-        Settings
-      </button>
-      <div class="pixel-panel settings-panel" id="settings-panel" role="dialog" aria-label="Accessibility settings" hidden>
-        <div class="settings-head">
-          <div class="settings-title">Accessibility</div>
-          <button type="button" class="pixel-btn settings-close" aria-label="Close accessibility settings">X</button>
-        </div>
-        <div class="settings-options">
-          <label>
-            <span>Dark mode</span>
-            <input type="checkbox" name="dark" aria-label="Toggle dark mode" />
-          </label>
-          <div>
-            <div class="font-label">Font</div>
-            <div class="font-choices">
-              <button type="button" class="pixel-btn" value="pixel">Pixel</button>
-              <button type="button" class="pixel-btn" value="sans">Sans</button>
-              <button type="button" class="pixel-btn" value="serif">Serif</button>
-            </div>
-          </div>
-          <label>
-            <span>High contrast</span>
-            <input type="checkbox" name="highContrast" aria-label="Toggle high contrast mode" />
-          </label>
-          <label>
-            <span>Larger text</span>
-            <input type="checkbox" name="largeText" aria-label="Toggle larger text" />
-          </label>
-        </div>
-      </div>
-    </div>
   </body>
 </html>
