@@ -156,7 +156,34 @@ function setUpUpdates() {
   bar.hidden = false;
 }
 
+// Cards slide up as they scroll into view (style.css, section 9). Marked here,
+// so without the script nothing is ever hidden.
+document.documentElement.classList.add("js");
+
+function setUpReveal() {
+  const items = document.querySelectorAll(".tradeoff, .card, .sdg, .feature, .shot, .block h2, .block .lead");
+  if (!("IntersectionObserver" in window)) return;
+  const seen = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        entry.target.classList.add("is-visible");
+        seen.unobserve(entry.target);
+      }
+    },
+    { rootMargin: "0px 0px -8% 0px" },
+  );
+  items.forEach((el) => {
+    // Cards in the same group come in one after another.
+    const siblings = el.parentElement ? [...el.parentElement.children] : [];
+    el.style.setProperty("--i", String(Math.max(0, siblings.indexOf(el)) % 6));
+    el.classList.add("reveal");
+    seen.observe(el);
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   setUpSettings();
   setUpUpdates();
+  setUpReveal();
 });
