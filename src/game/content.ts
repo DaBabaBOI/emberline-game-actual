@@ -2195,8 +2195,11 @@ export const TICK_SECONDS = 1.5;
 
 // First-time mode: the clock runs `slowFactor` times slower for the first
 // `slowTicks` ticks (about 5 minutes of real time), and events and raids come
-// `gapFactor` times further apart until tick `calmUntil` (about 15 minutes).
-export const GENTLE = { slowTicks: 100, slowFactor: 2, gapFactor: 1.5, calmUntil: 600 };
+// `gapFactor` times further apart until tick `calmUntil` (about 30 minutes).
+// In the Stone Age big moments are `quietFactor` times further apart, lessons
+// `lessonFactor` times, small moments `momentFactor` times, and there are no
+// raids or natural disasters at all.
+export const GENTLE = { slowTicks: 100, slowFactor: 2, gapFactor: 2.5, calmUntil: 1200, quietFactor: 3, lessonFactor: 2, momentFactor: 2 };
 
 // A campfire burns this many ticks on one load of wood, then goes out until
 // the player clicks it to relight it (costs RELIGHT_WOOD). Firekeeping: ×1.5.

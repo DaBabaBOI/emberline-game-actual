@@ -3413,14 +3413,20 @@ function knowledgeReady(state: GameState): GameState {
 
 // One big moment at a time: nothing new starts within QUIET_GAP of the last.
 export function quietEnough(state: GameState): boolean {
-  return state.tick - (state.lastBigTick ?? -Infinity) >= QUIET_GAP;
+  return state.tick - (state.lastBigTick ?? -Infinity) >= QUIET_GAP * (firstStoneAge(state) ? GENTLE.quietFactor : 1);
+}
+
+// First-time mode, still in the Stone Age: the calmest stretch of all.
+export function firstStoneAge(state: GameState) {
+  return state.difficulty === "first" && state.era === 0;
 }
 
 // Show the next elder lesson whose moment has come: one at a time, spaced out,
 // never during the tutorial or an event.
 export function lessonDue(state: GameState): GameState {
   if (state.tutorialStep < TUTORIAL.length || state.lesson || state.event || state.phase !== "playing") return state;
-  if (state.tick - (state.lessonTick ?? -LESSON_GAP) < LESSON_GAP) return state;
+  const lessonGap = LESSON_GAP * (firstStoneAge(state) ? GENTLE.lessonFactor : 1);
+  if (state.tick - (state.lessonTick ?? -lessonGap) < lessonGap) return state;
   if (!quietEnough(state)) return state;
   const seen = state.lessonsSeen ?? [];
   const next = LESSONS.find((l) => !seen.includes(l.id) && lessonReady(l.id, state));
@@ -3945,7 +3951,7 @@ export function smallMoment(state: GameState, force?: string): GameState {
   const last = state.lastMoment;
   const lucky = mulberry32(state.seed + state.tick * 13)();
   const options = MOMENTS.filter((m) => (force ? m.id === force : m.id !== last && (!m.rare || lucky < m.rare)) && m.when(state));
-  const next = state.tick + SMALL_MOMENTS.base + Math.floor(rand() * SMALL_MOMENTS.spread);
+  const next = state.tick + Math.round((SMALL_MOMENTS.base + Math.floor(rand() * SMALL_MOMENTS.spread)) * (firstStoneAge(state) ? GENTLE.momentFactor : 1));
   if (!options.length) return { ...state, nextMomentTick: next };
   const moment = options[Math.floor(rand() * options.length)];
   // Where it happens is worked out before it happens (a gust picks a lit fire).
@@ -4286,7 +4292,7 @@ function updateDisasters(state: GameState): GameState {
   const rand = mulberry32(state.seed + state.tick * 71);
   if (!d) {
     if (state.nextDisasterTick === undefined) return { ...state, nextDisasterTick: state.tick + DISASTERS.firstAfter };
-    if (state.tick < state.nextDisasterTick || state.raid || state.legion || state.drought || state.climate || state.event || !quietEnough(state) || isCalm(state))
+    if (state.tick < state.nextDisasterTick || state.raid || state.legion || state.drought || state.climate || state.event || !quietEnough(state) || isCalm(state) || firstStoneAge(state))
       return state;
     const weights: [DisasterKind, number][] = [
       ["storm", DISASTERS.kinds.storm.weight],
@@ -4770,7 +4776,7 @@ function updateRaids(state: GameState): GameState {
     };
   }
 
-  if (!raid && state.tick >= state.nextRaidTick && quietEnough(state)) {
+  if (!raid && state.tick >= state.nextRaidTick && quietEnough(state) && !firstStoneAge(state)) {
     const rand = mulberry32(state.seed + state.tick * 31);
     // In the Middle Ages, only a hostile kingdom sends an army; at peace, nobody
     // comes. A kingdom we raided comes for revenge, hostile or not by now.
