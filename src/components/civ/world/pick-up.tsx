@@ -368,6 +368,7 @@ function land(w: Walker, outcome: DropOutcome, tile: Tile | null, tiles: Tile[],
         Object.assign(w, { x: spot.x, z: spot.z, tx: spot.x, tz: spot.z });
       }
       if (tile) w.y = tile.height;
+      w.goWork = null;
       w.moving = false;
       w.sitting = false;
       w.sitAt = null;

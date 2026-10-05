@@ -39,6 +39,8 @@ export interface Walker extends Agent {
   // Helping at a building: where, and until when (performance.now ms). They
   // work a spot, then move to another on the same tile.
   workAt?: Tile | null;
+  // On the way to a workplace, to start work there on arrival (by their own choice).
+  goWork?: Tile | null;
   workUntil?: number;
   // What they face while working there (a tree, or the building).
   faceAt?: { x: number; z: number } | null;
@@ -92,8 +94,14 @@ const FIRE_SEAT = 0.5 * BUILDING_SCALE;
 // Model angles of the log seats (must match CampfireModel in building-models.tsx).
 const FIRE_SEATS = [0, 1.3, 2.6, 3.9, 5.2];
 
-function retarget(w: Walker, ground: Ground, pickTarget: () => Tile) {
+// How often a grown-up who walks to a workplace gets to work there, and for how long (s).
+const SELF_WORK = { go: 0.35, chance: 0.85, min: 10, extra: 10 };
+
+function retarget(w: Walker, ground: Ground, pickTarget: () => Tile, canWork = false) {
   const target = pickTarget();
+  // A workplace: often they go there to work (see stepWalker).
+  w.goWork =
+    canWork && !w.child && w.tunic !== SICK_TUNIC && target.building && WORK_TOOLS[target.building] && Math.random() < SELF_WORK.chance ? target : null;
   if (target.building === "campfire") {
     // Sit on one of the log seats, picking one on the near side so the walk
     // there doesn't cross the fire. The model is turned (tile.id % 6) × 60°,
@@ -127,7 +135,7 @@ function retarget(w: Walker, ground: Ground, pickTarget: () => Tile) {
 
 // Walks toward the target, standing on whatever tile is underfoot. If the next
 // step would go into a mountain, the sea or a building, pick somewhere else.
-function stepWalker(w: Walker, dt: number, ground: Ground, pickTarget: () => Tile) {
+function stepWalker(w: Walker, dt: number, ground: Ground, pickTarget: () => Tile, canWork = false) {
   // Paused: everyone stands still.
   if (dt <= 0) {
     w.moving = false;
@@ -138,6 +146,17 @@ function stepWalker(w: Walker, dt: number, ground: Ground, pickTarget: () => Til
   const dist = Math.hypot(dx, dz);
   if (dist < 0.05) {
     w.moving = false;
+    // Arrived at a workplace they chose: get to work there for a while.
+    if (w.goWork) {
+      const tile = w.goWork;
+      w.goWork = null;
+      w.working = true;
+      w.workAt = tile;
+      w.workTool = WORK_TOOLS[tile.building ?? ""];
+      w.workUntil = performance.now() + (SELF_WORK.min + Math.random() * SELF_WORK.extra) * 1000;
+      w.faceAt = { x: tile.x, z: tile.z };
+      w.wait = 2 + Math.random() * 2;
+    }
     // At work: face the tree being cut, or the field being hoed.
     if (w.workAt && w.faceAt) w.heading = Math.atan2(w.faceAt.x - w.x, w.faceAt.z - w.z);
     if (w.sitAt && !w.sitting) {
@@ -160,7 +179,7 @@ function stepWalker(w: Walker, dt: number, ground: Ground, pickTarget: () => Til
       w.working = false;
       w.workAt = null;
       w.faceAt = null;
-      retarget(w, ground, pickTarget);
+      retarget(w, ground, pickTarget, canWork);
       w.wait = 1 + Math.random() * 3;
     }
   } else {
@@ -181,6 +200,8 @@ function stepWalker(w: Walker, dt: number, ground: Ground, pickTarget: () => Til
       w.tx = w.x;
       w.tz = w.z;
       w.sitAt = null;
+      // Couldn't get there: no work today, just look around.
+      w.goWork = null;
       w.wait = 0.8 + Math.random() * 1.5;
     }
   }
@@ -236,6 +257,8 @@ export function Villagers({
       wander: wander.length ? wander : [homeTile],
       school: built.filter((t) => t.building === "elder"),
       fields: built.filter((t) => t.building === "farm"),
+      // Places with work to do (see WORK_TOOLS): where grown-ups go to work.
+      work: built.filter((t) => !!WORK_TOOLS[t.building!]),
       fires: built.filter((t) => t.building === "campfire" && litKey.split(",").includes(String(t.id))),
     };
   }, [tiles, homeTile, litKey]);
@@ -305,9 +328,10 @@ export function Villagers({
       stepWalker(w, dt, ground, () => {
         if (spots.fires.length && Math.random() < 0.45) return pick(spots.fires);
         if (w.child && spots.school.length && Math.random() < 0.6) return pick(spots.school);
+        if (!w.child && spots.work.length && Math.random() < SELF_WORK.go) return pick(spots.work);
         if (spots.fields.length && Math.random() < 0.3) return pick(spots.fields);
         return Math.random() < 0.4 ? pick(spots.wander) : pick(spots.all);
-      });
+      }, true);
     }
     shown.current = list.filter((w) => !w.goneUntil && !w.hunting);
     grabStore.walkers = shown.current;
