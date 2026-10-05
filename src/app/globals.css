@@ -212,7 +212,16 @@ html[data-theme="dark"] [class*="text-stone-800"] {
   color: #f8fafc !important;
 }
 
+<<<<<<< Updated upstream
 /* High contrast in-game applies only to the HUD, preserving the island art. */
+=======
+/* In the game, high contrast is deliberately a HUD option: preserve the
+ * island artwork and make the always-visible top controls easy to read. */
+html.high-contrast .game-top-bar {
+  color: #ffffff;
+}
+
+>>>>>>> Stashed changes
 html.high-contrast .game-top-bar .pixel-btn,
 html.high-contrast .game-top-bar .pixel-panel,
 html.high-contrast .game-top-bar .pixel-panel-dark {
