@@ -41,6 +41,7 @@ import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { cn } from "@/lib/utils";
 import { useGuide } from "./guide-overlay";
+import { HINTS_BY_ID } from "@/game/hints";
 import { useCompact } from "@/lib/use-compact";
 import { Countdown } from "./countdown";
 
@@ -253,9 +254,12 @@ export function BottomBar() {
   const [group, setGroup] = useState("homes");
   // While the hand points at a building card, its group is the one shown.
   const guide = useGuide();
-  const pointed = guide.target?.kind === "ui" ? guide.target.ids.find((id) => id.startsWith("build-"))?.slice(6) : undefined;
-  const guided = inTutorial || !!state.coach || !!state.hint;
-  const grouped = eraBuildings.length >= GROUP_FROM && (!guided || !!pointed);
+  // (A hint can point at a card too: the shrine.)
+  const hintTarget = state.hint ? HINTS_BY_ID[state.hint.id]?.target : undefined;
+  const hinted = (typeof hintTarget === "function" ? hintTarget(state) : hintTarget)?.match(/build-([a-z]+)/)?.[1];
+  const pointed = (guide.target?.kind === "ui" ? guide.target.ids.find((id) => id.startsWith("build-"))?.slice(6) : undefined) ?? hinted;
+  // Tabs stay put: only the Stone Age tutorial (a handful of buildings) shows them all.
+  const grouped = eraBuildings.length >= GROUP_FROM && (!inTutorial || !!pointed);
   const groups = GROUPS.filter((g) => eraBuildings.some((b) => groupOf(b.id) === g.id));
   // The hand's building, else the one in hand, else the tab picked.
   const holding = selected && eraBuildings.some((b) => b.id === selected) ? selected : undefined;
@@ -336,7 +340,11 @@ export function BottomBar() {
                 type="button"
                 role="tab"
                 aria-selected={showing === g.id}
-                onClick={() => setGroup(g.id)}
+                onClick={() => {
+                  setGroup(g.id);
+                  // Put down a building from another tab, or the bar would jump back to it.
+                  if (holding && groupOf(holding) !== g.id) setSelected(null);
+                }}
                 className={cn("shrink-0 px-2 py-0.5", showing === g.id ? "bg-amber-400 text-[#2b2119]" : "bg-white/10 text-white/80 hover:bg-white/20")}
                 data-testid={`build-group-${g.id}`}
               >

@@ -17,6 +17,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "The build bar keeps the tab you pick: it no longer jumps back when a hint appears or a building from another tab is in hand.",
       "Villagers now go to work on their own too: they walk to fields, workshops, schools, markets and temples and do the work there for a while (hoe, chop, hammer, read, carry or pray) before moving on.",
       "People you drop on a building now do that building's work: hammer at the smithy and factory, shovel coal at a coal plant, read a book at a school or university, carry loads at the market, granary, dock, well or hospital, and kneel to pray at a shrine or temple. (Dev mode: Show work.)",
       "Build to Last no longer stops in 2079: the years keep going, a warning counts down from 2120, and if the town isn't built to last by 2150 the game is lost.",
