@@ -191,6 +191,8 @@ export type Action =
   | { type: "devXp" }
   | { type: "devOres" }
   | { type: "devTired" }
+  | { type: "devFullStores" }
+  | { type: "devConnections" }
   | { type: "launch"; project: string }
   | { type: "devTipping"; when: "soon" | "now" | "end" }
   | { type: "devTypeOne" }
@@ -6165,6 +6167,40 @@ function step(state: GameState, action: Action): GameState {
         lastBigTick: state.tick,
         log: [`${action.from} sent ${action.warriors} warriors to raid us! They land soon.`, ...state.log].slice(0, 30),
       };
+    }
+
+    case "devFullStores": {
+      // Plenty of food in store, so the hunters rest and gather wood.
+      if (!state.dev) return state;
+      return withMeters({ ...state, resources: { ...state.resources, food: state.resources.food + 2000 } });
+    }
+
+    case "devConnections": {
+      // Shows every kind of connection near the town: an aqueduct chain from
+      // the river, a market between two homes, and a farm by a granary.
+      if (!state.dev) return state;
+      const needs = ["aqueduct", "market", "house", "farm", "granary"].map((id) => BUILDINGS_BY_ID[id].requires).filter((r): r is string => !!r);
+      let next: GameState = { ...state, researched: [...new Set([...state.researched, ...needs])] };
+      const home = next.tiles[next.startTile];
+      const put = (id: string, ok: (t: Tile) => boolean = () => true): Tile | null => {
+        const def = BUILDINGS_BY_ID[id];
+        const spot = next.tiles
+          .filter((t) => t.revealed && ok(t) && !placementError(next, t, def))
+          .sort((a, b) => hexDistance(a, home) - hexDistance(b, home))[0];
+        if (!spot) return null;
+        next = { ...next, tiles: next.tiles.map((t) => (t.id === spot.id ? { ...t, building: id, worn: 0 } : t)) };
+        return next.tiles[spot.id];
+      };
+      let last = put("aqueduct");
+      for (let i = 0; i < 2 && last; i++) {
+        const from = last;
+        last = put("aqueduct", (t) => hexDistance(t, from) === 1 && !touchesRiver(next, t));
+      }
+      const market = put("market", (t) => next.tiles.filter((n) => hexDistance(n, t) === 1 && !n.building).length >= 3);
+      if (market) for (let i = 0; i < 2; i++) put("house", (t) => hexDistance(t, market) === 1);
+      const granary = put("granary", (t) => next.tiles.some((n) => hexDistance(n, t) === 1 && !n.building));
+      if (granary) put("farm", (t) => hexDistance(t, granary) === 1);
+      return withMeters({ ...next, log: ["Dev: built an aqueduct chain, a market between homes and a farm by a granary.", ...next.log].slice(0, 30) });
     }
 
     case "devTired": {

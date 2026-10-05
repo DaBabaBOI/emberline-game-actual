@@ -106,7 +106,7 @@ Slower, kinder options exist too: **selective logging** instead of clear-cutting
 
 We built Emberline with an AI coding assistant (**Claude Code**). Most code was written by the assistant following our direction, and we want to be upfront about that.
 
-**The team** decided what the game is (Stone Age start, a cost on every building, the eras, the ways to lose, the look; all written in [`AGENTS.md`](AGENTS.md)), playtested it repeatedly with friends, turned feedback into changes, and reviewed and merged every pull request.
+**The team** decided what the game is (Stone Age start, a cost on every building, the eras, the ways to lose, the look), playtested it repeatedly with friends, turned feedback into changes, and reviewed and merged every pull request.
 
 **The assistant** wrote and tested the code (including the balance bot), took screenshots, and drafted docs and slides for us to review.
 
@@ -168,7 +168,6 @@ Every push to `main` deploys to GitHub Pages.
 
 ## Contributing
 
-- Read [`AGENTS.md`](AGENTS.md) first (humans and AI assistants alike). It holds the design decisions the game must stay true to.
 - Game rules live in `src/game/`; the engine stays reducer-based and immutable; UI and 3D stay separate from logic; prefer data-driven content.
 - Never commit to `main`. Branch as `feat/<name>-<thing>` (or `fix/`, `chore/`, `docs/`), open a PR, get a review. Commit messages are imperative ("add farmland").
 - Every player-visible change gets a line in `src/game/updates.ts`.
