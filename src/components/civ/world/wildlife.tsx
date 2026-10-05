@@ -181,7 +181,10 @@ export function Wildlife({
     // The villager out hunting, and where they set out from.
     who: Walker | null;
     from: { x: number; z: number };
-  }>({ target: -1, phase: "out", nextAt: 15, who: null, from: { x: 0, z: 0 } });
+    // The way there or back, tile by tile round water and buildings (the last
+    // point is the goal).
+    path: { x: number; z: number }[];
+  }>({ target: -1, phase: "out", nextAt: 15, who: null, from: { x: 0, z: 0 }, path: [] });
   const camps = useMemo(() => tiles.filter((t) => t.building === "gatherer"), [tiles]);
 
   useFrame(({ clock }, delta) => {
@@ -231,15 +234,27 @@ export function Wildlife({
     if (h.target < 0) {
       hunter.current = [];
       if (now > h.nextAt) {
-        const prey = animals
-          .filter((a) => motion.current.get(a.id)?.downAt === null && hexDistance(a.home, homeTile) <= 8)
-          .sort((a, b) => hexDistance(a.home, homeTile) - hexDistance(b.home, homeTile))[0];
-        const who = prey ? pickHunter(camps) : null;
-        if (prey && who) {
+        const who = pickHunter(camps);
+        // The nearest animal the hunter can actually walk to (not across a river).
+        let prey: Animal | undefined;
+        let path: { x: number; z: number }[] | null = null;
+        if (who) {
+          for (const a of animals
+            .filter((a) => motion.current.get(a.id)?.downAt === null && hexDistance(a.home, homeTile) <= 8)
+            .sort((a, b) => hexDistance(a.home, homeTile) - hexDistance(b.home, homeTile))) {
+            path = ground.route(who, a.home);
+            if (path) {
+              prey = a;
+              break;
+            }
+          }
+        }
+        if (prey && who && path) {
           h.target = prey.id;
           h.phase = "out";
           h.who = who;
           h.from = { x: who.x, z: who.z };
+          h.path = path;
           who.hunting = true;
           hunter.current = [
             {
@@ -286,15 +301,23 @@ export function Wildlife({
     const prey = preyInfo ? motion.current.get(preyInfo.id) : undefined;
     // The walk back never depends on the prey: it is cleared away a few seconds
     // after the kill. If the prey is gone before they reach it, they just head back.
-    if (h.phase === "out" && (!preyInfo || !prey || prey.downAt !== null)) h.phase = "back";
-    const goal = h.phase === "out" && prey ? prey : h.from;
+    const headBack = () => {
+      h.phase = "back";
+      h.path = ground.route(man, h.from) ?? [h.from];
+    };
+    if (h.phase === "out" && (!preyInfo || !prey || prey.downAt !== null)) headBack();
+    // On the last stretch out, follow the animal as it wanders on its tile.
+    if (h.phase === "out" && prey && h.path.length === 1) h.path[0] = { x: prey.x, z: prey.z };
+    // Reached a turning point on the way: on to the next.
+    while (h.path.length > 1 && Math.hypot(h.path[0].x - man.x, h.path[0].z - man.z) < 0.15) h.path.shift();
+    const goal = h.path[0] ?? h.from;
     const dx = goal.x - man.x;
     const dz = goal.z - man.z;
     const d = Math.hypot(dx, dz);
-    if (d < 0.25) {
+    if (h.path.length <= 1 && d < 0.25) {
       if (h.phase === "out" && prey && preyInfo) {
         prey.downAt = now;
-        h.phase = "back";
+        headBack();
         onHunt(preyInfo.kind === "golden" ? "golden deer" : preyInfo.kind);
         setTimeout(() => {
           motion.current.delete(preyInfo.id);
@@ -306,15 +329,15 @@ export function Wildlife({
       }
       return;
     }
-    // Straight there if the way is clear; otherwise veer a little either side
-    // (round a building, a fire or the water) until it is.
+    // Walk straight to the next point on the route. (Steering round obstacles
+    // frame by frame made hunters jitter back and forth at river banks.)
     const s = Math.min(d, 0.9 * dt);
-    const aim = Math.atan2(dx, dz);
-    const clear = (a: number) => ground.walkable(man.x + Math.sin(a) * 0.3, man.z + Math.cos(a) * 0.3);
-    const heading = d < 0.6 || !ground.walkable(man.x, man.z) ? aim : [0, 0.5, -0.5, 1, -1, 1.5, -1.5, 2.2, -2.2].map((k) => aim + k).find(clear) ?? aim;
+    const heading = Math.atan2(dx, dz);
     man.x += Math.sin(heading) * s;
     man.z += Math.cos(heading) * s;
-    man.heading = heading;
+    // Turn smoothly rather than snapping round at each turning point.
+    const turn = Math.atan2(Math.sin(heading - man.heading), Math.cos(heading - man.heading));
+    man.heading += turn * Math.min(1, dt * 10);
     const under = ground.tileAt(man.x, man.z);
     man.y += (ground.heightAt(man.x, man.z) + (under?.terrain === "mountain" ? 0.55 : 0) - man.y) * Math.min(1, dt * 12);
   });

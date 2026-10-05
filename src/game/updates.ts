@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Hunters no longer jitter back and forth at rivers: they plan a way round the water, and only go after animals they can actually reach. Villagers who can't reach a log seat no longer sit on the bare ground by the fire.",
       "Multiplayer bots adapt to you: in a race they keep pace with the players in the room instead of racing ahead, so a good game wins and a close one stays close. Their raids are sized to your defence, so a town with warriors can always beat them.",
       "Chat in multiplayer: talk in the waiting room and during the match (Chat in the side menu), with quick phrases for phones. New messages show a count and a short preview.",
       "The game and the project page have a little pixel flame in the browser tab.",

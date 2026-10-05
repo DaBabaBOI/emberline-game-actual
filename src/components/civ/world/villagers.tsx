@@ -167,9 +167,12 @@ function stepWalker(w: Walker, dt: number, ground: Ground, pickTarget: () => Til
       w.z = nz;
     } else {
       // Blocked: stop and look around for a moment before heading somewhere else.
+      // They no longer have a seat to go to: without this they sat down right
+      // where they stopped, on the bare ground beside the fire instead of a log.
       w.moving = false;
       w.tx = w.x;
       w.tz = w.z;
+      w.sitAt = null;
       w.wait = 0.8 + Math.random() * 1.5;
     }
   }

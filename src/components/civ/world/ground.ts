@@ -1,5 +1,6 @@
 import { LAND } from "@/game/content";
 import { hexDistance, hexKey, worldToAxial } from "@/game/hex";
+import { findRoute } from "@/game/route";
 import { isLand } from "@/game/map";
 import type { Tile } from "@/game/types";
 import { treeSpots } from "./hex-terrain";
@@ -17,6 +18,10 @@ export interface Ground {
   // working: a tree in the woods round a woodcutter (axe), otherwise a spot
   // beside the building, facing it.
   workSpot(tile: Tile, tool?: string): { x: number; z: number; face: { x: number; z: number } };
+  // A way to walk from one point to another, tile by tile round water,
+  // mountains, fires and buildings: the points to walk through (the last is
+  // `to`), or null if there is no way (across a river, say).
+  route(from: { x: number; z: number }, to: { x: number; z: number }): { x: number; z: number }[] | null;
 }
 
 const BUILDING_CLEARANCE = 0.62;
@@ -29,7 +34,12 @@ export function makeGround(tiles: Tile[]): Ground {
     const { q, r } = worldToAxial(x, z);
     return byKey.get(hexKey(q, r));
   };
+  // Tiles a walker can cross: dry, open, explored ground that isn't burning.
+  const open = (t: Tile) => t.revealed && isLand(t.terrain) && t.terrain !== "mountain" && t.scorch <= BURNING && !t.building;
   return {
+    route(from, to) {
+      return findRoute(byKey, from, to, open);
+    },
     tileAt,
     heightAt(x, z) {
       return tileAt(x, z)?.height ?? 0.2;
