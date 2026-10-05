@@ -1608,8 +1608,8 @@ export const TREE: TreeNode[] = [
   { id: "geothermal", name: "Geothermal", description: "Heat from the ground: clean plants make 10% more.", branch: "energy", era: 4, cost: 110, requires: ["steel", "hydropower"], boost: { cleanPower: 0.1 } },
   { id: "motors", name: "Efficient Motors", description: "Factories need 10% less power.", branch: "energy", era: 4, cost: 80, requires: ["steel"], boost: { demand: -0.1 } },
   { id: "insulation", name: "Insulation", description: "Warmer homes: 5% less power, +3 health.", branch: "construction", era: 4, cost: 70, requires: ["steel"], boost: { demand: -0.05, health: 3 } },
-  { id: "concrete", name: "Reinforced Concrete", description: "Homes hold 10% more people.", branch: "construction", era: 4, cost: 80, requires: ["steel"], boost: { housing: 0.1 } },
-  { id: "highrise", name: "High-rises", description: "Homes hold 15% more people.", branch: "construction", era: 4, cost: 110, requires: ["concrete"], boost: { housing: 0.15 } },
+  { id: "rconcrete", name: "Reinforced Concrete", description: "Homes hold 10% more people.", branch: "construction", era: 4, cost: 80, requires: ["steel"], boost: { housing: 0.1 } },
+  { id: "highrise", name: "High-rises", description: "Homes hold 15% more people.", branch: "construction", era: 4, cost: 110, requires: ["rconcrete"], boost: { housing: 0.15 } },
   { id: "greenroofs", name: "Green Roofs", description: "15% less smog, +2 happiness.", branch: "construction", era: 4, cost: 100, requires: ["highrise"], boost: { smog: -0.15, happiness: 2 } },
   { id: "recycling", name: "Recycling", description: "15% more stone, 5% less carbon.", branch: "construction", era: 4, cost: 80, requires: ["publichealth"], boost: { stone: 0.15, carbon: -0.05 } },
   { id: "sewers", name: "Sewers", description: "Clean streets: +6 health.", branch: "construction", era: 4, cost: 70, requires: ["publichealth"], boost: { health: 6 } },
@@ -3948,4 +3948,78 @@ export const LAST = {
   people: 120,
   meter: 50,
   forest: 0.35,
+  // No events, small moments or outbreaks for this many ticks (about 2.5
+  // minutes): time to look around before anything happens.
+  calm: 100,
+  // Record the town's carbon, clean power and people every this many ticks, for the graph.
+  trackEvery: 8,
+  // Stars for the year all three were solved: before the first, before the second, or later.
+  stars: [1950, 2000] as [number, number],
 };
+
+// Build to Last's guided start: four short steps with the pointing hand.
+export const LAST_TUTORIAL: { id: string; text: string }[] = [
+  { id: "problems", text: "These are your three big problems. Click the first one to see how to solve it." },
+  { id: "build", text: "Your people need room to grow. Build a Town House." },
+  { id: "advancements", text: "Inventions arrive in the year they were really made. Open Advancements to see what's coming." },
+  { id: "speed", text: "Grey ones aren't invented yet. Close Advancements and speed up time: the 1880s bring power from water and wind." },
+];
+
+// Build to Last follows real history: an advancement can't be researched
+// before the year it was first made to work (roughly; the first of its kind).
+export const INVENTED: Record<string, number> = {
+  steel: 1856, // Bessemer's process: cheap steel
+  batteries: 1859, // Planté's lead-acid battery
+  sewers: 1859, // London's sewers, after the Great Stink
+  rconcrete: 1867, // Monier's reinforced concrete
+  schooling: 1870, // free schooling for all in many countries
+  nationalparks: 1872, // Yellowstone
+  trams: 1881, // the first electric tram, Berlin
+  hydropower: 1882, // the first hydroelectric power plants
+  grid: 1882, // the first public power stations
+  turbines: 1884, // Parsons' steam turbine
+  highrise: 1885, // the first skyscraper, Chicago
+  bicycles: 1885, // the safety bicycle
+  renewables: 1887, // the first wind turbine that made electricity, Scotland
+  motors: 1888, // the AC induction motor
+  evs: 1890, // early electric cars
+  radio: 1895, // Marconi
+  climatesci: 1896, // Arrhenius: more CO2 would warm the Earth
+  geothermal: 1904, // Larderello, Italy
+  chemistry: 1913, // the Haber-Bosch fertiliser plant
+  zoning: 1916, // New York's zoning rules
+  weekend: 1926, // the five-day work week spreads
+  seeds: 1944, // the start of the "Green Revolution"
+  computers: 1946, // ENIAC
+  heatpumps: 1948, // the first home ground-source heat pumps
+  uranium: 1954, // the first nuclear power plant on a grid
+  plutonium: 1954,
+  solar: 1954, // the first practical silicon solar cell
+  cleanair: 1956, // the UK's Clean Air Act, after the Great Smog
+  greenroofs: 1960, // modern green roofs, Germany
+  internet: 1983, // the internet's common language (TCP/IP)
+  smartgrid: 2000,
+};
+
+// What was happening in the real world, shown as the years go by in Build to Last.
+export const HISTORY: { year: number; text: string }[] = [
+  { year: 1858, text: "The Great Stink: London's river is so foul that Parliament orders new sewers." },
+  { year: 1859, text: "The first commercial oil well is drilled in Pennsylvania." },
+  { year: 1872, text: "Yellowstone becomes the world's first national park." },
+  { year: 1882, text: "The first public power stations light up London and New York." },
+  { year: 1887, text: "In Scotland, a wind turbine makes electricity for the first time." },
+  { year: 1896, text: "Svante Arrhenius works out that more CO2 in the air would warm the Earth." },
+  { year: 1908, text: "The Model T: cars for millions, running on oil." },
+  { year: 1913, text: "Factory-made fertiliser: much more food, and much more energy used to make it." },
+  { year: 1952, text: "The Great Smog: coal smoke settles over London for five days." },
+  { year: 1954, text: "The first practical solar cell, and the first nuclear power on a grid." },
+  { year: 1958, text: "Charles Keeling starts measuring CO2 in the air on Mauna Loa, Hawaii." },
+  { year: 1970, text: "The first Earth Day." },
+  { year: 1987, text: "The Montreal Protocol: the world agrees to protect the ozone layer." },
+  { year: 2015, text: "The Paris Agreement: nearly every country agrees to limit warming." },
+];
+
+// CO2 in the real air, in ppm (from ice cores, then Mauna Loa), for the graph.
+export const REAL_CO2: [number, number][] = [
+  [1850, 285], [1875, 289], [1900, 296], [1925, 305], [1950, 311], [1960, 317], [1970, 326], [1980, 339], [1990, 354], [2000, 370], [2010, 390], [2020, 413],
+];

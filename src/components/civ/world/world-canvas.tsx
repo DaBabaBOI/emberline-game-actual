@@ -515,6 +515,7 @@ export function WorldCanvas() {
         tired={(state.fatigue ?? 0) / 100}
         era={state.era}
         cameos={cameos}
+        gameSpeed={state.speed}
       />
       <PickUp state={state} dispatch={dispatch} enabled={canPickUp} onHolding={setHolding} />
       <KeyboardPan controls={mapControls} enabled={!holding && !shot && !guide.target} />
@@ -527,6 +528,7 @@ export function WorldCanvas() {
         homeTile={home}
         rally={state.raid && state.raid.response !== "hide" ? state.tiles[state.raid.meetTile ?? state.raid.targetTile] : null}
         hidden={battleShowing}
+        gameSpeed={state.speed}
       />
       <BattleScene tiles={state.tiles} battle={battleShowing ? state.battle ?? null : null} homeTile={home} />
       <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} speed={state.speed} />
@@ -557,6 +559,7 @@ export function WorldCanvas() {
         homeTile={home}
         onHunt={(animal) => dispatch({ type: "hunt", animal })}
         resting={state.huntersHelping ?? false}
+        gameSpeed={state.speed}
       />
       <Fireworks home={home} startedAt={fireworksAt} />
       <Islet

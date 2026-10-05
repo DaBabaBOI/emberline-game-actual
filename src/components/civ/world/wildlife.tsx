@@ -110,7 +110,7 @@ function Boar({ legs }: { legs: Legs }) {
 function AnimalView({ animal, motion }: { animal: Animal; motion: React.RefObject<Map<number, Motion>> }) {
   const ref = useRef<Group>(null);
   const legs = useRef<(Group | null)[]>([]);
-  const last = useRef({ x: 0, z: 0, step: 0 });
+  const last = useRef<{ x: number; z: number; step: number; fell?: number }>({ x: 0, z: 0, step: 0 });
   useFrame(({ clock }, delta) => {
     const g = ref.current;
     const m = motion.current?.get(animal.id);
@@ -128,7 +128,9 @@ function AnimalView({ animal, motion }: { animal: Animal; motion: React.RefObjec
     g.position.set(m.x, animal.home.height + (walking ? Math.abs(Math.sin(last.current.step)) * 0.012 : 0), m.z);
     g.rotation.y = m.heading;
     if (m.downAt !== null) {
-      const t = Math.min(1, (clock.elapsedTime - m.downAt) / 0.6);
+      // When it fell, on the screen's clock (downAt is game time).
+      last.current.fell ??= clock.elapsedTime;
+      const t = Math.min(1, (clock.elapsedTime - last.current.fell) / 0.6);
       g.rotation.z = (Math.PI / 2) * t;
     } else {
       g.rotation.z = 0;
@@ -160,7 +162,10 @@ export function Wildlife({
   homeTile,
   onHunt,
   resting = false,
+  gameSpeed = 1,
 }: {
+  // The game's speed: animals and the hunter move that much faster.
+  gameSpeed?: number;
   tiles: Tile[];
   homeTile: Tile;
   onHunt: (animal: string) => void;
@@ -190,9 +195,16 @@ export function Wildlife({
   }>({ target: -1, phase: "out", nextAt: 15, who: null, from: { x: 0, z: 0 }, path: [] });
   const camps = useMemo(() => tiles.filter((t) => t.building === "gatherer"), [tiles]);
 
-  useFrame(({ clock }, delta) => {
-    const now = clock.elapsedTime;
-    const dt = Math.min(delta, 0.1);
+  // Game time: runs at the game's speed, and stops while paused.
+  const gameClock = useRef(0);
+  useFrame((_, delta) => {
+    const dt = Math.min(delta, 0.1) * gameSpeed;
+    gameClock.current += dt;
+    const now = gameClock.current;
+    if (dt <= 0) {
+      if (hunter.current[0]) hunter.current[0].moving = false;
+      return;
+    }
 
     // The dev panel can call up the golden deer at once.
     if ((animals.length < wanted || goldenDeer.wanted) && forests.length && (goldenDeer.wanted || Math.random() < 0.02)) {

@@ -4,8 +4,9 @@ import { useShot } from "./letterbox";
 
 import { HOME } from "@/lib/home";
 import { useState, type ReactNode } from "react";
-import { ERAS, formatYear, LESSONS, METERS, METER_SDG, MIN_SUSTAINABILITY_FOR_BEST_ENDING } from "@/game/content";
-import { clearSave, currentGoal, lastProblems, makeDebrief, readyForNextEra, secs } from "@/game/engine";
+import { ERAS, formatYear, LAST, LAST_TUTORIAL, LESSONS, METERS, METER_SDG, MIN_SUSTAINABILITY_FOR_BEST_ENDING, REAL_CO2 } from "@/game/content";
+import { clearSave, currentGoal, lastFocus, lastProblems, makeDebrief, readyForNextEra, secs } from "@/game/engine";
+import type { GameState } from "@/game/types";
 import type { Debrief as DebriefData } from "@/game/types";
 import { useGame } from "@/components/civ/game-provider";
 import { LeaderboardPanel } from "./online";
@@ -128,6 +129,8 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
           </p>
         </div>
 
+        {state.mode === "last" && d.kind === "final" && <Hindsight state={state} year={d.year} />}
+
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <div>
             <h3 className="font-pixel mb-1 font-semibold text-emerald-800">What you achieved</h3>
@@ -135,9 +138,13 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
               <Row label="Most people at once" value={Math.round(d.stats.peakPopulation)} />
               <Row label="Buildings built" value={d.stats.built} />
               <Row label="Advancements discovered" value={d.researched} />
-              <Row label="Raids driven off" value={d.stats.raidsWon} />
-              <Row label="Saplings planted" value={d.planted} />
-              <Row label="Lessons learned" value={d.lessons.length} />
+              {state.mode !== "last" && (
+                <>
+                  <Row label="Raids driven off" value={d.stats.raidsWon} />
+                  <Row label="Saplings planted" value={d.planted} />
+                  <Row label="Lessons learned" value={d.lessons.length} />
+                </>
+              )}
             </ul>
           </div>
           <div>
@@ -301,21 +308,23 @@ export function LastIntro() {
     setOpen(false);
     dispatch({ type: "setSpeed", speed: 1 });
   };
+  // Kept short on purpose: the guide shows the rest, one thing at a time.
   return (
     <div className="pointer-events-auto fixed inset-0 z-[46] flex items-center justify-center bg-black/50 p-3" data-testid="last-intro">
-      <div className="pixel-panel w-[min(94vw,520px)] p-4">
-        <h2 className="font-pixel text-2xl font-bold">Build to Last</h2>
-        <p className="mt-1 text-sm text-stone-600">{formatYear(state.year)}. Your town runs on coal. Solve all three at once, and keep them solved.</p>
-        <ol className="mt-3 flex flex-col gap-2 text-sm">
+      <div className="pixel-panel w-[min(94vw,480px)] p-4">
+        <h2 className="font-pixel text-2xl font-bold">{formatYear(state.year)}</h2>
+        <p className="mt-1 text-sm">
+          Your town runs on coal, and the smoke is building up. Can you make it last? History will happen around you as you play.
+        </p>
+        <ol className="font-pixel mt-3 flex flex-col gap-1 text-sm">
           {lastProblems(state).map((p, i) => (
             <li key={p.id} className="flex gap-2">
-              <span className="font-pixel font-bold text-amber-700">{i + 1}.</span>
-              <span>
-                <span className="font-pixel font-semibold">{p.title}.</span> {p.how}
-              </span>
+              <span className="font-bold text-amber-700">{i + 1}.</span>
+              {p.title}
             </li>
           ))}
         </ol>
+        <p className="mt-2 text-xs text-stone-600">Solve all three at the same time. A short guide will show you where to start.</p>
         <button type="button" onClick={close} className="pixel-btn font-pixel mt-4 w-full bg-emerald-600 py-2 text-lg font-semibold text-white" data-testid="last-start">
           Start
         </button>
@@ -324,31 +333,123 @@ export function LastIntro() {
   );
 }
 
+// Build to Last's guided start: one short step at a time, with the hand.
+export function LastTutorialPanel() {
+  const { state, dispatch } = useGame();
+  const step = state.mode === "last" && !state.dev ? LAST_TUTORIAL[state.lastStep ?? LAST_TUTORIAL.length] : undefined;
+  if (!step) return null;
+  return (
+    <div className="pixel-panel pointer-events-auto relative z-[26] w-full p-2.5 md:p-3" data-testid="last-tutorial">
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <span className="font-pixel flex items-center gap-2 text-base font-semibold">
+          <PixelIcon name="book" size={18} />
+          Your adviser
+        </span>
+        <span className="font-num text-xs text-amber-800/70">
+          {(state.lastStep ?? 0) + 1}/{LAST_TUTORIAL.length}
+        </span>
+      </div>
+      <p className="text-sm font-semibold leading-snug md:text-base" data-testid="last-tutorial-text">
+        {step.text}
+      </p>
+      <div className="mt-2 flex justify-end text-xs">
+        <button type="button" onClick={() => dispatch({ type: "lastStep", from: -1 })} className="text-stone-500 underline" data-testid="last-tutorial-skip">
+          Skip the guide
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// The end of Build to Last: stars for how early, and your air against the real world's.
+function Hindsight({ state, year }: { state: GameState; year: number }) {
+  const track = state.lastTrack ?? [];
+  const stars = year < LAST.stars[0] ? 3 : year < LAST.stars[1] ? 2 : 1;
+  const end = Math.max(2020, Math.ceil(year));
+  const top = Math.max(420, ...track.map((p) => p.ppm)) + 5;
+  const low = 270;
+  const W = 600;
+  const H = 170;
+  const x = (y: number) => 34 + ((y - LAST.startYear) / (end - LAST.startYear)) * (W - 44);
+  const yPos = (ppm: number) => 10 + ((top - ppm) / (top - low)) * (H - 34);
+  const line = (pts: [number, number][]) => pts.map(([a, b], i) => `${i ? "L" : "M"}${x(a).toFixed(1)},${yPos(b).toFixed(1)}`).join(" ");
+  const real = REAL_CO2.filter(([y]) => y <= end);
+  const yours: [number, number][] = track.map((p) => [p.year, p.ppm]);
+  const realThen = REAL_CO2.reduce((best, p) => (Math.abs(p[0] - year) < Math.abs(best[0] - year) ? p : best));
+  return (
+    <div className="mt-4 border-2 border-[#2b2119] bg-white p-3" data-testid="hindsight">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-pixel font-semibold">Your town against the real world</h3>
+        <span className="font-pixel text-3xl leading-none text-amber-500" aria-label={`${stars} of 3 stars`}>
+          {"★".repeat(stars)}
+          <span className="text-stone-300">{"★".repeat(3 - stars)}</span>
+        </span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="mt-1 w-full" role="img" aria-label="Carbon in the air over time: your town and the real world">
+        {[300, 350, 400].filter((v) => v < top).map((v) => (
+          <g key={v}>
+            <line x1={34} x2={W - 10} y1={yPos(v)} y2={yPos(v)} stroke="#e7e1d6" />
+            <text x={30} y={yPos(v) + 4} fontSize={10} textAnchor="end" fill="#78716c">{v}</text>
+          </g>
+        ))}
+        {[1850, 1900, 1950, 2000].filter((v) => v <= end).map((v) => (
+          <text key={v} x={x(v)} y={H - 6} fontSize={10} textAnchor="middle" fill="#78716c">{v}</text>
+        ))}
+        <path d={line(real)} fill="none" stroke="#dc2626" strokeWidth={2.5} strokeDasharray="6 4" />
+        {yours.length > 1 && <path d={line(yours)} fill="none" stroke="#059669" strokeWidth={3} />}
+        <line x1={x(year)} x2={x(year)} y1={10} y2={H - 24} stroke="#2b2119" strokeDasharray="2 3" />
+      </svg>
+      <div className="font-pixel flex flex-wrap gap-x-4 text-xs">
+        <span className="text-emerald-700">━ Your town (ppm of CO2)</span>
+        <span className="text-red-600">╍ The real world</span>
+      </div>
+      <p className="mt-2 text-sm">
+        You solved all three in <b>{Math.floor(year)}</b>. In the real world, CO2 was about {realThen[1]} ppm in {realThen[0]} and still rising, and in
+        2020 it passed 410 ppm. Most of the world&apos;s power still comes from coal, oil and gas.
+        {stars < 3 ? ` Finish before ${stars === 2 ? LAST.stars[0] : LAST.stars[1]} for another star.` : " Three stars: far ahead of history."}
+      </p>
+    </div>
+  );
+}
+
 // Build to Last: the three big problems, each with a tick when solved.
 function ProblemsLine() {
-  const { state } = useGame();
+  const { state, dispatch } = useGame();
   const problems = lastProblems(state);
+  const focus = lastFocus(state);
   // Click a problem to read how to solve it; click again to hide it.
   const [openId, setOpenId] = useState<string | null>(null);
   const open = problems.find((p) => p.id === openId);
+  const pick = (id: string) => {
+    setOpenId(openId === id ? null : id);
+    // The guide's first step: look at a problem.
+    if (state.lastStep === 0) dispatch({ type: "lastStep", from: 0 });
+  };
   return (
     <div className="pointer-events-none flex flex-col items-center gap-1">
-      <div className="pixel-panel-dark font-pixel pointer-events-auto flex max-w-[min(94vw,760px)] flex-wrap justify-center gap-x-2 gap-y-1 px-2 py-1 text-xs" data-testid="problems">
-        {problems.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            onClick={() => setOpenId(openId === p.id ? null : p.id)}
-            aria-expanded={openId === p.id}
-            className={cn("flex items-center gap-1 px-1.5 py-0.5 hover:bg-white/10", openId === p.id && "bg-white/15")}
-            data-testid={`problem-${p.id}`}
-          >
-            <span className={cn("inline-block h-3 w-3 border-2", p.done ? "border-emerald-300 bg-emerald-400" : "border-white/60")} />
-            <span className={p.done ? "text-emerald-300" : ""}>{p.title}</span>
-            <span className="text-white/60">· {p.status}</span>
-            <span className="text-amber-300">{openId === p.id ? "▴" : "?"}</span>
+      <div className="pixel-panel-dark font-pixel pointer-events-auto flex max-w-[min(94vw,760px)] flex-col items-center px-2 py-1 text-xs" data-testid="problems">
+        <div className="flex flex-wrap justify-center gap-x-1 gap-y-1">
+          {problems.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => pick(p.id)}
+              aria-expanded={openId === p.id}
+              title={`${p.status}. Click for how to solve it.`}
+              className={cn("flex items-center gap-1 px-1.5 py-0.5 hover:bg-white/10", openId === p.id && "bg-white/15", focus?.id === p.id && "outline outline-1 outline-amber-300/70")}
+              data-testid={`problem-${p.id}`}
+              data-guide={`problem-${p.id}`}
+            >
+              <span className={cn("inline-block h-3 w-3 border-2", p.done ? "border-emerald-300 bg-emerald-400" : "border-white/60")} />
+              <span className={p.done ? "text-emerald-300" : ""}>{p.title}</span>
+            </button>
+          ))}
+        </div>
+        {focus && (
+          <button type="button" onClick={() => pick(focus.id)} className="mt-0.5 text-[11px] text-white/80 hover:text-white" data-testid="problem-focus">
+            <span className="text-amber-300">Now:</span> {focus.title} · {focus.status} <span className="text-amber-300 underline">How?</span>
           </button>
-        ))}
+        )}
       </div>
       {open && (
         <button
@@ -359,6 +460,7 @@ function ProblemsLine() {
         >
           <span className="font-semibold">How to solve {open.title}: </span>
           {open.how}
+          <span className="mt-1 block text-stone-500">Now: {open.status}</span>
         </button>
       )}
     </div>

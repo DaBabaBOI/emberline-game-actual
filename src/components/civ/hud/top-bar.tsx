@@ -305,6 +305,7 @@ export function TopBar({ children }: { children?: React.ReactNode }) {
               type="button"
               onClick={() => dispatch({ type: "setSpeed", speed: s.value })}
               aria-label={s.value === 0 ? "Pause" : `Speed ${s.value}`}
+              data-guide={`speed-${s.value}`}
               className={cn(
                 "px-2 py-0.5 text-xs",
                 state.speed === s.value ? "bg-amber-400 text-[#2b2119]" : "bg-white/10 hover:bg-white/20",

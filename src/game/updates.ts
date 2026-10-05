@@ -16,6 +16,10 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Build to Last follows real history: each invention arrives in the year it really did (hydropower in 1882, wind in 1887, solar and nuclear in 1954), and real events appear as the years pass, from the Great Stink of 1858 to the first Earth Day.",
+      "Build to Last is gentler at the start: a short guide shows you around, nothing happens for the first couple of minutes, and one problem at a time is marked \"Now\", in the order history makes easiest.",
+      "Build to Last's ending: stars for how early you made it last, and a graph of your town's air against the real world's.",
+      "People walk at the game's speed: faster on fast-forward, and still when paused.",
       "Every new game opens with the fly-in over your island now: Build to Last and multiplayer too, not just the Stone Age.",
       "See a building's reach before you build it: while placing a quarry, campfire, factory, aqueduct, mill or anything that connects, the tiles it would affect light up, red where it does harm and green where it helps, and the buildings it would hit stand out.",
       "Buildings connect: aqueducts can join up in a chain to carry river water inland (each linked one waters the fields near it, and a chain brings water for more people), and some buildings work better side by side, joined by a short path: a farm by a granary, a market by homes, schools by libraries, a factory by a station and more. The placement card says what a spot connects to.",
