@@ -80,7 +80,7 @@ const SECTIONS: Section[] = [
     title: "Trade-offs",
     icon: "scales",
     items: [
-      { text: "Most choices trade a quick gain for a cost. Check every building card before placing it." },
+      { text: "Most choices trade a quick gain for a cost. Check every building card before placing it: the tiles it would reach light up, red for harm and green for help." },
       { icon: "sapling", text: "Plant, log selectively, trade and use clean power to reduce the cost." },
     ],
   },

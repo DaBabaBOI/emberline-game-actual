@@ -676,6 +676,12 @@ export function DevPanel() {
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devTired" })} title="Tired people sweat; click again to rest">
           Tired
         </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devFullStores" })} title="Lots of food in store: hunters rest and gather wood">
+          Full stores
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devConnections" })} title="Builds an aqueduct chain, a market between homes and a farm by a granary" data-testid="dev-connections">
+          Connections
+        </button>
         <button
           type="button"
           className="pixel-btn bg-[#4a3b2e] px-2 py-1"

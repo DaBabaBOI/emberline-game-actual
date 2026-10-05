@@ -136,7 +136,6 @@ src/
       hud/                2D interface (bars, meters, panels, debrief, dev panel)
       world/              3D world (terrain, buildings, people, animals, sky)
 docs/                     this documentation
-AGENTS.md                 every design rule, kept up to date with each change
 ```
 
 Size today: about 10,000 lines of TypeScript. `engine.ts` (about 2,300) and
@@ -159,7 +158,7 @@ All game content is data in `content.ts`, not special cases in the code:
 
 ## 6. Rules the code follows
 
-These keep the project reliable as it grows (the full list is in `AGENTS.md`):
+These keep the project reliable as it grows:
 
 - **Pure, predictable rules.** The engine never changes state in place and
   never calls `Math.random()`. It uses a seeded generator (`mulberry32`), so the

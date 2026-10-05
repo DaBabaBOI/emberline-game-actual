@@ -8,7 +8,7 @@ flowchart LR
     B --> C[One branch and one<br/>pull request per change]
     C --> D[Lint, type-check, build,<br/>and test in the browser]
     D --> E[Merge; the site<br/>redeploys itself]
-    E --> F[Update AGENTS.md,<br/>the Updates log and dev mode]
+    E --> F[Update the Updates log<br/>and dev mode]
     F --> A
 ```
 
@@ -17,10 +17,6 @@ flowchart LR
   and easy to undo.
 - **Checks before merging.** `npm run lint`, `npm run typecheck` and `npm run
   build` must pass locally and in GitHub Actions.
-- **Written design rules.** `AGENTS.md` records every design decision (for
-  example "every building shows its gain and its cost to the land"). When a
-  rule changes, the file changes in the same pull request. So nobody,
-  human or AI assistant, undoes a decision by accident.
 - **Players see what changed.** Every change a player would notice gets a
   plain-language line in the Updates bar (`src/game/updates.ts`).
 - **Every feature can be tested on demand.** Each new mechanic gets a dev-panel
@@ -30,7 +26,7 @@ flowchart LR
 
 We built Emberline with an AI coding assistant (Claude Code), and most of the
 code was written by it. The team set the direction and made the decisions: what
-the game is and its rules (`AGENTS.md`), which option to take for each feature,
+the game is and its rules, which option to take for each feature,
 what felt wrong in playtests, and whether each change was good enough to merge.
 The assistant wrote and tested the code, ran the balance bot and drafted the
 documentation, which we reviewed. The "How we built this" section of the

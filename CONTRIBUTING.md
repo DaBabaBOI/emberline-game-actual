@@ -4,7 +4,6 @@ Thanks for helping improve Emberline.
 
 ## Before you start
 
-- Read [AGENTS.md](AGENTS.md) before changing gameplay or project direction.
 - Keep the project aligned with the game vision: sustainable civilization
   building, bright low-poly aesthetics, and strong trade-off mechanics.
 - Prefer small, focused changes that are easy to review.

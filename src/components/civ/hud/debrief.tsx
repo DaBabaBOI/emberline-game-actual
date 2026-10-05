@@ -1,5 +1,7 @@
 "use client";
 
+import { useShot } from "./letterbox";
+
 import { HOME } from "@/lib/home";
 import { useState, type ReactNode } from "react";
 import { ERAS, formatYear, LESSONS, METERS, METER_SDG, MIN_SUSTAINABILITY_FOR_BEST_ENDING } from "@/game/content";
@@ -292,7 +294,9 @@ export function GoalLine() {
 export function LastIntro() {
   const { state, dispatch } = useGame();
   const [open, setOpen] = useState(() => state.mode === "last" && state.tick < 2);
-  if (!open) return null;
+  // Wait for the fly-in over the town to finish (or be skipped) first.
+  const shot = useShot();
+  if (!open || shot?.kind === "intro") return null;
   const close = () => {
     setOpen(false);
     dispatch({ type: "setSpeed", speed: 1 });

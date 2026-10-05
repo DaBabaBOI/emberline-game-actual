@@ -20,7 +20,7 @@ the UN Sustainable Development Goals, with SDG 11 as our focus).
 | --- | --- | --- |
 | Working project | The live link above; code in this repository | Done |
 | **Project schematic** | (the team is making it) | **Team** |
-| Code, documented and organized | `src/game/` (rules), `src/components/civ/` (screen and 3D), comments in the code, [`AGENTS.md`](../AGENTS.md) (every design rule) | Done |
+| Code, documented and organized | `src/game/` (rules), `src/components/civ/` (screen and 3D), comments in the code | Done |
 | Design evidence | [`design.md`](design.md), the [screenshots](#screenshots), the [process and testing log](process.md) | Done |
 | Presentation deck (5–10 min) | (the team is making it) | **Team** |
 | Video of the game being played | (the team is making it; link it here and in the main README) | **Team** |
@@ -35,7 +35,7 @@ the UN Sustainable Development Goals, with SDG 11 as our focus).
 | **3. Design & Presentation** (clarity, looks, usability) | [Look and usability](design.md#6-look-and-usability), the [screenshots](#screenshots) and the [presentation plan](presentation.md) |
 | **4. Problem-Solving & Thinking** (logic, adaptability) | [Process: problems we hit and how we adapted](process.md) |
 | **5. Implementation of the chosen feature** (clean, cohesive) | [The trade-off system: how it is built and how it fits](design.md#3-the-chosen-feature-trade-offs-you-can-see) |
-| **6. Documentation & Completeness** (code & schematics; supporting materials) | This folder, the project schematic, the [main README](../README.md), [`AGENTS.md`](../AGENTS.md) (every design rule), in-code comments, screenshots, and the gameplay video |
+| **6. Documentation & Completeness** (code & schematics; supporting materials) | This folder, the project schematic, the [main README](../README.md), in-code comments, screenshots, and the gameplay video |
 
 ## The documents
 
