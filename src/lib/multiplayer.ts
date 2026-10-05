@@ -5,6 +5,7 @@
 //
 // Empty seats are bots. They need no server: every client works out the same
 // bot scores, raids and gifts from the room's seed and the time since the start.
+import { MP } from "@/game/content";
 import { PUBLISHABLE_KEY, SUPABASE_URL } from "./online";
 
 export type Mode = "race" | "coop";
@@ -180,6 +181,37 @@ export function botScore(seed: number, seat: number, minutes: number, speed: Spe
   const xp = Math.round(skill * (38 * minutes + 2.2 * minutes * minutes) + era * 200);
   const sustainability = Math.round(Math.max(20, Math.min(95, 65 + 22 * Math.sin(minutes / 3 + seat) - era * 3 * (1 - skill))));
   return { xp, era, sustainability, population: Math.round(8 + minutes * 6 * skill * Math.sqrt(pace)) };
+}
+
+// Race: bots keep pace with the people in the room instead of a fixed curve.
+// Each aims between the humans' average XP and a typical player's (weighted
+// `ADAPT.follow` toward the humans, so playing well still pulls you ahead),
+// times its own share plus a slow wobble so the lead changes hands; never above
+// its own pace, and never an era ahead of the best human. The humans' numbers come
+// from the database, so every browser works out the same bot scores.
+export const ADAPT = { share: [0.82, 1.02] as const, wobble: 0.1, period: 2.2, follow: 0.8, typical: 0.8, raidShare: [0.6, 0.9] as const };
+
+export function adaptiveBotScore(seed: number, seat: number, minutes: number, speed: Speed, humans: { xp: number; era: number }[]) {
+  const base = botScore(seed, seat, minutes, speed);
+  if (!humans.length) return base;
+  const r = rand(seed * 17 + seat * 389)();
+  const share = ADAPT.share[0] + r * (ADAPT.share[1] - ADAPT.share[0]) + ADAPT.wobble * Math.sin(minutes / ADAPT.period + seat * 1.7);
+  const avg = humans.reduce((sum, h) => sum + Math.max(0, h.xp), 0) / humans.length;
+  const typical = ADAPT.typical * (38 * minutes + 2.2 * minutes * minutes);
+  const aim = Math.pow(Math.max(1, avg), ADAPT.follow) * Math.pow(Math.max(1, typical), 1 - ADAPT.follow);
+  const best = Math.max(...humans.map((h) => h.era));
+  return { ...base, xp: Math.round(Math.min(base.xp, aim * share)), era: Math.min(base.era, best) };
+}
+
+// How many warriors a bot's raid sends: what it planned, but at most a share of
+// our defense (so a town with warriors can always beat it), and only a couple
+// against a town with none.
+export function botRaidSize(seed: number, seat: number, planned: number, defense: number) {
+  const r = rand(seed * 29 + seat * 613)();
+  const share = ADAPT.raidShare[0] + r * (ADAPT.raidShare[1] - ADAPT.raidShare[0]);
+  // `defense` is in strength; each raider is worth MP.warriorStrength.
+  const fair = Math.floor((defense * share) / MP.warriorStrength);
+  return Math.max(1, Math.min(planned, Math.max(2, fair)));
 }
 
 // What the bots do: raids (race) or gifts (co-op), each at a set minute, at a
