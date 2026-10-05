@@ -26,7 +26,7 @@ const SECTIONS: Section[] = [
     title: "Moving around",
     icon: "compass",
     items: [
-      { text: "Drag to move; right-drag/two fingers to turn; scroll/pinch to zoom." },
+      { text: "Use arrow keys or drag to move; right-drag/two fingers to turn; scroll/pinch to zoom." },
       { text: "Click buildings for their actions. Use the top bar for pause and speed; Menu holds settings and saves." },
     ],
   },

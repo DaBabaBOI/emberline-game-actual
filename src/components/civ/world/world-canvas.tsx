@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Vector3 } from "three";
 import { Html, MapControls, PerformanceMonitor } from "@react-three/drei";
+import type { MapControls as MapControlsImpl } from "three-stdlib";
 import { BUILDINGS_BY_ID, ERAS, formatYear, IMPROVE, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL, WEAR, SMOG } from "@/game/content";
 import { CANOE_TOOL, SCOUT_TOOL, canoeTargetError, canoeTicks, scoutTargetError, scoutTicks } from "@/game/engine";
 import {
@@ -113,6 +114,57 @@ function OldGrove({ tiles, ids }: { tiles: Tile[]; ids: number[] }) {
 
 const probe = new Vector3();
 
+// Pan the map without a drag. This deliberately uses the camera's current
+// bearing, so Up always means further into the view and Left/Right remain
+// intuitive after the player has turned the camera.
+function KeyboardPan({ controls, enabled }: { controls: React.RefObject<MapControlsImpl | null>; enabled: boolean }) {
+  const pressed = useRef(new Set<string>());
+  const move = useRef(new Vector3());
+  const right = useRef(new Vector3());
+
+  useEffect(() => {
+    const arrows: Record<string, string> = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right" };
+    const typing = (target: EventTarget | null) =>
+      target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement || (target instanceof HTMLElement && target.isContentEditable);
+    const down = (event: KeyboardEvent) => {
+      const direction = arrows[event.key];
+      if (!enabled || !direction || event.defaultPrevented || typing(event.target)) return;
+      event.preventDefault();
+      pressed.current.add(direction);
+    };
+    const up = (event: KeyboardEvent) => {
+      const direction = arrows[event.key];
+      if (direction) pressed.current.delete(direction);
+    };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+    };
+  }, [enabled]);
+
+  useFrame(({ camera }, delta) => {
+    const c = controls.current;
+    if (!enabled || !c || pressed.current.size === 0) return;
+    const direction = move.current;
+    const sidewaysDirection = right.current;
+    camera.getWorldDirection(direction);
+    direction.y = 0;
+    const length = direction.length() || 1;
+    direction.divideScalar(length);
+    sidewaysDirection.set(-direction.z, 0, direction.x);
+    const forward = (pressed.current.has("up") ? 1 : 0) - (pressed.current.has("down") ? 1 : 0);
+    const sideways = (pressed.current.has("right") ? 1 : 0) - (pressed.current.has("left") ? 1 : 0);
+    const step = Math.min(delta, 0.1) * 12;
+    direction.multiplyScalar(forward * step).addScaledVector(sidewaysDirection, sideways * step);
+    camera.position.add(direction);
+    c.target.add(direction);
+    c.update();
+  });
+  return null;
+}
+
 // Tells the tutorial overlay where the tile it points at is on screen.
 function GuideAnchor({ tile }: { tile: Tile | null }) {
   useFrame(({ camera, size }) => {
@@ -176,6 +228,7 @@ export function WorldCanvas() {
   const guide = useGuide();
   // Picking people up (see world/pick-up.tsx).
   const [holding, setHolding] = useState(false);
+  const mapControls = useRef<MapControlsImpl>(null);
   const canPickUp =
     !selected && !panel && !guide.target && state.phase === "playing" && !state.debrief && state.tutorialStep >= TUTORIAL.length;
   const guideTile = guide.target?.kind === "tile" ? guide.target.tileId : null;
@@ -425,6 +478,7 @@ export function WorldCanvas() {
         cameos={cameos}
       />
       <PickUp state={state} dispatch={dispatch} enabled={canPickUp} onHolding={setHolding} />
+      <KeyboardPan controls={mapControls} enabled={!holding && !shot && !guide.target} />
       <Warriors
         tiles={state.tiles}
         population={state.population}
@@ -661,6 +715,7 @@ export function WorldCanvas() {
       {fancy && <FilmLook era={state.era} cinematic={!!shot} />}
 
       <MapControls
+        ref={mapControls}
         makeDefault
         // During guided steps the camera still turns and zooms, but doesn't
         // slide, so a click on the highlighted spot can't turn into a drag.
