@@ -165,19 +165,31 @@ Event cards and Elder Ama's lessons also link to other goals where they fit
 - **Reach the Future**: air capture plants, vertical farms, arcologies, fusion.
   Get the air back to a safe level before the climate tips for good, reach
   Type I on the Kardashev scale with clean power, and launch into space.
-- **Learn 79 advancements**, each doing something different (from Basketry and
-  Tamed Dogs to Rewilding and Automation). Some unlock only after a goal.
+- **Learn 109 advancements**, each doing something different (from Basketry and
+  Tamed Dogs to Heat Pumps, Electric Trams and Rewilding). Some unlock only
+  after a goal.
 - **Trade** with passing traders from the start: currency buys food, wood and
   stone, so you can spare your own forest.
 - **Mind the workload**: every building needs hands. With more jobs than
   people, everyone gets tired, makes less and is less happy.
 - **Explore**: pick where your scouts walk and where your canoes paddle, and
   watch them go and come back.
-- **Play together** online with up to 4 players (bots fill empty seats): race
-  for the most Chief XP, or team up in co-op. Send gifts, or raid each other.
+- **Play together** online with up to 4 players: race for the most Chief XP,
+  or team up in co-op. Send gifts, raid each other, and chat (quick phrases on
+  phones). Bots fill empty seats and keep pace with the players instead of
+  racing ahead.
+- **Watch the fights**: when your warriors meet raiders, the camera goes in
+  close over the battle. In multiplayer the raider gets a view of the fight,
+  anyone else can choose to watch, and everyone hears how it ended.
+- **Build to Last** (a second game mode): start in 1850 with a smoky
+  industrial town and solve three big problems at once: clear the air, run on
+  clean power, and give 120 people a home and food with the forest still
+  standing. No tutorial and no lessons; advancements are one line each.
 - **Name your people**, pick a culture and a difficulty, and play on a laptop or
   a phone. A guided tutorial with a pointing hand teaches the basics. New
-  players start in **First time** mode: a slower clock and a gentler start.
+  players start in **First time** mode: a slower clock, and a calm Stone Age
+  with no raids or disasters and far fewer interruptions. A **How to play**
+  guide is in the menu.
 - **Track your progress**: a chief level that only goes up, and a goal line that
   says what to aim for next.
 - **Six ways to lose**: famine, unrest (people too unhappy for too long), land

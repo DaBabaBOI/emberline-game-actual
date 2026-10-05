@@ -42,6 +42,7 @@ import {
   INDUSTRIAL_POPULATION,
   FUTURE_POPULATION,
   CARBON,
+  LAST,
   POWER,
   SMOG,
   STATION,
@@ -128,6 +129,7 @@ import { mulberry32 } from "./noise";
 import { cameosFor, EGGS, GOLDEN_DEER_FOOD, type EggId } from "./easter";
 import type { IconId } from "./sprites";
 import type {
+  BoostKey,
   Goal,
   TallyKey,
   TreeNode,
@@ -264,6 +266,8 @@ export interface NewGameOptions {
   nation?: string;
   // Multiplayer: everyone in a room plays the same island (the room's seed).
   seed?: number;
+  // "Build to Last": start in the Industrial era with three big problems.
+  mode?: "last";
   mp?: GameState["mp"];
 }
 
@@ -327,9 +331,85 @@ export function newGame(
   // advanceTutorial), so there's never a big pile; the reserve comes at the end.
   state.resources = tutorialBudget(state, [0]);
   state.resources.food += TUTORIAL_START_FOOD;
-  const started = options.dev ? applyDevStart(state, options.startEra ?? 0) : state;
+  const started = options.dev ? applyDevStart(state, options.startEra ?? 0) : options.mode === "last" ? applyLastStart(state) : state;
+  if (options.mode === "last") return { ...started, meters: computeMeters(started) };
   if (options.skipTutorial && !options.dev) return reducer({ ...started, meters: computeMeters(started) }, { type: "skipTutorial" });
   return { ...started, meters: computeMeters(started) };
+}
+
+// "Build to Last": the Industrial era in LAST.startYear, with a small working
+// town already standing (coal plant and smoky factory included), everything
+// from the earlier eras learned, and three big problems to solve. No tutorial,
+// no lessons, no raids: just the problems.
+function applyLastStart(state: GameState): GameState {
+  const researched = TREE.filter((n) => !n.comingSoon && !n.secret && n.era < 4).map((n) => n.id);
+  const home = state.tiles[state.startTile];
+  // Explore the island around the town.
+  for (const t of state.tiles) if (hexDistance(t, home) <= 6) t.revealed = true;
+  let next: GameState = {
+    ...devJumpToEra(state, 4),
+    mode: "last",
+    year: LAST.startYear,
+    tutorialStep: TUTORIAL.length,
+    researched: Array.from(new Set([...state.researched, ...researched])),
+    resources: { ...LAST.resources },
+    population: LAST.population,
+    carbon: CARBON.start,
+    nextRaidTick: Number.MAX_SAFE_INTEGER,
+    lessonsSeen: LESSONS.map((l) => l.id),
+    lastHeld: 0,
+    log: [`${state.nation ?? DEFAULT_NATION}, ${LAST.startYear}: smoke over the town. Solve the three big problems and build something that lasts.`],
+  };
+  // The town: each building on the nearest free spot that suits it.
+  for (const id of LAST.town) {
+    const def = BUILDINGS_BY_ID[id];
+    if (!def) continue;
+    const spot = next.tiles
+      .filter((t) => t.revealed && !placementError(next, t, def))
+      .sort((a, b) => hexDistance(a, home) - hexDistance(b, home))[0];
+    if (spot) next = { ...next, tiles: next.tiles.map((t) => (t.id === spot.id ? { ...t, building: id } : t)) };
+  }
+  return next;
+}
+
+// Build to Last: the three big problems, how each is going, and whether it's solved.
+export function lastProblems(state: GameState) {
+  const flow = carbonFlow(state) * 40;
+  const share = cleanPowerShare(state);
+  const cover = powerCover(state);
+  const pop = Math.floor(state.population);
+  const forest = forestCover(state);
+  const m = state.meters;
+  return [
+    {
+      id: "air",
+      title: "Clear the air",
+      done: flow <= 0,
+      status: flow <= 0 ? `Carbon falling (${flow.toFixed(1)} ppm/min)` : `Carbon rising ${flow.toFixed(1)} ppm/min`,
+    },
+    {
+      id: "power",
+      title: "Clean power",
+      done: share >= LAST.cleanShare && cover >= 1,
+      status: `${Math.round(share * 100)}% clean of ${Math.round(LAST.cleanShare * 100)}%${cover < 1 ? `, grid short (${Math.round(cover * 100)}%)` : ""}`,
+    },
+    {
+      id: "people",
+      title: `Home and food for ${LAST.people}`,
+      done: pop >= LAST.people && m.food >= LAST.meter && m.shelter >= LAST.meter && forest >= LAST.forest,
+      status: `${pop}/${LAST.people} people · food ${Math.round(m.food)} · homes ${Math.round(m.shelter)} · forest ${Math.round(forest * 100)}%/${Math.round(LAST.forest * 100)}%`,
+    },
+  ];
+}
+
+// All three solved, held for LAST.hold ticks in a row: the story ends well.
+function updateLast(state: GameState): GameState {
+  if (state.mode !== "last" || state.phase !== "playing" || state.finished || state.debrief) return state;
+  const solved = lastProblems(state).every((p) => p.done);
+  const held = solved ? (state.lastHeld ?? 0) + 1 : 0;
+  if (held < LAST.hold) return held === state.lastHeld ? state : { ...state, lastHeld: held };
+  const done = { ...state, lastHeld: held, finished: true, log: [`${state.nation ?? "Our people"} built something that lasts: clean air, clean power, and a home for everyone.`, ...state.log].slice(0, 30) };
+  return { ...done, debrief: makeDebrief(done, "final") };
 }
 
 // Dev mode: skip ahead for testing. Lots of resources, the map revealed, and
@@ -758,13 +838,14 @@ export function homelessMood(state: GameState) {
 }
 
 export function housingCapacity(state: GameState) {
-  let room = BASE_HOUSING;
+  let room = 0;
   for (const t of state.tiles) {
     const housing = homeRoom(t);
     // Hard mode: a broken-down home only holds half its people.
     room += (t.worn ?? 0) >= 1 ? Math.floor(housing / 2) : housing;
   }
-  return room;
+  // Advancements (Reinforced Concrete, High-rises): every home holds more.
+  return BASE_HOUSING + Math.floor(room * (1 + boostOf(state, "housing")));
 }
 
 // The wild only has so much to give. The first gatherer camp gets a full
@@ -1401,7 +1482,25 @@ const HOMES = ["hut", "house", "townhouse", "apartments"];
 
 // The power a building adds to the grid (+) or needs from it (-). Factories
 // only need it once Electricity drives their machines.
+// What the researched advancements add up to for one thing (see BoostKey):
+// a fraction for most (0.25 = 25% more), meter points for happiness and health.
+const BOOSTED = TREE.filter((n) => n.boost);
+export function boostOf(state: GameState, key: BoostKey): number {
+  let sum = 0;
+  for (const n of BOOSTED) if (n.boost![key] && state.researched.includes(n.id)) sum += n.boost![key]!;
+  return sum;
+}
+
 export function powerOf(state: GameState, building: string): number {
+  const def = BUILDINGS_BY_ID[building];
+  const raw = powerBase(state, building);
+  // Advancements: clean plants make more; everything that uses power needs less.
+  if (raw > 0 && !def?.carbon) return raw * (1 + boostOf(state, "cleanPower"));
+  if (raw < 0) return raw * Math.max(0.3, 1 + boostOf(state, "demand"));
+  return raw;
+}
+
+function powerBase(state: GameState, building: string): number {
   // Mineral X-7 (Future): everything that needs power needs a quarter less.
   const need = state.researched.includes("mineral-x") ? 1 - MINERAL_X.saving : 1;
   if (building === "factory") return state.researched.includes("electricity") ? -POWER.factoryNeed * need : 0;
@@ -1468,11 +1567,11 @@ export function warming(state: GameState) {
 // as much with Rewilding), and air capture plants take more back.
 export function carbonFlow(state: GameState) {
   const added = state.tiles.reduce((sum, t) => sum + (t.building ? (BUILDINGS_BY_ID[t.building].carbon ?? 0) : 0), 0);
-  return added - forestSink(state) - carbonCaptured(state);
+  return added * Math.max(0.2, 1 + boostOf(state, "carbon")) - forestSink(state) - carbonCaptured(state);
 }
 
 export function forestSink(state: GameState) {
-  return CARBON.forestSink * forestCover(state) * (state.researched.includes("rewilding") ? REWILDING.sink : 1);
+  return CARBON.forestSink * forestCover(state) * (state.researched.includes("rewilding") ? REWILDING.sink : 1) * (1 + boostOf(state, "sink"));
 }
 
 // Air capture plants work as well as the grid covers them, and much less on
@@ -1506,7 +1605,7 @@ export function smogIndex(state: GameState) {
     if (parks.some((p) => hexDistance(p, h) <= SMOG.parkRange)) continue;
     for (const f of smoky) if (hexDistance(f, h) <= SMOG.range) total += BUILDINGS_BY_ID[f.building!].smog! * laws;
   }
-  return Math.min(SMOG.max, total / homes.length);
+  return Math.min(SMOG.max, (total / homes.length) * Math.max(0.1, 1 + boostOf(state, "smog")));
 }
 
 // The climate tipping point (Future & Space): TIPPING.afterTicks into the era,
@@ -1918,6 +2017,9 @@ export function production(state: GameState): Resources {
   // The climate crisis: heat and storms ruin crops, the warmer the worse.
   if (inClimateCrisis(state)) out.food *= Math.max(0.3, 1 - CLIMATE.cropLoss * warming(state));
   if (state.researched.includes("roads")) out.currency *= ROADS_COINS;
+  // The many smaller Industrial advancements.
+  const more: [keyof Resources, BoostKey][] = [["food", "food"], ["wood", "wood"], ["stone", "stone"], ["knowledge", "knowledge"], ["currency", "coins"]];
+  for (const [r, key] of more) if (out[r] > 0) out[r] *= 1 + boostOf(state, key);
   // Keeping the outposts supplied (when we can pay; otherwise they stand idle).
   if (!unpaid) out.currency -= outpostUpkeep(state);
   return out;
@@ -3064,7 +3166,8 @@ export function computeMeters(state: GameState): Meters {
     (counts.healer ?? 0) * 12 +
     // Clean water keeps people healthy; dirty, crowded streets don't.
     Math.min(15, (counts.well ?? 0) * 3 + (counts.aqueduct ?? 0) * 6) -
-    (1 - sanitation(state)) * 12;
+    (1 - sanitation(state)) * 12 +
+    boostOf(state, "health");
 
   const fireBoost = state.researched.includes("firekeeping") ? 1.5 : 1;
   const lit = litFires(state).length;
@@ -3089,6 +3192,7 @@ export function computeMeters(state: GameState): Meters {
     (state.researched.length - 1) * 2;
 
   const happiness =
+    boostOf(state, "happiness") +
     clamp(food) * 0.35 +
     clamp(shelter) * 0.35 +
     Math.min(3, lit) * 6 +
@@ -3356,7 +3460,8 @@ export function goalProgress(state: GameState, nodeId: string) {
 }
 
 export function goalsMet(state: GameState, nodeId: string): boolean {
-  if (state.devGoals) return true;
+  // Build to Last keeps it simple: advancements only cost Knowledge.
+  if (state.devGoals || state.mode === "last") return true;
   return goalProgress(state, nodeId).every((g) => g.done);
 }
 
@@ -3476,6 +3581,8 @@ export function settlersReady(state: GameState) {
 
 export function readyForNextEra(state: GameState) {
   if (state.phase !== "playing" || state.debrief) return false;
+  // Build to Last stays in the Industrial era: the three problems are the goal.
+  if (state.mode === "last") return false;
   if (state.era === 0) return state.researched.includes("agriculture") && state.population >= NEXT_ERA_POPULATION;
   if (state.era === 1)
     return !!state.legionDone && state.researched.includes("coinage") && state.population >= CLASSICAL_POPULATION;
@@ -3724,6 +3831,7 @@ function tickOnce(state: GameState): GameState {
   next = sparks(next);
   // No raids or events while a new player is still learning.
   if (!inTutorial) next = updateTipping(updateClimate(updateRebellion(updatePlague(updateDisasters(updateDrought(updateLegion(updateRaids(next))))))));
+  next = updateLast(next);
   next = updateCarbon(next);
   next = updateFatigue(next);
   if ((next.tradePrice ?? 1) > 1) next = { ...next, tradePrice: Math.max(1, (next.tradePrice ?? 1) - TRADE.ease) };
@@ -4928,6 +5036,13 @@ function addXp(state: GameState, gain: number): GameState {
 // The one thing to aim for right now, in a line (null while the tutorial or a
 // guided step is already telling the player what to do).
 export function currentGoal(state: GameState): string | null {
+  if (state.mode === "last") {
+    const p = lastProblems(state);
+    const left = p.filter((x) => !x.done);
+    return left.length
+      ? `Goal: solve the three big problems (${3 - left.length}/3). Next: ${left[0].title.toLowerCase()}.`
+      : `All three solved! Hold them for ${Math.max(0, Math.ceil(secs(LAST.hold - (state.lastHeld ?? 0))))}s.`;
+  }
   if (state.tutorialStep < TUTORIAL.length || state.coach || state.phase !== "playing" || state.debrief) return null;
   const pop = Math.floor(state.population);
   if (state.era === 0) {
@@ -5142,7 +5257,8 @@ function step(state: GameState, action: Action): GameState {
         ...snapshotGoals({ ...state, researched: [...state.researched, node.id] }),
         coach,
         // A short scene of the moment it was discovered (see DISCOVERIES).
-        cutscene: DISCOVERIES[node.id] ? node.id : state.cutscene ?? null,
+        // Build to Last keeps text short: no discovery scenes.
+        cutscene: DISCOVERIES[node.id] && state.mode !== "last" ? node.id : state.cutscene ?? null,
         researched: [...state.researched, node.id],
         flags: { ...state.flags, rocket: state.flags.rocket || node.id === "rocketry" },
         resources: { ...state.resources, knowledge: state.resources.knowledge - researchCost(state, node) },

@@ -201,10 +201,15 @@ export interface BuildingDef {
   reveal?: number;
 }
 
+// What an advancement improves, as a fraction (+0.1 = 10% more; −0.1 = 10%
+// less) or, for happiness and health, points on the meter.
+export type BoostKey = "food" | "wood" | "stone" | "knowledge" | "coins" | "cleanPower" | "demand" | "carbon" | "sink" | "smog" | "housing" | "happiness" | "health";
+
 export interface TreeNode {
   id: string;
   name: string;
   description: string;
+  boost?: Partial<Record<BoostKey, number>>;
   branch: Branch | "root";
   era: number;
   cost: number;
@@ -310,6 +315,10 @@ export interface GameState {
   seed: number;
   culture: CultureId;
   difficulty: DifficultyId;
+  // "Build to Last": start in the Industrial era with three big problems to solve.
+  mode?: "last";
+  // Build to Last: ticks in a row with all three problems solved.
+  lastHeld?: number;
   // The Roman legion on its way (seen by scouts), and whether it has been fought.
   legion?: { size: number; arriveTick: number; vanguard?: boolean } | null;
   legionDone?: boolean;

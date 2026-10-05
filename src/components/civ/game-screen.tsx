@@ -209,7 +209,7 @@ export function GameScreen() {
         onLoadCloud={(state) => setGame(state)}
         onStart={(culture: CultureId, difficulty: DifficultyId, options?: NewGameOptions) => {
           clearSave();
-          setIntro(!options?.dev);
+          setIntro(!options?.dev && options?.mode !== "last");
           setGame(newGame(culture, difficulty, options));
         }}
       />

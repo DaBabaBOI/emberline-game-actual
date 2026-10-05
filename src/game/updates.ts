@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "New game mode, Build to Last: start in 1850 with a smoky industrial town and solve three big problems (clear the air, clean power, a home and food for 120 with the forest standing). 30 new short advancements, no tutorial and no lessons.",
       "First-time mode is calmer: in the Stone Age there are no raids or natural disasters, big moments are three times further apart, and lessons and small moments come half as often. Event cards stay spaced out for the first half hour.",
       "Cutscenes move like the opening fly-in: a new era sweeps down from high over the sea to your town, and discovery scenes open with the camera moving in.",
       "Tired people sweat: when your town is overworked, drops of sweat fly off your villagers' brows, more of them the more tired the town is.",
