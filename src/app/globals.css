@@ -418,6 +418,121 @@ html[data-in-game] .accessibility-floating {
   background: linear-gradient(105deg, transparent 30%, rgba(255, 240, 184, 0.14) 50%, transparent 70%);
   animation: scene-beat-wash 0.75s steps(6) both;
 }
+
+.not-found-page {
+  color: #2b2119;
+}
+
+.not-found-page :is(h1, p, span, a) {
+  color: inherit;
+}
+
+.not-found-page > header > a {
+  color: #2b2119;
+}
+
+.not-found-page .nf-code {
+  color: #9a3412;
+  font-family: var(--font-num), ui-monospace, monospace;
+}
+
+.not-found-page .nf-home-button {
+  background-color: #047857;
+  border-color: #2b2119;
+  color: #ffffff;
+}
+
+.not-found-page .nf-game-button {
+  background-color: #fbbf24;
+  border-color: #2b2119;
+  color: #2b2119;
+}
+
+.not-found-page .nf-map-scene {
+  background-color: #1686a0;
+  background-image: repeating-linear-gradient(0deg, transparent 0 22px, rgba(255, 255, 255, 0.12) 23px 24px);
+}
+
+.nf-map-grid {
+  display: grid;
+  width: min(72%, 350px);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  transform: rotate(-8deg);
+}
+
+.nf-map-tile {
+  aspect-ratio: 1;
+  clip-path: polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0 50%);
+  filter: drop-shadow(0 2px 0 rgba(43, 33, 25, 0.4));
+}
+
+.nf-map-water {
+  background-color: rgba(145, 222, 226, 0.36);
+}
+
+.nf-map-land {
+  background-color: #d9b45a;
+  box-shadow: inset 0 -8px 0 rgba(139, 90, 43, 0.24);
+}
+
+.nf-map-forest {
+  background-color: #3fa34d;
+  box-shadow: inset 0 -8px 0 rgba(45, 110, 53, 0.6);
+}
+
+.nf-map-marker {
+  top: 17%;
+  right: 10%;
+  animation: nf-marker-bob 1.2s steps(3) infinite alternate;
+}
+
+.nf-map-caption {
+  box-shadow: 2px 2px 0 rgba(43, 33, 25, 0.35);
+}
+
+@keyframes nf-marker-bob {
+  to { transform: translateY(-5px); }
+}
+
+html[data-theme="dark"] .not-found-page {
+  background: linear-gradient(180deg, #1e3a5f 0%, #111b2e 58%, #0b1220 100%) !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .not-found-page > header > a,
+html[data-theme="dark"] .not-found-page > section > div:first-child > p,
+html[data-theme="dark"] .not-found-page > footer {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .not-found-page .nf-home-button {
+  background-color: #047857 !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .not-found-page .nf-game-button {
+  background-color: #fbbf24 !important;
+  color: #1c1300 !important;
+}
+
+html[data-theme="dark"] .not-found-page .nf-map-marker {
+  background-color: #111b2e !important;
+  border-color: #f8fafc !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .not-found-page .nf-map-caption {
+  background-color: #fdf6e3 !important;
+}
+
+html[data-theme="dark"] .not-found-page .nf-map-caption span {
+  color: #2b2119 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nf-map-marker { animation: none; }
+}
 @keyframes scene-beat-wash {
   from { opacity: 1; transform: translateX(-25%); }
   to { opacity: 0; transform: translateX(25%); }
