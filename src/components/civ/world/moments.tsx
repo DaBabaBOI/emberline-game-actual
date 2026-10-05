@@ -2,7 +2,7 @@
 
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
+import { Html } from "./html";
 import type { Group, Mesh } from "three";
 import type { GameState, Tile } from "@/game/types";
 import type { IconId } from "@/game/sprites";

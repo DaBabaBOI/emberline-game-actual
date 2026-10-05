@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Html } from "@react-three/drei";
+import { Html } from "./html";
 import { isLand } from "@/game/map";
 import type { Tile } from "@/game/types";
 import { SEA_LEVEL } from "./water";

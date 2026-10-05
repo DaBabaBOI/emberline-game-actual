@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
+import { Html } from "./html";
 import { Plane, Raycaster, Vector2, Vector3 } from "three";
 import { BUILDINGS_BY_ID, DROP, GRIEF, TICK_SECONDS } from "@/game/content";
 import { dropOutcome, type Action, type DropOutcome } from "@/game/engine";

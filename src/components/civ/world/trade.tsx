@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Group } from "three";
-import { Html } from "@react-three/drei";
+import { Html } from "./html";
 import { CANOE, DIPLOMACY, KINGDOMS, TICK_SECONDS } from "@/game/content";
 import { moodOf, nextVoyage } from "@/game/engine";
 import { ISLANDS, isLand } from "@/game/map";

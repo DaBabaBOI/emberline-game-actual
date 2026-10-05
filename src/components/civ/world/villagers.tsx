@@ -2,7 +2,7 @@
 
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
+import { Html } from "./html";
 import { Object3D, type Group, type InstancedMesh } from "three";
 import { TICK_SECONDS, WORK } from "@/game/content";
 import { hexDistance } from "@/game/hex";
