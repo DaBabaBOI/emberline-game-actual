@@ -1,8 +1,8 @@
 # Emberline
 
-**A sustainability trade-off game.** Lead your people from the first campfire
-to the stars, through six eras, without destroying the land that feeds them.
-Every hut, farm and power plant helps your people now and costs the land later. Made for
+**A sustainability trade-off game.** Build and guide a civilization through
+different eras and challenges. Balance your people's needs with the health of
+the land: every home, farm and power plant brings a benefit and a cost. Made for
 the SHISTECH Hacktrack hackathon (UN Sustainable Development Goals theme), built
 around **SDG 11: Sustainable Cities and Communities**.
 
@@ -205,10 +205,10 @@ new.
 
 ## Roadmap
 
-**All six eras are complete and playable**, from the first campfire through
-the Roman legion, the great drought, the plague and the climate crisis to the
-tipping point and space. Online multiplayer works too. Ideas for after the
-hackathon:
+**The six-era campaign is complete and playable**, with the Roman legion, the
+great drought, the plague and the climate crisis leading to the tipping point
+and space. Other modes start in later eras and set their own goals. Online
+multiplayer works too. Ideas for after the hackathon:
 
 | Next | What it adds to the trade-off |
 | --- | --- |

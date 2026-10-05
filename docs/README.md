@@ -1,9 +1,10 @@
 # Emberline: project documentation
 
-**Emberline** is a browser game about sustainability trade-offs. The player
-leads a people through six eras, from the first campfire to space. Every
-building helps the people now and costs the land later. Up to four people can
-play together online. It was made by Prithu Sharma, Aarav Kumar,
+**Emberline** is a browser game about sustainability trade-offs. Players guide
+a civilization through scenarios set across six eras; some begin at the first
+campfire, while others start later with their own challenges. Every building
+helps the people now and costs the land later. Up to four people can play
+together online. It was made by Prithu Sharma, Aarav Kumar,
 Vagisha Sinha and Aaradhya Verma for the SHISTECH Hacktrack hackathon (theme:
 the UN Sustainable Development Goals, with SDG 11 as our focus).
 
