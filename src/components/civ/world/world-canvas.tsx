@@ -243,8 +243,10 @@ export function WorldCanvas() {
   // when a new era begins.
   const shownEra = useRef(state.era);
   useEffect(() => {
-    if (state.tick === 0 && state.tutorialStep === 0 && !state.dev) {
-      playShot({ kind: "intro", title: state.nation ?? "The Emberfolk", subtitle: `${ERAS[0].name} · ${formatYear(state.year)}`, seconds: 6 });
+    // Every new game (the Stone Age, Build to Last, multiplayer), not a loaded one.
+    if (state.tick === 0 && !state.dev) {
+      const mode = state.mode === "last" ? "Build to Last" : state.mp ? (state.mp.mode === "race" ? "Race" : "Together") : ERAS[state.era].name;
+      playShot({ kind: "intro", title: state.nation ?? "The Emberfolk", subtitle: `${mode} · ${formatYear(state.year)}`, seconds: 6 });
     }
     // Only on the first render of this game.
     // eslint-disable-next-line react-hooks/exhaustive-deps
