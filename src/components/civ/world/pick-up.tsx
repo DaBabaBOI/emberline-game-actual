@@ -12,6 +12,9 @@ import { makeGround } from "./ground";
 import { tileTop } from "./hex-terrain";
 import { grabStore, type Walker } from "./villagers";
 
+// The tool someone dropped on a building works with (none: they help by hand).
+const TOOLS: Record<string, "axe" | "pick" | "hoe"> = { woodcutter: "axe", quarry: "pick", farm: "hoe", gatherer: "hoe", pen: "hoe", forester: "hoe", vfarm: "hoe" };
+
 // How close (in screen pixels) a click must be to a person to pick them up...
 const GRAB_RADIUS = 44;
 // ...or how close on the ground (world units, about a hex) to where you clicked.
@@ -370,11 +373,15 @@ function land(w: Walker, outcome: DropOutcome, tile: Tile | null, tiles: Tile[],
       w.sitting = false;
       w.sitAt = null;
       if (outcome === "help" && tile) {
-        // Get to work for as long as the help lasts, facing the building.
-        w.working = true;
+        // Get to work for as long as the help lasts, facing the building. A
+        // tool only where one makes sense: an axe for wood, a pick for stone,
+        // a hoe for the land. Anywhere else (a school, a market, a factory)
+        // they pitch in by hand, without digging at the floor.
+        const tool = tile.building ? TOOLS[tile.building] : undefined;
+        w.working = !!tool;
         w.workAt = tile;
         w.workUntil = performance.now() + DROP.helpTicks * TICK_SECONDS * 1000;
-        w.workTool = tile.building === "woodcutter" ? "axe" : tile.building === "quarry" ? "pick" : "hoe";
+        w.workTool = tool;
         // A woodcutter's helper walks out to a tree; the others work where
         // they land, facing the building.
         const spot = w.workTool === "axe" ? ground.workSpot(tile, "axe") : { x: w.x, z: w.z, face: { x: tile.x, z: tile.z } };
