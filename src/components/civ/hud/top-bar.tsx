@@ -234,7 +234,7 @@ export function TopBar({ children }: { children?: React.ReactNode }) {
         </div>
         {/* The stores: their own row below 1024 px. */}
         <div className="order-6 flex w-full flex-wrap items-center justify-center gap-x-1 gap-y-1 min-[380px]:gap-x-1.5 sm:gap-x-2.5 lg:contents">
-          <ChiefXp state={state} />
+          {state.mode !== "last" && <ChiefXp state={state} />}
           <span className="hidden h-6 w-px bg-white/20 lg:block" />
           <CrowdChip
             icon="person"
@@ -245,13 +245,15 @@ export function TopBar({ children }: { children?: React.ReactNode }) {
             controls={(close) => <PopulationControl close={close} />}
           />
           <Chip icon="coin" value={Math.floor(r.currency).toLocaleString()} title={era.currency} />
-          <CrowdChip
-            icon="sword"
-            count={state.soldiers}
-            figures={figureCounts(state.population, state.soldiers).warriors}
-            group="warriors"
-            noun="warriors"
-          />
+          {state.mode !== "last" && (
+            <CrowdChip
+              icon="sword"
+              count={state.soldiers}
+              figures={figureCounts(state.population, state.soldiers).warriors}
+              group="warriors"
+              noun="warriors"
+            />
+          )}
           <span className="hidden h-6 w-px bg-white/20 lg:block" />
           <Chip icon="meat" value={Math.floor(r.food).toString()} title="Stored food" low={low.has("food") || low.has("famine")} />
           <Chip icon="log" value={Math.floor(r.wood).toString()} title="Wood" low={low.has("wood")} />

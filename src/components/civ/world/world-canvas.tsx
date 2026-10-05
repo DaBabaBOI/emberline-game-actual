@@ -36,6 +36,9 @@ import {
   townNote,
   connectionNote,
   effectAreas,
+  salvageOf,
+  scrapClearCost,
+  scrapEra,
   soilOf,
 } from "@/game/engine";
 import { BuildingInfo } from "./building-info";
@@ -45,7 +48,7 @@ import { ScoutMarker, SmallMoment } from "./moments";
 import { Rebels } from "./rebels";
 import { tileAnchor } from "@/components/civ/guide";
 import { useGuide } from "@/components/civ/hud/guide-overlay";
-import type { Tile } from "@/game/types";
+import type { GameState, Tile } from "@/game/types";
 import { BiomeDetails, Deposits, Forests, HexTerrain, Mountains, tileTop, treeSpots } from "./hex-terrain";
 import { BUILDING_SCALE, MODELS, buildingTurn } from "./building-models";
 import { BattleScene, FireVictims, Raiders, Villagers, Warriors } from "./villagers";
@@ -103,6 +106,34 @@ function ReachArea({ tiles, centre, building }: { tiles: Tile[]; centre: Tile; b
               <ringGeometry args={[0.86, 0.95, 6, 1, Math.PI / 6]} />
               <meshBasicMaterial color={harm ? "#b91c1c" : "#15803d"} transparent opacity={0.9} depthWrite={false} />
             </mesh>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+// Scrap left by sold buildings (Industrial era on): a heap of beams, sheets and rust.
+function ScrapPiles({ state }: { state: GameState }) {
+  const ids = Object.keys(state.scrap ?? {}).map(Number);
+  return (
+    <group>
+      {ids.map((id) => {
+        const t = state.tiles[id];
+        if (!t) return null;
+        return (
+          <group key={id} position={[t.x, tileTop(t), t.z]} rotation={[0, id % 6, 0]} raycast={() => null}>
+            {[
+              [0, 0.08, 0, 0.7, 0.16, 0.5, "#6b6258"],
+              [0.15, 0.2, -0.05, 0.35, 0.12, 0.3, "#8a5a3c"],
+              [-0.2, 0.18, 0.1, 0.3, 0.1, 0.25, "#4f4a44"],
+              [0.05, 0.3, 0.05, 0.6, 0.05, 0.07, "#9a8f84"],
+            ].map(([x, y, z, w, h, d, c], i) => (
+              <mesh key={i} position={[x as number, y as number, z as number]} rotation={[0, i * 0.7, i % 2 ? 0.25 : -0.1]}>
+                <boxGeometry args={[w as number, h as number, d as number]} />
+                <meshStandardMaterial color={c as string} flatShading />
+              </mesh>
+            ))}
           </group>
         );
       })}
@@ -297,7 +328,15 @@ export function WorldCanvas() {
     if (!demolishing || !hoverTile) return null;
     const problem = demolishError(state, hoverTile);
     if (problem) return { ok: false, text: problem };
+    const list = (r: Partial<Record<string, number>>, sign: string) =>
+      Object.entries(r).filter(([, v]) => (v ?? 0) > 0).map(([k, v]) => `${sign}${v} ${k === "currency" ? "coins" : k}`).join(", ");
+    // A scrap pile: what clearing it costs and salvages.
+    if (!hoverTile.building && state.scrap?.[hoverTile.id]) {
+      const cost = list(scrapClearCost(state), "−");
+      return { ok: true, text: `Clear the scrap${cost ? ` (${cost})` : ""}: ${list(state.scrap[hoverTile.id], "+") || "a little back"}` };
+    }
     const target = BUILDINGS_BY_ID[hoverTile.building!];
+    if (scrapEra(state)) return { ok: true, text: `Take down the ${target.name}: it leaves scrap worth ${list(salvageOf(state, target), "+") || "a little"} to clear` };
     const refund = Object.entries(demolishRefund(target))
       .filter(([, v]) => (v ?? 0) > 0)
       .map(([k, v]) => `+${v} ${k}`)
@@ -567,6 +606,7 @@ export function WorldCanvas() {
       {(disaster.kind === "earthquake" || disaster.kind === "landslide") && disaster.active && <DisasterDust tiles={state.tiles} ids={disaster.tiles} />}
       <Cracks tiles={state.tiles} />
       <Links state={state} />
+      <ScrapPiles state={state} />
       <Rubble tiles={state.tiles} />
       <Wildlife
         tiles={state.tiles}
@@ -648,7 +688,7 @@ export function WorldCanvas() {
           </div>
         </Html>
       )}
-      {hoverTile && demolishNote && hoverTile.building && (
+      {hoverTile && demolishNote && (hoverTile.building || state.scrap?.[hoverTile.id]) && (
         <Html zIndexRange={[15, 0]} center position={[hoverTile.x, tileTop(hoverTile) + 1.2, hoverTile.z]} style={{ pointerEvents: "none" }}>
           <div className="pixel-panel-dark font-pixel whitespace-nowrap px-2 py-1 text-xs">{demolishNote.text}</div>
         </Html>

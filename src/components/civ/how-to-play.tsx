@@ -27,12 +27,12 @@ const SECTIONS: Section[] = [
     title: "Build to Last",
     icon: "factory",
     items: [
-      { text: "It's 1850. Your town has homes, farms, factories and coal power, and the smoke is building up. A short guide shows you where to start." },
-      { icon: "person", text: "1. Homes and food for 120 people, with a third of the land still forest. Start here." },
-      { icon: "bulb", text: "2. Clean power: 75% from water, wind or sun. Hydropower arrives in 1882 and wind in 1887." },
+      { text: "It's 1850, the age of coal. A short guide has you build your town, one building at a time, so you know what each one does." },
+      { icon: "person", text: "1. Homes and food for 60 people, with a third of the land still forest. Start here." },
+      { icon: "bulb", text: "2. Clean power: 70% from water, wind or sun. Hydropower arrives in 1882 and wind in 1887." },
       { icon: "leaf", text: "3. Clear the air: once power is clean, close the coal plants so carbon falls." },
       { icon: "book", text: "Inventions arrive in the year they really were, and real history happens around you as the years pass." },
-      { icon: "star", text: "Solve all three at once and keep them solved for almost two minutes. Beat the real world: finish before 2025 for three stars: see your air against the real world's at the end." },
+      { icon: "star", text: "Solve all three at once and keep them solved for a minute and a half. Beat the real world: finish before 2025 for three stars: see your air against the real world's at the end." },
     ],
   },
   {

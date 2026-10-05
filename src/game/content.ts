@@ -3743,6 +3743,11 @@ export const KNIGHTS = { strength: 4, food: 1.5 };
 // Tired soil: a field farmed `tiredAfter` ticks in a row (about 6 minutes)
 // gives `tiredYield` of its food until it rests fallow for `restTicks` (about
 // a minute). Three-Field Rotation rests every field in turn, so none tire.
+// Scrap (from the Industrial era): a sold building leaves a scrap pile that
+// blocks the tile. Clearing it costs `clearCost` (the work) and salvages
+// `salvage` of what the building cost; with Recycling it's free and saves more.
+export const SCRAP = { fromEra: 4, salvage: 0.3, recycled: 0.6, clearCost: { currency: 5 } };
+
 export const FALLOW = { tiredAfter: 240, restTicks: 40, tiredYield: 0.5 };
 
 export const FARMING = { plough: 1.25, rotation: 1.1, rotationStrain: 0.5, windmill: 0.2, windmillReach: 2, windmillEnergy: 10 };
@@ -3940,17 +3945,20 @@ export const TUTORIAL: { text: string; more: string; done: string; unlocks: stri
 // fed and housed (meters at least `meter`) with `forest` of the forest standing.
 export const LAST = {
   startYear: 1850,
-  population: 60,
-  resources: { food: 400, wood: 250, stone: 250, knowledge: 30, currency: 200 },
-  // A smoky industrial town that runs on coal: factories and flats on the grid.
-  town: ["townhouse", "townhouse", "townhouse", "apartments", "apartments", "latrine", "latrine", "well", "well", "farm", "farm", "farm", "farm", "farm", "farm", "farm", "granary", "woodcutter", "quarry", "factory", "factory", "coalplant", "coalplant", "market", "university", "temple"],
+  population: 30,
+  resources: { food: 300, wood: 300, stone: 300, knowledge: 30, currency: 500 },
+  // Nothing built yet: the guide has the player build the town, so they know
+  // what each building does. (Any listed here are placed in districts.)
+  town: [] as string[],
   // Already known in 1850 (on top of every earlier era).
   known: ["electricity", "railways"],
+  // Advancements left out of this mode: nothing to do with its three problems.
+  hiddenTech: ["tanks", "seawalls", "plutonium"],
   // Old buildings left off the build bar in this mode, to keep it short.
-  hidden: ["campfire", "hut", "gatherer", "warcamp", "watchfire", "elder", "healer", "pen", "house", "school", "smithy", "canal", "shrine", "walls", "dock", "fishing", "harbour", "shipyard", "tradingpost", "guildhall"],
-  hold: 70,
-  cleanShare: 0.75,
-  people: 120,
+  hidden: ["campfire", "hut", "gatherer", "warcamp", "watchfire", "elder", "healer", "pen", "house", "school", "smithy", "canal", "shrine", "walls", "dock", "fishing", "harbour", "shipyard", "tradingpost", "guildhall", "castle", "cathedral", "library", "academy"],
+  hold: 60,
+  cleanShare: 0.7,
+  people: 60,
   meter: 50,
   forest: 0.35,
   // No events, small moments or outbreaks for this many ticks (about 2.5
@@ -3966,9 +3974,13 @@ export const LAST = {
 };
 
 // Build to Last's guided start: four short steps with the pointing hand.
-export const LAST_TUTORIAL: { id: string; text: string }[] = [
+export const LAST_TUTORIAL: { id: string; text: string; build?: string }[] = [
   { id: "problems", text: "These are your three big problems. Click the first one to see how to solve it." },
-  { id: "build", text: "Your people need room to grow. Build a Town House." },
+  { id: "townhouse", build: "townhouse", text: "Your people need homes. Build a Town House." },
+  { id: "farm", build: "farm", text: "Everyone needs food. Build Farmland." },
+  { id: "coalplant", build: "coalplant", text: "In 1850, power means coal. Build a Coal Plant: cheap power, but smoke and carbon." },
+  { id: "factory", build: "factory", text: "A Factory turns power into coins, and adds its own smoke." },
+  { id: "university", build: "university", text: "A University makes Knowledge, to research new inventions." },
   { id: "advancements", text: "Inventions arrive in the year they were really made. Open Advancements to see what's coming." },
   { id: "speed", text: "Grey ones aren't invented yet. Close Advancements and speed up time: the 1880s bring power from water and wind." },
 ];

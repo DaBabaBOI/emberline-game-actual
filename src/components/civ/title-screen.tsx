@@ -185,8 +185,8 @@ export function TitleScreen({
               <ModeCard
                 icon="factory"
                 title="Build to Last"
-                blurb="It's 1850 and your town runs on coal. Solve three big problems at once, and keep them solved."
-                facts={["Clean the air, switch to clean power, house and feed 120", "30 new advancements, short and simple", "A shorter game, no tutorial needed"]}
+                blurb="It's 1850, the age of coal. Build a town, then solve three big problems at once and keep them solved."
+                facts={["Clean the air, switch to clean power, house and feed 60", "30 new advancements, short and simple", "A shorter game with a short guide"]}
                 tone="bg-sky-700 hover:bg-sky-600"
                 action="Start in 1850"
                 onClick={() => start({ nation, mode: "last" })}

@@ -17,6 +17,8 @@ function barColor(value: number) {
 export function SideMeters({ side }: { side: "left" | "right" }) {
   // Whose "why" panel is open (one at a time).
   const [open, setOpen] = useState<MeterKey | null>(null);
+  // Build to Last leaves out Literacy: it has nothing to do with its problems.
+  const last = useGame().state.mode === "last";
   return (
     <div
       className={cn(
@@ -26,7 +28,7 @@ export function SideMeters({ side }: { side: "left" | "right" }) {
         open && "z-[27]",
       )}
     >
-      {METERS.filter((m) => m.side === side).map((m) => (
+      {METERS.filter((m) => m.side === side && !(last && m.key === "literacy")).map((m) => (
         <MeterButton key={m.key} meter={m.key} open={open} setOpen={setOpen} tip={side} />
       ))}
       {open && <MeterPanel meter={open} place={side} onClose={() => setOpen(null)} />}
@@ -38,10 +40,11 @@ export function SideMeters({ side }: { side: "left" | "right" }) {
 // its number; tapping one opens its "why" panel just below.
 export function MeterStrip() {
   const [open, setOpen] = useState<MeterKey | null>(null);
+  const last = useGame().state.mode === "last";
   return (
     <div className="pointer-events-auto relative w-full max-w-md" data-testid="meter-strip">
       <div className="pixel-panel-dark font-pixel grid grid-cols-6 gap-0.5 p-0.5">
-        {METERS.map((m) => (
+        {METERS.filter((m) => !(last && m.key === "literacy")).map((m) => (
           <MeterButton key={m.key} meter={m.key} open={open} setOpen={setOpen} />
         ))}
       </div>

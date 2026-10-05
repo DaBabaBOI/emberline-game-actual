@@ -16,6 +16,11 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Build to Last, simpler: you build your own town with a short guide (homes, a farm, a coal plant, a factory, a university), the whole island is already explored, and there are no disasters, kingdoms, festivals, chief levels or climate crisis to distract from the three problems. The goals are easier too: 60 people and 70% clean power.",
+      "New advancements are marked New: the Advancements button counts them, and their cards are tagged until you've looked.",
+      "The build bar only shows what you can build now; new buildings appear as you research them.",
+      "Scrap, from the Industrial era: a sold building leaves a scrap pile that blocks the tile. Click it with Sell to clear it (5 coins) and salvage 30% of what it cost, or 60% for free once you know Recycling.",
+      "The climate banners shrink to one line when you click them.",
       "Tired soil, from the Ancient era on: a field farmed for about 6 minutes straight grows half the food and looks dry. Click it and let it rest fallow for a minute, or learn Three-Field Rotation and fields rest in turn by themselves.",
       "A calmer build bar: buildings are sorted into tabs (homes, food and water, work, power, trade, town), and the numbers beside them only show what matters right now.",
       "Build to Last is a little harder, and set to end around today: years pass faster, clean power must reach 75%, and the town has to hold for almost two minutes. Finish before 2025 to beat the real world. A short slip no longer resets the clock.",

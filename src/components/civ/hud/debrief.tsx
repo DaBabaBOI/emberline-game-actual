@@ -314,7 +314,7 @@ export function LastIntro() {
       <div className="pixel-panel w-[min(94vw,480px)] p-4">
         <h2 className="font-pixel text-2xl font-bold">{formatYear(state.year)}</h2>
         <p className="mt-1 text-sm">
-          Your town runs on coal, and the smoke is building up. Can you make it last? History will happen around you as you play.
+          Your people are starting a town in the age of coal. Build it, then make it last. History will happen around you as you play.
         </p>
         <ol className="font-pixel mt-3 flex flex-col gap-1 text-sm">
           {lastProblems(state).map((p, i) => (

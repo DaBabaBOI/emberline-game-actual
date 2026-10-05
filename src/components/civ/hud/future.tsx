@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 // The Future & Space era's screens: the climate tipping point banner, and
 // Space (a view of the planet from orbit, with the projects to launch).
 
@@ -18,6 +20,8 @@ const perMinute = (perTick: number) => perTick * 40;
 // what pulls carbon back out.
 export function TippingBanner() {
   const { state } = useGame();
+  // Click to shrink it to one line (and back).
+  const [small, setSmall] = useState(false);
   const t = state.tipping!;
   const carbon = state.carbon ?? CARBON.start;
   const flow = perMinute(carbonFlow(state));
@@ -26,7 +30,13 @@ export function TippingBanner() {
   const needed = (carbon - TIPPING.safe) / Math.max(1, secs(left) / 60);
   const onTrack = -flow >= needed;
   return (
-    <div className="pointer-events-none flex justify-center" data-testid="tipping-banner">
+    <button type="button" onClick={() => setSmall(!small)} title={small ? "Show more" : "Click to hide the details"} className="pointer-events-auto flex w-full justify-center text-left" data-testid="tipping-banner">
+      {small ? (
+        <span className="font-pixel border-[3px] border-[#140e0a] bg-[#4a3b2e]/95 px-3 py-1 text-xs text-white">
+          The tipping point: {Math.round(carbon)} ppm, {onTrack ? "on track" : "not fast enough"} · show more
+        </span>
+      ) : (
+        <>
       <div className={cn("font-pixel flex w-[min(92vw,560px)] flex-col gap-1.5 border-[3px] border-[#140e0a] px-4 py-2 text-xs text-white md:text-sm", onTrack ? "bg-[#2f5d3a]/95" : "bg-[#5a2a4a]/95")}>
         <span className="flex items-start gap-2 font-semibold">
           <PixelIcon name="earth" size={20} />
@@ -46,7 +56,9 @@ export function TippingBanner() {
           Helps: Air Capture Plants on clean power, planting forest, Rewilding, and closing coal plants and smoky factories.
         </span>
       </div>
-    </div>
+        </>
+      )}
+    </button>
   );
 }
 

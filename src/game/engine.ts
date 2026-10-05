@@ -87,6 +87,7 @@ import {
   BELIEFS,
   SETTLERS,
   FALLOW,
+  SCRAP,
   CONNECTIONS,
   INVENTED,
   LAST_TUTORIAL,
@@ -198,6 +199,7 @@ export type Action =
   | { type: "devOres" }
   | { type: "devTired" }
   | { type: "devFullStores" }
+  | { type: "seeTech"; ids: string[] }
   | { type: "devTireFields" }
   | { type: "restField"; tileId: number }
   | { type: "devConnections" }
@@ -356,8 +358,8 @@ export function newGame(
 function applyLastStart(state: GameState): GameState {
   const researched = [...TREE.filter((n) => !n.comingSoon && !n.secret && n.era < 4).map((n) => n.id), ...LAST.known];
   const home = state.tiles[state.startTile];
-  // Explore the island around the town.
-  for (const t of state.tiles) if (hexDistance(t, home) <= 6) t.revealed = true;
+  // The whole island is known: nothing to explore in this mode.
+  for (const t of state.tiles) if (t.island === home.island || hexDistance(t, home) <= 6) t.revealed = true;
   let next: GameState = {
     ...devJumpToEra(state, 4),
     mode: "last",
@@ -380,7 +382,7 @@ function applyLastStart(state: GameState): GameState {
     lastTrack: [],
     lastStep: 0,
     lastNews: HISTORY.filter((h) => h.year <= LAST.startYear).length,
-    log: [`${state.nation ?? DEFAULT_NATION}, ${LAST.startYear}: smoke over the town. Solve the three big problems and build something that lasts.`],
+    log: [`${state.nation ?? DEFAULT_NATION}, ${LAST.startYear}, the age of coal. Build your town, then make it last.`],
   };
   // The town, laid out in districts so it reads at a glance: homes and services
   // in the middle with room between them, farms on a ring further out, and
@@ -415,6 +417,10 @@ function applyLastStart(state: GameState): GameState {
   return {
     ...next,
     milestones: milestonesReached(next).map(([id]) => id),
+    seenTech: newResearch(next).map((n) => n.id),
+    kingdoms: undefined,
+    climate: undefined,
+    tipping: undefined,
     stats: { ...(next.stats ?? emptyStats()), peakPopulation: Math.max(next.stats?.peakPopulation ?? 0, LAST.population) },
   };
 }
@@ -444,7 +450,7 @@ export function lastProblems(state: GameState) {
   const people = {
     id: "people",
     title: `Home and food for ${LAST.people}`,
-    how: "Build Town Houses and Apartments for room and more Farmland for food, but keep a third of the land as forest.",
+    how: "Build Town Houses and Apartments for room and more Farmland for food, and a Temple or parks to keep people happy. Keep a third of the land as forest.",
     done: pop >= LAST.people && m.food >= LAST.meter && m.shelter >= LAST.meter && forest >= LAST.forest,
     status: `${pop}/${LAST.people} people · food ${Math.round(m.food)} · homes ${Math.round(m.shelter)} · forest ${Math.round(forest * 100)}%/${Math.round(LAST.forest * 100)}%`,
   };
@@ -467,6 +473,23 @@ function updateHunters(state: GameState): GameState {
     ? "Plenty of food in the stores: the hunters leave the herds alone and gather wood instead."
     : "Food is running lower: the hunters go back out after the herds.";
   return { ...state, huntersHelping: want, log: [line, ...state.log].slice(0, 30) };
+}
+
+// Advancements that have just become researchable (prerequisites done, and
+// invented, in Build to Last) and that the player hasn't looked at yet.
+export function newResearch(state: GameState): TreeNode[] {
+  const seen = state.seenTech ?? [];
+  return TREE.filter(
+    (n) =>
+      n.era <= state.era &&
+      !n.secret &&
+      !n.comingSoon &&
+      !(state.mode === "last" && (n.era < 4 || LAST.hiddenTech.includes(n.id))) &&
+      !state.researched.includes(n.id) &&
+      !seen.includes(n.id) &&
+      n.requires.every((r) => state.researched.includes(r)) &&
+      notInventedYet(state, n.id) === null,
+  );
 }
 
 // Build to Last's guided start: move on from step `from` (if we're on it).
@@ -496,11 +519,9 @@ export function notInventedYet(state: GameState, id: string): number | null {
 
 function updateLast(state: GameState): GameState {
   if (state.mode !== "last" || state.phase !== "playing" || state.finished || state.debrief) return state;
-  // The guide's second step: a new home built.
-  if (state.lastStep === 1) {
-    const c = countBuildings(state);
-    if ((c.townhouse ?? 0) + (c.apartments ?? 0) > LAST.town.filter((id) => id === "townhouse" || id === "apartments").length) state = lastStepDone(state, 1);
-  }
+  // The guide's building steps: done once that building stands.
+  const guideBuild = LAST_TUTORIAL[state.lastStep ?? LAST_TUTORIAL.length]?.build;
+  if (guideBuild && (countBuildings(state)[guideBuild] ?? 0) > 0) state = lastStepDone(state, state.lastStep!);
   // The graph: carbon, clean power and people every few ticks.
   if (state.tick % LAST.trackEvery === 0) {
     const point = { year: Math.round(state.year), ppm: Math.round(state.carbon ?? CARBON.start), clean: Math.round(cleanPowerShare(state) * 100), people: Math.floor(state.population) };
@@ -511,9 +532,6 @@ function updateLast(state: GameState): GameState {
   if (HISTORY[news] && state.year >= HISTORY[news].year) {
     state = { ...state, lastNews: news + 1, log: [`${HISTORY[news].year}, in the real world: ${HISTORY[news].text}`, ...state.log].slice(0, 30) };
   }
-  // An advancement that has just been invented.
-  const arrived = Object.entries(INVENTED).find(([id, year]) => Math.floor(state.year) === year && Math.floor(state.year - LAST.yearsPerTick) < year && TREE_BY_ID[id]);
-  if (arrived) state = { ...state, log: [`Invented in ${arrived[1]}: ${TREE_BY_ID[arrived[0]].name}. Open Advancements to research it.`, ...state.log].slice(0, 30) };
   const solved = lastProblems(state).every((p) => p.done);
   // A short slip only sets the clock back a little; it doesn't start it over.
   const held = solved ? (state.lastHeld ?? 0) + 1 : Math.max(0, (state.lastHeld ?? 0) - 3);
@@ -887,6 +905,7 @@ export function isUnlocked(state: GameState, def: BuildingDef) {
 }
 
 export function placementError(state: GameState, tile: Tile, def: BuildingDef): string | null {
+  if (state.scrap?.[tile.id]) return "Clear the scrap pile first (Sell tool)";
   if (state.tutorialStep < TUTORIAL.length && (countBuildings(state)[def.id] ?? 0) >= 1) {
     return "Only one of each during the tutorial";
   }
@@ -2310,7 +2329,24 @@ export function demolishRefund(def: BuildingDef): Partial<Resources> {
   );
 }
 
+// From the Industrial era, a sold building leaves scrap to clear instead of coins back.
+export function scrapEra(state: GameState) {
+  return state.era >= SCRAP.fromEra;
+}
+
+// What clearing a building's scrap would salvage.
+export function salvageOf(state: GameState, def: BuildingDef): Partial<Resources> {
+  const share = state.researched.includes("recycling") ? SCRAP.recycled : SCRAP.salvage;
+  return Object.fromEntries(Object.entries(def.cost).map(([k, v]) => [k, Math.floor((v ?? 0) * share)]));
+}
+
+// What clearing a scrap pile costs: the work, unless we recycle.
+export function scrapClearCost(state: GameState): Partial<Resources> {
+  return state.researched.includes("recycling") ? {} : SCRAP.clearCost;
+}
+
 export function demolishError(state: GameState, tile: Tile): string | null {
+  if (!tile.building && state.scrap?.[tile.id]) return canAfford(state, scrapClearCost(state)) ? null : "Not enough coins to clear the scrap";
   if (!tile.building) return "Nothing to sell";
   if (BUILDINGS_BY_ID[tile.building]?.landmark) return "A landmark stays for good";
   if (tile.building === "woodcutter" && (countBuildings(state).woodcutter ?? 0) <= 1) {
@@ -2419,7 +2455,9 @@ export function nextYear(state: GameState): number {
 
 export function warnings(state: GameState): Warning[] {
   // During the tutorial Elder Ama explains what to do; warnings would only nag.
+  // The same during Build to Last's guide.
   if (state.tutorialStep < TUTORIAL.length) return [];
+  if (state.mode === "last" && (state.lastStep ?? LAST_TUTORIAL.length) < LAST_TUTORIAL.length) return [];
   const out: Warning[] = [];
   const prod = production(state);
   const netFood = prod.food - consumption(state);
@@ -3610,6 +3648,8 @@ export function knowledgeSources(state: GameState) {
 
 // Pay out Knowledge for new milestones, once each.
 function knowledgeMilestones(state: GameState): GameState {
+  // Build to Last: Knowledge comes from the University and schools, not firsts.
+  if (state.mode === "last") return state;
   const done = state.milestones ?? [];
   const fresh = milestonesReached(state).filter(([id]) => !done.includes(id));
   if (!fresh.length) return state;
@@ -3737,6 +3777,8 @@ export function affordableResearch(state: GameState) {
 
 // When Knowledge first covers an advancement, Elder Ama says so (once each).
 function knowledgeReady(state: GameState): GameState {
+  // Build to Last keeps quiet: the Advancements button shows what's new.
+  if (state.mode === "last") return state;
   const told = state.knowledgeNotified ?? [];
   const fresh = affordableResearch(state)
     .filter((n) => !told.includes(n.id))
@@ -4079,7 +4121,9 @@ function tickOnce(state: GameState): GameState {
   next = cutHills(next);
   next = sparks(next);
   // No raids or events while a new player is still learning.
-  if (!inTutorial) next = updateTipping(updateClimate(updateRebellion(updatePlague(updateDisasters(updateDrought(updateLegion(updateRaids(next))))))));
+  // Build to Last keeps to its three problems: no disasters, rebellions or kingdoms.
+  const last = next.mode === "last";
+  if (!inTutorial) next = last ? next : updateTipping(updateClimate(updateRebellion(updatePlague(updateDisasters(updateDrought(updateLegion(updateRaids(next))))))));
   next = updateLast(next);
   next = updateHunters(next);
   next = updateCarbon(next);
@@ -4089,7 +4133,7 @@ function tickOnce(state: GameState): GameState {
   next = returnCaravans(next);
   next = returnScouts(next);
   next = returnCanoes(next);
-  next = returnShips(updateKingdoms(next));
+  next = last ? next : returnShips(updateKingdoms(next));
   next = finishStage(next);
   // The final battle ends the story (won or lost): nothing else happens today.
   if (next.phase !== "playing" || next.debrief) return { ...next, meters: computeMeters(next) };
@@ -4112,14 +4156,14 @@ function tickOnce(state: GameState): GameState {
     return { ...lost, debrief: makeDebrief(lost, "loss") };
   }
 
-  if (!inTutorial && next.tick >= next.nextEventTick && quietEnough(next)) {
+  if (!inTutorial && !last && next.tick >= next.nextEventTick && quietEnough(next)) {
     const rand = mulberry32(next.seed + next.tick);
     const event = pickEvent(rand(), next);
     next = { ...next, event, lastEvent: event.id, lastBigTick: next.tick, nextEventTick: next.tick + Math.round((EVENT_GAP.base + Math.floor(rand() * EVENT_GAP.spread)) * gapFactor(next)) };
   }
 
-  if (!inTutorial) next = smallMoment(next);
-  next = festival(next);
+  if (!inTutorial && !last) next = smallMoment(next);
+  if (!last) next = festival(next);
 
   const beforeDisease = next.population;
   // Crowded towns without latrines, and people drinking dirty water in the
@@ -5240,6 +5284,8 @@ export function reducer(state: GameState, action: Action): GameState {
 
 // Chief XP for what just happened: compare the state before and after an action.
 function awardXp(prev: GameState, next: GameState): GameState {
+  // Build to Last has no chief levels.
+  if (next.mode === "last") return next;
   if (next === prev || next.phase !== "playing") return next;
   let gain = 0;
   const a = prev.stats ?? { built: 0, peakPopulation: 0, raidsWon: 0 };
@@ -5411,7 +5457,7 @@ function step(state: GameState, action: Action): GameState {
 
     case "setSpeed":
       // Build to Last's guide: its last step is to speed up time.
-      if (state.mode === "last" && state.lastStep === 3 && action.speed >= 2) return lastStepDone({ ...state, speed: action.speed }, 3);
+      if (state.mode === "last" && LAST_TUTORIAL[state.lastStep ?? -1]?.id === "speed" && action.speed >= 2) return lastStepDone({ ...state, speed: action.speed }, state.lastStep!);
       return { ...state, speed: action.speed };
 
     case "lastStep":
@@ -5649,7 +5695,27 @@ function step(state: GameState, action: Action): GameState {
     case "demolish": {
       const tile = state.tiles[action.tileId];
       if (!tile || demolishError(state, tile)) return state;
+      // A scrap pile: clear it and salvage what we can.
+      if (!tile.building && state.scrap?.[tile.id]) {
+        const got = state.scrap[tile.id];
+        const resources = { ...state.resources };
+        for (const [k, v] of Object.entries(scrapClearCost(state))) resources[k as keyof Resources] -= v ?? 0;
+        for (const [k, v] of Object.entries(got)) resources[k as keyof Resources] += v ?? 0;
+        const scrap = { ...state.scrap };
+        delete scrap[tile.id];
+        const what = Object.entries(got).filter(([, v]) => (v ?? 0) > 0).map(([k, v]) => `${v} ${k === "currency" ? "coins" : k}`).join(", ");
+        return withMeters({ ...state, scrap, resources, log: [`Cleared a scrap pile and salvaged ${what || "a little"}.`, ...state.log].slice(0, 30) });
+      }
       const def = BUILDINGS_BY_ID[tile.building!];
+      // Industrial era on: no coins back now, a scrap pile to clear instead.
+      if (scrapEra(state)) {
+        return withMeters({
+          ...state,
+          tiles: state.tiles.map((t) => (t.id === tile.id ? { ...t, building: null } : t)),
+          scrap: { ...state.scrap, [tile.id]: salvageOf(state, def) },
+          log: [`Took down a ${def.name}. It left a scrap pile: click it with Sell to clear it and salvage what we can.`, ...state.log].slice(0, 30),
+        });
+      }
       const refund = demolishRefund(def);
       const resources = { ...state.resources };
       for (const [k, v] of Object.entries(refund)) resources[k as keyof Resources] += v ?? 0;
@@ -6311,6 +6377,9 @@ function step(state: GameState, action: Action): GameState {
       return withMeters({ ...state, sown, fallow: {} });
     }
 
+    case "seeTech":
+      return { ...state, seenTech: [...new Set([...(state.seenTech ?? []), ...action.ids])] };
+
     case "devFullStores": {
       // Plenty of food in store, so the hunters rest and gather wood.
       if (!state.dev) return state;
@@ -6517,6 +6586,8 @@ function step(state: GameState, action: Action): GameState {
     }
 
     case "showHint":
+      // Build to Last has its own short guide instead.
+      if (state.mode === "last") return state;
       if ((state.hintsSeen ?? []).includes(action.id)) return state;
       return { ...state, hint: { id: action.id, tick: state.tick }, hintTick: state.tick, hintsSeen: [...(state.hintsSeen ?? []), action.id] };
 

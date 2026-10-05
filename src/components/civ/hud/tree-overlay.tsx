@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { BRANCHES, BUILDINGS_BY_ID, ERAS, TREE, TREE_BY_ID } from "@/game/content";
-import { goalProgress, goalsMet, notInventedYet, perSecond, production, tutorialLocked } from "@/game/engine";
+import { BRANCHES, BUILDINGS_BY_ID, ERAS, TREE, TREE_BY_ID, LAST_TUTORIAL, LAST } from "@/game/content";
+import { goalProgress, goalsMet, newResearch, notInventedYet, perSecond, production, tutorialLocked } from "@/game/engine";
 import type { GameState, TreeNode } from "@/game/types";
 import type { IconId } from "@/game/sprites";
 import { useGame } from "@/components/civ/game-provider";
@@ -54,8 +54,8 @@ interface Placed {
 
 // Lays out one era: a row per branch (the root sits in its own row on top),
 // columns by how deep a node is within this era.
-function layoutEra(era: number) {
-  const nodes = TREE.filter((n) => n.era === era);
+function layoutEra(era: number, hide: string[] = []) {
+  const nodes = TREE.filter((n) => n.era === era && !hide.includes(n.id));
   const inEra = new Set(nodes.map((n) => n.id));
   const depth: Record<string, number> = {};
   const depthOf = (id: string): number => {
@@ -102,11 +102,17 @@ export function TreeOverlay() {
   const { state, dispatch, setPanel } = useGame();
   const [era, setEra] = useState(state.era);
   const [focus, setFocus] = useState<string | null>(null);
-  const { placed, rowTops, width, height } = useMemo(() => layoutEra(era), [era]);
+  const { placed, rowTops, width, height } = useMemo(() => layoutEra(era, state.mode === "last" ? LAST.hiddenTech : []), [era, state.mode]);
   const locked = tutorialLocked(state, "advancements");
-  // Build to Last's guide: opening Advancements is its third step.
+  // What's new since last time: marked on its card while this is open, and
+  // counted as seen from now on.
+  const [fresh] = useState(() => newResearch(state).map((n) => n.id));
   useEffect(() => {
-    if (state.lastStep === 2) dispatch({ type: "lastStep", from: 2 });
+    if (fresh.length) dispatch({ type: "seeTech", ids: fresh });
+  }, [fresh, dispatch]);
+  // Build to Last's guide: opening Advancements is one of its steps.
+  useEffect(() => {
+    if (state.lastStep !== undefined && LAST_TUTORIAL[state.lastStep]?.id === "advancements") dispatch({ type: "lastStep", from: state.lastStep });
   }, [state.lastStep, dispatch]);
 
   const focused = focus ? TREE_BY_ID[focus] : null;
@@ -150,7 +156,8 @@ export function TreeOverlay() {
       </p>
 
       <div className="flex gap-1.5 overflow-x-auto px-3 pt-2 md:px-5 md:pt-3">
-        {ERAS.map((e, i) => (
+        {/* Build to Last: only its own era. */}
+        {ERAS.map((e, i) => (state.mode === "last" && i !== 4 ? null : (
           <button
             key={e.name}
             type="button"
@@ -168,7 +175,7 @@ export function TreeOverlay() {
             {e.name}
             <span className="font-num text-xs opacity-70">{eraDone(i)}</span>
           </button>
-        ))}
+        )))}
       </div>
 
       <div className="relative m-2 mb-2 flex-1 overflow-auto border-[3px] border-[#140e0a] bg-[#2a211a] md:m-5 md:mb-3" data-tree-area>
@@ -244,7 +251,14 @@ export function TreeOverlay() {
                 }}
                 title={fromEarlier.length ? `Needs: ${fromEarlier.join(", ")}` : undefined}
               >
-                <span className="truncate text-sm font-semibold">{s === "secret" ? "???" : node.name}</span>
+                <span className="flex items-center gap-1 truncate text-sm font-semibold">
+                  {s === "secret" ? "???" : node.name}
+                  {fresh.includes(node.id) && (
+                    <span className="shrink-0 bg-sky-400 px-1 text-[10px] leading-tight text-[#2b2119]" data-testid="tree-new">
+                      New
+                    </span>
+                  )}
+                </span>
                 {(s === "available" || s === "locked") && <GoalLine state={state} nodeId={node.id} reachable={s === "available"} />}
                 <span className="flex items-center gap-1 text-[11px] opacity-80">
                   {s === "done" && "Discovered"}

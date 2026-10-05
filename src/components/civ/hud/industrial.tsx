@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 // The Industrial & Modern era's screens: the climate crisis banner.
 
 import { CARBON, CLIMATE } from "@/game/content";
@@ -16,13 +18,21 @@ const minutes = (s: number) => String(Math.round((s / 60) * 10) / 10);
 // what it would cost now), then how it is going.
 export function ClimateBanner() {
   const { state } = useGame();
+  // Click to shrink it to one line (and back).
+  const [small, setSmall] = useState(false);
   const c = state.climate!;
   const on = inClimateCrisis(state);
   const pop = Math.floor(state.population);
   const toll = climateToll(state);
   const ready = Math.round((climateShield(state) / CLIMATE.maxReady) * 100);
   return (
-    <div className="pointer-events-none flex justify-center" data-testid="climate-banner">
+    <button type="button" onClick={() => setSmall(!small)} title={small ? "Show more" : "Click to hide the details"} className="pointer-events-auto flex w-full justify-center text-left" data-testid="climate-banner">
+      {small ? (
+        <span className="font-pixel border-[3px] border-[#140e0a] bg-[#4a3b2e]/95 px-3 py-1 text-xs text-white">
+          {on ? "The climate crisis is here" : "A climate crisis is coming"} · show more
+        </span>
+      ) : (
+        <>
       <div
         className={cn(
           "font-pixel flex w-[min(92vw,560px)] flex-col gap-1.5 border-[3px] border-[#140e0a] px-4 py-2 text-xs text-white md:text-sm",
@@ -58,6 +68,8 @@ export function ClimateBanner() {
           Helps: Sea Walls, Hospitals, City Parks, clean power (wind, sun, water) and standing forest. Coal makes it worse.
         </span>
       </div>
-    </div>
+        </>
+      )}
+    </button>
   );
 }

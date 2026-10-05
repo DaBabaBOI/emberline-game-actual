@@ -83,11 +83,11 @@ function coachGuide(state: GameState, selected: string | null, panel: string | n
 
 // Build to Last's guided start (LAST_TUTORIAL).
 function lastGuide(state: GameState, selected: string | null, panel: string | null): Guide {
-  switch (LAST_TUTORIAL[state.lastStep ?? 0]?.id) {
+  const step = LAST_TUTORIAL[state.lastStep ?? 0];
+  if (step?.build) return buildStep(state, step.build, selected, panel);
+  switch (step?.id) {
     case "problems":
       return { target: { kind: "ui", ids: ["problem-people"] }, waiting: null };
-    case "build":
-      return buildStep(state, "townhouse", selected, panel);
     case "advancements":
       return { target: { kind: "ui", ids: ["tool-advancements"] }, waiting: null };
     case "speed":

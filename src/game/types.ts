@@ -330,6 +330,12 @@ export interface GameState {
   // Fields: the tick each was last sown (planted or back from rest), and the
   // tick a resting (fallow) field is ready again. By tile id.
   sown?: Record<number, number>;
+  // Scrap piles left by sold buildings (Industrial era on): what clearing each
+  // one salvages, by tile id.
+  scrap?: Record<number, Partial<Resources>>;
+  // Advancements the player has already seen become researchable (the rest
+  // are marked "New" on the Advancements button).
+  seenTech?: string[];
   fallow?: Record<number, number>;
   // The Roman legion on its way (seen by scouts), and whether it has been fought.
   legion?: { size: number; arriveTick: number; vanguard?: boolean } | null;

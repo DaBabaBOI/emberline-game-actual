@@ -34,13 +34,13 @@ import {
   spearmenOf,
   tradeOffer,
   tutorialLocked,
-  warriorCap,
-} from "@/game/engine";
+  warriorCap, newResearch } from "@/game/engine";
 import type { Resources } from "@/game/types";
 import type { IconId } from "@/game/sprites";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { cn } from "@/lib/utils";
+import { useGuide } from "./guide-overlay";
 import { useCompact } from "@/lib/use-compact";
 import { Countdown } from "./countdown";
 
@@ -229,10 +229,16 @@ export function BottomBar() {
   const net = prod.food - consumption(state) - foodSpoiling(state);
   // Build to Last keeps the bar short: no Stone Age buildings, no army, scouts or ships.
   const last = state.mode === "last";
-  const eraBuildings = BUILDINGS.filter((b) => b.era <= state.era && !(last && LAST.hidden.includes(b.id)));
+  // Only what can be built now: locked ones appear once researched (the
+  // tutorial's own locks still show, so the steps make sense).
+  const eraBuildings = BUILDINGS.filter(
+    (b) => b.era <= state.era && !(last && LAST.hidden.includes(b.id)) && (isUnlocked(state, b) || state.tutorialStep < TUTORIAL.length),
+  );
   const inTutorial = state.tutorialStep < TUTORIAL.length;
   const counts = countBuildings(state);
   const affordable = affordableResearch(state);
+  // Newly researchable advancements the player hasn't looked at yet.
+  const fresh = newResearch(state);
   // After the tutorial, flag purchases that would leave the fires short of wood.
   const tight = (cost: Partial<Resources>) =>
     !inTutorial && (cost.wood ?? 0) > 0 && state.resources.wood - (cost.wood ?? 0) < LOW_WOOD_AFTER_BUY;
@@ -245,10 +251,15 @@ export function BottomBar() {
   // One group of buildings at a time once there are many. Everything shows
   // while a guide or hint may point at one of them.
   const [group, setGroup] = useState("homes");
-  const guided = inTutorial || !!state.coach || !!state.hint || (state.mode === "last" && (state.lastStep ?? 99) < 4);
-  const grouped = eraBuildings.length >= GROUP_FROM && !guided;
+  // While the hand points at a building card, its group is the one shown.
+  const guide = useGuide();
+  const pointed = guide.target?.kind === "ui" ? guide.target.ids.find((id) => id.startsWith("build-"))?.slice(6) : undefined;
+  const guided = inTutorial || !!state.coach || !!state.hint;
+  const grouped = eraBuildings.length >= GROUP_FROM && (!guided || !!pointed);
   const groups = GROUPS.filter((g) => eraBuildings.some((b) => groupOf(b.id) === g.id));
-  const showing = grouped ? (groups.some((g) => g.id === group) ? group : groups[0]?.id) : null;
+  // The hand's building, else the one in hand, else the tab picked.
+  const holding = selected && eraBuildings.some((b) => b.id === selected) ? selected : undefined;
+  const showing = !grouped ? null : pointed ? groupOf(pointed) : holding ? groupOf(holding) : groups.some((g) => g.id === group) ? group : groups[0]?.id;
   const shownBuildings = showing ? eraBuildings.filter((b) => groupOf(b.id) === showing) : eraBuildings;
 
   return (
@@ -282,7 +293,7 @@ export function BottomBar() {
           compact ? "gap-1 p-1 md:gap-2" : "gap-2 p-1.5 md:gap-3 md:p-2",
         )}
       >
-        <div className={cn("flex-col justify-center gap-0.5 border-r-2 border-white/10 pr-3 text-[11px] text-white/85", compact ? "hidden" : "hidden md:flex")}>
+        <div className={cn("flex-col justify-center gap-0.5 border-r-2 border-white/10 pr-3 text-[11px] text-white/85", compact || last ? "hidden" : "hidden md:flex")}>
           <Stat icon="hut" title="Housing">
             {Math.floor(state.population)}/{housingCapacity(state)}
           </Stat>
@@ -389,7 +400,7 @@ export function BottomBar() {
             title="Sell a building to make room. You get half its cost back."
             tone={selected === DEMOLISH_TOOL ? "bg-amber-400 text-[#2b2119]" : "bg-[#4a3b2e] hover:bg-[#5c4a3a]"}
           />
-          <TradeButton />
+          {!last && <TradeButton />}
           {/* Planting saplings comes with Early Farming. */}
           {state.researched.includes("early-farming") && (
             <ToolButton
@@ -458,9 +469,11 @@ export function BottomBar() {
             icon="star"
             label="Advancements"
             onClick={() => setPanel("tree")}
-            badge={affordable.length ? String(affordable.length) : undefined}
+            badge={fresh.length ? `${fresh.length} new` : affordable.length ? String(affordable.length) : undefined}
             title={
-              affordable.length
+              fresh.length
+                ? `New to research: ${fresh.map((n) => n.name).join(", ")}`
+                : affordable.length
                 ? `Enough Knowledge for: ${affordable.map((n) => n.name).join(", ")}`
                 : "Research new technology and see your goals"
             }

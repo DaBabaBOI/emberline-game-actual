@@ -70,7 +70,7 @@ Slower, kinder options exist too: **selective logging** instead of clear-cutting
 - **Trade** with passing traders, caravans and neighbouring kingdoms
 - **Pick people up** and drop them on buildings, cold fires, or the sea (risky)
 - **Online multiplayer** for up to 4 players: race for Chief XP or play co-op, with gifts, raids and chat. Bots keep pace with players.
-- **Two main ways to play**, side by side: **From the Stone Age** (the full journey), or **Build to Last**, starting in 1850 with a smoky town. Clear the air, switch to clean power, and house 120 people with the forest standing. Click a problem to see how to solve it. Inventions arrive in their real years, real history happens around you, and the ending compares your air with the real world's.
+- **Two main ways to play**, side by side: **From the Stone Age** (the full journey), or **Build to Last**, starting in 1850, the age of coal: build a town, then make it last. Clear the air, switch to clean power, and house 60 people with the forest standing. Click a problem to see how to solve it. Inventions arrive in their real years, real history happens around you, and the ending compares your air with the real world's.
 - **Six ways to lose**, each with a countdown: famine, unrest, land collapse, conquest, plague, being left behind
 - **First time mode**: slower clock, calm Stone Age, no raids or disasters
 - **Autosave**, cloud saves by code, leaderboard, feedback form and in-game **How to play** guide
