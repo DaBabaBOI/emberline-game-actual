@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { setAudioSettings, useAudioSettings } from "@/lib/audio";
 
 const STORAGE_KEY = "emberline-accessibility-settings";
 
@@ -162,8 +163,27 @@ function AccessibilityOptions({
   settings,
   updateSetting,
 }: Pick<ReturnType<typeof useAccessibilitySettings>, "settings" | "updateSetting">) {
+  const audio = useAudioSettings();
   return (
     <div className="space-y-3 text-sm">
+      <label className="block">
+        <span className="mb-1 flex items-center justify-between gap-3">
+          <span>Sound volume</span>
+          <span className="font-num">{Math.round(audio.master * 100)}%</span>
+        </span>
+        <input
+          aria-label="Overall sound volume"
+          aria-valuetext={`${Math.round(audio.master * 100)} percent`}
+          type="range"
+          min={0}
+          max={100}
+          value={Math.round(audio.master * 100)}
+          onChange={(event) => setAudioSettings({ master: Number(event.target.value) / 100, muted: false })}
+          data-testid="volume-master"
+          className="w-full accent-emerald-600"
+        />
+      </label>
+
       <label className="flex items-center justify-between gap-3">
         <span>Dark mode</span>
         <input
