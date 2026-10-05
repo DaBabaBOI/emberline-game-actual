@@ -1,8 +1,9 @@
 "use client";
 
-import { BUILDINGS_BY_ID, FIRE_SCARE, IMPROVE, LANDMARKS, NUCLEAR, QUARRY_DUST, SMOG, WEAR } from "@/game/content";
+import { BUILDINGS_BY_ID, FALLOW, FIRE_SCARE, IMPROVE, LANDMARKS, NUCLEAR, QUARRY_DUST, SMOG, WEAR } from "@/game/content";
 import {
   connections,
+  soilOf,
   dusty,
   rainfall,
   residents,
@@ -95,6 +96,39 @@ export function BuildingInfo({
         <PixelIcon name={def.landImpact ? "stump" : "leaf"} size={12} />
         {def.landCost}
       </p>
+      {/* Fields: tired soil, and letting it rest fallow. */}
+      {(() => {
+        const soil = soilOf(state, tile);
+        if (!soil) return null;
+        if (soil === "rotation") return <p className="mt-1 text-emerald-700">Fields rest in turn (Three-Field Rotation): the soil never tires.</p>;
+        if (soil === "resting")
+          return (
+            <p className="mt-1 text-sky-800" data-testid="field-resting">
+              Resting fallow: back with fresh soil in <CountdownFor ticks={(state.fallow?.[tile.id] ?? state.tick) - state.tick} state={state} />s.
+            </p>
+          );
+        return (
+          <div className="mt-2 border-t-2 border-stone-300 pt-1.5">
+            <p className="mb-1">
+              {soil === "tired" ? (
+                <span className="text-red-800">Tired soil: this field grows half its food.</span>
+              ) : (
+                <>Fresh soil. Farmed too long without a rest, a field tires and grows half the food.</>
+              )}
+            </p>
+            <button
+              type="button"
+              onClick={() => dispatch({ type: "restField", tileId })}
+              className={cn("pixel-btn w-full px-2 py-1 text-left", soil === "tired" ? "bg-amber-400 text-[#2b2119]" : "bg-[#fdf6e3] hover:bg-amber-100")}
+              data-testid="rest-field"
+            >
+              <span className="font-semibold">Rest this field</span>
+              <span className="block text-[11px] text-stone-700">No food for about {Math.round(FALLOW.restTicks * 1.5)}s, then fresh soil again. Like farmers before crop rotation.</span>
+            </button>
+          </div>
+        );
+      })()}
+
       {/* What it gets from the buildings it touches (CONNECTIONS). */}
       {connections(state, tile).map((c) => (
         <p key={c.why} className="mt-1 flex gap-1.5 text-emerald-700" data-testid="building-connection">

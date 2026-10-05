@@ -209,6 +209,20 @@ function TradeButton() {
   );
 }
 
+// The build bar's groups, so only a few cards show at once. Anything not
+// listed goes under "Town & nature".
+const GROUPS: { id: string; label: string; ids: string[] }[] = [
+  { id: "homes", label: "Homes & health", ids: ["campfire", "hut", "house", "townhouse", "apartments", "arcology", "latrine", "baths", "hospital", "healer"] },
+  { id: "food", label: "Food & water", ids: ["gatherer", "farm", "pen", "fishing", "granary", "well", "aqueduct", "canal", "watermill", "windmill", "vfarm"] },
+  { id: "work", label: "Work", ids: ["woodcutter", "quarry", "smithy", "market", "factory", "station", "guildhall"] },
+  { id: "power", label: "Power", ids: ["coalplant", "hydrodam", "windfarm", "solarfarm", "nuclear", "fusion", "datacenter"] },
+  { id: "sea", label: "Trade & sea", ids: ["dock", "harbour", "shipyard", "tradingpost"] },
+  { id: "town", label: "Town & nature", ids: [] },
+];
+const groupOf = (id: string) => GROUPS.find((g) => g.ids.includes(id))?.id ?? "town";
+// Fewer buildings than this: no groups, everything shows.
+const GROUP_FROM = 9;
+
 export function BottomBar() {
   const { state, dispatch, selected, setSelected, setPanel } = useGame();
   const prod = production(state);
@@ -228,6 +242,14 @@ export function BottomBar() {
   // tool in hand, or one of Elder Ama's hints (they point at its buttons).
   const [tucked, setTucked] = useState(false);
   const hidden = tucked && !inTutorial && !state.coach && !selected && !state.hint;
+  // One group of buildings at a time once there are many. Everything shows
+  // while a guide or hint may point at one of them.
+  const [group, setGroup] = useState("homes");
+  const guided = inTutorial || !!state.coach || !!state.hint || (state.mode === "last" && (state.lastStep ?? 99) < 4);
+  const grouped = eraBuildings.length >= GROUP_FROM && !guided;
+  const groups = GROUPS.filter((g) => eraBuildings.some((b) => groupOf(b.id) === g.id));
+  const showing = grouped ? (groups.some((g) => g.id === group) ? group : groups[0]?.id) : null;
+  const shownBuildings = showing ? eraBuildings.filter((b) => groupOf(b.id) === showing) : eraBuildings;
 
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-1.5 flex flex-col items-center gap-1.5 px-1.5 md:bottom-3 md:px-3" data-hud="bottom">
@@ -271,15 +293,12 @@ export function BottomBar() {
           >
             {rate(net)}/s
           </Stat>
-          <span className="font-num whitespace-nowrap text-[11px] text-white/60" title="More people eat more food">
-            eat −{perSec(consumption(state))}/s
-          </span>
-          {foodSpoiling(state) > 0.05 && (
+          {foodSpoiling(state) > 0.3 && (
             <span className="font-num whitespace-nowrap text-[11px] text-amber-300" title={`Stored food above ${foodKeeps(state)} rots away. Granaries keep more.`}>
               rot −{perSec(foodSpoiling(state))}/s
             </span>
           )}
-          {(counts.farm ?? 0) > 0 && (
+          {(counts.farm ?? 0) > 0 && rainfall(state) < 0.8 && (
             <span
               className={cn("font-num whitespace-nowrap text-[11px]", rainfall(state) < 0.8 ? "text-amber-300" : "text-white/60")}
               title="Forests bring rain. Fields grow this share of their food."
@@ -287,7 +306,7 @@ export function BottomBar() {
               rain {Math.round(rainfall(state) * 100)}%
             </span>
           )}
-          {state.era >= 2 && (
+          {state.era >= 2 && waterSupply(state) < state.population && (
             <Stat icon="drop" title="Water in a dry year: springs, wells and aqueducts, for this many people" bad={waterSupply(state) < state.population}>
               {Math.min(waterSupply(state), Math.floor(state.population))}/{Math.floor(state.population)}
             </Stat>
@@ -295,13 +314,28 @@ export function BottomBar() {
           <Stat icon="log" title="Wood per second" bad={prod.wood < 0}>
             {rate(prod.wood)}/s
           </Stat>
-          <Stat icon="bulb" title="Knowledge per second">
-            {rate(prod.knowledge)}/s
-          </Stat>
         </div>
 
+        <div className="flex min-w-0 flex-col gap-1">
+        {showing && (
+          <div className="flex gap-1 overflow-x-auto text-[11px]" role="tablist" data-testid="build-groups">
+            {groups.map((g) => (
+              <button
+                key={g.id}
+                type="button"
+                role="tab"
+                aria-selected={showing === g.id}
+                onClick={() => setGroup(g.id)}
+                className={cn("shrink-0 px-2 py-0.5", showing === g.id ? "bg-amber-400 text-[#2b2119]" : "bg-white/10 text-white/80 hover:bg-white/20")}
+                data-testid={`build-group-${g.id}`}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex min-w-0 gap-1.5 overflow-x-auto pb-1">
-          {eraBuildings.map((b) => {
+          {shownBuildings.map((b) => {
             const unlocked = isUnlocked(state, b);
             const cost = buildingCost(state, b);
             const affordable = canAfford(state, cost);
@@ -343,6 +377,7 @@ export function BottomBar() {
               </button>
             );
           })}
+        </div>
         </div>
 
         <div className="flex shrink-0 gap-1.5 overflow-x-auto border-t-2 border-white/10 pt-1.5 md:overflow-visible md:border-l-2 md:border-t-0 md:pl-3 md:pt-0">

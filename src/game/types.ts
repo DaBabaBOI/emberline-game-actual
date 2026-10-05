@@ -327,6 +327,10 @@ export interface GameState {
   lastStep?: number;
   // Food is plentiful, so the hunters at the gatherer's camps gather wood instead.
   huntersHelping?: boolean;
+  // Fields: the tick each was last sown (planted or back from rest), and the
+  // tick a resting (fallow) field is ready again. By tile id.
+  sown?: Record<number, number>;
+  fallow?: Record<number, number>;
   // The Roman legion on its way (seen by scouts), and whether it has been fought.
   legion?: { size: number; arriveTick: number; vanguard?: boolean } | null;
   legionDone?: boolean;

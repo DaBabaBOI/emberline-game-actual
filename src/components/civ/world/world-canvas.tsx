@@ -36,6 +36,7 @@ import {
   townNote,
   connectionNote,
   effectAreas,
+  soilOf,
 } from "@/game/engine";
 import { BuildingInfo } from "./building-info";
 import { useGame } from "@/components/civ/game-provider";
@@ -483,6 +484,19 @@ export function WorldCanvas() {
               <Model opacity={1} lit={t.building !== "campfire" || burningIds.includes(t.id)} />
             )}
             {(t.level ?? 1) >= 2 && <Plinth level={t.level!} />}
+            {/* Tired soil looks dry and pale; a resting field grows over with grass. */}
+            {t.building === "farm" && soilOf(state, t) === "tired" && (
+              <mesh position={[0, 0.2, 0]} raycast={() => null}>
+                <cylinderGeometry args={[0.6, 0.6, 0.02, 6]} />
+                <meshBasicMaterial color="#d8c79a" transparent opacity={0.5} depthWrite={false} />
+              </mesh>
+            )}
+            {t.building === "farm" && soilOf(state, t) === "resting" && (
+              <mesh position={[0, 0.22, 0]} raycast={() => null}>
+                <cylinderGeometry args={[0.63, 0.63, 0.04, 6]} />
+                <meshStandardMaterial color="#7fae52" flatShading />
+              </mesh>
+            )}
             {(t.worn ?? 0) >= 0.35 && <WearMarks worn={t.worn ?? 0} seed={t.id} />}
           </group>
         );

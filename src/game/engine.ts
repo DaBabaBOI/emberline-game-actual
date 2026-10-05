@@ -86,6 +86,7 @@ import {
   WORK,
   BELIEFS,
   SETTLERS,
+  FALLOW,
   CONNECTIONS,
   INVENTED,
   LAST_TUTORIAL,
@@ -197,6 +198,8 @@ export type Action =
   | { type: "devOres" }
   | { type: "devTired" }
   | { type: "devFullStores" }
+  | { type: "devTireFields" }
+  | { type: "restField"; tileId: number }
   | { type: "devConnections" }
   | { type: "launch"; project: string }
   | { type: "devTipping"; when: "soon" | "now" | "end" }
@@ -509,10 +512,11 @@ function updateLast(state: GameState): GameState {
     state = { ...state, lastNews: news + 1, log: [`${HISTORY[news].year}, in the real world: ${HISTORY[news].text}`, ...state.log].slice(0, 30) };
   }
   // An advancement that has just been invented.
-  const arrived = Object.entries(INVENTED).find(([id, year]) => Math.floor(state.year) === year && Math.floor(state.year - ERAS[4].yearsPerTick) < year && TREE_BY_ID[id]);
+  const arrived = Object.entries(INVENTED).find(([id, year]) => Math.floor(state.year) === year && Math.floor(state.year - LAST.yearsPerTick) < year && TREE_BY_ID[id]);
   if (arrived) state = { ...state, log: [`Invented in ${arrived[1]}: ${TREE_BY_ID[arrived[0]].name}. Open Advancements to research it.`, ...state.log].slice(0, 30) };
   const solved = lastProblems(state).every((p) => p.done);
-  const held = solved ? (state.lastHeld ?? 0) + 1 : 0;
+  // A short slip only sets the clock back a little; it doesn't start it over.
+  const held = solved ? (state.lastHeld ?? 0) + 1 : Math.max(0, (state.lastHeld ?? 0) - 3);
   if (held < LAST.hold) return held === state.lastHeld ? state : { ...state, lastHeld: held };
   const done = { ...state, lastHeld: held, finished: true, log: [`${state.nation ?? "Our people"} built something that lasts: clean air, clean power, and a home for everyone.`, ...state.log].slice(0, 30) };
   return { ...done, debrief: makeDebrief(done, "final") };
@@ -1173,6 +1177,19 @@ function near(state: GameState, tile: Tile, building: string, reach: number) {
   return state.tiles.some((t) => t.building === building && hexDistance(t, tile) <= reach);
 }
 
+// A field's soil: fresh, tired (farmed too long without rest), resting
+// fallow, or rotated in turn (Three-Field Rotation, never tires).
+export function soilOf(state: GameState, tile: Tile): "fresh" | "tired" | "resting" | "rotation" | null {
+  if (tile.building !== "farm") return null;
+  if (state.researched.includes("three-field")) return "rotation";
+  if (state.tick < (state.fallow?.[tile.id] ?? -1)) return "resting";
+  // The Stone Age's first fields are new, rich land: soil only tires from the
+  // Ancient era, and each new era starts the count again.
+  if (state.era === 0) return "fresh";
+  const sown = Math.max(state.sown?.[tile.id] ?? -Infinity, state.eraStartTick ?? -Infinity);
+  return Number.isFinite(sown) && state.tick - sown >= FALLOW.tiredAfter ? "tired" : "fresh";
+}
+
 // How much a field grows: rain, canals, aqueducts and mills, and seed grain eaten in a famine.
 export function farmFactor(state: GameState, tile: Tile) {
   const canal = state.tiles.some((t) => t.building === "canal" && hexDistance(t, tile) === 1) ? 1.5 : 1;
@@ -1184,7 +1201,9 @@ export function farmFactor(state: GameState, tile: Tile) {
   const silt = state.tick < (state.silt?.[tile.id] ?? 0) ? 1 + DISASTER_HITS.flood.silt : 1;
   const wind = near(state, tile, "windmill", FARMING.windmillReach) ? 1 + FARMING.windmill : 1;
   const plough = (state.researched.includes("heavy-plough") ? FARMING.plough : 1) * (state.researched.includes("three-field") ? FARMING.rotation : 1);
-  return canal * mill * wind * plough * silt * (watered ? 1 + WATER.aqueductFarm : 1) * water * (seedEaten(state) ? 1 - FAMINE.seed.farmLoss : 1);
+  const soil = soilOf(state, tile);
+  const rest = soil === "resting" ? 0 : soil === "tired" ? FALLOW.tiredYield : 1;
+  return rest * canal * mill * wind * plough * silt * (watered ? 1 + WATER.aqueductFarm : 1) * water * (seedEaten(state) ? 1 - FAMINE.seed.farmLoss : 1);
 }
 
 // How many people have water in the drought: springs, wells and aqueducts.
@@ -2333,7 +2352,7 @@ function gapFactor(state: GameState) {
 }
 
 export interface Warning {
-  id: "fire" | "food" | "wood" | "famine" | "tired" | "unrest" | "collapse" | "behind" | "land" | "sick" | "rain" | "wear" | "roof" | "hostile-steppe" | "hostile-reach";
+  id: "fire" | "food" | "wood" | "famine" | "tired" | "unrest" | "collapse" | "behind" | "land" | "sick" | "rain" | "wear" | "roof" | "hostile-steppe" | "hostile-reach" | "soil";
   icon: IconId;
   text: string;
   // Ticks left on the countdown in the text; "{secs}" in the text is where it goes.
@@ -2390,7 +2409,7 @@ export function nextYear(state: GameState): number {
     return from + (ERAS[2].startYear - from) * progress;
   }
   const next = ERAS[state.era + 1];
-  const perTick = ERAS[state.era].yearsPerTick;
+  const perTick = state.mode === "last" ? LAST.yearsPerTick : ERAS[state.era].yearsPerTick;
   if (!next) return state.year + perTick;
   const last = next.startYear - 1;
   const left = last - state.year;
@@ -2406,6 +2425,14 @@ export function warnings(state: GameState): Warning[] {
   const netFood = prod.food - consumption(state);
   const famineLimit = DIFFICULTIES[state.difficulty].famineLimit;
 
+  const tired = state.tiles.filter((t) => soilOf(state, t) === "tired").length;
+  if (tired)
+    out.push({
+      id: "soil",
+      icon: "wheat",
+      text: `${tired} field${tired === 1 ? " has" : "s have"} tired soil and grow${tired === 1 ? "s" : ""} half the food. Click one and let it rest, or learn Three-Field Rotation.`,
+      severe: false,
+    });
   if (state.famineTicks > 0) {
     out.push({
       id: "famine",
@@ -5415,9 +5442,12 @@ function step(state: GameState, action: Action): GameState {
           : state.landmark;
       // A castle worries the Eastern Reach.
       const worried = def.id === "castle" ? changeMood(state, { reach: DIPLOMACY.castleMood }) : state;
+      // A new field starts with fresh soil.
+      const sown = def.id === "farm" ? { ...state.sown, [tile.id]: state.tick } : state.sown;
       return withMeters({
         ...worried,
         landmark,
+        sown,
         tiles,
         fires: def.id === "campfire" ? { ...state.fires, [tile.id]: burnTicks(state) } : state.fires,
         resources: spend(state.resources, buildingCost(state, def)),
@@ -6257,6 +6287,28 @@ function step(state: GameState, action: Action): GameState {
         lastBigTick: state.tick,
         log: [`${action.from} sent ${action.warriors} warriors to raid us! They land soon.`, ...state.log].slice(0, 30),
       };
+    }
+
+    case "restField": {
+      // Let a field lie fallow for a while: no food, then fresh soil.
+      const tile = state.tiles[action.tileId];
+      const soil = tile ? soilOf(state, tile) : null;
+      if (soil !== "tired" && soil !== "fresh") return state;
+      const ready = state.tick + FALLOW.restTicks;
+      return withMeters({
+        ...state,
+        fallow: { ...state.fallow, [tile.id]: ready },
+        sown: { ...state.sown, [tile.id]: ready },
+        log: ["A field is resting fallow. Grass and clover will bring its soil back in about a minute.", ...state.log].slice(0, 30),
+      });
+    }
+
+    case "devTireFields": {
+      // Every field has been farmed too long: tired soil everywhere.
+      if (!state.dev) return state;
+      const sown = { ...state.sown };
+      for (const t of state.tiles) if (t.building === "farm") sown[t.id] = state.tick - FALLOW.tiredAfter;
+      return withMeters({ ...state, sown, fallow: {} });
     }
 
     case "devFullStores": {

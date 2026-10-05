@@ -3740,6 +3740,11 @@ export const KINGDOM_RAID = {
 // Castles and knights.
 export const CASTLE = { defense: 15, warriors: 10 };
 export const KNIGHTS = { strength: 4, food: 1.5 };
+// Tired soil: a field farmed `tiredAfter` ticks in a row (about 6 minutes)
+// gives `tiredYield` of its food until it rests fallow for `restTicks` (about
+// a minute). Three-Field Rotation rests every field in turn, so none tire.
+export const FALLOW = { tiredAfter: 240, restTicks: 40, tiredYield: 0.5 };
+
 export const FARMING = { plough: 1.25, rotation: 1.1, rotationStrain: 0.5, windmill: 0.2, windmillReach: 2, windmillEnergy: 10 };
 export const LEARNING = { universityLiteracy: 20, printingKnowledge: 1.3, printingLiteracy: 15, guildTools: 0.1, guildMood: 3 };
 // The Black Death: warned of when the year comes, it arrives by ship
@@ -3942,19 +3947,22 @@ export const LAST = {
   // Already known in 1850 (on top of every earlier era).
   known: ["electricity", "railways"],
   // Old buildings left off the build bar in this mode, to keep it short.
-  hidden: ["campfire", "hut", "gatherer", "warcamp", "watchfire", "elder", "healer", "pen", "house", "school", "smithy", "canal", "shrine", "walls", "dock", "fishing"],
-  hold: 60,
-  cleanShare: 0.7,
+  hidden: ["campfire", "hut", "gatherer", "warcamp", "watchfire", "elder", "healer", "pen", "house", "school", "smithy", "canal", "shrine", "walls", "dock", "fishing", "harbour", "shipyard", "tradingpost", "guildhall"],
+  hold: 70,
+  cleanShare: 0.75,
   people: 120,
   meter: 50,
   forest: 0.35,
   // No events, small moments or outbreaks for this many ticks (about 2.5
   // minutes): time to look around before anything happens.
   calm: 100,
+  // Years go by faster than in the Industrial era of the main game, so a good
+  // game ends around today.
+  yearsPerTick: 0.7,
   // Record the town's carbon, clean power and people every this many ticks, for the graph.
   trackEvery: 8,
   // Stars for the year all three were solved: before the first, before the second, or later.
-  stars: [1950, 2000] as [number, number],
+  stars: [2025, 2050] as [number, number],
 };
 
 // Build to Last's guided start: four short steps with the pointing hand.

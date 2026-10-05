@@ -15,6 +15,9 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Tired soil, from the Ancient era on: a field farmed for about 6 minutes straight grows half the food and looks dry. Click it and let it rest fallow for a minute, or learn Three-Field Rotation and fields rest in turn by themselves.",
+      "A calmer build bar: buildings are sorted into tabs (homes, food and water, work, power, trade, town), and the numbers beside them only show what matters right now.",
+      "Build to Last is a little harder, and set to end around today: years pass faster, clean power must reach 75%, and the town has to hold for almost two minutes. Finish before 2025 to beat the real world. A short slip no longer resets the clock.",
       "Build to Last follows real history: each invention arrives in the year it really did (hydropower in 1882, wind in 1887, solar and nuclear in 1954), and real events appear as the years pass, from the Great Stink of 1858 to the first Earth Day.",
       "Build to Last is gentler at the start: a short guide shows you around, nothing happens for the first couple of minutes, and one problem at a time is marked \"Now\", in the order history makes easiest.",
       "Build to Last's ending: stars for how early you made it last, and a graph of your town's air against the real world's.",
