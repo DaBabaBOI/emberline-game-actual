@@ -28,6 +28,7 @@ import {
 import { cn } from "@/lib/utils";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { ChatBox } from "@/components/civ/hud/mp-chat";
+import { isOffensive } from "@/lib/names";
 
 const SPEEDS: { id: Speed; label: string }[] = [
   { id: "quick", label: `Quick: ${MP.minutes.quick} min, 3x faster learning` },
@@ -82,7 +83,9 @@ export function MultiplayerLobby({
 
   if (session) return <WaitingRoom session={session} onStart={onStart} onLeave={() => setSession(null)} />;
 
-  const who = name.trim() || "Chief";
+  // Other players see this name: one with a slur is replaced.
+  const badName = isOffensive(name);
+  const who = (!badName && name.trim()) || "Chief";
   return (
     <main className="min-h-dvh bg-[#e8f4fb] px-4 py-8">
       <div className="mx-auto flex max-w-xl flex-col gap-4">
@@ -105,6 +108,7 @@ export function MultiplayerLobby({
             className="w-full border-[3px] border-[#2b2119] bg-white px-3 py-2 outline-none focus:bg-amber-50"
             data-testid="mp-name"
           />
+          {badName && <span className="mt-1 block text-sm text-red-700">That name isn&apos;t allowed. Please choose another.</span>}
         </label>
 
         <div className="pixel-panel flex flex-col gap-2 p-4">

@@ -11,6 +11,7 @@ import { SAVE_VERSION } from "@/game/engine";
 import { loadFromCloud } from "@/lib/online";
 import { cn } from "@/lib/utils";
 import { PixelIcon } from "@/components/civ/pixel-icon";
+import { isOffensive } from "@/lib/names";
 import type { IconId } from "@/game/sprites";
 
 // Set once a game has been started in this browser (First time is then no longer the default).
@@ -49,7 +50,10 @@ export function TitleScreen({
       return "normal";
     }
   });
+  // Names other players may see: no slurs.
+  const badName = isOffensive(nation);
   const start = (options?: NewGameOptions) => {
+    if (badName) return;
     try {
       localStorage.setItem(PLAYED_KEY, "1");
     } catch {
@@ -114,6 +118,11 @@ export function TitleScreen({
                 className="w-full border-[3px] border-[#2b2119] bg-white px-3 py-2 text-base outline-none focus:bg-amber-50"
                 data-testid="nation-input"
               />
+              {badName && (
+                <span className="mt-1 block text-sm text-red-700" data-testid="name-not-allowed">
+                  That name isn&apos;t allowed. Please choose another.
+                </span>
+              )}
             </label>
             <h2 className="font-pixel mb-3 text-lg font-semibold">Choose your culture</h2>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">

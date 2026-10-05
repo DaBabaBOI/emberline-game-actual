@@ -7,6 +7,7 @@
 // add leaderboard rows (never change or delete them), and save/load a game only
 // through the save_game/load_game functions, by code.
 import type { GameState } from "@/game/types";
+import { HIDDEN_NAME, isOffensive } from "./names";
 
 export const SUPABASE_URL = "https://lgfrxrnjexdcjhpwztpy.supabase.co";
 export const PUBLISHABLE_KEY = "sb_publishable_2ehFe1z5_RD_IxrNcSH1bg_eKQMbV5U";
@@ -100,6 +101,8 @@ export function scoreFor(state: GameState): ScoreRow | null {
 }
 
 export async function postScore(row: ScoreRow): Promise<boolean> {
+  // A name with a slur never goes on the board.
+  if (isOffensive(row.nation)) row = { ...row, nation: HIDDEN_NAME };
   return !!(await call("leaderboard", row, "return=minimal"));
 }
 
@@ -110,7 +113,8 @@ export async function topScores(limit = 10): Promise<ScoreRow[] | null> {
   );
   if (!res) return null;
   try {
-    return (await res.json()) as ScoreRow[];
+    // Rows that slipped in before the check are left out.
+    return ((await res.json()) as ScoreRow[]).filter((r) => !isOffensive(r.nation));
   } catch {
     return null;
   }

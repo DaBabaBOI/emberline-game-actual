@@ -7,6 +7,7 @@
 // bot scores, raids and gifts from the room's seed and the time since the start.
 import { MP } from "@/game/content";
 import { PUBLISHABLE_KEY, SUPABASE_URL } from "./online";
+import { isOffensive } from "./names";
 
 export type Mode = "race" | "coop";
 export type Speed = "quick" | "normal" | "long";
@@ -238,7 +239,9 @@ export const CHAT = { max: 140, keep: 40, quick: ["Hi!", "Good luck!", "Nice!", 
 const MASK = /\b(fuck\w*|shit\w*|bitch\w*|cunt\w*|dick\w*|asshole\w*|bastard\w*|slut\w*|whore\w*|piss\w*)\b/gi;
 
 export function cleanChat(text: string) {
-  return text.replace(/\s+/g, " ").trim().slice(0, CHAT.max).replace(MASK, (w) => w[0] + "*".repeat(w.length - 1));
+  const clean = text.replace(/\s+/g, " ").trim().slice(0, CHAT.max).replace(MASK, (w) => w[0] + "*".repeat(w.length - 1));
+  // Slurs: each word that has one is hidden completely.
+  return clean.split(" ").map((w) => (isOffensive(w) ? "*".repeat(Math.max(3, w.length)) : w)).join(" ");
 }
 
 export interface ChatLine {
