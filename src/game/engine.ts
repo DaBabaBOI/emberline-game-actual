@@ -5299,7 +5299,11 @@ function withMeters(state: GameState): GameState {
 
 // Every action, then check whether the guided after-step has been done.
 export function reducer(state: GameState, action: Action): GameState {
-  const next = reduce(state, action);
+  let next = reduce(state, action);
+  // Build to Last's guide moves on the moment its building is placed (not at
+  // the next tick), so the hand never points at a spot for a second one.
+  const guideBuild = next.mode === "last" ? LAST_TUTORIAL[next.lastStep ?? LAST_TUTORIAL.length]?.build : undefined;
+  if (action.type === "place" && guideBuild && action.buildingId === guideBuild && next !== state) next = lastStepDone(next, next.lastStep!);
   return awardXp(state, next.coach ? advanceCoach(next) : next);
 }
 

@@ -6,7 +6,7 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { Vector3 } from "three";
 import { Html, MapControls, PerformanceMonitor } from "@react-three/drei";
 import type { MapControls as MapControlsImpl } from "three-stdlib";
-import { BUILDINGS_BY_ID, ERAS, formatYear, IMPROVE, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL, WEAR, SMOG } from "@/game/content";
+import { BUILDINGS_BY_ID, ERAS, formatYear, IMPROVE, LAST_TUTORIAL, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL, WEAR, SMOG } from "@/game/content";
 import { CANOE_TOOL, SCOUT_TOOL, canoeTargetError, canoeTicks, scoutTargetError, scoutTicks } from "@/game/engine";
 import {
   buildingCost,
@@ -456,6 +456,8 @@ export function WorldCanvas() {
     }
     if (!selected) return;
     dispatch({ type: "place", tileId: id, buildingId: selected });
+    // Build to Last's guide: one of each, so put the tool down once it's placed.
+    if (state.mode === "last" && (state.lastStep ?? LAST_TUTORIAL.length) < LAST_TUTORIAL.length) setSelected(null);
     // After a two-tap build on a phone, drop the preview so no stale label lingers.
     if (touch) setHovered(null);
   }
