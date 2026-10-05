@@ -11,14 +11,15 @@ import { useSyncExternalStore } from "react";
 // eras) a soft drum. Quieter and slower at night; tense drums during a raid.
 // Ambience: wind, the sea, birds by day and crickets at night.
 
-// ---- Settings (Menu > Sound) ---------------------------------------------------
+// ---- Settings (Menu > Sound and Accessibility) ---------------------------------
 export interface AudioSettings {
+  master: number; // 0–1
   music: number; // 0–1
   sounds: number; // 0–1 (effects and ambience)
   muted: boolean;
 }
 const KEY = "emberline-audio";
-const DEFAULTS: AudioSettings = { music: 0.6, sounds: 0.7, muted: false };
+const DEFAULTS: AudioSettings = { master: 1, music: 0.6, sounds: 0.7, muted: false };
 let settings: AudioSettings | null = null;
 const listeners = new Set<() => void>();
 
@@ -27,6 +28,7 @@ export function getAudioSettings(): AudioSettings {
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) ?? "{}") as Partial<AudioSettings>;
     settings = {
+      master: typeof saved.master === "number" ? Math.min(1, Math.max(0, saved.master)) : DEFAULTS.master,
       music: typeof saved.music === "number" ? Math.min(1, Math.max(0, saved.music)) : DEFAULTS.music,
       sounds: typeof saved.sounds === "number" ? Math.min(1, Math.max(0, saved.sounds)) : DEFAULTS.sounds,
       muted: Boolean(saved.muted),
@@ -167,7 +169,7 @@ function applyVolumes() {
   if (!engine) return;
   const s = getAudioSettings();
   const now = engine.ctx.currentTime;
-  engine.master.gain.setTargetAtTime(s.muted ? 0 : 1, now, 0.05);
+  engine.master.gain.setTargetAtTime(s.muted ? 0 : s.master, now, 0.05);
   engine.music.gain.setTargetAtTime(s.music * 1.1, now, 0.1);
   engine.sounds.gain.setTargetAtTime(s.sounds, now, 0.1);
 }
