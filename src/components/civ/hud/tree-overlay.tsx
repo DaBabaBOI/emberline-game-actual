@@ -31,7 +31,8 @@ function statusOf(state: GameState, n: TreeNode): Status {
 // The first unfinished goal on a card, with its progress (or "Goal met").
 function GoalLine({ state, nodeId, reachable }: { state: GameState; nodeId: string; reachable: boolean }) {
   const goals = goalProgress(state, nodeId);
-  if (!goals.length) return null;
+  // Build to Last: advancements only cost Knowledge, so there are no goals to show.
+  if (!goals.length || state.mode === "last") return null;
   const next = goals.find((g) => !g.done);
   const left = goals.filter((g) => !g.done).length;
   return (

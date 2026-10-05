@@ -1598,6 +1598,38 @@ export const TREE: TreeNode[] = [
     cost: 130,
     requires: ["uranium"],
   },
+  // ---- Industrial: the many smaller advancements (one line each). Each
+  // boosts something (see BoostKey); the engine adds them up in boostOf().
+  { id: "grid", name: "Power Grid", description: "Smarter wires: 10% less power needed.", branch: "energy", era: 4, cost: 70, requires: ["electricity"], boost: { demand: -0.1 } },
+  { id: "turbines", name: "Better Turbines", description: "Water and wind plants make 15% more.", branch: "energy", era: 4, cost: 80, requires: ["hydropower"], boost: { cleanPower: 0.15 } },
+  { id: "batteries", name: "Batteries", description: "Store clean power: clean plants make 15% more.", branch: "energy", era: 4, cost: 100, requires: ["renewables"], boost: { cleanPower: 0.15 } },
+  { id: "smartgrid", name: "Smart Grid", description: "Power where it's needed: 15% less needed.", branch: "energy", era: 4, cost: 120, requires: ["grid", "computers"], boost: { demand: -0.15 } },
+  { id: "heatpumps", name: "Heat Pumps", description: "Warm homes without coal: 10% less carbon.", branch: "energy", era: 4, cost: 90, requires: ["electricity"], boost: { carbon: -0.1, happiness: 2 } },
+  { id: "geothermal", name: "Geothermal", description: "Heat from the ground: clean plants make 10% more.", branch: "energy", era: 4, cost: 110, requires: ["steel", "hydropower"], boost: { cleanPower: 0.1 } },
+  { id: "motors", name: "Efficient Motors", description: "Factories need 10% less power.", branch: "energy", era: 4, cost: 80, requires: ["steel"], boost: { demand: -0.1 } },
+  { id: "insulation", name: "Insulation", description: "Warmer homes: 5% less power, +3 health.", branch: "construction", era: 4, cost: 70, requires: ["steel"], boost: { demand: -0.05, health: 3 } },
+  { id: "concrete", name: "Reinforced Concrete", description: "Homes hold 10% more people.", branch: "construction", era: 4, cost: 80, requires: ["steel"], boost: { housing: 0.1 } },
+  { id: "highrise", name: "High-rises", description: "Homes hold 15% more people.", branch: "construction", era: 4, cost: 110, requires: ["concrete"], boost: { housing: 0.15 } },
+  { id: "greenroofs", name: "Green Roofs", description: "15% less smog, +2 happiness.", branch: "construction", era: 4, cost: 100, requires: ["highrise"], boost: { smog: -0.15, happiness: 2 } },
+  { id: "recycling", name: "Recycling", description: "15% more stone, 5% less carbon.", branch: "construction", era: 4, cost: 80, requires: ["publichealth"], boost: { stone: 0.15, carbon: -0.05 } },
+  { id: "sewers", name: "Sewers", description: "Clean streets: +6 health.", branch: "construction", era: 4, cost: 70, requires: ["publichealth"], boost: { health: 6 } },
+  { id: "zoning", name: "Zoning", description: "Factories away from homes: 20% less smog.", branch: "construction", era: 4, cost: 90, requires: ["cleanair"], boost: { smog: -0.2 } },
+  { id: "chemistry", name: "Fertiliser", description: "Farms grow 10% more.", branch: "knowledge", era: 4, cost: 70, requires: ["steel"], boost: { food: 0.1 } },
+  { id: "seeds", name: "Better Seeds", description: "Farms grow 15% more.", branch: "knowledge", era: 4, cost: 100, requires: ["chemistry"], boost: { food: 0.15 } },
+  { id: "vaccines", name: "Vaccines", description: "Fewer get sick: +8 health.", branch: "knowledge", era: 4, cost: 100, requires: ["publichealth"], boost: { health: 8 } },
+  { id: "radio", name: "Radio", description: "News for everyone: 15% more knowledge.", branch: "knowledge", era: 4, cost: 70, requires: ["electricity"], boost: { knowledge: 0.15 } },
+  { id: "schooling", name: "Public Schools", description: "20% more knowledge, +2 happiness.", branch: "knowledge", era: 4, cost: 90, requires: ["radio"], boost: { knowledge: 0.2, happiness: 2 } },
+  { id: "climatesci", name: "Climate Science", description: "Measure it to cut it: 10% less carbon.", branch: "knowledge", era: 4, cost: 110, requires: ["computers"], boost: { carbon: -0.1 } },
+  { id: "internet", name: "Internet", description: "20% more knowledge, 10% more coins.", branch: "knowledge", era: 4, cost: 140, requires: ["computers", "radio"], boost: { knowledge: 0.2, coins: 0.1 } },
+  { id: "trams", name: "Electric Trams", description: "10% less carbon and smog.", branch: "transport", era: 4, cost: 90, requires: ["railways", "electricity"], boost: { carbon: -0.1, smog: -0.1 } },
+  { id: "bicycles", name: "Bicycles", description: "10% less smog, +1 happiness.", branch: "transport", era: 4, cost: 60, requires: ["railways"], boost: { smog: -0.1, happiness: 1 } },
+  { id: "evs", name: "Electric Cars", description: "15% less carbon and smog.", branch: "transport", era: 4, cost: 130, requires: ["trams", "batteries"], boost: { carbon: -0.15, smog: -0.15 } },
+  { id: "freight", name: "Rail Freight", description: "15% more coins, 10% more wood.", branch: "transport", era: 4, cost: 80, requires: ["railways"], boost: { coins: 0.15, wood: 0.1 } },
+  { id: "markets", name: "Local Markets", description: "10% more food, 5% more coins.", branch: "transport", era: 4, cost: 70, requires: ["railways"], boost: { food: 0.1, coins: 0.05 } },
+  { id: "nationalparks", name: "National Parks", description: "Forests take back 30% more carbon, +3 happiness.", branch: "culture", era: 4, cost: 90, requires: ["cleanair"], boost: { sink: 0.3, happiness: 3 } },
+  { id: "reforesting", name: "Reforestation", description: "Forests take back 30% more carbon.", branch: "culture", era: 4, cost: 110, requires: ["nationalparks"], boost: { sink: 0.3 } },
+  { id: "weekend", name: "The Weekend", description: "Two days off: +5 happiness.", branch: "culture", era: 4, cost: 70, requires: ["publichealth"], boost: { happiness: 5 } },
+  { id: "unions", name: "Trade Unions", description: "Fair work: +3 happiness, +3 health.", branch: "culture", era: 4, cost: 90, requires: ["weekend"], boost: { happiness: 3, health: 3 } },
   // ---- Future & Space ----
   {
     id: "ai",
@@ -3869,3 +3901,20 @@ export const TUTORIAL: { text: string; more: string; done: string; unlocks: stri
     buys: ["early-farming"],
   },
 ];
+
+// "Build to Last": a game that starts in the Industrial era (in `startYear`,
+// with a small working town) and asks for three things at once, held for
+// `hold` ticks (about a minute and a half): carbon falling, at least `cleanShare` of
+// the power clean (with the grid covering what's needed), and `people` people
+// fed and housed (meters at least `meter`) with `forest` of the forest standing.
+export const LAST = {
+  startYear: 1850,
+  population: 60,
+  resources: { food: 400, wood: 250, stone: 250, knowledge: 150, currency: 300 },
+  town: ["townhouse", "townhouse", "townhouse", "latrine", "latrine", "well", "well", "farm", "farm", "farm", "farm", "farm", "farm", "farm", "granary", "woodcutter", "quarry", "factory", "coalplant", "market", "university", "temple"],
+  hold: 60,
+  cleanShare: 0.7,
+  people: 120,
+  meter: 55,
+  forest: 0.35,
+};

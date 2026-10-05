@@ -184,6 +184,15 @@ export function TitleScreen({
             >
               I&apos;ve played before: skip the tutorial
             </button>
+            <button
+              type="button"
+              onClick={() => start({ nation, mode: "last" })}
+              className="pixel-btn font-pixel mt-2 w-full bg-sky-700 py-2 text-base text-white hover:bg-sky-600"
+              data-testid="start-last"
+              title="Start in 1850 with a smoky industrial town. Solve three big problems and build something that lasts."
+            >
+              Build to Last: start in 1850, solve 3 big problems
+            </button>
           </div>
 
           {devMode && (

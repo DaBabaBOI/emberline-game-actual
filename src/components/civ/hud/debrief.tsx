@@ -3,7 +3,7 @@
 import { HOME } from "@/lib/home";
 import { useState, type ReactNode } from "react";
 import { ERAS, formatYear, LESSONS, METERS, METER_SDG, MIN_SUSTAINABILITY_FOR_BEST_ENDING } from "@/game/content";
-import { clearSave, currentGoal, makeDebrief, readyForNextEra, secs } from "@/game/engine";
+import { clearSave, currentGoal, lastProblems, makeDebrief, readyForNextEra, secs } from "@/game/engine";
 import type { Debrief as DebriefData } from "@/game/types";
 import { useGame } from "@/components/civ/game-provider";
 import { LeaderboardPanel } from "./online";
@@ -62,7 +62,9 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
     d.kind === "era"
       ? `The ${ERAS[d.era].name}${ERAS[d.era].name.endsWith("Age") ? "" : " era"} is over`
       : d.kind === "final"
-        ? "Your story is complete"
+        ? state.mode === "last"
+          ? "A civilisation that lasts"
+          : "Your story is complete"
         : state.lostTo === "unrest"
           ? "The tribe has left"
           : state.lostTo === "conquest"
@@ -75,6 +77,8 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
   const sub =
     d.kind === "era"
       ? `${ERA_ENDS[d.era] ?? `${who} are ready for what comes next.`} Here is how you got here.`.replace("{who}", who)
+      : d.kind === "final" && state.mode === "last"
+        ? `${who} cleared the air, run on clean power, and give ${Math.floor(state.population)} people a home and food, with the forest still standing, in ${formatYear(d.year)}.`
       : d.kind === "final"
         ? `${who} reached Type I on the Kardashev scale (${(d.kardashev ?? 1).toFixed(2)}): the whole planet runs on clean energy${d.tipped ? ", though the climate tipped on the way" : ", and the climate held"}. Here is the whole story, from the first fire.`
         : state.lostTo === "conquest"
@@ -257,6 +261,7 @@ export function GoalLine() {
   const { state } = useGame();
   const compact = useCompact();
   const [full, setFull] = useState(false);
+  if (state.mode === "last") return <ProblemsLine />;
   const goal = currentGoal(state);
   if (!goal) return null;
   if (compact)
@@ -278,6 +283,25 @@ export function GoalLine() {
       <span className="pixel-panel-dark font-pixel max-w-[min(92vw,640px)] px-3 py-1 text-center text-xs" data-testid="goal-line">
         {goal}
       </span>
+    </div>
+  );
+}
+
+// Build to Last: the three big problems, each with a tick when solved.
+function ProblemsLine() {
+  const { state } = useGame();
+  const problems = lastProblems(state);
+  return (
+    <div className="pointer-events-none flex justify-center">
+      <div className="pixel-panel-dark font-pixel flex max-w-[min(94vw,760px)] flex-wrap justify-center gap-x-4 gap-y-1 px-3 py-1 text-xs" data-testid="problems">
+        {problems.map((p) => (
+          <span key={p.id} className="flex items-center gap-1" title={p.status} data-testid={`problem-${p.id}`}>
+            <span className={cn("inline-block h-3 w-3 border-2", p.done ? "border-emerald-300 bg-emerald-400" : "border-white/60")} />
+            <span className={p.done ? "text-emerald-300" : ""}>{p.title}</span>
+            <span className="text-white/60">· {p.status}</span>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
