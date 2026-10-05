@@ -52,18 +52,18 @@ html[data-font="serif"] {
 }
 
 html.high-contrast {
-  --background: #000000;
-  --foreground: #ffffff;
-  --muted: #111111;
-  --muted-foreground: #f8fafc;
-  --border: #ffffff;
-  --primary: #ffe082;
-  --primary-foreground: #000000;
-  --secondary: #7dd3fc;
-  --secondary-foreground: #000000;
-  --panel-bg: #000000;
-  --panel-text: #ffffff;
-  --panel-border: #ffffff;
+  --background: #071a2b;
+  --foreground: #f8fafc;
+  --muted: #102a43;
+  --muted-foreground: #dbeafe;
+  --border: #bfdbfe;
+  --primary: #fbbf24;
+  --primary-foreground: #102a43;
+  --secondary: #67e8f9;
+  --secondary-foreground: #102a43;
+  --panel-bg: #102a43;
+  --panel-text: #f8fafc;
+  --panel-border: #bfdbfe;
 }
 
 html.large-text {
@@ -229,8 +229,8 @@ html[data-theme="dark"] [class*="text-stone-800"] {
 
 html.high-contrast .pixel-btn,
 html.high-contrast .pixel-panel {
-  outline: 3px solid transparent;
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.8), 0 6px 0 0 rgba(255, 255, 255, 0.8);
+  outline: 2px solid #67e8f9;
+  box-shadow: 0 4px 0 0 #020617;
 }
 
 /* Component-level utility classes and inline tree labels can otherwise keep a
@@ -241,34 +241,38 @@ html.high-contrast body :is(a, button, label, p, li, span, div, input, textarea,
   color: #ffffff !important;
 }
 
-html.high-contrast :is(
-  [class*="bg-white"],
-  [class*="bg-amber-"],
-  [class*="bg-emerald-300"],
-  [class*="bg-emerald-400"],
-  [class*="bg-emerald-500"],
-  [class*="bg-emerald-600"],
-  [class*="bg-[#f8e7bd]"],
-  [class*="bg-[#f5d98b]"],
-  [class*="bg-[#fbf7ef]"],
-  [class*="bg-[#fdf6e3]"],
-  [style*="background"]
-) {
-  color: #000000 !important;
+/* Keep distinct, high-contrast surfaces rather than turning the entire game
+ * black. This must still win over dark mode's utility-colour overrides. */
+html.high-contrast main {
+  background: linear-gradient(180deg, #164e63 0%, #071a2b 72%) !important;
 }
 
-/* High contrast is an accessibility mode, not merely a dark-palette variant.
- * It must win when both toggles are on, including against utility backgrounds. */
-html.high-contrast :is(main, .pixel-panel, .pixel-panel-dark, .pixel-btn, [class*="bg-"]) {
-  background-color: #000000 !important;
-  background-image: none !important;
+html.high-contrast :is(.pixel-panel, .pixel-panel-dark) {
+  background-color: #102a43 !important;
   color: #ffffff !important;
-  border-color: #ffffff !important;
-  box-shadow: 0 3px 0 0 #ffffff !important;
+  border-color: #bfdbfe !important;
+}
+
+html.high-contrast .pixel-btn {
+  background-color: #164e63 !important;
+  color: #ffffff !important;
+  border-color: #67e8f9 !important;
+}
+
+html.high-contrast :is([class~="bg-amber-400"], [class~="bg-amber-500"], [class~="bg-amber-600"], [class*="bg-[#f8e7bd]"], [class*="bg-[#f5d98b]"]) {
+  background-color: #fbbf24 !important;
+  color: #102a43 !important;
+  border-color: #fef3c7 !important;
+}
+
+html.high-contrast :is([class~="bg-emerald-500"], [class~="bg-emerald-600"], [class~="bg-emerald-700"]) {
+  background-color: #047857 !important;
+  color: #ffffff !important;
+  border-color: #99f6e4 !important;
 }
 
 html.high-contrast input {
-  accent-color: #ffffff;
+  accent-color: #fbbf24;
 }
 
 html body,

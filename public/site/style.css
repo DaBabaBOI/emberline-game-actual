@@ -756,41 +756,41 @@ html[data-theme="dark"] {
 
 html.high-contrast {
   --text: #ffffff;
-  --body: #000000;
-  --page: #000000;
-  --page-edge: #ffffff;
-  --edge-shadow: 0 3px 0 0 #ffffff;
-  --sky: #000000;
+  --body: #071a2b;
+  --page: linear-gradient(180deg, #164e63 0%, #071a2b 72%);
+  --page-edge: #bfdbfe;
+  --edge-shadow: 0 3px 0 0 #020617;
+  --sky: linear-gradient(180deg, #0e7490 0%, #102a43 62%, #071a2b 100%);
   --label: #ffffff;
   --tagline: #ffffff;
   --gain: #ffffff;
   --cost: #ffffff;
 
-  --panel: #000000;
-  --outline: #ffffff;
-  --panel-shadow: 0 3px 0 0 #ffffff;
-  --button: #000000;
-  --button-hover: #000000;
-  --button-cream: #000000;
+  --panel: #102a43;
+  --outline: #bfdbfe;
+  --panel-shadow: 0 3px 0 0 #020617;
+  --button: #164e63;
+  --button-hover: #0e7490;
+  --button-cream: #164e63;
   --button-text: #ffffff;
-  --button-shadow: #ffffff;
-  --chosen: #000000;
+  --button-shadow: #020617;
+  --chosen: #fbbf24;
 
-  --play: #000000;
-  --play-hover: #000000;
+  --play: #047857;
+  --play-hover: #065f46;
   --play-text: #ffffff;
-  --badge-text: #000000; /* the SDG badges keep their colours */
+  --badge-text: #102a43; /* the SDG badges keep their colours */
 
-  --bar: #000000;
-  --tag: #000000;
+  --bar: #164e63;
+  --tag: #102a43;
   --tag-text: #ffffff;
-  --footer: #000000;
+  --footer: #102a43;
 
-  --settings: #000000;
-  --settings-hover: #000000;
-  --settings-edge: #ffffff;
-  --settings-panel: #000000;
-  --tick: #ffffff;
+  --settings: #164e63;
+  --settings-hover: #0e7490;
+  --settings-edge: #67e8f9;
+  --settings-panel: #102a43;
+  --tick: #fbbf24;
 }
 
 html:is([data-theme="dark"], .high-contrast) :is(button, input):focus-visible {
