@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ERAS, MP } from "@/game/content";
+import { defenseStrength } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { cn } from "@/lib/utils";
@@ -9,7 +10,9 @@ import { ChatBox } from "./mp-chat";
 import {
   BOT_NAMES,
   CHAT,
+  adaptiveBotScore,
   botActions,
+  botRaidSize,
   botScore,
   chatLines,
   cleanChat,
@@ -128,10 +131,11 @@ export function MultiplayerPanel({ match }: { match: Match }) {
     const due = plan.filter((a) => a.at > (botDone.current ?? 0) && a.at <= minutes && a.to === session.seat);
     botDone.current = minutes;
     for (const a of due) {
-      if (a.kind === "raid") dispatch({ type: "mpRaidIn", warriors: a.size, from: BOT_NAMES[a.from], seat: a.from });
+      if (a.kind === "raid")
+        dispatch({ type: "mpRaidIn", warriors: botRaidSize(room.seed, a.from, a.size, defenseStrength(stateRef.current)), from: BOT_NAMES[a.from], seat: a.from });
       else dispatch({ type: "mpGiftIn", resources: { food: MP.giftStep, wood: MP.giftStep }, from: BOT_NAMES[a.from] });
     }
-  }, [minutes, plan, session.seat, dispatch]);
+  }, [minutes, plan, session.seat, room.seed, dispatch]);
 
   // A rival's raid on us is over: if they won, their warriors take loot home.
   useEffect(() => {
@@ -149,13 +153,17 @@ export function MultiplayerPanel({ match }: { match: Match }) {
     if (over && state.speed !== 0) dispatch({ type: "setSpeed", speed: 0 });
   }, [over, state.speed, dispatch]);
 
+  const humanScores = seats.filter((x) => humanSeats.includes(x.seat)).map((x) => ({ xp: x.xp, era: x.era }));
   const rows: Row[] = [0, 1, 2, 3]
     .map((n) => {
       const human = seats.find((x) => x.seat === n && humanSeats.includes(n));
       if (n === session.seat)
         return { seat: n, name: session.name, bot: false, xp: state.xp ?? 0, era: state.era, sustainability: state.meters.sustainability, you: true };
       if (human) return { seat: n, name: human.name, bot: false, xp: human.xp, era: human.era, sustainability: human.sustainability, you: false };
-      return { seat: n, name: `${BOT_NAMES[n]} (bot)`, bot: true, ...botScore(room.seed, n, minutes, room.speed), you: false };
+      // Race: bots keep pace with the humans (their scores as the database has
+      // them, so every browser agrees). Co-op: they're teammates, at their own pace.
+      const score = room.mode === "race" ? adaptiveBotScore(room.seed, n, minutes, room.speed, humanScores) : botScore(room.seed, n, minutes, room.speed);
+      return { seat: n, name: `${BOT_NAMES[n]} (bot)`, bot: true, ...score, you: false };
     })
     .sort((a, b) => b.xp - a.xp);
   const place = rows.findIndex((r) => r.you) + 1;
