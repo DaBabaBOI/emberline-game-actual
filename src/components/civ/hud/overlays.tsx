@@ -30,6 +30,7 @@ import { useGuide } from "./guide-overlay";
 import { PlagueBanner, RebellionBanner } from "./medieval";
 import { ClimateBanner } from "./industrial";
 import { TippingBanner } from "./future";
+import { workDemo } from "@/components/civ/world/villagers";
 
 // An easter egg: poke Elder Ama's picture and she gets grumpier; the tenth poke
 // earns a secret.
@@ -681,6 +682,9 @@ export function DevPanel() {
         </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devTireFields" })} title="Every field's soil is tired at once">
           Tired soil
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => (workDemo.want = true)} title="Sends someone to work at each kind of workplace, to see how they work" data-testid="dev-work">
+          Show work
         </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devConnections" })} title="Builds an aqueduct chain, a market between homes and a farm by a granary" data-testid="dev-connections">
           Connections

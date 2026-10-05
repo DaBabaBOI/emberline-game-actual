@@ -17,10 +17,12 @@ export interface Agent {
   hair: string;
   phase: number;
   sitting?: boolean;
-  // Working at a building (dropped there to help): hoeing or chopping.
+  // Working at a building (dropped there to help).
   working?: boolean;
-  // What they work with: a hoe in the fields, an axe at the woodcutter...
-  workTool?: "hoe" | "axe" | "pick";
+  // How they work there: a tool they swing (hoe, axe, pick, hammer, shovel),
+  // something held in both hands (a book to read, a load to carry), or
+  // kneeling in prayer.
+  workTool?: WorkTool;
   // Being carried by the player.
   held?: boolean;
   // 0–1: how far the figure has toppled over (fire victims).
@@ -28,6 +30,50 @@ export interface Agent {
   // A gold crown (the team cameos, an easter egg).
   crown?: boolean;
 }
+
+export type WorkTool = "hoe" | "axe" | "pick" | "hammer" | "shovel" | "book" | "carry" | "pray";
+const STRIKES: WorkTool[] = ["hoe", "axe", "pick", "hammer", "shovel"];
+const strikes = (tool?: WorkTool) => !tool || STRIKES.includes(tool);
+// What's in their hands, by kind: [size across, up, through, colour].
+const HELD: Partial<Record<WorkTool, [number, number, number, string]>> = {
+  book: [0.075, 0.095, 0.022, "#8b2b2b"],
+  carry: [0.13, 0.09, 0.09, "#9a6a3a"],
+};
+
+// How someone dropped on a building works there (none listed: they help by hand).
+export const WORK_TOOLS: Record<string, WorkTool> = {
+  woodcutter: "axe",
+  quarry: "pick",
+  farm: "hoe",
+  gatherer: "hoe",
+  pen: "hoe",
+  forester: "hoe",
+  vfarm: "hoe",
+  smithy: "hammer",
+  factory: "hammer",
+  shipyard: "hammer",
+  guildhall: "hammer",
+  station: "hammer",
+  coalplant: "shovel",
+  elder: "book",
+  school: "book",
+  academy: "book",
+  university: "book",
+  library: "book",
+  market: "carry",
+  granary: "carry",
+  tradingpost: "carry",
+  harbour: "carry",
+  dock: "carry",
+  well: "carry",
+  baths: "carry",
+  latrine: "carry",
+  healer: "carry",
+  hospital: "carry",
+  shrine: "pray",
+  temple: "pray",
+  cathedral: "pray",
+};
 
 export const SKINS = ["#f1c7a0", "#e0ac69", "#c68642", "#8d5524", "#f5d0b0"];
 export const HAIRS = ["#2b1b10", "#4a2f1b", "#1a1a1a", "#7a4a22", "#a0703c"];
@@ -158,10 +204,16 @@ export function Figures({
       const a = list[i];
       const swing = a.moving ? Math.sin(t * 9 + a.phase) * 0.6 : 0;
       // Working: both hands on the tool, lifting it overhead and bringing it down.
-      const work = a.working && !a.moving && !a.held ? workStroke(t, a.phase).swing : null;
+      const work = a.working && strikes(a.workTool) && !a.moving && !a.held ? workStroke(t, a.phase).swing : null;
+      // Or holding something in both hands (also while walking with a load), or praying.
+      const holding = !!a.working && !a.held && !!HELD[a.workTool!] && (a.workTool === "carry" || !a.moving);
+      const praying = !!a.working && !a.held && a.workTool === "pray" && !a.moving;
+      const kneel = a.sitting || praying;
+      // Reading: the book rises and falls a little as the pages turn.
+      const hold = holding ? (a.workTool === "book" ? -1.05 + Math.sin(t * 1.3 + a.phase) * 0.06 : -1.3) : null;
       const bob = a.moving ? Math.abs(Math.sin(t * 9 + a.phase)) * 0.015 : 0;
       // Sitting: hips drop to the ground, legs point forward, hands reach out.
-      fig.position.set(a.x, a.y + bob - (a.sitting ? 0.15 * a.scale : 0), a.z);
+      fig.position.set(a.x, a.y + bob - (kneel ? 0.15 * a.scale : 0), a.z);
       // Toppling pivots at the feet, forward along the way they face.
       fig.rotation.set(((a.fallen ?? 0) * Math.PI) / 2, a.heading, 0, "YXZ");
       fig.scale.setScalar(a.scale);
@@ -185,15 +237,25 @@ export function Figures({
       const weaponArm = weapon && work === null && !a.sitting ? -0.7 + swing * 0.15 : null;
       for (const side of [-1, 1]) {
         const k = side < 0 ? 0 : 1;
-        const legAngle = a.sitting ? -Math.PI / 2 + 0.15 : swing * side;
+        const legAngle = kneel ? -Math.PI / 2 + 0.15 : (holding ? swing * 0.6 : swing) * side;
         local.rotation.set(legAngle, 0, 0);
         local.position.set(0.035 * side, 0.19 - 0.09 * Math.cos(legAngle), -0.09 * Math.sin(legAngle));
         put(legs.current, i * 2 + k);
 
         const armSwing =
-          work !== null ? work : a.sitting ? -0.75 : side > 0 && weaponArm !== null ? weaponArm : -swing * side * 0.8;
-        // Both hands meet on the tool's handle while working.
-        const tilt = work !== null ? -side * 0.4 : side * 0.12;
+          work !== null
+            ? work
+            : hold !== null
+              ? hold
+              : praying
+                ? -2.75 + Math.sin(t * 0.9 + a.phase) * 0.08
+                : a.sitting
+                  ? -0.75
+                  : side > 0 && weaponArm !== null
+                    ? weaponArm
+                    : -swing * side * 0.8;
+        // Both hands meet on the tool's handle (or the book, or the load).
+        const tilt = work !== null ? -side * 0.4 : hold !== null ? -side * 0.3 : praying ? -side * 0.15 : side * 0.12;
         const mid = handAt(side, armSwing, tilt, ARM / 2);
         local.rotation.set(armSwing, 0, tilt);
         local.position.set(mid.x, mid.y, mid.z);
@@ -245,9 +307,33 @@ export function Figures({
     // Tools in hand while working (hidden, scaled to nothing, otherwise). The
     // handle runs on from the hands, a little steeper than the arms, so the
     // head ends up overhead on the lift and in the ground on the stroke.
+    const paint = new Color();
     for (let i = 0; i < n; i++) {
       const a = list[i];
-      const busy = !!a.working && !a.moving && !a.held;
+      const busy = !!a.working && strikes(a.workTool) && !a.moving && !a.held;
+      const held = a.working && !a.held ? HELD[a.workTool!] : undefined;
+      const holding = !!held && (a.workTool === "carry" || !a.moving);
+      if (holding) {
+        // A book or a load in both hands, in front of the chest: no handle.
+        fig.position.set(a.x, a.y, a.z);
+        fig.rotation.set(0, a.heading, 0, "YXZ");
+        fig.scale.setScalar(a.scale);
+        fig.updateMatrix();
+        const lift = a.workTool === "book" ? -1.05 + Math.sin(t * 1.3 + a.phase) * 0.06 : -1.3;
+        const hand = handAt(1, lift, -0.3);
+        local.rotation.set(a.workTool === "book" ? -0.5 : 0, 0, 0);
+        local.scale.set(0.0001, 0.0001, 0.0001);
+        local.position.set(0, hand.y, hand.z);
+        put(handle.current, i);
+        local.scale.set(held[0], held[1], held[2]);
+        local.position.set(0, hand.y + (a.workTool === "carry" ? 0.03 : 0.01), hand.z + 0.03);
+        put(toolHead.current, i);
+        toolHead.current?.setColorAt(i, paint.set(held[3]));
+        local.scale.setScalar(0.0001);
+        put(dust.current, i);
+        continue;
+      }
+      toolHead.current?.setColorAt(i, paint.set("#7d7f84"));
       fig.position.set(a.x, a.y, a.z);
       fig.rotation.set(0, a.heading, 0, "YXZ");
       fig.scale.setScalar(busy ? a.scale : 0.0001);
@@ -264,7 +350,17 @@ export function Figures({
       const d = { y: -Math.cos(angle), z: -Math.sin(angle) };
       const lead = { y: Math.sin(angle), z: -Math.cos(angle) };
       const end = HANDLE - 0.04;
-      const shape = a.workTool === "axe" ? { out: 0.03, w: 0.014, l: 0.05, t: 0.045 } : a.workTool === "pick" ? { out: 0, w: 0.016, l: 0.13, t: 0.016 } : { out: 0.03, w: 0.06, l: 0.06, t: 0.012 };
+      // A hammer is a heavy block; a shovel a wide, flat scoop.
+      const shape =
+        a.workTool === "axe"
+          ? { out: 0.03, w: 0.014, l: 0.05, t: 0.045 }
+          : a.workTool === "pick"
+            ? { out: 0, w: 0.016, l: 0.13, t: 0.016 }
+            : a.workTool === "hammer"
+              ? { out: 0, w: 0.045, l: 0.07, t: 0.045 }
+              : a.workTool === "shovel"
+                ? { out: 0.02, w: 0.07, l: 0.08, t: 0.014 }
+                : { out: 0.03, w: 0.06, l: 0.06, t: 0.012 };
       local.rotation.set(angle - Math.PI / 2, 0, 0);
       local.scale.set(shape.w, shape.l, shape.t);
       local.position.set(0, hand.y + d.y * end + lead.y * shape.out, hand.z + d.z * end + lead.z * shape.out);
@@ -277,6 +373,7 @@ export function Figures({
       put(dust.current, i);
     }
 
+    if (toolHead.current?.instanceColor) toolHead.current.instanceColor.needsUpdate = true;
     for (const m of [torso, head, hair, crown, tool, tip, helmet, crest, shield, marker, handle, toolHead, dust]) if (m.current) m.current.count = n;
     for (const m of [legs, arms]) if (m.current) m.current.count = n * 2;
     for (const m of [torso, head, hair, crown, legs, arms, tool, tip, helmet, crest, shield, marker, handle, toolHead, dust]) {
@@ -321,7 +418,8 @@ export function Figures({
       </instancedMesh>
       <instancedMesh ref={toolHead} args={[undefined, undefined, max]} {...common}>
         <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial color="#7d7f84" metalness={0.4} />
+        {/* Coloured per figure: grey metal for tools, red for a book, wood for a load. */}
+        <meshStandardMaterial color="#ffffff" metalness={0.2} />
       </instancedMesh>
       <instancedMesh ref={dust} args={[undefined, undefined, max]} frustumCulled={false} raycast={() => null}>
         <sphereGeometry args={[0.035, 6, 5]} />

@@ -11,9 +11,8 @@ import type { GameState, Tile } from "@/game/types";
 import { makeGround } from "./ground";
 import { tileTop } from "./hex-terrain";
 import { grabStore, type Walker } from "./villagers";
+import { WORK_TOOLS as TOOLS } from "./figures";
 
-// The tool someone dropped on a building works with (none: they help by hand).
-const TOOLS: Record<string, "axe" | "pick" | "hoe"> = { woodcutter: "axe", quarry: "pick", farm: "hoe", gatherer: "hoe", pen: "hoe", forester: "hoe", vfarm: "hoe" };
 
 // How close (in screen pixels) a click must be to a person to pick them up...
 const GRAB_RADIUS = 44;

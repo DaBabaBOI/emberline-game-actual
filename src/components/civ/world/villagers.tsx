@@ -8,7 +8,7 @@ import { TICK_SECONDS, WORK } from "@/game/content";
 import { hexDistance } from "@/game/hex";
 import { isLand } from "@/game/map";
 import type { Battle, Raid, Tile } from "@/game/types";
-import { Figures, HAIRS, SKINS, type Agent } from "./figures";
+import { Figures, HAIRS, SKINS, WORK_TOOLS, type Agent } from "./figures";
 import { makeGround, type Ground } from "./ground";
 import { MAX_FIGURES, figureCounts } from "./crowd";
 import { tileTop } from "./hex-terrain";
@@ -52,6 +52,9 @@ export interface Walker extends Agent {
 // Shared with the pick-up tool: the villagers on the map, and who is being carried.
 // There is only ever one game on screen, so one shared store is enough.
 export const grabStore: { walkers: Walker[]; held: Walker | null } = { walkers: [], held: null };
+
+// Dev mode: send someone to work at each kind of workplace, to see how they work.
+export const workDemo = { want: false };
 
 const SICK_TUNIC = "#9db38a";
 
@@ -279,6 +282,19 @@ export function Villagers({
     });
     const dt = Math.min(delta, 0.1) * gameSpeed;
     const now = performance.now();
+    if (workDemo.want) {
+      workDemo.want = false;
+      const kinds = new Set<string>();
+      for (const tile of tiles) {
+        const tool = tile.building ? WORK_TOOLS[tile.building] : undefined;
+        if (!tool || kinds.has(tile.building!)) continue;
+        const w = list.find((v) => !v.child && !v.held && !v.hunting && !v.goneUntil && !v.working);
+        if (!w) break;
+        kinds.add(tile.building!);
+        const spot = ground.workSpot(tile, tool);
+        Object.assign(w, { x: spot.x, z: spot.z, tx: spot.x, tz: spot.z, working: true, workAt: tile, workTool: tool, faceAt: spot.face, workUntil: now + 60000, wait: 3, sitting: false, sitAt: null });
+      }
+    }
     for (const w of list) {
       // Someone who was lost comes back as a new face at a building.
       if (w.goneUntil && now >= w.goneUntil) {
