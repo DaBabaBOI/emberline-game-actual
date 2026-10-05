@@ -314,7 +314,7 @@ export function LastIntro() {
       <div className="pixel-panel w-[min(94vw,480px)] p-4">
         <h2 className="font-pixel text-2xl font-bold">{formatYear(state.year)}</h2>
         <p className="mt-1 text-sm">
-          Your town runs on coal, and the smoke is building up. Can you make it last? History will happen around you as you play.
+          Your town runs on coal, and the smoke is building up. Start with homes and food; there is time to tackle clean power and the air after that.
         </p>
         <ol className="font-pixel mt-3 flex flex-col gap-1 text-sm">
           {lastProblems(state).map((p, i) => (
@@ -324,7 +324,7 @@ export function LastIntro() {
             </li>
           ))}
         </ol>
-        <p className="mt-2 text-xs text-stone-600">Solve all three at the same time. A short guide will show you where to start.</p>
+        <p className="mt-2 text-xs text-stone-600">Take one problem at a time. Your adviser will walk you through the first steps.</p>
         <button type="button" onClick={close} className="pixel-btn font-pixel mt-4 w-full bg-emerald-600 py-2 text-lg font-semibold text-white" data-testid="last-start">
           Start
         </button>

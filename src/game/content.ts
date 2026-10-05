@@ -3967,7 +3967,7 @@ export const LAST = {
 
 // Build to Last's guided start: four short steps with the pointing hand.
 export const LAST_TUTORIAL: { id: string; text: string }[] = [
-  { id: "problems", text: "These are your three big problems. Click the first one to see how to solve it." },
+  { id: "problems", text: "Start with your people. Click Home and food to see the first steps." },
   { id: "build", text: "Your people need room to grow. Build a Town House." },
   { id: "advancements", text: "Inventions arrive in the year they were really made. Open Advancements to see what's coming." },
   { id: "speed", text: "Grey ones aren't invented yet. Close Advancements and speed up time: the 1880s bring power from water and wind." },
