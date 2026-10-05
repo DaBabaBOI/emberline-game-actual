@@ -68,6 +68,8 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
         ? state.mode === "last"
           ? "A civilisation that lasts"
           : "Your story is complete"
+        : state.lostTo === "time"
+          ? "Out of time"
         : state.lostTo === "unrest"
           ? "The tribe has left"
           : state.lostTo === "conquest"
@@ -84,6 +86,8 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
         ? `${who} cleared the air, run on clean power, and give ${Math.floor(state.population)} people a home and food, with the forest still standing, in ${formatYear(d.year)}.`
       : d.kind === "final"
         ? `${who} reached Type I on the Kardashev scale (${(d.kardashev ?? 1).toFixed(2)}): the whole planet runs on clean energy${d.tipped ? ", though the climate tipped on the way" : ", and the climate held"}. Here is the whole story, from the first fire.`
+        : state.lostTo === "time"
+          ? `${LAST.deadline} came, and ${who} still hadn't solved all three problems at once. ${lastProblems(state).filter((p) => !p.done).map((p) => p.title).join(" and ")} ${lastProblems(state).filter((p) => !p.done).length === 1 ? "was" : "were"} still left to do.`
         : state.lostTo === "conquest"
           ? `The Roman legion broke through in ${formatYear(d.year)} and ${who} lost their village.`
           : state.lostTo === "unrest"
@@ -106,6 +110,8 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
                   : state.lostTo === "conquest"
                     ? "shield"
                     : state.lostTo === "behind"
+                      ? "warning"
+                    : state.lostTo === "time"
                       ? "warning"
                     : state.lostTo === "collapse"
                       ? "leaf"
@@ -324,7 +330,7 @@ export function LastIntro() {
             </li>
           ))}
         </ol>
-        <p className="mt-2 text-xs text-stone-600">Take one problem at a time. Your adviser will walk you through the first steps.</p>
+        <p className="mt-2 text-xs text-stone-600">Take one problem at a time, and solve all three by {LAST.deadline}. Your adviser will walk you through the first steps.</p>
         <button type="button" onClick={close} className="pixel-btn font-pixel mt-4 w-full bg-emerald-600 py-2 text-lg font-semibold text-white" data-testid="last-start">
           Start
         </button>

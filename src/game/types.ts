@@ -311,7 +311,7 @@ export interface GameState {
   version: number;
   phase: "playing" | "gameover";
   // Why the game ended: everyone starved, or everyone got so sad they left.
-  lostTo: "famine" | "unrest" | "conquest" | "collapse" | "behind" | "plague" | null;
+  lostTo: "famine" | "unrest" | "conquest" | "collapse" | "behind" | "plague" | "time" | null;
   seed: number;
   culture: CultureId;
   difficulty: DifficultyId;

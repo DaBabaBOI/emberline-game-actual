@@ -3989,6 +3989,9 @@ export const LAST = {
   // Years go by faster than in the Industrial era of the main game, so a good
   // game ends around today.
   yearsPerTick: 0.7,
+  // Not made to last by this year: the game is lost. A warning from `warnFrom`.
+  deadline: 2150,
+  warnFrom: 2120,
   // Record the town's carbon, clean power and people every this many ticks, for the graph.
   trackEvery: 8,
   // Stars for the year all three were solved: before the first, before the second, or later.

@@ -2405,7 +2405,7 @@ function gapFactor(state: GameState) {
 }
 
 export interface Warning {
-  id: "fire" | "food" | "wood" | "famine" | "tired" | "unrest" | "collapse" | "behind" | "land" | "sick" | "rain" | "wear" | "roof" | "hostile-steppe" | "hostile-reach" | "soil";
+  id: "fire" | "food" | "wood" | "famine" | "tired" | "unrest" | "collapse" | "behind" | "land" | "sick" | "rain" | "wear" | "roof" | "hostile-steppe" | "hostile-reach" | "soil" | "deadline";
   icon: IconId;
   text: string;
   // Ticks left on the countdown in the text; "{secs}" in the text is where it goes.
@@ -2461,8 +2461,10 @@ export function nextYear(state: GameState): number {
     const progress = Math.min(1, Math.max(0, (tick - state.legionBeatenTick) / deadline));
     return from + (ERAS[2].startYear - from) * progress;
   }
+  // Build to Last: years go by steadily, right up to the deadline.
+  if (state.mode === "last") return state.year + LAST.yearsPerTick;
   const next = ERAS[state.era + 1];
-  const perTick = state.mode === "last" ? LAST.yearsPerTick : ERAS[state.era].yearsPerTick;
+  const perTick = ERAS[state.era].yearsPerTick;
   if (!next) return state.year + perTick;
   const last = next.startYear - 1;
   const left = last - state.year;
@@ -2480,6 +2482,14 @@ export function warnings(state: GameState): Warning[] {
   const netFood = prod.food - consumption(state);
   const famineLimit = DIFFICULTIES[state.difficulty].famineLimit;
 
+  // Build to Last: the deadline is coming.
+  if (state.mode === "last" && state.year >= LAST.warnFrom && !state.finished)
+    out.push({
+      id: "deadline",
+      icon: "warning",
+      text: `Only ${Math.max(0, Math.ceil(LAST.deadline - state.year))} years left until ${LAST.deadline}. Solve all three problems and hold them, or the town won't last.`,
+      severe: state.year >= LAST.deadline - 10,
+    });
   const tired = state.tiles.filter((t) => soilOf(state, t) === "tired").length;
   if (tired)
     out.push({
@@ -4161,6 +4171,11 @@ function tickOnce(state: GameState): GameState {
   }
   if (unrestTicks >= DIFFICULTIES[state.difficulty].unrestLimit) {
     const lost: GameState = { ...next, phase: "gameover", lostTo: "unrest", log: ["Your people lost hope and left.", ...next.log] };
+    return { ...lost, debrief: makeDebrief(lost, "loss") };
+  }
+  // Build to Last: not made to last by the deadline.
+  if (next.mode === "last" && !next.finished && next.year >= LAST.deadline) {
+    const lost: GameState = { ...next, phase: "gameover", lostTo: "time", log: [`${LAST.deadline} came, and the town still wasn't built to last.`, ...next.log] };
     return { ...lost, debrief: makeDebrief(lost, "loss") };
   }
   const behind = behindTicksLeft(next);

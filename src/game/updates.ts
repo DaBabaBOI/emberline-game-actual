@@ -17,6 +17,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Build to Last no longer stops in 2079: the years keep going, a warning counts down from 2120, and if the town isn't built to last by 2150 the game is lost.",
       "Trade is back in Build to Last: swap coins for food, wood or stone when you run short.",
       "People you drop on a building only bring a tool where it fits: an axe at a woodcutter, a pick at a quarry, a hoe on fields and pens. At a university, school, market or factory they help by hand instead of hoeing the floor.",
       "When someone gets over a sickness for the first time, a short scene shows them getting up from bed (and now and again after that).",

@@ -32,7 +32,7 @@ const SECTIONS: Section[] = [
       { icon: "bulb", text: "2. Clean power: 70% from water, wind or sun. Hydropower arrives in 1882 and wind in 1887." },
       { icon: "leaf", text: "3. Clear the air: once power is clean, close the coal plants so carbon falls." },
       { icon: "book", text: "Inventions arrive in the year they really were, and real history happens around you as the years pass." },
-      { icon: "star", text: "Solve all three at once and keep them solved for a minute and a half. Beat the real world: finish before 2025 for three stars: see your air against the real world's at the end." },
+      { icon: "star", text: "Solve all three at once and keep them solved for a minute and a half. Beat the real world: finish before 2025 for three stars. If it isn't done by 2150, the game is lost: see your air against the real world's at the end." },
     ],
   },
   {
