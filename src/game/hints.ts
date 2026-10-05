@@ -51,31 +51,31 @@ export const HINTS: Hint[] = [
       const grove = s.protectedTiles ?? [];
       return grove.length > 0 && woodcutters(s).some((w) => grove.some((id) => hexDistance(s.tiles[id], w) <= LAND.woodcutterReach));
     },
-    text: () => "The sacred grove is protected, so the Woodcutter beside it has fewer trees. Press Sell, then click the Woodcutter, to move it.",
+    text: () => "The sacred grove protects nearby trees. Sell this Woodcutter and rebuild it by forest.",
     target: guide("tool-sell"),
   },
   {
     id: "idle-woodcutter",
     when: (s) => woodcutters(s).some((w) => treesNear(s, w).length === 0),
-    text: () => "A Woodcutter has no trees left to cut. Sell it (Sell, then click it) and build one by the forest, or plant saplings around it.",
+    text: () => "This Woodcutter has no trees left. Sell it, move it to forest, or plant nearby.",
     target: guide("tool-sell"),
   },
   {
     id: "fire-out",
     when: (s) => s.tiles.some((t) => t.building === "campfire" && !isLit(s, t)),
-    text: () => "A campfire went out: click it to relight it. Clicking a lit fire lets you send its keeper away to save wood.",
+    text: () => "A campfire went out. Click it to relight it.",
     done: (s) => !s.tiles.some((t) => t.building === "campfire" && !isLit(s, t)),
   },
   {
     id: "scout",
     when: (s) => playedTicks(s) > 10 && !s.scouting && canAfford(s, scoutCost(s)),
-    text: (s) => `Press Scout, then click a spot in the fog: people walk out to explore and come back with a map of it. Further in takes longer, and each trip costs more (next: ${costText(scoutCost(s))}).`,
+    text: (s) => `Press Scout, then click fog to map it. Next trip: ${costText(scoutCost(s))}.`,
     target: guide("tool-scout"),
   },
   {
     id: "trade",
     when: (s) => playedTicks(s) > 30 && s.resources.currency >= 20,
-    text: () => "Our shells buy things! Press Trade to swap them for food, wood or stone. Buying wood spares our own forest.",
+    text: () => "Use Trade for food, wood or stone. Buying wood spares the forest.",
     target: guide("tool-trade"),
   },
   {
@@ -87,7 +87,7 @@ export const HINTS: Hint[] = [
   {
     id: "meter-low",
     when: (s) => playedTicks(s) > 20 && Object.values(s.meters).some((v) => v < LOW),
-    text: () => "One of the meters on the side is low. Click it to see why, then press What should I fix?",
+    text: () => "A meter is low. Click it, then choose What should I fix?",
     // The lowest meter.
     target: (s) => {
       const [key] = Object.entries(s.meters).sort((a, b) => a[1] - b[1])[0];
@@ -97,7 +97,7 @@ export const HINTS: Hint[] = [
   {
     id: "land-suffering",
     when: (s) => s.meters.sustainability < 70,
-    text: () => "The land is suffering. Click the Sustainability meter, then What should I fix?, to see exactly what to change.",
+    text: () => "The land is suffering. Open Sustainability for the best fix.",
     target: testid("sustain-meter"),
   },
   {
@@ -113,13 +113,13 @@ export const HINTS: Hint[] = [
       const next = improveNext(s, t);
       return !!next && !next.needs && canAfford(s, next.cost);
     }),
-    text: () => `Buildings can be improved with stone, and later bronze, iron and steel: click a Farm or Woodcutter and press Improve. Each level makes ${Math.round(IMPROVE.boost * 100)}% more from the same land.`,
+    text: () => `Click a Farm or Woodcutter and Improve it: +${Math.round(IMPROVE.boost * 100)}% output on the same land.`,
     done: (s) => s.tiles.some((t) => (t.level ?? 1) >= 2),
   },
   {
     id: "logging",
     when: (s) => forestCover(s) < 0.85 && woodcutters(s).some((w) => loggingMode(s, w) === "clear"),
-    text: () => "Click a Woodcutter to switch it to selective logging: half the wood, but the forest keeps up.",
+    text: () => "Switch this Woodcutter to selective logging: less wood, lasting forest.",
   },
   {
     id: "research-ready",
@@ -205,7 +205,7 @@ export const HINTS: Hint[] = [
 export const HINTS_BY_ID: Record<string, Hint> = Object.fromEntries(HINTS.map((h) => [h.id, h]));
 
 // How long a hint stays up (ticks), and the gap before the next one.
-export const HINT = { showTicks: 30, gapTicks: 40, firstAfter: 15 };
+export const HINT = { showTicks: 22, gapTicks: 32, firstAfter: 15 };
 
 // The hint to show now, if any: the first one that applies and hasn't been
 // shown. Never during the tutorial, an event, a lesson, a guided step or a raid.

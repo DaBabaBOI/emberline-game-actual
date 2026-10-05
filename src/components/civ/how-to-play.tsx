@@ -17,9 +17,8 @@ const SECTIONS: Section[] = [
     title: "The goal",
     icon: "flame",
     items: [
-      { text: "Lead your people from a Stone Age camp to the Future, era by era." },
-      { text: "Every era asks you to grow (food, homes, knowledge) without wrecking the land, the air or your people's happiness." },
-      { text: "The ending you get depends on how you grew, not just how far you got." },
+      { text: "Lead your people from a Stone Age camp to the Future." },
+      { text: "Grow food, homes and Knowledge without breaking the land or your people's spirits." },
     ],
   },
   {
@@ -27,10 +26,8 @@ const SECTIONS: Section[] = [
     title: "Moving around",
     icon: "compass",
     items: [
-      { text: "Drag to slide the map. Right-drag (or two fingers) to turn it. Scroll or pinch to zoom." },
-      { text: "Click a building to see what it does, upgrade it, repair it or remove it." },
-      { text: "The top bar has pause and speed. Menu has saves, sound, graphics and this guide." },
-      { text: "“Hide” on the bottom bar folds it away when you want to look at your town." },
+      { text: "Drag to move; right-drag/two fingers to turn; scroll/pinch to zoom." },
+      { text: "Click buildings for their actions. Use the top bar for pause and speed; Menu holds settings and saves." },
     ],
   },
   {
@@ -38,11 +35,9 @@ const SECTIONS: Section[] = [
     title: "Building",
     icon: "hut",
     items: [
-      { icon: "wheat", text: "Food: gatherers, hunters, fishing and later farms. Too little and people starve." },
-      { icon: "log", text: "Wood and stone build everything. Woodcutters on selective logging spare the forest." },
-      { icon: "hut", text: "Homes: people need a roof. Homeless people get sick and unhappy." },
-      { icon: "flame", text: "Warmth: campfires keep people warm until you learn warm clothes." },
-      { icon: "person", text: "Every building needs hands. With more jobs than people, everyone gets tired and makes less." },
+      { icon: "wheat", text: "Secure food, materials, homes and warmth first." },
+      { icon: "log", text: "Selective logging is slower but keeps the forest standing." },
+      { icon: "person", text: "Too many jobs tire everyone and reduce output." },
     ],
   },
   {
@@ -50,9 +45,9 @@ const SECTIONS: Section[] = [
     title: "The six meters",
     icon: "star",
     items: [
-      { icon: "wheat", text: "Food, Shelter, Happiness, Learning and Energy: how your people are doing." },
-      { icon: "leaf", text: "Sustainability: how the land is doing. If it falls too far, the land collapses and the game ends." },
-      { text: "Click any meter to see exactly why it is where it is, and what would fix it." },
+      { icon: "wheat", text: "Food, Shelter, Happiness, Literacy and Energy track your people." },
+      { icon: "leaf", text: "Sustainability tracks the land. Keep it healthy." },
+      { text: "Click a meter for its causes and best fixes." },
     ],
   },
   {
@@ -60,10 +55,9 @@ const SECTIONS: Section[] = [
     title: "Advancements and eras",
     icon: "book",
     items: [
-      { icon: "bulb", text: "Knowledge comes from elders, schools and new discoveries. Spend it in Advancements." },
-      { icon: "star", text: "Some advancements unlock only after a goal (\"have 3 farms\"). The tree shows what each one needs." },
-      { icon: "column", text: `When the era's goals are met, move on. The eras: ${ERAS.map((e) => e.name).join(", ")}.` },
-      { icon: "scroll", text: "Each era ends with a big test (a legion, a drought, a crisis) and a debrief of how you did." },
+      { icon: "bulb", text: "Earn Knowledge from learning and discovery, then spend it in Advancements." },
+      { icon: "star", text: "Meet the era goal to move on; each era brings a new test." },
+      { icon: "column", text: `Eras: ${ERAS.map((e) => e.name).join(", ")}.` },
     ],
   },
   {
@@ -71,9 +65,8 @@ const SECTIONS: Section[] = [
     title: "Trade-offs",
     icon: "scales",
     items: [
-      { text: "Almost every choice helps one thing and hurts another: clear-cutting gives wood fast but hurts the land; coal powers a city but warms the planet." },
-      { icon: "sapling", text: "Plant trees, log selectively, use clean power and buy from traders to spare the land." },
-      { icon: "coin", text: "Currency buys goods from traders, pays raiders to leave and helps after a disaster." },
+      { text: "Most choices trade a quick gain for a cost. Check every building card before placing it." },
+      { icon: "sapling", text: "Plant, log selectively, trade and use clean power to reduce the cost." },
     ],
   },
   {
@@ -81,9 +74,8 @@ const SECTIONS: Section[] = [
     title: "Dangers",
     icon: "shield",
     items: [
-      { icon: "sword", text: "Raiders land on the shore. Train warriors at a war camp, and choose to fight, hide or pay when they come." },
-      { icon: "storm", text: "Storms, floods, earthquakes and fires happen. Some can be prepared for." },
-      { icon: "sad", text: "Unhappy people leave, and from the Medieval era they can rebel." },
+      { icon: "sword", text: "Train warriors before raiders land; fight, hide or pay tribute when they arrive." },
+      { icon: "storm", text: "Fires and disasters happen. Prepare where you can." },
     ],
   },
   {
@@ -91,8 +83,8 @@ const SECTIONS: Section[] = [
     title: "Exploring",
     icon: "spyglass",
     items: [
-      { icon: "spyglass", text: "Scout: pick a spot on the edge of what you know. Scouts walk there and back, revealing the land." },
-      { icon: "boat", text: "Canoe: pick a far coast or island. The canoe paddles out from your dock and comes home." },
+      { icon: "spyglass", text: "Use Scout on fog at the edge of known land." },
+      { icon: "boat", text: "Use Canoe from a dock to reach sea and islands." },
     ],
   },
   {
@@ -100,9 +92,8 @@ const SECTIONS: Section[] = [
     title: "Tips",
     icon: "bulb",
     items: [
-      { text: "Watch the warnings just above the bottom bar: they say what's wrong and what to do." },
-      { text: "A \"!\" on a bottom button means something is worth doing there." },
-      { text: "Pause whenever you like. Nothing happens while the game is paused." },
+      { text: "Warnings name the problem and the next move. A ! marks an available action." },
+      { text: "Pause any time to plan." },
     ],
   },
 ];
