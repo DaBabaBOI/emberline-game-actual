@@ -522,7 +522,7 @@ h2 {
   background: #0284c7;
 }
 
-/* The UN Sustainable Development Goals: a coloured number badge and a few words. */
+/* The UN Sustainable Development Goals: official artwork and a few words. */
 .sdgs {
   display: grid;
   gap: 1rem;
@@ -531,23 +531,17 @@ h2 {
 
 .sdg {
   display: flex;
+  align-items: flex-start;
   gap: 1rem;
   padding: 1rem;
 }
 
-.badge {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 3.5rem;
-  height: 3.5rem;
-  border: 3px solid #2b2119;
-  color: var(--badge-text);
-  font-size: 1.5rem;
-  line-height: 2rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+.sdg-icon {
+  display: block;
+  flex: 0 0 7rem;
+  width: 7rem;
+  height: 7rem;
+  object-fit: contain;
 }
 
 .sdg-name {
@@ -567,6 +561,29 @@ h2 {
 .sdg p {
   font-size: 0.875rem;
   line-height: 1.25rem;
+}
+
+.sdg-attribution {
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1.125rem;
+}
+
+.sdg-attribution a {
+  text-decoration: underline;
+}
+
+@media (max-width: 380px) {
+  .sdg {
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .sdg-icon {
+    flex-basis: 5rem;
+    width: 5rem;
+    height: 5rem;
+  }
 }
 
 /* What you do: a grid of short lines, each with a picture. */

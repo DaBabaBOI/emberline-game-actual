@@ -1,0 +1,57 @@
+name: Bug report
+description: Report a reproducible problem in the game or project site.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe one problem per issue. Do not include passwords, private data, or other secrets.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: A clear description of the problem.
+      placeholder: Tell us what went wrong.
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Game mode
+      options:
+        - From the Stone Age
+        - Build to Last
+        - Multiplayer
+        - Project website
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the actions and game state needed to reproduce it.
+      placeholder: |
+        1. Start a game...
+        2. Build or research...
+        3. See the problem...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead?
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Browser and device
+      description: Include browser, operating system, and device where relevant.
+      placeholder: e.g. Safari on macOS 15
