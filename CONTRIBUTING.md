@@ -8,6 +8,7 @@ Thanks for helping improve Emberline.
   building, bright low-poly aesthetics, and strong trade-off mechanics.
 - Prefer small, focused changes that are easy to review.
 - Create another branch, not in main
+- Follow the community expectations in [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ## Development setup
 
@@ -33,6 +34,9 @@ Pull requests should include:
 - why the change was needed
 - screenshots or notes for gameplay/UI changes when useful
 - validation details, including relevant commands run
+
+GitHub provides bug and feature request forms in `.github/ISSUE_TEMPLATE/` and
+uses `.github/pull_request_template.md` to guide pull request descriptions.
 
 ## Code conventions
 
@@ -61,3 +65,5 @@ please follow the guidance in [SECURITY.md](SECURITY.md).
 ## Community expectations
 
 Please keep discussions constructive, respectful, and focused on the project.
+See [ACCESSIBILITY.md](ACCESSIBILITY.md) for supported features, known
+limitations, and how to report an accessibility barrier.

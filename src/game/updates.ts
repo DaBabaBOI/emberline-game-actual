@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-05",
     items: [
+      "The UN Sustainable Development Goals section now uses the official icons for Goals 7, 11, 13 and 15, with an attribution and disclaimer.",
       "Accessibility has its own top-right box on the project page and in the app, including a saved master sound-volume slider. Town Houses now have a gabled roof and clearer window trim; Industrial Apartment Blocks have a quieter steel-and-glass facade.",
     ],
   },

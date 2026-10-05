@@ -1,0 +1,46 @@
+name: Feature request
+description: Suggest a focused improvement to Emberline.
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Explain the player need first. Small, focused proposals are easiest to discuss.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem should this solve?
+      description: What is difficult, missing, or unclear for players?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to see?
+      description: Describe the change and who it would help.
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Where does this apply?
+      multiple: true
+      options:
+        - From the Stone Age
+        - Build to Last
+        - Multiplayer
+        - Project website
+        - All modes
+    validations:
+      required: true
+  - type: textarea
+    id: tradeoffs
+    attributes:
+      label: Gameplay trade-offs or accessibility considerations
+      description: How might this affect sustainability, balance, clarity, or access?
+      placeholder: Optional, but helpful for gameplay changes.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any other approaches you have in mind?
