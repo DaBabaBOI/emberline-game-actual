@@ -27,11 +27,12 @@ const SECTIONS: Section[] = [
     title: "Build to Last",
     icon: "factory",
     items: [
-      { text: "It's 1850. Your town has homes, farms, factories and coal power, and the smoke is building up." },
-      { icon: "leaf", text: "1. Clear the air: get carbon falling, not rising." },
-      { icon: "bulb", text: "2. Clean power: at least 70% of your power from clean sources, and enough of it." },
-      { icon: "person", text: "3. Homes and food for 120 people, with a third of the forest still standing." },
-      { icon: "star", text: "Click any problem at the top of the screen to see how to solve it. Solve all three together and keep them solved for a minute and a half to win." },
+      { text: "It's 1850. Your town has homes, farms, factories and coal power, and the smoke is building up. A short guide shows you where to start." },
+      { icon: "person", text: "1. Homes and food for 120 people, with a third of the land still forest. Start here." },
+      { icon: "bulb", text: "2. Clean power: 70% from water, wind or sun. Hydropower arrives in 1882 and wind in 1887." },
+      { icon: "leaf", text: "3. Clear the air: once power is clean, close the coal plants so carbon falls." },
+      { icon: "book", text: "Inventions arrive in the year they really were, and real history happens around you as the years pass." },
+      { icon: "star", text: "Solve all three at once and keep them solved for a minute and a half. The earlier the year, the more stars: see your air against the real world's at the end." },
     ],
   },
   {

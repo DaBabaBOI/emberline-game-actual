@@ -87,6 +87,9 @@ import {
   BELIEFS,
   SETTLERS,
   CONNECTIONS,
+  INVENTED,
+  LAST_TUTORIAL,
+  HISTORY,
   HUNTERS,
   GROWTH_PRESSURE,
   DISEASE,
@@ -168,6 +171,8 @@ export const RAID_GROWTH_TICKS = 300;
 export type Action =
   | { type: "tick" }
   | { type: "setSpeed"; speed: GameState["speed"] }
+  // Build to Last's guided start: step `from` is done (-1 skips it all).
+  | { type: "lastStep"; from: number }
   | { type: "place"; tileId: number; buildingId: string }
   | { type: "scout"; tileId?: number }
   | { type: "research"; nodeId: string }
@@ -364,6 +369,14 @@ function applyLastStart(state: GameState): GameState {
     nextRaidTick: Number.MAX_SAFE_INTEGER,
     lessonsSeen: LESSONS.map((l) => l.id),
     lastHeld: 0,
+    // A calm start: nothing happens for a while, and nobody starts out sick.
+    nextEventTick: LAST.calm,
+    nextMomentTick: LAST.calm,
+    calmUntil: LAST.calm,
+    sick: 0,
+    lastTrack: [],
+    lastStep: 0,
+    lastNews: HISTORY.filter((h) => h.year <= LAST.startYear).length,
     log: [`${state.nation ?? DEFAULT_NATION}, ${LAST.startYear}: smoke over the town. Solve the three big problems and build something that lasts.`],
   };
   // The town, laid out in districts so it reads at a glance: homes and services
@@ -411,29 +424,29 @@ export function lastProblems(state: GameState) {
   const pop = Math.floor(state.population);
   const forest = forestCover(state);
   const m = state.meters;
-  return [
-    {
-      id: "air",
-      title: "Clear the air",
-      how: "Close coal plants and smoky factories, and keep the forest standing.",
-      done: flow <= 0,
-      status: flow <= 0 ? `Carbon falling (${flow.toFixed(1)} ppm/min)` : `Carbon rising ${flow.toFixed(1)} ppm/min`,
-    },
-    {
-      id: "power",
-      title: "Clean power",
-      how: "Learn Hydropower or Renewables, then build dams, wind and solar farms.",
-      done: share >= LAST.cleanShare && cover >= 1,
-      status: `${Math.round(share * 100)}% clean of ${Math.round(LAST.cleanShare * 100)}%${cover < 1 ? `, grid short (${Math.round(cover * 100)}%)` : ""}`,
-    },
-    {
-      id: "people",
-      title: `Home and food for ${LAST.people}`,
-      how: "Apartments for room, farms for food, parks to keep people happy.",
-      done: pop >= LAST.people && m.food >= LAST.meter && m.shelter >= LAST.meter && forest >= LAST.forest,
-      status: `${pop}/${LAST.people} people · food ${Math.round(m.food)} · homes ${Math.round(m.shelter)} · forest ${Math.round(forest * 100)}%/${Math.round(LAST.forest * 100)}%`,
-    },
-  ];
+  const air = {
+    id: "air",
+    title: "Clear the air",
+    how: "Once your power is clean, close the coal plants and smoky factories. Forests and parks pull carbon back out of the air.",
+    done: flow <= 0,
+    status: flow <= 0 ? `Carbon falling (${flow.toFixed(1)} ppm/min)` : `Carbon rising ${flow.toFixed(1)} ppm/min`,
+  };
+  const power = {
+    id: "power",
+    title: "Clean power",
+    how: `Hydropower (${INVENTED.hydropower}) and Wind Power (${INVENTED.renewables}) are on their way. Research them when they arrive, build dams and wind farms, and switch off coal.`,
+    done: share >= LAST.cleanShare && cover >= 1,
+    status: `${Math.round(share * 100)}% clean of ${Math.round(LAST.cleanShare * 100)}%${cover < 1 ? `, grid short (${Math.round(cover * 100)}%)` : ""}`,
+  };
+  const people = {
+    id: "people",
+    title: `Home and food for ${LAST.people}`,
+    how: "Build Town Houses and Apartments for room and more Farmland for food, but keep a third of the land as forest.",
+    done: pop >= LAST.people && m.food >= LAST.meter && m.shelter >= LAST.meter && forest >= LAST.forest,
+    status: `${pop}/${LAST.people} people · food ${Math.round(m.food)} · homes ${Math.round(m.shelter)} · forest ${Math.round(forest * 100)}%/${Math.round(LAST.forest * 100)}%`,
+  };
+  // In the order history makes easiest: people first, power once it's invented, then the air.
+  return [people, power, air];
 }
 
 // All three solved, held for LAST.hold ticks in a row: the story ends well.
@@ -453,8 +466,51 @@ function updateHunters(state: GameState): GameState {
   return { ...state, huntersHelping: want, log: [line, ...state.log].slice(0, 30) };
 }
 
+// Build to Last's guided start: move on from step `from` (if we're on it).
+function lastStepDone(state: GameState, from: number): GameState {
+  if (state.lastStep !== from) return state;
+  const step = from + 1;
+  const end = step >= LAST_TUTORIAL.length;
+  return {
+    ...state,
+    lastStep: step,
+    log: end ? ["Your turn now. Click a problem at the top any time to see how to solve it.", ...state.log].slice(0, 30) : state.log,
+  };
+}
+
+// The one problem to look at now: the first unsolved one, in order.
+export function lastFocus(state: GameState) {
+  return lastProblems(state).find((p) => !p.done) ?? null;
+}
+
+// Build to Last follows real history: the year this advancement was first made
+// to work, if it hasn't come yet (other modes: never).
+export function notInventedYet(state: GameState, id: string): number | null {
+  if (state.mode !== "last") return null;
+  const year = INVENTED[id];
+  return year && state.year < year ? year : null;
+}
+
 function updateLast(state: GameState): GameState {
   if (state.mode !== "last" || state.phase !== "playing" || state.finished || state.debrief) return state;
+  // The guide's second step: a new home built.
+  if (state.lastStep === 1) {
+    const c = countBuildings(state);
+    if ((c.townhouse ?? 0) + (c.apartments ?? 0) > LAST.town.filter((id) => id === "townhouse" || id === "apartments").length) state = lastStepDone(state, 1);
+  }
+  // The graph: carbon, clean power and people every few ticks.
+  if (state.tick % LAST.trackEvery === 0) {
+    const point = { year: Math.round(state.year), ppm: Math.round(state.carbon ?? CARBON.start), clean: Math.round(cleanPowerShare(state) * 100), people: Math.floor(state.population) };
+    state = { ...state, lastTrack: [...(state.lastTrack ?? []), point] };
+  }
+  // Real history, as the years go by.
+  const news = state.lastNews ?? 0;
+  if (HISTORY[news] && state.year >= HISTORY[news].year) {
+    state = { ...state, lastNews: news + 1, log: [`${HISTORY[news].year}, in the real world: ${HISTORY[news].text}`, ...state.log].slice(0, 30) };
+  }
+  // An advancement that has just been invented.
+  const arrived = Object.entries(INVENTED).find(([id, year]) => Math.floor(state.year) === year && Math.floor(state.year - ERAS[4].yearsPerTick) < year && TREE_BY_ID[id]);
+  if (arrived) state = { ...state, log: [`Invented in ${arrived[1]}: ${TREE_BY_ID[arrived[0]].name}. Open Advancements to research it.`, ...state.log].slice(0, 30) };
   const solved = lastProblems(state).every((p) => p.done);
   const held = solved ? (state.lastHeld ?? 0) + 1 : 0;
   if (held < LAST.hold) return held === state.lastHeld ? state : { ...state, lastHeld: held };
@@ -3647,7 +3703,8 @@ export function affordableResearch(state: GameState) {
       !state.researched.includes(n.id) &&
       n.requires.every((r) => state.researched.includes(r)) &&
       state.resources.knowledge >= researchCost(state, n) &&
-      goalsMet(state, n.id),
+      goalsMet(state, n.id) &&
+      notInventedYet(state, n.id) === null,
   );
 }
 
@@ -3662,7 +3719,12 @@ function knowledgeReady(state: GameState): GameState {
   return {
     ...state,
     knowledgeNotified: [...told, ...fresh.map((n) => n.id)],
-    log: [`Elder Ama: "We have learned enough for ${node.name}. Open Advancements to spend our Knowledge."`, ...state.log].slice(0, 30),
+    log: [
+      state.mode === "last"
+        ? `Your scientists: "We know enough for ${node.name} now. Open Advancements to research it."`
+        : `Elder Ama: "We have learned enough for ${node.name}. Open Advancements to spend our Knowledge."`,
+      ...state.log,
+    ].slice(0, 30),
   };
 }
 
@@ -4116,7 +4178,7 @@ const MOMENTS: Moment[] = [
     id: "baby",
     when: (s) => s.meters.food >= 45 && s.population < housingCapacity(s) && belowLimit(s, s.population + 1),
     apply: (s) => ({ ...s, population: s.population + 1 }),
-    text: "A baby was born by the fire (+1 person).",
+    text: "A baby was born (+1 person).",
     where: (s) => aBuilding(s, ["hut", "house", "townhouse"]) ?? s.tiles[s.startTile],
   },
   {
@@ -5321,7 +5383,12 @@ function step(state: GameState, action: Action): GameState {
       return tick(state);
 
     case "setSpeed":
+      // Build to Last's guide: its last step is to speed up time.
+      if (state.mode === "last" && state.lastStep === 3 && action.speed >= 2) return lastStepDone({ ...state, speed: action.speed }, 3);
       return { ...state, speed: action.speed };
+
+    case "lastStep":
+      return action.from < 0 ? { ...state, lastStep: LAST_TUTORIAL.length } : lastStepDone(state, action.from);
 
     case "place": {
       const def = BUILDINGS_BY_ID[action.buildingId];
@@ -5408,7 +5475,8 @@ function step(state: GameState, action: Action): GameState {
         state.researched.includes(node.id) ||
         !node.requires.every((r) => state.researched.includes(r)) ||
         state.resources.knowledge < researchCost(state, node) ||
-        !goalsMet(state, node.id)
+        !goalsMet(state, node.id) ||
+        notInventedYet(state, node.id) !== null
       )
         return state;
       // Elder Ama walks you through what it unlocks (the opening tutorial covers its own).

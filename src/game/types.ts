@@ -319,6 +319,12 @@ export interface GameState {
   mode?: "last";
   // Build to Last: ticks in a row with all three problems solved.
   lastHeld?: number;
+  // Build to Last: the town's carbon (ppm), clean power share and people over
+  // time, for the graph; and how many HISTORY lines have been shown.
+  lastTrack?: { year: number; ppm: number; clean: number; people: number }[];
+  lastNews?: number;
+  // Build to Last's short guided start (LAST_TUTORIAL): the step we're on.
+  lastStep?: number;
   // Food is plentiful, so the hunters at the gatherer's camps gather wood instead.
   huntersHelping?: boolean;
   // The Roman legion on its way (seen by scouts), and whether it has been fought.

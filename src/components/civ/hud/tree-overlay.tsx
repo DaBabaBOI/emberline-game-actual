@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BRANCHES, BUILDINGS_BY_ID, ERAS, TREE, TREE_BY_ID } from "@/game/content";
-import { goalProgress, goalsMet, perSecond, production, tutorialLocked } from "@/game/engine";
+import { goalProgress, goalsMet, notInventedYet, perSecond, production, tutorialLocked } from "@/game/engine";
 import type { GameState, TreeNode } from "@/game/types";
 import type { IconId } from "@/game/sprites";
 import { useGame } from "@/components/civ/game-provider";
@@ -18,13 +18,13 @@ const PAD = 20;
 
 const ERA_ICONS: IconId[] = ["flame", "amphora", "column", "castle", "factory", "rocket"];
 
-type Status = "done" | "available" | "locked" | "soon" | "secret";
+type Status = "done" | "available" | "locked" | "soon" | "secret" | "future";
 
 function statusOf(state: GameState, n: TreeNode): Status {
   if (state.researched.includes(n.id)) return "done";
   if (n.secret) return "secret";
   if (n.comingSoon) return "soon";
-  if (n.requires.every((r) => state.researched.includes(r))) return "available";
+  if (n.requires.every((r) => state.researched.includes(r))) return notInventedYet(state, n.id) ? "future" : "available";
   return "locked";
 }
 
@@ -104,6 +104,10 @@ export function TreeOverlay() {
   const [focus, setFocus] = useState<string | null>(null);
   const { placed, rowTops, width, height } = useMemo(() => layoutEra(era), [era]);
   const locked = tutorialLocked(state, "advancements");
+  // Build to Last's guide: opening Advancements is its third step.
+  useEffect(() => {
+    if (state.lastStep === 2) dispatch({ type: "lastStep", from: 2 });
+  }, [state.lastStep, dispatch]);
 
   const focused = focus ? TREE_BY_ID[focus] : null;
   const focusStatus = focused ? statusOf(state, focused) : null;
@@ -140,9 +144,9 @@ export function TreeOverlay() {
         </div>
       </div>
       <p className="px-3 pt-1 text-xs text-[#fdf6e3]/70 md:px-5">
-        Knowledge comes from milestones: your first of each building, your tribe growing, your first scouting trips,
-        beating raiders, planting saplings. An Elder&apos;s Hut (after Storytelling) or a Scribe School also teaches
-        a little all the time.
+        {state.mode === "last"
+          ? "Your University and schools make Knowledge all the time. Grey advancements haven't been invented yet: each arrives in the year it really was."
+          : "Knowledge comes from milestones: your first of each building, your tribe growing, your first scouting trips, beating raiders, planting saplings. An Elder's Hut (after Storytelling) or a Scribe School also teaches a little all the time."}
       </p>
 
       <div className="flex gap-1.5 overflow-x-auto px-3 pt-2 md:px-5 md:pt-3">
@@ -226,7 +230,7 @@ export function TreeOverlay() {
                   "font-pixel absolute flex flex-col justify-center border-[3px] px-2 text-left",
                   s === "done" && "text-[#2b2119]",
                   s === "available" && "bg-[#3a2e24] shadow-[0_0_0_3px_rgba(251,191,36,0.35)]",
-                  (s === "locked" || s === "soon") && "bg-[#231b15] text-white/55",
+                  (s === "locked" || s === "soon" || s === "future") && "bg-[#231b15] text-white/55",
                   s === "secret" && "border-dashed bg-[#231b15] text-white/70",
                   focus === node.id && "outline outline-2 outline-offset-2 outline-white",
                 )}
@@ -235,7 +239,7 @@ export function TreeOverlay() {
                   top: y,
                   width: NODE_W,
                   height: NODE_H,
-                  borderColor: s === "locked" || s === "soon" ? "#4a3b2e" : color,
+                  borderColor: s === "locked" || s === "soon" || s === "future" ? "#4a3b2e" : color,
                   background: s === "done" ? color : undefined,
                 }}
                 title={fromEarlier.length ? `Needs: ${fromEarlier.join(", ")}` : undefined}
@@ -256,6 +260,7 @@ export function TreeOverlay() {
                     </>
                   )}
                   {s === "soon" && "Coming soon"}
+                  {s === "future" && `Invented in ${notInventedYet(state, node.id)}`}
                   {s === "secret" && "Hidden goal"}
                 </span>
               </button>
@@ -279,6 +284,12 @@ export function TreeOverlay() {
                   <span className="text-emerald-300">
                     {" "}
                     Unlocks: {focused.unlocks.map((u) => BUILDINGS_BY_ID[u]?.name).join(", ")}.
+                  </span>
+                )}
+                {focusStatus === "future" && (
+                  <span className="text-sky-300">
+                    {" "}
+                    Not invented yet: it arrives in {notInventedYet(state, focused.id)}, in about {Math.ceil(notInventedYet(state, focused.id)! - state.year)} years.
                   </span>
                 )}
                 {focusStatus === "locked" && (

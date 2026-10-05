@@ -1,4 +1,4 @@
-import { AFTER_STEPS, BUILDINGS_BY_ID, ERAS, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL } from "@/game/content";
+import { AFTER_STEPS, BUILDINGS_BY_ID, ERAS, LAST_TUTORIAL, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL } from "@/game/content";
 import { buildingCost, countBuildings, placementError, placementHarm, scoutCost, spearmenOf, warriorCap } from "@/game/engine";
 import { hexDistance } from "@/game/hex";
 import type { GameState, Resources } from "@/game/types";
@@ -81,9 +81,25 @@ function coachGuide(state: GameState, selected: string | null, panel: string | n
   return NONE;
 }
 
+// Build to Last's guided start (LAST_TUTORIAL).
+function lastGuide(state: GameState, selected: string | null, panel: string | null): Guide {
+  switch (LAST_TUTORIAL[state.lastStep ?? 0]?.id) {
+    case "problems":
+      return { target: { kind: "ui", ids: ["problem-people"] }, waiting: null };
+    case "build":
+      return buildStep(state, "townhouse", selected, panel);
+    case "advancements":
+      return { target: { kind: "ui", ids: ["tool-advancements"] }, waiting: null };
+    case "speed":
+      return panel === "tree" ? { target: { kind: "ui", ids: ["tree-close"] }, waiting: null } : { target: { kind: "ui", ids: ["speed-2"] }, waiting: null };
+  }
+  return NONE;
+}
+
 export function guideFor(state: GameState, selected: string | null, panel: string | null): Guide {
   const step = TUTORIAL[state.tutorialStep];
   if (state.phase !== "playing" || state.event) return NONE;
+  if (state.mode === "last" && !state.dev && (state.lastStep ?? LAST_TUTORIAL.length) < LAST_TUTORIAL.length) return lastGuide(state, selected, panel);
   if (!step) return coachGuide(state, selected, panel);
   if (state.dev) return NONE;
 

@@ -125,6 +125,11 @@ function retarget(w: Walker, ground: Ground, pickTarget: () => Tile) {
 // Walks toward the target, standing on whatever tile is underfoot. If the next
 // step would go into a mountain, the sea or a building, pick somewhere else.
 function stepWalker(w: Walker, dt: number, ground: Ground, pickTarget: () => Tile) {
+  // Paused: everyone stands still.
+  if (dt <= 0) {
+    w.moving = false;
+    return;
+  }
   const dx = w.tx - w.x;
   const dz = w.tz - w.z;
   const dist = Math.hypot(dx, dz);
@@ -194,7 +199,11 @@ export function Villagers({
   era = 0,
   cameos = [],
   tired = 0,
+  gameSpeed = 1,
 }: {
+  // The game's speed (0 paused, 1, 2, 4): people walk that much faster. Only
+  // the speed setting changes it, never the era.
+  gameSpeed?: number;
   // Team members who joined the tribe (an easter egg): crowned, with a name tag.
   cameos?: string[];
   // Clothes change with the era.
@@ -268,7 +277,7 @@ export function Villagers({
       w.tunic = ill ? SICK_TUNIC : w.baseTunic;
       w.speed = ill ? w.baseSpeed * 0.35 : w.baseSpeed;
     });
-    const dt = Math.min(delta, 0.1);
+    const dt = Math.min(delta, 0.1) * gameSpeed;
     const now = performance.now();
     for (const w of list) {
       // Someone who was lost comes back as a new face at a building.
@@ -325,7 +334,10 @@ export function Warriors({
   rally,
   hidden,
   era = 0,
+  gameSpeed = 1,
 }: {
+  // The game's speed: warriors walk that much faster (stand still when paused).
+  gameSpeed?: number;
   // Ancient-era warriors wear leather instead of hides.
   era?: number;
   tiles: Tile[];
@@ -382,7 +394,7 @@ export function Warriors({
     const withSpears = soldiers ? Math.round((count * Math.min(spearmen, soldiers)) / soldiers) : 0;
     spearFigs.current = list.slice(0, withSpears);
     clubFigs.current = list.slice(withSpears);
-    const dt = Math.min(delta, 0.1);
+    const dt = Math.min(delta, 0.1) * gameSpeed;
     for (const w of list) {
       if (rally) {
         w.speed = 0.9;
