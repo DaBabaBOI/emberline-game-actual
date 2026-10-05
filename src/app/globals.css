@@ -417,8 +417,15 @@ html[data-in-game] .accessibility-floating {
   animation: scene-waves 1.5s steps(6) infinite;
 }
 .scene-stage { cursor: pointer; }
+/* Discovery scenes open with the camera pushing in (the same easing as the fly-in). */
+.scene-camera { animation: scene-camera 2.4s cubic-bezier(0.65, 0, 0.35, 1) both; transform-origin: 50% 72%; }
+@keyframes scene-camera {
+  from { transform: scale(1.7) translateY(8%); filter: blur(1.5px) brightness(0.8); }
+  60% { filter: none; }
+  to { transform: none; filter: none; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .scene-walk, .scene-bob, .scene-pop, .scene-rays, .scene-line, .scene-twinkle, .scene-waves { animation: none; }
+  .scene-walk, .scene-bob, .scene-pop, .scene-rays, .scene-line, .scene-twinkle, .scene-waves, .scene-camera { animation: none; }
 }
 
 /* Camera shots (world/cinematic.tsx): black bars slide in, the title fades up. */
