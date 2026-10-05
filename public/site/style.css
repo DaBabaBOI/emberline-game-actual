@@ -809,3 +809,259 @@ html[data-font="sans"] {
 html[data-font="serif"] {
   --font: Georgia, "Times New Roman", serif;
 }
+
+/* 9. Motion ------------------------------------------------------------------
+   The hero: pixel clouds drift, embers rise from the flame, and the title, text
+   and Play button come in one after another. Further down, cards slide up as
+   they scroll into view (site.js adds .is-visible). Everything here stops for
+   people who ask for less motion, and nothing is hidden if the script doesn't run. */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-inner {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-sky {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* A blocky cloud: one bar and two bumps on top. */
+.cloud {
+  position: absolute;
+  width: 96px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 0 rgba(255, 255, 255, 0.4);
+  animation: drift linear infinite;
+}
+
+.cloud::before,
+.cloud::after {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  background: inherit;
+}
+
+.cloud::before {
+  left: 16px;
+  width: 36px;
+  height: 14px;
+}
+
+.cloud::after {
+  left: 44px;
+  width: 28px;
+  height: 22px;
+}
+
+.cloud-1 {
+  top: 18%;
+  animation-duration: 70s;
+  animation-delay: -10s;
+}
+
+.cloud-2 {
+  top: 34%;
+  transform: scale(0.7);
+  animation-duration: 95s;
+  animation-delay: -55s;
+  opacity: 0.8;
+}
+
+.cloud-3 {
+  top: 8%;
+  transform: scale(1.25);
+  animation-duration: 120s;
+  animation-delay: -85s;
+  opacity: 0.7;
+}
+
+@keyframes drift {
+  from {
+    left: -160px;
+  }
+  to {
+    left: 100%;
+  }
+}
+
+/* Embers: small square sparks rising and fading, around the middle. */
+.embers {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 0;
+  height: 100%;
+}
+
+.embers i {
+  position: absolute;
+  bottom: -8px;
+  width: 6px;
+  height: 6px;
+  background: #f59e0b;
+  box-shadow: 0 0 6px #fbbf24;
+  opacity: 0;
+  animation: rise 7s linear infinite;
+}
+
+.embers i:nth-child(1) { left: -320px; animation-delay: 0s; }
+.embers i:nth-child(2) { left: -250px; animation-delay: 2.4s; background: #ef4444; }
+.embers i:nth-child(3) { left: -180px; animation-delay: 4.1s; }
+.embers i:nth-child(4) { left: -110px; animation-delay: 1.2s; width: 4px; height: 4px; }
+.embers i:nth-child(5) { left: -40px; animation-delay: 5.6s; background: #ef4444; }
+.embers i:nth-child(6) { left: 30px; animation-delay: 3.2s; }
+.embers i:nth-child(7) { left: 100px; animation-delay: 0.7s; width: 4px; height: 4px; }
+.embers i:nth-child(8) { left: 170px; animation-delay: 4.8s; }
+.embers i:nth-child(9) { left: 240px; animation-delay: 2s; background: #ef4444; }
+.embers i:nth-child(10) { left: 310px; animation-delay: 6.2s; }
+.embers i:nth-child(11) { left: -380px; animation-delay: 3.7s; width: 4px; height: 4px; }
+.embers i:nth-child(12) { left: 370px; animation-delay: 1.6s; }
+
+@keyframes rise {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.9;
+  }
+  50% {
+    transform: translate(14px, -45vh);
+  }
+  100% {
+    transform: translate(-10px, -95vh);
+    opacity: 0;
+  }
+}
+
+/* The flame by the title flickers. */
+h1 img {
+  animation: flicker 1.6s steps(1, end) infinite;
+  transform-origin: 50% 100%;
+}
+
+@keyframes flicker {
+  0%,
+  100% {
+    transform: scale(1, 1);
+    filter: brightness(1);
+  }
+  25% {
+    transform: scale(0.96, 1.05);
+    filter: brightness(1.15);
+  }
+  50% {
+    transform: scale(1.03, 0.97);
+  }
+  75% {
+    transform: scale(0.98, 1.03);
+    filter: brightness(1.1);
+  }
+}
+
+/* The hero comes in, one line after another. */
+.hero-inner > * {
+  animation: come-in 0.7s ease-out both;
+}
+
+.hero-inner > :nth-child(1) { animation-delay: 0.05s; }
+.hero-inner > :nth-child(2) { animation-delay: 0.2s; }
+.hero-inner > :nth-child(3) { animation-delay: 0.35s; }
+.hero-inner > :nth-child(4) { animation-delay: 0.5s; }
+.hero-inner > :nth-child(5) { animation-delay: 0.65s; }
+.hero-inner > :nth-child(6) { animation-delay: 0.8s; }
+
+@keyframes come-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The Play button glows gently, and lifts when pointed at. */
+.play-button {
+  animation:
+    come-in 0.7s ease-out 0.65s both,
+    glow 2.8s ease-in-out 1.5s infinite;
+  transition: transform 0.15s ease-out;
+}
+
+.play-button:hover {
+  transform: translateY(-2px);
+}
+
+@keyframes glow {
+  0%,
+  100% {
+    box-shadow: 0 3px 0 0 var(--button-shadow), 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+  50% {
+    box-shadow: 0 3px 0 0 var(--button-shadow), 0 0 22px 4px rgba(16, 185, 129, 0.45);
+  }
+}
+
+/* Cards slide up as they come into view (only when the script is running). */
+.js .reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.55s ease-out,
+    transform 0.55s ease-out;
+  transition-delay: calc(var(--i, 0) * 70ms);
+}
+
+.js .reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Screenshots lean in a little when pointed at. */
+.shot {
+  overflow: hidden;
+}
+
+.shot img {
+  transition: transform 0.4s ease-out;
+}
+
+.shot:hover img {
+  transform: scale(1.04);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cloud,
+  .embers i,
+  h1 img,
+  .hero-inner > *,
+  .play-button {
+    animation: none !important;
+  }
+
+  .embers {
+    display: none;
+  }
+
+  .js .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .shot img,
+  .play-button {
+    transition: none;
+  }
+}
