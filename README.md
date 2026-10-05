@@ -1,16 +1,12 @@
-# Emberline
+# 🔥 Emberline
 
-**A sustainability trade-off game.** Build and guide a civilization through
-different eras and challenges. Balance your people's needs with the health of
-the land: every home, farm and power plant brings a benefit and a cost. Made for
-the SHISTECH Hacktrack hackathon (UN Sustainable Development Goals theme), built
-around **SDG 11: Sustainable Cities and Communities**.
+**Grow a civilization from the Stone Age to space, without wrecking the land it lives on.**
 
-### Play it: https://dabababoi.github.io/emberline-game-actual/
+Emberline is a real-time hex-island city builder where every home, farm and power plant brings a benefit *and* a cost. Built for the **SHISTECH Hacktrack** hackathon (UN Sustainable Development Goals theme) around **SDG 11: Sustainable Cities and Communities**.
 
-No install needed. It runs in the browser, on a laptop or a phone.
+### ▶ [Play it now](https://dabababoi.github.io/emberline-game-actual/)
 
----
+No install. Runs in the browser on a laptop or a phone.
 
 ![A Stone Age village](docs/images/04-village-stone.png)
 
@@ -18,362 +14,135 @@ No install needed. It runs in the browser, on a laptop or a phone.
 | --- | --- | --- |
 | ![A Medieval town](public/site/shots/medieval.jpg) | ![An Industrial city](public/site/shots/industrial.jpg) | ![A Future city](public/site/shots/future.jpg) |
 
-**Judges:** the full documentation, mapped to each judging criterion, is in
-[`docs/`](docs/README.md): [game design](docs/design.md),
-[architecture diagrams](docs/architecture.md),
-[process and testing](docs/process.md) and the
-[finals presentation plan](docs/presentation.md), with real screenshots.
-
-> **Still to add before judging:** a gameplay GIF (`assets/gameplay.gif`) and a
-> demo video link.
+> **Judges:** full documentation, mapped to each judging criterion, is in [`docs/`](docs/README.md): [game design](docs/design.md) · [architecture](docs/architecture.md) · [process and testing](docs/process.md) · [finals presentation plan](docs/presentation.md).
+>
+> **Still to add:** gameplay GIF (`assets/gameplay.gif`) and demo video link.
 
 ---
 
-## Why this project exists
+## The idea
 
-Emberline was built for the SHISTECH Hacktrack and the UN Sustainable Development
-Goals theme. The core idea is simple: the player should not be rewarded for
-building endlessly without cost. Every decision changes the land, the people, and
-the future of the village.
+Most city builders reward you for building as much as you can. Emberline asks the question SDG 11 asks: **can a settlement grow without wrecking the place it lives in?**
 
-The game is about sustainable growth: gather enough food, keep the people warm,
-watch the forest, and decide when a short-term win is worth a long-term loss.
+Every building shows what you get and what the land pays, right where you place it:
 
-## The idea: every choice is a trade-off
-
-Most city builders reward you for building as much as you can. Emberline asks the
-question SDG 11 asks: **can a settlement grow without wrecking the place it lives
-in?**
-
-Every building shows what you get and what the land pays, right where you place
-it:
-
-| You build… | You get… | The land pays… |
+| You build | You get | The land pays |
 | --- | --- | --- |
-| Woodcutter | Wood for fires and building | It fells the trees around it; once they're gone it makes no wood |
-| Campfire | Warmth for 10 people | Burns wood, adds smoke, raises the risk of a wildfire in nearby trees, throws sparks that can scorch grass or burn a house next to it, and scares the animals away from a gatherer's camp next to it |
-| Gatherer's Camp | Wild food, more on berry bushes | Each extra camp adds only a quarter of a camp's food, and past two camps the animals are hunted faster than they can breed |
-| Wooden House | Room for 6 more people | More people eat more food and need more fires; wood burns, so sparks from a campfire next door can set it alight |
-| Farmland | Lots of steady food | Clears the nearest patch of forest for good, and fewer trees means less rain, so every field grows less |
-| Stone Quarry | Stone for better buildings | Cuts the hill down for good (you can watch it sink into a rocky pit), and its dust covers crops and berries nearby |
-| Livestock Pen | Food, and later warm clothes so fewer fires are needed | Grazing wears down the grass |
-| Bronze Smithy *(Ancient)* | Better tools: +20% food and wood | Burns wood for charcoal all the time, heavy smoke |
-| Irrigation Canal *(Ancient)* | Neighbouring farms grow 50% more | Watered soil slowly turns salty |
+| Woodcutter | Wood for fires and building | Fells nearby trees; with none left, no wood |
+| Campfire | Warmth for 10 people | Burns wood, adds smoke, risks wildfire, sparks can burn a house next door |
+| Gatherer's Camp | Wild food | Each extra camp adds only a quarter of the food; past two, animals are hunted faster than they breed |
+| Wooden House | Room for 6 people | More mouths, more fires needed, flammable |
+| Farmland | Lots of steady food | Clears forest for good, and fewer trees means less rain for every field |
+| Stone Quarry | Stone for better buildings | Cuts the hill into a pit; dust cuts nearby harvests |
+| Livestock Pen | Food, and clothes so you need fewer fires | Grazing wears down the grass |
+| Bronze Smithy | +20% food and wood | Burns charcoal constantly, heavy smoke |
+| Irrigation Canal | Neighbouring farms grow 50% more | Soil slowly turns salty |
 
-And for the big choices there is a slower option that lasts:
+Slower, kinder options exist too: **selective logging** instead of clear-cutting, **replanting** saplings or a Forester's Lodge, **clothes** instead of fires, and **Granaries** instead of letting food rot.
 
-- **Clear-cut** a forest for full wood now, or log **selectively** for half the
-  wood and a forest that stays standing.
-- **Plant saplings** to restore land you cut, or build a **Forester's Lodge**.
-- Keep people warm with **fires** (wood, smoke, wildfire risk) or with
-  **clothes** from your herds.
-- Build a **Granary** instead of letting surplus food rot.
-
-**Sustainability measures how much forest is still standing** around the
-village (minus smoke, quarries, fields, too many gatherer camps and more). Click it to see exactly
-what is pulling it down. It recovers only as fast as the forest grows back.
-Push it too low for too long and the land wears out: forests stop regrowing and
-harvests shrink. **Forests also bring rain**: the less forest stands, the less
-rain falls and the less every field grows. You can see the damage on the map:
-stumps and bare ground, quarried pits, smoke over the fires, fewer deer to hunt.
+**Sustainability** is how much forest is still standing around the village (minus smoke, quarries, fields and more). Click the leaf meter to see exactly what is pulling it down. Let it stay low too long and the land wears out: forests stop regrowing and harvests shrink.
 
 ## How the game teaches
 
-- **See the cost before you build.** Trade-off cards beside every placement
-  (with warnings like "dust would cut the food of 2 buildings nearby"), stumps
-  on every building card, and a Sustainability breakdown with a trend arrow.
-- **A tutorial that talks to you.** Elder Ama walks you through your first fire,
-  woodcutter, house, camp, scouts, warrior and farm as one conversation, handing
-  over just what each step needs. She explains the stumps on each building and
-  how Knowledge is earned, then says goodbye when you're ready.
-- **Every advancement is earned by doing.** Each one has its own goal before you
-  can research it: keep a fire burning for two minutes before Storytelling, hunt
-  animals before Herding, lose food to rot before Pottery, farm, grow and store
-  food before Agriculture. The card shows your progress. After you research it,
-  Elder Ama and the pointing hand walk you through using it once.
-- **Elder Ama's lessons.** When something happens in play (the forest shrinks,
-  too many camps hunt the herds, the rains fail, food rots, smoke builds up,
-  sickness spreads in crowded huts, the soil turns salty), she explains the
-  lesson and links it to a real UN target.
-- **Real-world event cards.** Dilemmas like a sacred grove, overhunting, a rich
-  but flood-prone riverbank, or fires inside the huts. Each card says how it
-  connects to the world today.
-- **A debrief at the end of each era.** Achievements next to what they cost
-  (forest lost, time the land was unhealthy, lives lost), every meter with its
-  SDG target, and the lessons your people learned. The **best ending needs
-  Sustainability of 60 or more**, so growth can't just ignore the damage. And a
-  village that starves or breaks up never gets a good ending, however healthy
-  the land is.
+- **See the cost before you build.** Trade-off cards on every placement, warnings like "dust would cut the food of 2 buildings nearby", and a Sustainability breakdown with a trend arrow.
+- **A tutorial that talks to you.** Elder Ama walks you through your first fire, woodcutter, house, camp, scouts, warrior and farm, with a pointing hand and exactly the supplies each step needs.
+- **Advancements are earned by doing.** Keep a fire burning before Storytelling, hunt before Herding, lose food to rot before Pottery.
+- **Lessons tied to real targets.** When something happens (forest shrinks, rains fail, food rots, sickness spreads), Elder Ama explains why and links it to a UN target.
+- **Real-world event cards.** Dilemmas like a sacred grove, overhunting, or a rich but flood-prone riverbank.
+- **An honest debrief.** Each era ends with achievements next to their cost (forest lost, lives lost). The best ending needs **Sustainability ≥ 60**, and a starving village never gets one.
 
-### How it maps to the SDGs
-
-**SDG 11 (Sustainable Cities and Communities)** is the core. Three more goals
-are built into how the game works:
+### SDG mapping
 
 | Goal | In the game |
 | --- | --- |
-| **11 · Sustainable Cities & Communities** | Shelter, crowding, clean water and sanitation, planning growth, pollution |
-| 13 · Climate Action | Smoke and coal raise the carbon in the air; in the last era you must bring it back down before the climate tips |
-| 15 · Life on Land | Sustainability is the forest left standing; deforestation, lost wildlife, failing rains, worn-out soil, replanting |
-| 7 · Affordable & Clean Energy | From campfires to coal plants to wind, sun and water; clean power is how the last era is won |
+| **11 · Sustainable Cities & Communities** | Shelter, crowding, water and sanitation, planned growth, pollution |
+| 13 · Climate Action | Smoke and coal raise carbon; the last era is about bringing it back down |
+| 15 · Life on Land | Forest, wildlife, rainfall, soil health and replanting |
+| 7 · Affordable & Clean Energy | Campfires to coal to wind, sun and fusion; clean power wins the last era |
 
-Event cards and Elder Ama's lessons also link to other goals where they fit
-(for example 12 for food waste and 4 for schools).
+## Features
 
-## What you can do
-
-- **Explore hex islands** of grassland, forest, dry steppe, marsh and hills.
-- **Build 57 kinds of buildings** across six eras, with a see-through preview and
-  a trade-off card first. Sell any of them back for half.
-- **Balance six meters**: Food, Shelter, Happiness, Literacy, Energy and
-  Sustainability.
-- **Watch your people** walk to work, sit on the logs around the fire, fall
-  sick, and hunt. Hover a house to see how many live there.
-- **Earn Knowledge from milestones**: your first of each building, your tribe
-  growing, your first scouting trips, beating raiders, planting saplings. Elder's
-  Huts and schools teach a little all the time. Elder Ama tells you when you can
-  research something new. Knowledge is slow on purpose: a new era takes real
-  play, not five minutes.
-- **Defend against raiders.** When raiders land you choose: fight, hide in the
-  houses, or pay them off with food. Your warriors march out and fight on the
-  map. After Hunting Spears you can arm them (spearmen count as 1.5 warriors), and
-  after Firekeeping you can build a Watch Tower on the shore to see raiders coming
-  sooner.
-- **Pick your people up** and drop them somewhere: on a building to help out, on
-  a cold campfire to relight it. Drop them in a fire, the sea or the unexplored
-  fog and you may lose them.
-- **Survive sickness.** Before Herbalism your people call it a curse from the
-  gods; after it, healers can help.
-- **Reach the Ancient era** (research Agriculture, grow to 15 people): bronze,
-  irrigation, writing, granaries, walls. You can see it: people wear dyed linen,
-  paths wear into the ground between buildings, and the light turns warmer.
-- **Face the Roman legion** in the Ancient era, then learn Coinage and grow to
-  40 people.
-- **Build a Classical town** by the river: wells and aqueducts, tall Town
-  Houses (warm without campfires, but they need latrines or sickness spreads),
-  a market, caravans across the sea to the Silk Steppe, paved roads, an
-  academy. Each has its own cost to the land or the people.
-- **Survive the great drought** that ends the Classical era: the elders warn you
-  three minutes ahead, then the rain almost stops for three minutes. Water,
-  full granaries and standing forests get you through.
-- **Grow a Medieval kingdom**: castles, guild halls, windmills, a university,
-  and two neighbouring kingdoms to trade with, gift or raid. Unhappy people can
-  rebel. The era ends with the great sickness (the plague).
-- **Industrialise**: factories, railways, coal plants, dams, wind and solar
-  farms, apartments and hospitals. Coal is cheap and fast; the carbon it puts in
-  the air brings a climate crisis.
-- **Reach the Future**: air capture plants, vertical farms, arcologies, fusion.
-  Get the air back to a safe level before the climate tips for good, reach
-  Type I on the Kardashev scale with clean power, and launch into space.
-- **Learn 109 advancements**, each doing something different (from Basketry and
-  Tamed Dogs to Heat Pumps, Electric Trams and Rewilding). Some unlock only
-  after a goal.
-- **Trade** with passing traders from the start: currency buys food, wood and
-  stone, so you can spare your own forest.
-- **Mind the workload**: every building needs hands. With more jobs than
-  people, everyone gets tired, makes less and is less happy.
-- **Explore**: pick where your scouts walk and where your canoes paddle, and
-  watch them go and come back.
-- **Play together** online with up to 4 players: race for the most Chief XP,
-  or team up in co-op. Send gifts, raid each other, and chat (quick phrases on
-  phones). Bots fill empty seats and keep pace with the players instead of
-  racing ahead.
-- **Watch the fights**: when your warriors meet raiders, the camera goes in
-  close over the battle. In multiplayer the raider gets a view of the fight,
-  anyone else can choose to watch, and everyone hears how it ended.
-- **Two main ways to play**, side by side on the title screen and the landing
-  page: **From the Stone Age** (the full journey, era by era) and **Build to
-  Last**: start in 1850 with a smoky
-  industrial town and solve three big problems at once: clear the air, run on
-  clean power, and give 120 people a home and food with the forest still
-  standing. No tutorial and no lessons; advancements are one line each. Click a
-  problem to see how to solve it.
-- **Hunters only hunt when food is needed**: with plenty in store they gather
-  wood at their camps instead, and the herds get a rest.
-- **Name your people**, pick a culture and a difficulty, and play on a laptop or
-  a phone. A guided tutorial with a pointing hand teaches the basics (skip it from the
-  tutorial itself). New
-  players start in **First time** mode: a slower clock, and a calm Stone Age
-  with no raids or disasters and far fewer interruptions. A **How to play**
-  guide is in the menu.
-- **Track your progress**: a chief level that only goes up, and a goal line that
-  says what to aim for next.
-- **Six ways to lose**: famine, unrest (people too unhappy for too long), land
-  collapse (Sustainability too low for too long), conquest, the plague, or
-  being left behind (taking too long to reach the next era). Every one gives
-  you a countdown first.
-
-The game autosaves in your browser, and you can save to the cloud with a code to
-carry on elsewhere. There is a leaderboard, a feedback form and a **How to
-play** guide in the menu. An
-**Updates** bar at the top of the project page and the title screen lists what's
-new.
-
-## Roadmap
-
-**The six-era campaign is complete and playable**, with the Roman legion, the
-great drought, the plague and the climate crisis leading to the tipping point
-and space. Other modes start in later eras and set their own goals. Online
-multiplayer works too. Ideas for after the hackathon:
-
-| Next | What it adds to the trade-off |
-| --- | --- |
-| Shared map multiplayer | Neighbours on the same sea, so one player's smoke and clear-cutting reaches the others |
-| Classroom mode | A teacher picks the era and the crises, and sees how each group chose |
-| More languages | So more schools can play it |
-
-## What went wrong and how we adapted
-
-- **Our first version was the wrong game.** We started with a simple turn-based
-  city sim made of meters and buttons, then added a 3D island on top. It still
-  didn't feel like a game, so we rebuilt it as a real-time hex-island builder.
-- **We cut multiplayer to ship.** We had built multiplayer rooms on a hosted
-  database. When we moved to free static hosting on GitHub Pages there was no
-  server to run it, so we removed it and saved games in the browser instead.
-  Later we brought a small hosted database back (Supabase) for cloud saves, a
-  leaderboard and feedback, and then for multiplayer rooms: every player runs
-  the game in their own browser, and only scores, gifts and raids go through
-  the database.
-- **Emojis made it look cheap.** The first HUD used emoji icons. We replaced every
-  one with hand-drawn 12×12 pixel sprites and a pixel-style interface.
-- **People walked through mountains.** Villagers clipped into terrain and
-  buildings, and sometimes vanished. We made them follow the ground height and
-  steer around buildings, mountains and water.
-- **Our pollution wasn't realistic.** Early on, woodcutters produced smog and
-  grey skies, which doesn't fit the Stone Age, and forests spread over the whole
-  island. We rebuilt Sustainability around the forest that's actually left,
-  made smoke come only from fires, and added steppe and marsh biomes.
-- **Balance swung both ways.** Food was first far too easy, then so tight that
-  new players were overwhelmed, and the game felt too fast with too many
-  messages at once. We slowed the clock, made the start calm and easy with no
-  raids or disease early on, and let pressure build as the tribe grows.
-- **Players survived without learning anything.** Playtesters were busy
-  surviving and missed the point. So we put the trade-off in front of every
-  decision (trade-off cards, the Sustainability breakdown), added sustainable
-  alternatives (selective logging, replanting, clothes), elder lessons and
-  real-world event cards.
-- **The tutorial had rough edges.** Players could skip ahead, then had to wait
-  for resources, and skipping it left the tribe with no fire or defense. The
-  lines also read like separate orders, not a person talking. We added a
-  pointing hand that blocks other clicks, started players with exactly the
-  resources the tutorial needs, gave skippers the basic buildings and a warrior,
-  and rewrote Elder Ama's lines as one conversation.
-- **Some choices had no downside.** Gatherer camps were safe to spam, the quarry's
-  cost ("digs pits") was something nobody cared about, and a trickle of
-  Knowledge felt both too fast and too slow. Extra camps now add much less food
-  and hurt the wildlife, quarry dust cuts nearby harvests, and Knowledge comes
-  from milestones.
-- **Knowledge swung from too easy to too hard.** Players reached the Ancient era
-  in five minutes by spamming scouts. We slowed Knowledge down, then wrote a bot
-  that plays the whole game by the real rules. It showed we had gone too far:
-  the economy starved of wood, Agriculture was out of reach, raids outgrew any
-  defense and the Roman legion came before bronze weapons were possible. We
-  rebalanced until the bot, playing sensibly, reaches the Ancient era in about
-  20 minutes and beats the legion in some games but not all.
-- **The tutorial handed out a big pile.** It started players with everything the
-  tutorial would buy, so the first screen showed plenty of food and wood. Now
-  Elder Ama hands over each step's supplies as you reach it.
-- **Thatched huts before farming.** Our first homes had straw roofs, but straw
-  comes from farmed grain. The Stone Age home became a log-and-bark Wooden House,
-  which also gave fire a new trade-off: sparks can burn it down.
-- **You couldn't tell the eras apart.** Entering the Ancient era changed the
-  buildings on offer but not how the village looked, so we added dyed clothes,
-  worn paths, warmer light and a bronze trim.
-- **Small bugs added up.** A lost game could be "continued" for a few seconds
-  from an old save, a loss could be called "the best ending", digits 2, 5 and 8
-  looked alike, countdowns skipped seconds, panels drew over each other, and
-  the tutorial pointed at buttons off the edge of a phone screen. Each got fixed
-  as players found it.
+- **Six eras, 57 buildings, 109 advancements**: Stone, Ancient, Classical, Medieval, Industrial, Future
+- **Six meters**: Food, Shelter, Happiness, Literacy, Energy, Sustainability
+- **Living map**: people walk to work, sit by fires, fall sick and hunt; paths wear into the ground; hunters only hunt when food is needed
+- **Era set pieces**: Roman legion, the great drought, the plague, the climate crisis and the launch into space
+- **Raids**: fight, hide, or pay them off; arm warriors and build Watch Towers
+- **Trade** with passing traders, caravans and neighbouring kingdoms
+- **Pick people up** and drop them on buildings, cold fires, or the sea (risky)
+- **Online multiplayer** for up to 4 players: race for Chief XP or play co-op, with gifts, raids and chat. Bots keep pace with players.
+- **Two main ways to play**, side by side: **From the Stone Age** (the full journey), or **Build to Last**, starting in 1850 with a smoky town. Clear the air, switch to clean power, and house 120 people with the forest standing. Click a problem to see how to solve it.
+- **Six ways to lose**, each with a countdown: famine, unrest, land collapse, conquest, plague, being left behind
+- **First time mode**: slower clock, calm Stone Age, no raids or disasters
+- **Autosave**, cloud saves by code, leaderboard, feedback form and in-game **How to play** guide
 
 ## Controls
 
 | Action | Laptop | Phone |
 | --- | --- | --- |
-| Move the camera | Drag | Drag with one finger |
-| Zoom / rotate | Scroll wheel / right-drag | Pinch / two-finger drag |
-| Build | Pick a building, click a tile | Pick a building, tap a tile to preview, tap again to build |
-| Building info (logging mode, upgrades) | Click the building | Tap the building |
+| Move camera | Drag | One-finger drag |
+| Zoom / rotate | Scroll / right-drag | Pinch / two-finger drag |
+| Build | Pick a building, click a tile | Tap to preview, tap again to build |
+| Building info | Click the building | Tap the building |
 | Cancel | `Esc`, right-click or **Cancel** | **Cancel** |
 | Why is Sustainability low? | Click the leaf meter | Tap the leaf meter |
-| Speed | Pause / 1× / 2× / 4× in the top bar | Same |
+| Speed | Pause / 1× / 2× / 4× in top bar | Same |
+
+## What went wrong and how we adapted
+
+- **Wrong game first.** We built a turn-based meters-and-buttons sim, then rebuilt it as a real-time hex-island builder.
+- **Multiplayer cut, then returned.** GitHub Pages had no server, so we dropped it. Supabase later brought back cloud saves, the leaderboard and rooms (every player runs the game locally; only scores, gifts and raids go through the database).
+- **Emojis looked cheap.** Replaced with hand-drawn 12×12 pixel sprites.
+- **Villagers walked through mountains.** They now follow terrain height and steer around obstacles.
+- **Unrealistic pollution.** Woodcutters used to make smog. Smoke now comes only from fires, and Sustainability is based on forest actually standing.
+- **Balance swung both ways.** Too easy, then overwhelming. We slowed the clock and let pressure build with tribe size.
+- **Players survived without learning.** So the trade-off moved in front of every decision, with sustainable alternatives, lessons and event cards.
+- **Tutorial rough edges.** Skippable, slow, and robotic. Added a click-blocking pointing hand, supplies per step, and rewrote Ama's lines as a conversation.
+- **Choices with no downside.** Camps were spammable and quarry costs ignored. Extra camps now add little and hurt wildlife; quarry dust cuts nearby harvests.
+- **Knowledge pacing.** Players hit the Ancient era in five minutes, then we overcorrected. A bot that plays by the real rules helped us tune it to about 20 minutes.
+- **Eras looked identical.** Added dyed clothes, worn paths, warmer light and bronze trim.
+- **Many small bugs.** Stale saves, loss shown as "best ending", look-alike digits, skipped countdown seconds, overlapping panels, off-screen tutorial pointers. Fixed as players found them.
 
 ## How we built this
 
-We built Emberline with the help of an AI coding assistant (Claude Code). Most of
-the code was written by the assistant, following our instructions. We want to be
-upfront about that.
+We built Emberline with an AI coding assistant (**Claude Code**). Most code was written by the assistant following our direction, and we want to be upfront about that.
 
-**What the team did**
+**The team** decided what the game is (Stone Age start, a cost on every building, the eras, the ways to lose, the look; all written in [`AGENTS.md`](AGENTS.md)), playtested it repeatedly with friends, turned feedback into changes, and reviewed and merged every pull request.
 
-- Decided what the game is: the Stone Age start, a cost to the land on every
-  building, the eras, the ways to lose, the look. Every rule is written down in
-  [`AGENTS.md`](AGENTS.md).
-- Played it over and over, and asked friends to play it, then turned what we
-  saw into changes ("too easy", "too much at once", "nothing happens", "raiders
-  look glitchy").
-- Chose between options for each new feature, and checked the result in the game
-  before merging it.
-- Reviewed and merged every change through a pull request.
+**The assistant** wrote and tested the code (including the balance bot), took screenshots, and drafted docs and slides for us to review.
 
-**What the assistant did**
-
-- Wrote and changed the code, and tested it (including a bot that plays whole
-  games to check the balance).
-- Took the screenshots and drafted the documentation and slides, which we
-  reviewed.
-
-**Who did what on the team:** _[fill in before submitting]_
+**Who did what:** _[fill in before submitting]_
 
 ## Tech stack
 
-- Next.js 16 (static export)
-- React 19
-- TypeScript
-- Tailwind CSS
-- React Three Fiber / Three.js
-- Hosted on GitHub Pages
-- Supabase for cloud saves, the leaderboard and feedback (only the public
-  "publishable" key is in the code)
+Next.js 16 (static export) · React 19 · TypeScript · Tailwind CSS · React Three Fiber / Three.js · GitHub Pages · Supabase (cloud saves, leaderboard, feedback; only the public publishable key is in the code)
 
 ## Project structure
 
 ```
-assets/                 Screenshots, GIF and video for this README
 src/
   game/                 Pure game logic, no React
-    types.ts            Game state and data shapes
-    content.ts          Eras, buildings, advancements, events, lessons, tutorial (data)
-    updates.ts          The "what's new" list shown in the Updates bar
-    engine.ts           The simulation: reducer, ticks, meters, raids, the legion, saving
-    disease.ts          Sickness: outbreaks, spread, recovery
-    map.ts, hex.ts      Hex grid maths and the island map generator
-    noise.ts            Seeded random + noise
-    sprites.ts          Hand-drawn pixel icons
+    types.ts            State and data shapes
+    content.ts          Eras, buildings, advancements, events, lessons, tutorial
+    engine.ts           Reducer, ticks, meters, raids, the legion, saving
+    disease.ts          Outbreaks, spread, recovery
+    map.ts, hex.ts      Hex maths and island generator
+    noise.ts            Seeded random and noise
+    sprites.ts          Pixel icons
+    updates.ts          "What's new" list
   components/civ/
-    game-screen.tsx     Title screen → game, HUD layout
-    game-provider.tsx   Game state, the tick loop and autosave
-    guide.ts            Tutorial hand: what to point at next
-    title-screen.tsx    Name, culture and difficulty picker
-    hud/                Top bar, meters, bottom bar, advancements, lessons, debrief
-    world/              Everything 3D: terrain, buildings, people, battles, smoke
-  components/
-    updates-bar.tsx     The Updates bar at the top of the pages
-  lib/
-    online.ts           Cloud saves, leaderboard and feedback (Supabase)
-    utils.ts            Shared helpers
-  app/
-    play/page.tsx       The game
-    not-found.tsx       Custom 404 page
-public/
-  index.html            Project page (for judges and visitors): plain HTML
-  site/style.css        Its look: plain CSS
-  site/site.js          Its "What's new" bar and Settings button
-  site/fonts/           The two pixel fonts (also used by the game)
-scripts/
-  export-site.mjs       Makes the project page's icons and update list from the game's code
+    game-screen.tsx     Title screen to game, HUD layout
+    game-provider.tsx   State, tick loop, autosave
+    guide.ts            Tutorial hand
+    title-screen.tsx    Name, culture, difficulty
+    hud/                Top bar, meters, advancements, lessons, debrief
+    world/              3D: terrain, buildings, people, battles, smoke
+  lib/online.ts         Supabase: saves, leaderboard, feedback
+  app/play/page.tsx     The game
+public/                 Project page (plain HTML/CSS/JS), fonts, screenshots
+scripts/export-site.mjs Builds project-page icons and update list from game code
 ```
 
-## Working on it
+## Running it locally
 
 ```bash
 git clone https://github.com/DaBabaBOI/emberline-game-actual.git
@@ -382,69 +151,37 @@ npm install
 npm run dev        # http://localhost:3000, then open /play
 ```
 
-**Downloaded the ZIP instead?** (Code → Download ZIP on GitHub.) It works the
-same way: unzip it, open a terminal in the folder and run `npm install` then
-`npm run dev`. You need [Node.js](https://nodejs.org/) 22 (see `.nvmrc`).
-Double-clicking a file won't start the game; it has to be served. To just play,
-use the live link at the top.
+Needs [Node.js](https://nodejs.org/) 22 (see `.nvmrc`). Downloaded the ZIP? Same steps. Double-clicking a file won't work; the game must be served.
 
-| Script | What it does |
+| Script | Does |
 | --- | --- |
-| `npm run dev` | Dev server with hot reload (project page at `/`, game at `/play`) |
+| `npm run dev` | Dev server with hot reload |
 | `npm run build` | Static build into `out/` |
-| `npm run site` | Remake the project page's icons and "What's new" list (dev and build do this for you) |
+| `npm run site` | Rebuild project-page icons and update list |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | TypeScript check |
 | `npm run format` | Prettier |
 
-Every push to `main` deploys automatically to GitHub Pages.
+Every push to `main` deploys to GitHub Pages.
 
-**Conventions:** never commit straight to `main`. Branch as
-`feat/<name>-<thing>` (or `fix/`, `chore/`, `docs/`), open a pull request, and
-have someone else review it. Commit messages are imperative ("add farmland", not
-"added farmland").
-
-**Dev mode:** open `/play/?dev`
-(https://dabababoi.github.io/emberline-game-actual/play/?dev). You can start in any
-era with plenty of resources, and a dev panel lets you trigger every feature:
-wildfire, raid, the Roman legion, an outbreak, any event card or elder lesson
-(picked from a list), fires out, +10 people, "Goals on" (every advancement goal
-counts as met), "Cut hills" (finish every quarry's cut), finish the era, each
-kind of raid, Starve, Collapse, Nearly behind, a small moment, +100 XP and
-"Back from fog".
-
-**Updates log:** every change a player would notice gets a line in
-`src/game/updates.ts`, which feeds the Updates bar.
-
-**Using an AI assistant?** Point it at [`AGENTS.md`](AGENTS.md) first. It holds
-the design decisions the game must stay true to.
-
-## Design and contribution notes
-
-Before making changes, read [AGENTS.md](AGENTS.md). It documents the game design
-constraints and the project decisions that must stay intact.
-
-This project follows a few important conventions:
-
-- Most game rules belong in `src/game/`
-- The engine should stay reducer-based and immutable
-- UI and 3D code should stay separate from core game logic
-- New mechanics should be added through data-driven content where possible
-- Tutorial flow and balancing changes should be validated against the project
-  goals in [AGENTS.md](AGENTS.md)
+**Dev mode:** open [`/play/?dev`](https://dabababoi.github.io/emberline-game-actual/play/?dev) to start in any era with plenty of resources and a panel to trigger wildfires, raids, the legion, outbreaks, any event or lesson, "Goals on", finish the era, starve, collapse and more.
 
 ## Contributing
 
-Please see [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and
-development expectations.
+- Read [`AGENTS.md`](AGENTS.md) first (humans and AI assistants alike). It holds the design decisions the game must stay true to.
+- Game rules live in `src/game/`; the engine stays reducer-based and immutable; UI and 3D stay separate from logic; prefer data-driven content.
+- Never commit to `main`. Branch as `feat/<name>-<thing>` (or `fix/`, `chore/`, `docs/`), open a PR, get a review. Commit messages are imperative ("add farmland").
+- Every player-visible change gets a line in `src/game/updates.ts`.
 
-## Security
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
-Please see [SECURITY.md](SECURITY.md) for vulnerability reporting guidance.
+## Roadmap
+
+The six-era campaign is complete. Next: **shared-map multiplayer** (one player's smoke and clear-cutting reaches neighbours), **classroom mode** (teacher picks era and crises, sees how each group chose) and **more languages**.
 
 ## License
 
-This project is released into the public domain under the Unlicense. See [LICENSE](LICENSE).
+Public domain under the [Unlicense](LICENSE).
 
 ## Team
 
