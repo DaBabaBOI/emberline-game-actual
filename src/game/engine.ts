@@ -389,7 +389,14 @@ function applyLastStart(state: GameState): GameState {
     const spot = next.tiles.filter((t) => t.revealed && !placementError(next, t, def)).sort((a, b) => score(a) - score(b))[0];
     if (spot) next = { ...next, tiles: next.tiles.map((t) => (t.id === spot.id ? { ...t, building: id } : t)) };
   }
-  return next;
+  // The town was already here: its buildings and people are not "firsts" that
+  // teach us anything new, so they pay no Knowledge.
+  // The same for XP: the 60 people were already here, not born this game.
+  return {
+    ...next,
+    milestones: milestonesReached(next).map(([id]) => id),
+    stats: { ...(next.stats ?? emptyStats()), peakPopulation: Math.max(next.stats?.peakPopulation ?? 0, LAST.population) },
+  };
 }
 
 // Build to Last: the three big problems, how each is going, and whether it's solved.
