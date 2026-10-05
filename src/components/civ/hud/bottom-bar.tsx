@@ -400,7 +400,7 @@ export function BottomBar() {
             title="Sell a building to make room. You get half its cost back."
             tone={selected === DEMOLISH_TOOL ? "bg-amber-400 text-[#2b2119]" : "bg-[#4a3b2e] hover:bg-[#5c4a3a]"}
           />
-          {!last && <TradeButton />}
+          <TradeButton />
           {/* Planting saplings comes with Early Farming. */}
           {state.researched.includes("early-farming") && (
             <ToolButton
