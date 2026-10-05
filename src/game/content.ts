@@ -3973,9 +3973,9 @@ export const LAST = {
   stars: [2025, 2050] as [number, number],
 };
 
-// Build to Last's guided start: four short steps with the pointing hand.
+// Build to Last's guided start: short steps with the pointing hand.
 export const LAST_TUTORIAL: { id: string; text: string; build?: string }[] = [
-  { id: "problems", text: "These are your three big problems. Click the first one to see how to solve it." },
+  { id: "problems", text: "Start with your people. Click Home and food to see the first steps." },
   { id: "townhouse", build: "townhouse", text: "Your people need homes. Build a Town House." },
   { id: "farm", build: "farm", text: "Everyone needs food. Build Farmland." },
   { id: "coalplant", build: "coalplant", text: "In 1850, power means coal. Build a Coal Plant: cheap power, but smoke and carbon." },

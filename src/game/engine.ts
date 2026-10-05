@@ -5336,7 +5336,7 @@ export function currentGoal(state: GameState): string | null {
     const p = lastProblems(state);
     const left = p.filter((x) => !x.done);
     return left.length
-      ? `Goal: solve the three big problems (${3 - left.length}/3). Next: ${left[0].title.toLowerCase()}.`
+      ? `First focus: ${left[0].title}. ${3 - left.length}/3 problems settled.`
       : `All three solved! Hold them for ${Math.max(0, Math.ceil(secs(LAST.hold - (state.lastHeld ?? 0))))}s.`;
   }
   if (state.tutorialStep < TUTORIAL.length || state.coach || state.phase !== "playing" || state.debrief) return null;
