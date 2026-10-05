@@ -43,3 +43,6 @@ next-env.d.ts
 # made by scripts/export-site.mjs (npm run site)
 /public/site/icons/
 /public/site/updates.js
+
+# local agent definitions
+/.github/agents/*.agent.md
