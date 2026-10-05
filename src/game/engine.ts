@@ -186,6 +186,7 @@ export type Action =
   | { type: "devFogBack" }
   | { type: "devXp" }
   | { type: "devOres" }
+  | { type: "devTired" }
   | { type: "launch"; project: string }
   | { type: "devTipping"; when: "soon" | "now" | "end" }
   | { type: "devTypeOne" }
@@ -5905,6 +5906,12 @@ function step(state: GameState, action: Action): GameState {
         lastBigTick: state.tick,
         log: [`${action.from} sent ${action.warriors} warriors to raid us! They land soon.`, ...state.log].slice(0, 30),
       };
+    }
+
+    case "devTired": {
+      // Worn out at once (to see the sweat and the warning), or rested again.
+      if (!state.dev) return state;
+      return { ...state, fatigue: (state.fatigue ?? 0) >= 50 ? 0 : 85 };
     }
 
     case "devOres": {

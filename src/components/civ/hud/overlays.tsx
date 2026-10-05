@@ -673,6 +673,9 @@ export function DevPanel() {
         >
           Golden deer
         </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devTired" })} title="Tired people sweat; click again to rest">
+          Tired
+        </button>
         <button
           type="button"
           className="pixel-btn bg-[#4a3b2e] px-2 py-1"

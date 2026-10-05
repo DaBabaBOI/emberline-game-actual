@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Tired people sweat: when your town is overworked, drops of sweat fly off your villagers' brows, more of them the more tired the town is.",
       "The project page moves: pixel clouds drift, embers rise, the title comes in line by line, the Play button glows, and the cards slide in as you scroll. It all stays still if your device asks for less motion.",
       "Watch the fights: when your warriors meet raiders, the camera goes in close over the battle (click to leave). In multiplayer, the raider gets a view of the fight, anyone else can choose to watch, and everyone hears how it ended.",
       "Hunters no longer jitter back and forth at rivers: they plan a way round the water, and only go after animals they can actually reach. Villagers who can't reach a log seat no longer sit on the bare ground by the fire.",

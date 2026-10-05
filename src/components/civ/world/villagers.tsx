@@ -3,8 +3,8 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
-import type { Group } from "three";
-import { TICK_SECONDS } from "@/game/content";
+import { Object3D, type Group, type InstancedMesh } from "three";
+import { TICK_SECONDS, WORK } from "@/game/content";
 import { hexDistance } from "@/game/hex";
 import { isLand } from "@/game/map";
 import type { Battle, Raid, Tile } from "@/game/types";
@@ -193,6 +193,7 @@ export function Villagers({
   sick = 0,
   era = 0,
   cameos = [],
+  tired = 0,
 }: {
   // Team members who joined the tribe (an easter egg): crowned, with a name tag.
   cameos?: string[];
@@ -206,6 +207,8 @@ export function Villagers({
   sick?: number;
   // Tile ids of campfires that are burning; people only gather at those.
   litFires: number[];
+  // How tired the town is (0–1): that share of people sweat.
+  tired?: number;
 }) {
   const walkers = useRef<Walker[]>([]);
   // The ones on the map right now (not away in the fog or lost).
@@ -299,6 +302,7 @@ export function Villagers({
   return (
     <>
       <Figures agents={shown} max={MAX_FIGURES} colorKey={`${sickFigures}|${era}`} group="people" />
+      <Sweat agents={shown} share={tired >= WORK.warnAt / 100 ? tired : 0} />
       {cameoAt.map((_, k) => (
         <group key={cameos[k]} ref={(el) => void (tags.current[k] = el)}>
           <Html zIndexRange={[12, 0]} center style={{ pointerEvents: "none" }}>
@@ -712,5 +716,48 @@ export function BattleScene({ tiles, battle, homeTile }: { tiles: Tile[]; battle
         <Figures agents={raiders} max={10} weapon="club" />
       )}
     </>
+  );
+}
+
+// Sweat on tired people (once the town is tired enough to be warned about it):
+// drops flick off the brow, one each side in turn, and fall. The share of
+// people sweating grows with how tired the town is.
+const DROPS = 2;
+const drop = new Object3D();
+function Sweat({ agents, share }: { agents: React.RefObject<Walker[]>; share: number }) {
+  const mesh = useRef<InstancedMesh>(null);
+  useFrame(({ clock }) => {
+    const m = mesh.current;
+    if (!m) return;
+    const t = clock.elapsedTime;
+    const list = agents.current ?? [];
+    let n = 0;
+    for (let i = 0; i < Math.min(list.length, MAX_FIGURES) && share > 0; i++) {
+      const w = list[i];
+      // The same people sweat from frame to frame; children and sitters rest.
+      if (w.child || w.sitting || w.held || hash(i + 31) > share) continue;
+      for (let k = 0; k < DROPS; k++) {
+        const life = ((t * 1.1 + w.phase * 0.37 + k * 0.5) % 1 + 1) % 1;
+        const side = k === 0 ? 1 : -1;
+        // Out from the side of the head, then down.
+        const out = 0.05 + life * 0.05;
+        const ax = Math.cos(w.heading) * side;
+        const az = -Math.sin(w.heading) * side;
+        drop.position.set(w.x + ax * out * w.scale, w.y + (0.5 - life * life * 0.3) * w.scale, w.z + az * out * w.scale);
+        const size = w.scale * (1 - life * 0.5);
+        drop.scale.set(size, size * 1.5, size);
+        drop.rotation.set(0, 0, 0);
+        drop.updateMatrix();
+        m.setMatrixAt(n++, drop.matrix);
+      }
+    }
+    m.count = n;
+    m.instanceMatrix.needsUpdate = true;
+  });
+  return (
+    <instancedMesh ref={mesh} args={[undefined, undefined, MAX_FIGURES * DROPS]} frustumCulled={false}>
+      <sphereGeometry args={[0.032, 6, 5]} />
+      <meshStandardMaterial color="#8fd3ff" emissive="#3aa0e0" emissiveIntensity={0.5} roughness={0.2} transparent opacity={0.9} />
+    </instancedMesh>
   );
 }

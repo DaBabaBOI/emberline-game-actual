@@ -420,6 +420,7 @@ export function WorldCanvas() {
         homeTile={home}
         litFires={burningIds}
         sick={state.population > 0 ? (state.sick ?? 0) / state.population : 0}
+        tired={(state.fatigue ?? 0) / 100}
         era={state.era}
         cameos={cameos}
       />
