@@ -1270,6 +1270,11 @@ export function everydayWater(state: GameState) {
   return state.mode !== "last" && state.era <= DRINKING.untilEra;
 }
 
+// Pottery & Storage (an Ancient advancement) would carry water for more: only
+// worth suggesting once it can be researched.
+const potteryHelps = (state: GameState) =>
+  !state.researched.includes("pottery") && state.era >= (TREE.find((n) => n.id === "pottery")?.era ?? 1);
+
 // How many people have water: every day in the Stone and Ancient Ages; later
 // only the drought tests it (springs, wells and aqueducts).
 export function waterSupply(state: GameState) {
@@ -2582,7 +2587,7 @@ export function warnings(state: GameState): Warning[] {
       out.push({
         id: "water",
         icon: "drop",
-        text: `${dry} ${dry === 1 ? "person has" : "people have"} no water nearby: build homes beside the river${state.researched.includes("pottery") ? "" : ", or research Pottery & Storage to carry water in jars"}. Thirsty people are unhappy and fall sick.`,
+        text: `${dry} ${dry === 1 ? "person has" : "people have"} no water nearby: build homes beside the river${potteryHelps(state) ? ", or research Pottery & Storage to carry water in jars" : ""}. Thirsty people are unhappy and fall sick.`,
         severe: dry >= state.population / 3,
       });
   }
@@ -3234,7 +3239,7 @@ export function meterBreakdown(state: GameState, key: MeterKey): MeterPart[] {
         value: -thirst * thirstMood(state),
         hint: everydayWater(state) ? "Everyone needs water every day." : "In the drought, water is everything.",
         fix: everydayWater(state)
-          ? `Build homes beside the river: their people always have water.${state.researched.includes("pottery") ? "" : " Pottery & Storage jars carry water for more."}`
+          ? `Build homes beside the river: their people always have water.${potteryHelps(state) ? " Pottery & Storage jars carry water for more." : ""}`
           : build("well", "water for more people."),
       },
       { label: plural(baths, "bathhouse"), value: baths * TOWN.bathsMood, hint: `+${TOWN.bathsMood} each, up to 2.` },
