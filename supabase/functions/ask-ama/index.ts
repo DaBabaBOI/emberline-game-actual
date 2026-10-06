@@ -7,7 +7,8 @@
 // Secret: supabase secrets set GEMINI_API_KEY=... (or Dashboard > Edge Functions > Secrets)
 
 const KEY = Deno.env.get("GEMINI_API_KEY");
-const MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash";
+// "gemini-flash-latest" always points at Google's current Flash model.
+const MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-flash-latest";
 
 const SYSTEM = `You are Elder Ama, the wise and kind elder in Emberline, a city-building game about making towns sustainable (UN Goal 11), played by school students.
 The player asks you about their town. You are given facts about it from the game.
@@ -63,15 +64,21 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: SYSTEM }] },
         contents: [{ role: "user", parts: [{ text: `TOWN FACTS:\n${town}\n\nTHE PLAYER ASKS: ${question}` }] }],
-        generationConfig: { maxOutputTokens: 220, temperature: 0.5, thinkingConfig: { thinkingBudget: 0 } },
+        generationConfig: { maxOutputTokens: 600, temperature: 0.5 },
         safetySettings: SAFETY,
       }),
     });
-    if (!res.ok) return json({ error: res.status === 429 ? "busy" : "failed" }, res.status === 429 ? 429 : 502);
+    if (!res.ok) {
+      // Gemini's reason, for the function's Logs tab (never the key).
+      console.error("Gemini", res.status, (await res.text()).slice(0, 500));
+      return json({ error: res.status === 429 ? "busy" : "failed", status: res.status }, res.status === 429 ? 429 : 502);
+    }
     const data = await res.json();
     const answer = (data.candidates?.[0]?.content?.parts ?? []).map((p: { text?: string }) => p.text ?? "").join("").trim();
+    if (!answer) console.error("Gemini gave no answer", JSON.stringify(data).slice(0, 500));
     return answer ? json({ answer }) : json({ error: "no answer" }, 502);
-  } catch {
+  } catch (e) {
+    console.error("Ask Ama failed", String(e));
     return json({ error: "failed" }, 502);
   }
 });
