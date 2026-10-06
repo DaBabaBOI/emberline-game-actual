@@ -17,6 +17,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "The build bar stays on the tab you pick. A guide or hint opens its card's tab once, then a glowing tab shows where the card is.",
       "Fixed a glitch where island name labels could flicker away when a game starts.",
       "The build bar keeps the tab you pick: it no longer jumps back when a hint appears or a building from another tab is in hand.",
       "Villagers now go to work on their own too: they walk to fields, workshops, schools, markets and temples and do the work there for a while (hoe, chop, hammer, read, carry or pray) before moving on.",

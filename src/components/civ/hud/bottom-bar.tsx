@@ -263,7 +263,15 @@ export function BottomBar() {
   const groups = GROUPS.filter((g) => eraBuildings.some((b) => groupOf(b.id) === g.id));
   // The hand's building, else the one in hand, else the tab picked.
   const holding = selected && eraBuildings.some((b) => b.id === selected) ? selected : undefined;
-  const showing = !grouped ? null : pointed ? groupOf(pointed) : holding ? groupOf(holding) : groups.some((g) => g.id === group) ? group : groups[0]?.id;
+  // A newly pointed or newly picked-up card opens its tab once; after that the
+  // player's own tab choice sticks, even while the hand keeps pointing.
+  const lead = pointed ?? holding;
+  const [followed, setFollowed] = useState<string | undefined>(undefined);
+  if (lead !== followed) {
+    setFollowed(lead);
+    if (lead) setGroup(groupOf(lead));
+  }
+  const showing = !grouped ? null : groups.some((g) => g.id === group) ? group : groups[0]?.id;
   const shownBuildings = showing ? eraBuildings.filter((b) => groupOf(b.id) === showing) : eraBuildings;
 
   return (
@@ -340,12 +348,13 @@ export function BottomBar() {
                 type="button"
                 role="tab"
                 aria-selected={showing === g.id}
-                onClick={() => {
-                  setGroup(g.id);
-                  // Put down a building from another tab, or the bar would jump back to it.
-                  if (holding && groupOf(holding) !== g.id) setSelected(null);
-                }}
-                className={cn("shrink-0 px-2 py-0.5", showing === g.id ? "bg-amber-400 text-[#2b2119]" : "bg-white/10 text-white/80 hover:bg-white/20")}
+                onClick={() => setGroup(g.id)}
+                className={cn(
+                  "shrink-0 px-2 py-0.5",
+                  showing === g.id ? "bg-amber-400 text-[#2b2119]" : "bg-white/10 text-white/80 hover:bg-white/20",
+                  // The card the hand points at is in this tab.
+                  pointed && showing !== g.id && groupOf(pointed) === g.id && "animate-pulse ring-2 ring-amber-300",
+                )}
                 data-testid={`build-group-${g.id}`}
               >
                 {g.label}
