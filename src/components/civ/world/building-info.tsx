@@ -133,7 +133,7 @@ export function BuildingInfo({
       {connections(state, tile).map((c) => (
         <p key={c.why} className="mt-1 flex gap-1.5 text-emerald-700" data-testid="building-connection">
           <PixelIcon name="star" size={12} />
-          Connected to the {c.with.map((id) => BUILDINGS_BY_ID[id]?.name ?? id).join(" and ")}: +{Math.round(c.bonus * 100)}% ({c.why})
+          Connected to the {c.with.map((id) => BUILDINGS_BY_ID[id]?.name ?? id).join(" and ")}: {c.room ? `+${c.room} room` : `+${Math.round(c.bonus * 100)}%`} ({c.why})
         </p>
       ))}
 

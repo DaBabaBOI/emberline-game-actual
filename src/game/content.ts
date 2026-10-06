@@ -3492,7 +3492,15 @@ export const CONNECTIONS: { building: string; to: string[]; bonus: number; max: 
   { building: "university", to: ["library", "school", "academy"], bonus: 0.1, max: 0.2, why: "teachers share books and ideas" },
   { building: "factory", to: ["station"], bonus: 0.2, max: 0.2, why: "goods go straight onto the train" },
   { building: "tradingpost", to: ["harbour", "dock"], bonus: 0.15, max: 0.15, why: "ships unload at the door" },
+  // Chains: the same kind side by side.
+  { building: "farm", to: ["farm"], bonus: 0.05, max: 0.1, why: "the fields share one ditch and one fence" },
+  { building: "windfarm", to: ["windfarm", "solarfarm"], bonus: 0.1, max: 0.2, why: "one line carries all their power to town" },
+  { building: "solarfarm", to: ["solarfarm", "windfarm"], bonus: 0.1, max: 0.2, why: "one line carries all their power to town" },
 ];
+
+// A street: a home touching `touching` other homes holds `share` more people
+// (at least one more).
+export const STREET = { homes: ["hut", "house", "townhouse", "apartments"], touching: 2, share: 0.1, why: "a street: shared walls keep the warmth in" };
 
 // When the stores hold plenty (`helpAbove` ticks of eating, about 4 minutes),
 // hunters leave the herds alone and gather wood at their camps; below

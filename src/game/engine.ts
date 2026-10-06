@@ -90,6 +90,7 @@ import {
   FALLOW,
   SCRAP,
   CONNECTIONS,
+  STREET,
   INVENTED,
   LAST_TUTORIAL,
   HISTORY,
@@ -990,7 +991,7 @@ export function housingCapacity(state: GameState) {
     room += (t.worn ?? 0) >= 1 ? Math.floor(housing / 2) : housing;
   }
   // Advancements (Reinforced Concrete, High-rises): every home holds more.
-  return BASE_HOUSING + Math.floor(room * (1 + boostOf(state, "housing")));
+  return BASE_HOUSING + Math.floor((room + streetRoom(state)) * (1 + boostOf(state, "housing")));
 }
 
 // The wild only has so much to give. The first gatherer camp gets a full
@@ -1136,14 +1137,26 @@ export function linkedAqueducts(state: GameState): Tile[] {
 // What a building here gets from the buildings it touches (CONNECTIONS).
 export function connections(state: GameState, tile: Tile, building = tile.building) {
   const next = state.tiles.filter((t) => t.building && t.id !== tile.id && hexDistance(t, tile) === 1);
-  const out: { with: string[]; bonus: number; why: string }[] = [];
+  const out: { with: string[]; bonus: number; room?: number; why: string }[] = [];
   for (const c of CONNECTIONS) {
     if (c.building !== building) continue;
     const touching = next.filter((t) => c.to.includes(t.building!));
     if (!touching.length) continue;
     out.push({ with: [...new Set(touching.map((t) => t.building!))], bonus: Math.min(c.max, c.bonus * touching.length), why: c.why });
   }
+  if (building && STREET.homes.includes(building)) {
+    const homes = next.filter((t) => STREET.homes.includes(t.building!));
+    const room = Math.max(1, Math.round(homeRoom({ ...tile, building }) * STREET.share));
+    if (homes.length >= STREET.touching) out.push({ with: [...new Set(homes.map((t) => t.building!))], bonus: 0, room, why: STREET.why });
+  }
   return out;
+}
+
+// Homes in a street (STREET): the extra room they hold between them.
+function streetRoom(state: GameState) {
+  return state.tiles
+    .filter((t) => t.building && STREET.homes.includes(t.building) && (t.worn ?? 0) < 1)
+    .reduce((sum, t) => sum + (connections(state, t).find((c) => c.room)?.room ?? 0), 0);
 }
 
 export function connectionBonus(state: GameState, tile: Tile) {
@@ -1153,13 +1166,19 @@ export function connectionBonus(state: GameState, tile: Tile) {
 // For the placement card: what this building would connect to here.
 export function connectionNote(state: GameState, tile: Tile, building: string): string | null {
   const parts = connections(state, tile, building).map(
-    (c) => `${c.with.map((id) => BUILDINGS_BY_ID[id]?.name ?? id).join(" and ")} next door: +${Math.round(c.bonus * 100)}% (${c.why})`,
+    (c) => `${c.with.map((id) => BUILDINGS_BY_ID[id]?.name ?? id).join(" and ")} next door: ${c.room ? `+${c.room} room` : `+${Math.round(c.bonus * 100)}%`} (${c.why})`,
   );
   // And what it would do for its neighbours.
   const helps = [...new Set(state.tiles
     .filter((t) => t.building && hexDistance(t, tile) === 1 && CONNECTIONS.some((c) => c.building === t.building && c.to.includes(building)))
     .map((t) => BUILDINGS_BY_ID[t.building!]?.name ?? t.building!))];
   if (helps.length) parts.push(`Helps the ${helps.join(" and ")} next door`);
+  // A home that turns the homes beside it into a street.
+  if (STREET.homes.includes(building)) {
+    const isHome = (t: Tile) => !!t.building && STREET.homes.includes(t.building) && t.id !== tile.id;
+    const joins = state.tiles.filter((t) => isHome(t) && hexDistance(t, tile) === 1 && state.tiles.filter((o) => isHome(o) && o.id !== t.id && hexDistance(o, t) === 1).length + 1 === STREET.touching);
+    if (joins.length) parts.push(`Makes a street with the home${joins.length > 1 ? "s" : ""} next door: they hold more people`);
+  }
   if (building === "aqueduct" && !touchesRiver(state, tile) && linkedAqueducts(state).some((t) => hexDistance(t, tile) === 1))
     parts.push(`Joins the aqueduct next to it and carries the river water further (+${WATER.chainPeople} people with water)`);
   return parts.length ? `Connects: ${parts.join(". ")}.` : null;
@@ -1178,6 +1197,12 @@ export function connectedPairs(state: GameState): [Tile, Tile, "water" | "path"]
         for (const b of built)
           if (c.to.includes(b.building!) && hexDistance(a, b) === 1 && !out.some(([x, y]) => (x.id === b.id && y.id === a.id) || (x.id === a.id && y.id === b.id)))
             out.push([a, b, "path"]);
+  // Streets: a path between touching homes when one of them is in a street.
+  const homes = built.filter((t) => STREET.homes.includes(t.building!));
+  for (let i = 0; i < homes.length; i++)
+    for (let j = i + 1; j < homes.length; j++)
+      if (hexDistance(homes[i], homes[j]) === 1 && [homes[i], homes[j]].some((h) => connections(state, h).some((c) => c.room)))
+        out.push([homes[i], homes[j], "path"]);
   return out;
 }
 
@@ -1773,8 +1798,11 @@ function gridTiles(state: GameState) {
   return state.tiles.filter((t) => t.building && !isFlooded(state, t) && wearFactor(t) > 0);
 }
 
+// Wind and solar farms side by side share one line to town (CONNECTIONS).
+const rowPower = (state: GameState, t: Tile) => (t.building === "windfarm" || t.building === "solarfarm" ? 1 + connectionBonus(state, t) : 1);
+
 export function powerSupply(state: GameState) {
-  return gridTiles(state).reduce((sum, t) => sum + Math.max(0, powerOf(state, t.building!)) * wearFactor(t), 0) + orbitPower(state);
+  return gridTiles(state).reduce((sum, t) => sum + Math.max(0, powerOf(state, t.building!)) * wearFactor(t) * rowPower(state, t), 0) + orbitPower(state);
 }
 
 export function powerDemand(state: GameState) {
@@ -1798,7 +1826,7 @@ export function cleanPower(state: GameState) {
   return (
     gridTiles(state)
       .filter((t) => powerOf(state, t.building!) > 0 && !BUILDINGS_BY_ID[t.building!].carbon)
-      .reduce((sum, t) => sum + powerOf(state, t.building!) * wearFactor(t), 0) + orbitPower(state)
+      .reduce((sum, t) => sum + powerOf(state, t.building!) * wearFactor(t) * rowPower(state, t), 0) + orbitPower(state)
   );
 }
 
