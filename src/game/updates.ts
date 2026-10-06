@@ -17,6 +17,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "An aqueduct that no river water reaches now looks dry, and its info says how to fix it: join it to the river with touching aqueducts.",
       "Chains give bonuses: a home touching two other homes is part of a street and holds 10% more people; fields side by side grow 5% more each (up to 10%); wind and solar farms side by side make 10% more power each (up to 20%).",
       "Buildings line up with their neighbours: aqueducts, canals and walls join into straight runs, homes and fields form neat rows, and partners like a farm and its granary face each other. The preview shows how it will sit before you place it.",
       "The build bar stays on the tab you pick. A guide or hint opens its card's tab once, then a glowing tab shows where the card is.",

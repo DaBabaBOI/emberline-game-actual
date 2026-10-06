@@ -12,7 +12,8 @@ import type { Tile } from "@/game/types";
 
 interface ModelProps {
   opacity: number;
-  // Campfires only: false when it has burned out.
+  // Campfires: false when it has burned out. Aqueducts: false when no river
+  // water reaches them (the channel runs dry).
   lit?: boolean;
 }
 
@@ -960,7 +961,7 @@ export function WellModel({ opacity }: ModelProps) {
 }
 
 // Stone arches carrying a water channel across the tile.
-export function AqueductModel({ opacity }: ModelProps) {
+export function AqueductModel({ opacity, lit = true }: ModelProps) {
   return (
     <group>
       {[-0.54, -0.18, 0.18, 0.54].map((x) => (
@@ -976,7 +977,7 @@ export function AqueductModel({ opacity }: ModelProps) {
       <Part color={STONE} opacity={opacity} position={[0, 0.56, 0]}>
         <boxGeometry args={[1.26, 0.1, 0.24]} />
       </Part>
-      <Part color={WATER} opacity={opacity} position={[0, 0.615, 0]} roughness={0.15}>
+      <Part color={lit ? WATER : "#a89b84"} opacity={opacity} position={[0, 0.615, 0]} roughness={lit ? 0.15 : 0.9}>
         <boxGeometry args={[1.24, 0.02, 0.12]} />
       </Part>
     </group>

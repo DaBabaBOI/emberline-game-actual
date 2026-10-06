@@ -43,6 +43,7 @@ import {
   scrapClearCost,
   scrapEra,
   soilOf,
+  linkedAqueducts,
 } from "@/game/engine";
 import { BuildingInfo } from "./building-info";
 import { useGame } from "@/components/civ/game-provider";
@@ -416,6 +417,7 @@ export function WorldCanvas() {
   // A battle is played out for a few ticks after it happens.
   const battleShowing = !!state.battle && state.tick - state.battle.tick < 7;
   const burningIds = burning.map((t) => t.id);
+  const wetIds = linkedAqueducts(state).map((t) => t.id);
   // The great drought: warned of (a little dry), then on (parched land, hazy sky).
   const dry = inDrought(state) ? 1 : state.drought ? 0.2 : 0;
   const plagueOn = inPlague(state);
@@ -549,7 +551,7 @@ export function WorldCanvas() {
                 <Model opacity={1} />
               </UnderConstruction>
             ) : (
-              <Model opacity={1} lit={t.building !== "campfire" || burningIds.includes(t.id)} />
+              <Model opacity={1} lit={t.building === "aqueduct" ? wetIds.includes(t.id) : t.building !== "campfire" || burningIds.includes(t.id)} />
             )}
             {(t.level ?? 1) >= 2 && <Plinth level={t.level!} />}
             {/* Tired soil looks dry and pale; a resting field grows over with grass. */}
