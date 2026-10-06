@@ -1,5 +1,5 @@
 import { AFTER_STEPS, BUILDINGS_BY_ID, ERAS, LAST_TUTORIAL, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL } from "@/game/content";
-import { buildingCost, countBuildings, placementError, placementHarm, scoutCost, spearmenOf, warriorCap } from "@/game/engine";
+import { buildingCost, countBuildings, everydayWater, placementError, placementHarm, scoutCost, spearmenOf, touchesRiver, warriorCap } from "@/game/engine";
 import { hexDistance } from "@/game/hex";
 import type { GameState, Resources } from "@/game/types";
 
@@ -27,6 +27,8 @@ function missing(state: GameState, cost: Partial<Resources>) {
 // never where it would do harm the card warns about (quarry dust on fields, a
 // fire scaring a gatherer's game...). A quarry goes as far from the village as
 // it can: its dust and scar belong away from where people live and farm.
+// In the Stone and Ancient Ages a home goes beside the river: its people
+// always have water there.
 export function suggestTile(state: GameState, buildingId: string) {
   const def = BUILDINGS_BY_ID[buildingId];
   const home = state.tiles[state.startTile];
@@ -38,7 +40,8 @@ export function suggestTile(state: GameState, buildingId: string) {
     const score =
       (far ? -d : d) -
       (def.depositBonus && t.deposit === def.depositBonus.deposit ? 2.5 : 0) +
-      (d === 0 ? 1 : 0) +
+      (d === 0 ? 1 : 0) -
+      (def.housing && everydayWater(state) && touchesRiver(state, t) ? 3 : 0) +
       // Never next to harm (smoke over homes, dust on fields): that costs a lot.
       placementHarm(state, t, buildingId) * 3;
     if (!best || score < best.score) best = { id: t.id, score };

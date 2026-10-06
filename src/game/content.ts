@@ -3952,8 +3952,8 @@ export const TUTORIAL: { text: string; more: string; done: string; unlocks: stri
     buys: ["woodcutter"],
   },
   {
-    text: "Now a roof. Build a Wooden House, away from the fire.",
-    more: "More homes let more families join us. Sparks can set wood alight, so leave a patch of ground between a house and a fire.",
+    text: "Now a roof. Build a Wooden House beside the river, away from the fire.",
+    more: "More homes let more families join us. People drink every day: a home touching the river always has water, while the springs only serve a few. Sparks can set wood alight, so leave a patch of ground between a house and a fire.",
     done: "hut",
     unlocks: ["hut"],
     buys: ["hut"],
