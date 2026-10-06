@@ -5776,7 +5776,11 @@ function step(state: GameState, action: Action): GameState {
       const byHome = (a: Tile, b: Tile) => hexDistance(a, home) - hexDistance(b, home);
       const clearOfFire = (t: Tile) => !tiles.some((f) => f.building === "campfire" && hexDistance(f, t) <= 1);
       if (!counts.hut) {
-        const spot = tiles.filter((t) => free(t, BUILDINGS_BY_ID.hut.terrain) && clearOfFire(t)).sort(byHome)[0];
+        // Beside the river if one is close, as the tutorial teaches: its people always have water.
+        const riverside = (t: Tile) => tiles.some((r) => r.terrain === "river" && hexDistance(r, t) === 1);
+        const spot = tiles
+          .filter((t) => free(t, BUILDINGS_BY_ID.hut.terrain) && clearOfFire(t))
+          .sort((a, b) => byHome(a, b) - (riverside(a) ? 3 : 0) + (riverside(b) ? 3 : 0))[0];
         if (spot) spot.building = "hut";
       }
       if (!counts.farm) {

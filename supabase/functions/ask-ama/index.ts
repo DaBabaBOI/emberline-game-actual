@@ -61,7 +61,8 @@ Deno.serve(async (req) => {
   const request = JSON.stringify({
     systemInstruction: { parts: [{ text: SYSTEM }] },
     contents: [{ role: "user", parts: [{ text: `TOWN FACTS:\n${town}\n\nTHE PLAYER ASKS: ${question}` }] }],
-    generationConfig: { maxOutputTokens: 600, temperature: 0.5 },
+    // Room for the model's thinking as well as the short answer.
+    generationConfig: { maxOutputTokens: 4096, temperature: 0.5 },
     safetySettings: SAFETY,
   });
   // Busy (503), out of quota (429) or gone (404): try again once, then the next model.
@@ -86,7 +87,14 @@ Deno.serve(async (req) => {
           return json({ error: "failed", status: res.status }, 502);
         }
         const data = await res.json();
-        const answer = (data.candidates?.[0]?.content?.parts ?? []).map((p: { text?: string }) => p.text ?? "").join("").trim();
+        const candidate = data.candidates?.[0];
+        let answer = (candidate?.content?.parts ?? [])
+          .filter((p: { thought?: boolean }) => !p.thought)
+          .map((p: { text?: string }) => p.text ?? "")
+          .join("")
+          .trim();
+        // Cut off at the length limit: keep the sentences that were finished.
+        if (candidate?.finishReason === "MAX_TOKENS") answer = answer.match(/^[\s\S]*[.!?]/)?.[0] ?? answer;
         if (answer) return json({ answer });
         console.error("Gemini gave no answer", model, JSON.stringify(data).slice(0, 300));
         break;

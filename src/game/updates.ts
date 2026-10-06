@@ -17,6 +17,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "The game waits while Elder Ama thinks about your question, and her answers no longer get cut off. Skipping the tutorial also puts your first house beside the river.",
       "The tutorial now teaches water: build your first house beside the river, where its people always have water. The guiding hand points at a riverside spot.",
       "People need water from the Stone Age on: the springs serve 10, homes beside the river always have water, and Pottery & Storage jars carry water for 10 more. Thirsty people are unhappy and fall sick; the water counter shows in the bar.",
       "Ask Elder Ama: type a question about your town and Ama answers (when the online helper is switched on; otherwise she gives the game's own advice).",

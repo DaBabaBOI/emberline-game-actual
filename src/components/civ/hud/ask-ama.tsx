@@ -13,7 +13,7 @@ const STARTERS = ["What should I do next?", "Why are people unhappy?", "How do I
 // Ask Elder Ama anything about your town (src/lib/ama.ts). Folded away to a
 // small button until opened.
 export function AskAma() {
-  const { state } = useGame();
+  const { state, setAsking } = useGame();
   const shot = useShot();
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
@@ -26,10 +26,12 @@ export function AskAma() {
     const text = q.trim();
     if (!text || busy) return;
     setBusy(true);
+    setAsking(true);
     setQuestion("");
     const res = await askAma(text, state);
     setReply({ q: text, ...res });
     setBusy(false);
+    setAsking(false);
   };
 
   if (!open)
@@ -60,7 +62,7 @@ export function AskAma() {
           <p className="leading-snug" data-testid="ask-ama-answer">{reply.answer}</p>
         </div>
       )}
-      {busy && <p className="text-xs text-stone-500" data-testid="ask-ama-thinking">Ama is thinking…</p>}
+      {busy && <p className="text-xs text-stone-500" data-testid="ask-ama-thinking">Ama is thinking… (the game waits)</p>}
       {!reply && !busy && (
         <div className="flex flex-wrap gap-1">
           {STARTERS.map((s) => (

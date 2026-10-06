@@ -25,6 +25,8 @@ interface GameContextValue {
   setSelected: (id: string | null) => void;
   panel: Panel;
   setPanel: (panel: Panel) => void;
+  // The game waits while Elder Ama thinks about a question (Ask Elder Ama).
+  setAsking: (asking: boolean) => void;
   // Whether time is passing, and how long a tick takes now (ms).
   clock: { running: boolean; msPerTick: number };
 }
@@ -47,6 +49,7 @@ export function GameProvider({
   const [state, dispatch] = useReducer(reducer, initial);
   const [selected, setSelected] = useState<string | null>(null);
   const [panel, setPanel] = useState<Panel>(null);
+  const [asking, setAsking] = useState(false);
 
   // Time stands still while the tutorial hand is guiding: the starting resources
   // cover every step exactly, so nothing should be eaten or burned meanwhile.
@@ -57,7 +60,8 @@ export function GameProvider({
     ((inTutorial && !state.dev) || (!inTutorial && !!state.coach)) && guideFor(state, selected, panel).waiting === null;
   // The world waits while the debrief is on screen.
   // ...and while a discovery scene plays.
-  const paused = !!state.debrief || !!state.cutscene;
+  // ...and while Elder Ama thinks about a question.
+  const paused = !!state.debrief || !!state.cutscene || asking;
 
   // First-time mode starts with a slower clock (tickSeconds).
   const perTick = tickSeconds(state);
@@ -82,7 +86,7 @@ export function GameProvider({
   }, [state, inTutorial]);
 
   return (
-    <GameContext.Provider value={{ state, dispatch, selected, setSelected, panel, setPanel, clock }}>
+    <GameContext.Provider value={{ state, dispatch, selected, setSelected, panel, setPanel, setAsking, clock }}>
       {children}
     </GameContext.Provider>
   );

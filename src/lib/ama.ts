@@ -64,6 +64,8 @@ export async function askAma(question: string, state: GameState): Promise<{ answ
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/${FUNCTION}`, {
       method: "POST",
+      // Never keep the player (and the paused game) waiting long.
+      signal: AbortSignal.timeout(20000),
       headers: { apikey: PUBLISHABLE_KEY, "Content-Type": "application/json" },
       body: JSON.stringify({ question: question.slice(0, 200), town: townSummary(state) }),
     });
