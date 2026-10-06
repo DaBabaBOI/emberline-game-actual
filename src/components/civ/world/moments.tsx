@@ -111,7 +111,7 @@ const FARM_STALKS = [-0.36, -0.18, 0, 0.18, 0.36].flatMap((z) => {
   return Array.from({ length: n }, (_, i) => ({ x: -span / 2 + (span / Math.max(1, n - 1)) * i, z }));
 });
 
-function Grow({ tile }: { tile: Tile }) {
+function Grow({ tile, tiles }: { tile: Tile; tiles: Tile[] }) {
   const field = useRef<Group>(null);
   const age = useAge();
   useFrame(({ clock }) => {
@@ -125,7 +125,7 @@ function Grow({ tile }: { tile: Tile }) {
     });
   });
   return (
-    <group rotation={[0, buildingTurn(tile.id), 0]} scale={BUILDING_SCALE}>
+    <group rotation={[0, buildingTurn(tile, tiles), 0]} scale={BUILDING_SCALE}>
       <group ref={field}>
         {FARM_STALKS.map((s, i) => (
           <group key={i} position={[s.x, 0.04, s.z]}>
@@ -239,7 +239,7 @@ function Bottle() {
   );
 }
 
-function Scene({ id, tile }: { id: string; tile: Tile }) {
+function Scene({ id, tile, tiles }: { id: string; tile: Tile; tiles: Tile[] }) {
   switch (id) {
     case "berries":
       return <Berries />;
@@ -248,7 +248,7 @@ function Scene({ id, tile }: { id: string; tile: Tile }) {
     case "gust":
       return <Wind color="#ffffff" opacity={0.8} />;
     case "grow":
-      return <Grow tile={tile} />;
+      return <Grow tile={tile} tiles={tiles} />;
     case "story":
       return <Rising color="#ffd23f" count={10} spread={0.5} size={0.05} speed={0.35} />;
     case "smoke":
@@ -276,7 +276,7 @@ export function SmallMoment({ state }: { state: GameState }) {
   return (
     // Keyed by when it began, so each moment starts its animation fresh.
     <group key={`${m.id}-${m.tick}`} position={[tile.x, top, tile.z]}>
-      <Scene id={m.id} tile={tile} />
+      <Scene id={m.id} tile={tile} tiles={state.tiles} />
       {label && (
         <Html zIndexRange={[13, 0]} center position={[0, 2.9, 0]} style={{ pointerEvents: "none" }}>
           <div className="pixel-panel font-pixel flex items-center gap-1 whitespace-nowrap px-2 py-0.5 text-xs" data-testid="moment-label">

@@ -17,6 +17,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Buildings line up with their neighbours: aqueducts, canals and walls join into straight runs, homes and fields form neat rows, and partners like a farm and its granary face each other. The preview shows how it will sit before you place it.",
       "The build bar stays on the tab you pick. A guide or hint opens its card's tab once, then a glowing tab shows where the card is.",
       "Fixed a glitch where island name labels could flicker away when a game starts.",
       "The build bar keeps the tab you pick: it no longer jumps back when a hint appears or a building from another tab is in hand.",

@@ -54,6 +54,7 @@ import { useGuide } from "@/components/civ/hud/guide-overlay";
 import type { GameState, Tile } from "@/game/types";
 import { BiomeDetails, Deposits, Forests, HexTerrain, Mountains, tileTop, treeSpots } from "./hex-terrain";
 import { BUILDING_SCALE, MODELS, buildingTurn } from "./building-models";
+import { turnFor } from "./facing";
 import { BattleScene, FireVictims, Raiders, Villagers, Warriors } from "./villagers";
 import { PickUp } from "./pick-up";
 import { SeaTraffic, TradeShips, WaitingShips } from "./trade";
@@ -539,7 +540,7 @@ export function WorldCanvas() {
           <group
             key={t.id}
             position={[t.x, t.height, t.z]}
-            rotation={[broken ? 0.12 : 0, buildingTurn(t.id), broken ? 0.1 : 0]}
+            rotation={[broken ? 0.12 : 0, buildingTurn(t, state.tiles), broken ? 0.1 : 0]}
             scale={BUILDING_SCALE}
           >
             {state.landmark?.tile === t.id && !landmarkDone(state) ? (
@@ -724,7 +725,10 @@ export function WorldCanvas() {
       )}
       {hoverTile && Ghost && (
         <group position={[hoverTile.x, tileTop(hoverTile), hoverTile.z]} scale={BUILDING_SCALE}>
-          <Ghost opacity={0.45} />
+          {/* Turned the way it will stand, lined up with its neighbours. */}
+          <group rotation={[0, turnFor(state.tiles, hoverTile, def?.id), 0]}>
+            <Ghost opacity={0.45} />
+          </group>
           <Html
             // In the tutorial the card sits above the dimming so it can be read.
             zIndexRange={state.tutorialStep < TUTORIAL.length ? [40, 30] : [15, 0]}

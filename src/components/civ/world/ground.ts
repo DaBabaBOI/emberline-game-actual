@@ -70,7 +70,7 @@ export function makeGround(tiles: Tile[]): Ground {
         }
         // No trees left to fell: split logs at the chopping block, standing
         // on its outer side (the yard itself is kept clear for walking).
-        const block = onBuilding(tile, CHOPPING_BLOCK.x, CHOPPING_BLOCK.z);
+        const block = onBuilding(tile, CHOPPING_BLOCK.x, CHOPPING_BLOCK.z, tiles);
         const out = Math.atan2(block.z - tile.z, block.x - tile.x) + (Math.random() - 0.5) * 0.8;
         const d = CHOPPING_BLOCK.r * BUILDING_SCALE + 0.12;
         return { x: block.x + Math.cos(out) * d, z: block.z + Math.sin(out) * d, face: block };

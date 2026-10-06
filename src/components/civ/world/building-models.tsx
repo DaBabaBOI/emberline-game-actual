@@ -7,6 +7,8 @@ import { Part } from "./part";
 import { MEDIEVAL_MODELS } from "./medieval-models";
 import { INDUSTRIAL_MODELS } from "./industrial-models";
 import { FUTURE_MODELS } from "./future-models";
+import { buildingTurn } from "./facing";
+import type { Tile } from "@/game/types";
 
 interface ModelProps {
   opacity: number;
@@ -262,14 +264,14 @@ export function GathererModel({ opacity }: ModelProps) {
   );
 }
 
-// Buildings are drawn this much bigger on the map, and turned by a sixth of a
-// circle per tile id (world-canvas.tsx), so each one faces its own way.
+// Buildings are drawn this much bigger on the map, each turned its own way or
+// lined up with its neighbours (facing.ts).
 export const BUILDING_SCALE = 1.55;
-export const buildingTurn = (tileId: number) => (tileId % 6) * (Math.PI / 3);
+export { buildingTurn } from "./facing";
 
 // Where a point in a building's model is on the map (y ignored).
-export function onBuilding(tile: { id: number; x: number; z: number }, x: number, z: number) {
-  const a = buildingTurn(tile.id);
+export function onBuilding(tile: Tile, x: number, z: number, tiles?: Tile[]) {
+  const a = buildingTurn(tile, tiles);
   return {
     x: tile.x + (x * Math.cos(a) + z * Math.sin(a)) * BUILDING_SCALE,
     z: tile.z + (-x * Math.sin(a) + z * Math.cos(a)) * BUILDING_SCALE,
