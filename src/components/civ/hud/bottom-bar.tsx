@@ -15,6 +15,7 @@ import {
   shipCost,
   shipError,
   waterSupply,
+  everydayWater,
   consumption,
   countBuildings,
   defenseBreakdown,
@@ -329,8 +330,16 @@ export function BottomBar() {
               rain {Math.round(rainfall(state) * 100)}%
             </span>
           )}
-          {state.era >= 2 && waterSupply(state) < state.population && (
-            <Stat icon="drop" title="Water in a dry year: springs, wells and aqueducts, for this many people" bad={waterSupply(state) < state.population}>
+          {((everydayWater(state) && !inTutorial) || (state.era >= 2 && waterSupply(state) < state.population)) && (
+            <Stat
+              icon="drop"
+              title={
+                everydayWater(state)
+                  ? "People with water: the springs, homes beside the river and (with Pottery) jars. Everyone drinks every day."
+                  : "Water in a dry year: springs, wells and aqueducts, for this many people"
+              }
+              bad={waterSupply(state) < state.population}
+            >
               {Math.min(waterSupply(state), Math.floor(state.population))}/{Math.floor(state.population)}
             </Stat>
           )}

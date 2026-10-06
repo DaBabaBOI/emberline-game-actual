@@ -1,5 +1,6 @@
 "use client";
 
+import { AskAma } from "./hud/ask-ama";
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
 import { clearSave, loadGame, newGame, type NewGameOptions } from "@/game/engine";
@@ -115,6 +116,7 @@ function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null 
             <CoachPanel />
             <ElderLesson />
           <HintPanel />
+            <AskAma />
           </div>
           <div className="flex flex-col items-end gap-2 lg:absolute lg:right-16 lg:top-20 lg:w-64">
             {match && <MultiplayerPanel match={match} />}

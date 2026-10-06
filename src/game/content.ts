@@ -3631,6 +3631,12 @@ export const ANCIENT_DEADLINE: Record<string, number> = { first: 30 * 40, easy: 
 // Sustainability each). Aqueducts water fields within `aqueductReach` (+`aqueductFarm`);
 // watermills grind for fields within `millReach` (+`millFarm`).
 export const WATER = { chainPeople: 10, base: 10, well: 12, aqueduct: 40, wellsFree: 4, wellSustain: 2, aqueductReach: 3, aqueductFarm: 0.2, millReach: 2, millFarm: 0.25 };
+// Everyday water in the Stone and Ancient Ages (up to era `untilEra`): the
+// springs by the camp give water for `WATER.base` people, every home touching
+// the river for everyone living in it, and Pottery & Storage jars carry water
+// for `pots` more. People without water lose up to `thirstMood` happiness and
+// fall sick more often.
+export const DRINKING = { untilEra: 1, pots: 10, thirstMood: 8 };
 
 // Towns: each Public Latrine keeps the streets clean for `latrine` people and each
 // Bathhouse for `baths`. With Town Houses standing, the share of people without

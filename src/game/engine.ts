@@ -90,6 +90,7 @@ import {
   FALLOW,
   SCRAP,
   CONNECTIONS,
+  DRINKING,
   STREET,
   INVENTED,
   LAST_TUTORIAL,
@@ -1173,6 +1174,7 @@ export function connectionNote(state: GameState, tile: Tile, building: string): 
     .filter((t) => t.building && hexDistance(t, tile) === 1 && CONNECTIONS.some((c) => c.building === t.building && c.to.includes(building)))
     .map((t) => BUILDINGS_BY_ID[t.building!]?.name ?? t.building!))];
   if (helps.length) parts.push(`Helps the ${helps.join(" and ")} next door`);
+  if (everydayWater(state) && BUILDINGS_BY_ID[building]?.housing && touchesRiver(state, tile)) parts.push("Beside the river: its people always have water");
   // A home that turns the homes beside it into a street.
   if (STREET.homes.includes(building)) {
     const isHome = (t: Tile) => !!t.building && STREET.homes.includes(t.building) && t.id !== tile.id;
@@ -1262,8 +1264,19 @@ export function farmFactor(state: GameState, tile: Tile) {
   return rest * canal * mill * wind * plough * silt * (watered ? 1 + WATER.aqueductFarm : 1) * water * (seedEaten(state) ? 1 - FAMINE.seed.farmLoss : 1);
 }
 
-// How many people have water in the drought: springs, wells and aqueducts.
+// Stone and Ancient Ages: people drink every day (DRINKING), from the springs,
+// homes beside the river and, with Pottery, water carried in jars.
+export function everydayWater(state: GameState) {
+  return state.mode !== "last" && state.era <= DRINKING.untilEra;
+}
+
+// How many people have water: every day in the Stone and Ancient Ages; later
+// only the drought tests it (springs, wells and aqueducts).
 export function waterSupply(state: GameState) {
+  if (everydayWater(state)) {
+    const riverside = state.tiles.filter((t) => homeRoom(t) > 0 && touchesRiver(state, t)).reduce((sum, t) => sum + homeRoom(t), 0);
+    return WATER.base + riverside + (state.researched.includes("pottery") ? DRINKING.pots : 0);
+  }
   const c = countBuildings(state);
   const linked = linkedAqueducts(state);
   // Aqueducts joined in a chain bring a little more water each.
@@ -1271,9 +1284,16 @@ export function waterSupply(state: GameState) {
   return WATER.base + (c.well ?? 0) * WATER.well + linked.length * WATER.aqueduct + chained * WATER.chainPeople;
 }
 
-// Share of the town with no water (only in the drought; rain and the river are enough otherwise).
+// How much a town with no water at all loses in happiness.
+const thirstMood = (state: GameState) => (everydayWater(state) ? DRINKING.thirstMood : DROUGHT.thirstMood);
+
+// Share of the town with no water: every day in the Stone and Ancient Ages
+// (after the tutorial), later only in the drought.
 export function thirstShare(state: GameState) {
-  if (!inDrought(state) || state.population <= 0) return 0;
+  if (state.population <= 0) return 0;
+  if (everydayWater(state)) {
+    if (state.tutorialStep < TUTORIAL.length) return 0;
+  } else if (!inDrought(state)) return 0;
   return Math.max(0, 1 - waterSupply(state) / state.population);
 }
 
@@ -2433,7 +2453,7 @@ function gapFactor(state: GameState) {
 }
 
 export interface Warning {
-  id: "fire" | "food" | "wood" | "famine" | "tired" | "unrest" | "collapse" | "behind" | "land" | "sick" | "rain" | "wear" | "roof" | "hostile-steppe" | "hostile-reach" | "soil" | "deadline";
+  id: "fire" | "food" | "wood" | "famine" | "tired" | "unrest" | "collapse" | "behind" | "land" | "sick" | "rain" | "wear" | "roof" | "hostile-steppe" | "hostile-reach" | "soil" | "deadline" | "water";
   icon: IconId;
   text: string;
   // Ticks left on the countdown in the text; "{secs}" in the text is where it goes.
@@ -2553,6 +2573,18 @@ export function warnings(state: GameState): Warning[] {
       text: `Your people are worn out: ${w.needed} jobs, ${w.workers} people free to work (the sick can't; warriors help half the time). They make ${Math.round(fatigueLoss(state) * 100)}% less and are unhappier. Grow the town, train fewer warriors, remove buildings you don't need, or learn Rest Days.`,
       severe: (state.fatigue ?? 0) >= 70,
     });
+  }
+
+  // Stone and Ancient Ages: people need water every day.
+  if (everydayWater(state)) {
+    const dry = Math.floor(state.population) - waterSupply(state);
+    if (dry > 0)
+      out.push({
+        id: "water",
+        icon: "drop",
+        text: `${dry} ${dry === 1 ? "person has" : "people have"} no water nearby: build homes beside the river${state.researched.includes("pottery") ? "" : ", or research Pottery & Storage to carry water in jars"}. Thirsty people are unhappy and fall sick.`,
+        severe: dry >= state.population / 3,
+      });
   }
 
   // People with no roof over their heads: say why, if a home was just lost.
@@ -3000,7 +3032,7 @@ export function meterBreakdown(state: GameState, key: MeterKey): MeterPart[] {
     if (thirst > 0) {
       const before = Math.min(making + stored, state.resources.food <= 0 ? Math.min(making + stored, 5) : making + stored);
       parts.push({
-        label: `${Math.round(thirst * 100)}% without water in the drought`,
+        label: `${Math.round(thirst * 100)}% without water${everydayWater(state) ? "" : " in the drought"}`,
         value: -before * 0.3 * thirst,
         hint: "In the drought, only springs, wells and aqueducts keep water flowing.",
         fix: buildFirst([
@@ -3199,9 +3231,11 @@ export function meterBreakdown(state: GameState, key: MeterKey): MeterPart[] {
       },
       {
         label: `${Math.round(thirst * 100)}% thirsty`,
-        value: -thirst * DROUGHT.thirstMood,
-        hint: "In the drought, water is everything.",
-        fix: build("well", "water for more people."),
+        value: -thirst * thirstMood(state),
+        hint: everydayWater(state) ? "Everyone needs water every day." : "In the drought, water is everything.",
+        fix: everydayWater(state)
+          ? `Build homes beside the river: their people always have water.${state.researched.includes("pottery") ? "" : " Pottery & Storage jars carry water for more."}`
+          : build("well", "water for more people."),
       },
       { label: plural(baths, "bathhouse"), value: baths * TOWN.bathsMood, hint: `+${TOWN.bathsMood} each, up to 2.` },
       {
@@ -3529,7 +3563,7 @@ export function computeMeters(state: GameState): Meters {
     sickShare(state) * 30 -
     (state.famineTicks > 0 ? FAMINE.happiness : 0) -
     homelessMood(state) -
-    thirst * DROUGHT.thirstMood +
+    thirst * thirstMood(state) +
     Math.min(2, counts.baths ?? 0) * TOWN.bathsMood +
     Math.min(BELIEFS.max, counts.shrine ?? 0) * BELIEFS.shrineMood +
     Math.min(BELIEFS.max, counts.temple ?? 0) * BELIEFS.templeMood +

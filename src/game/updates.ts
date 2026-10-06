@@ -17,6 +17,8 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "People need water from the Stone Age on: the springs serve 10, homes beside the river always have water, and Pottery & Storage jars carry water for 10 more. Thirsty people are unhappy and fall sick; the water counter shows in the bar.",
+      "Ask Elder Ama: type a question about your town and Ama answers (when the online helper is switched on; otherwise she gives the game's own advice).",
       "An aqueduct that no river water reaches now looks dry, and its info says how to fix it: join it to the river with touching aqueducts.",
       "Chains give bonuses: a home touching two other homes is part of a street and holds 10% more people; fields side by side grow 5% more each (up to 10%); wind and solar farms side by side make 10% more power each (up to 20%).",
       "Buildings line up with their neighbours: aqueducts, canals and walls join into straight runs, homes and fields form neat rows, and partners like a farm and its granary face each other. The preview shows how it will sit before you place it.",
