@@ -2,7 +2,8 @@
 // Gemini, and Ama's answer comes back. The Gemini key stays here, as the
 // project secret GEMINI_API_KEY; it never ships in the game's page.
 //
-// Deploy: supabase functions deploy ask-ama --no-verify-jwt
+// Deployed as "clever-endpoint" (src/lib/ama.ts calls that name), with JWT
+// verification off: supabase functions deploy clever-endpoint --no-verify-jwt
 // Secret: supabase secrets set GEMINI_API_KEY=... (or Dashboard > Edge Functions > Secrets)
 
 const KEY = Deno.env.get("GEMINI_API_KEY");

@@ -1,5 +1,5 @@
 // Ask Elder Ama: sends the player's question and a short summary of their town
-// to the ask-ama function (supabase/functions/ask-ama), which asks Gemini.
+// to the Edge Function (supabase/functions/ask-ama, deployed as FUNCTION), which asks Gemini.
 // Offline, or when it isn't set up, Ama falls back to the game's own advice.
 import { BUILDINGS, CONNECTIONS, ERAS, STREET, TREE } from "@/game/content";
 import {
@@ -18,6 +18,9 @@ import {
 import type { GameState } from "@/game/types";
 import { isOffensive } from "./names";
 import { PUBLISHABLE_KEY, SUPABASE_URL } from "./online";
+
+// The Supabase Edge Function holding the Gemini key (supabase/functions/ask-ama).
+const FUNCTION = "clever-endpoint";
 
 const name = (id: string) => BUILDINGS.find((b) => b.id === id)?.name ?? id;
 const round = (n: number) => Math.round(n * 10) / 10;
@@ -59,7 +62,7 @@ function fallback(state: GameState) {
 export async function askAma(question: string, state: GameState): Promise<{ answer: string; offline: boolean }> {
   if (isOffensive(question)) return { answer: "Let us keep our words kind around the fire. What would you like to know about the town?", offline: true };
   try {
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/ask-ama`, {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/${FUNCTION}`, {
       method: "POST",
       headers: { apikey: PUBLISHABLE_KEY, "Content-Type": "application/json" },
       body: JSON.stringify({ question: question.slice(0, 200), town: townSummary(state) }),
