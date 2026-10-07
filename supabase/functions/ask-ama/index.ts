@@ -7,9 +7,11 @@
 // Secret: supabase secrets set GEMINI_API_KEY=... (or Dashboard > Edge Functions > Secrets)
 
 const KEY = Deno.env.get("GEMINI_API_KEY");
-// Google's current Flash model first; when it is busy (free models often are)
-// or missing, the lighter ones. The "-latest" names always point at a current model.
-const MODELS = [Deno.env.get("GEMINI_MODEL") ?? "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.5-flash-lite"];
+// Fast, lightly used models first (Flash-Lite answers in a second or two and is
+// rarely overloaded on the free tier), the bigger Flash last. Each gets
+// PER_MODEL_MS before the next is tried, so Ama never keeps a player waiting.
+const MODELS = [Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash-lite", "gemini-flash-lite-latest", "gemini-flash-latest"];
+const PER_MODEL_MS = 8000;
 
 const SYSTEM = `You are Elder Ama, the wise and kind elder in Emberline, a city-building game about making towns sustainable (UN Goal 11), played by school students.
 The player asks you about their town. You are given facts about it from the game.
@@ -65,43 +67,36 @@ Deno.serve(async (req) => {
     generationConfig: { maxOutputTokens: 4096, temperature: 0.5 },
     safetySettings: SAFETY,
   });
-  // Busy (503), out of quota (429) or gone (404): try again once, then the next model.
+  // Busy (503), out of quota (429), gone (404) or too slow: the next model.
   let last = 0;
-  for (const model of MODELS)
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-goog-api-key": KEY },
-          body: request,
-        });
-        if (!res.ok) {
-          last = res.status;
-          // Gemini's reason, for the function's Logs tab (never the key).
-          console.error("Gemini", model, res.status, (await res.text()).slice(0, 300));
-          if (res.status === 503 && attempt === 0) {
-            await new Promise((r) => setTimeout(r, 800));
-            continue;
-          }
-          if ([404, 429, 500, 503].includes(res.status)) break;
-          return json({ error: "failed", status: res.status }, 502);
-        }
-        const data = await res.json();
-        const candidate = data.candidates?.[0];
-        let answer = (candidate?.content?.parts ?? [])
-          .filter((p: { thought?: boolean }) => !p.thought)
-          .map((p: { text?: string }) => p.text ?? "")
-          .join("")
-          .trim();
-        // Cut off at the length limit: keep the sentences that were finished.
-        if (candidate?.finishReason === "MAX_TOKENS") answer = answer.match(/^[\s\S]*[.!?]/)?.[0] ?? answer;
-        if (answer) return json({ answer });
-        console.error("Gemini gave no answer", model, JSON.stringify(data).slice(0, 300));
-        break;
-      } catch (e) {
-        console.error("Ask Ama failed", model, String(e));
-        break;
+  for (const model of MODELS) {
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": KEY },
+        body: request,
+        signal: AbortSignal.timeout(PER_MODEL_MS),
+      });
+      if (!res.ok) {
+        last = res.status;
+        // Gemini's reason, for the function's Logs tab (never the key).
+        console.error("Gemini", model, res.status, (await res.text()).slice(0, 300));
+        continue;
       }
+      const data = await res.json();
+      const candidate = data.candidates?.[0];
+      let answer = (candidate?.content?.parts ?? [])
+        .filter((p: { thought?: boolean }) => !p.thought)
+        .map((p: { text?: string }) => p.text ?? "")
+        .join("")
+        .trim();
+      // Cut off at the length limit: keep the sentences that were finished.
+      if (candidate?.finishReason === "MAX_TOKENS") answer = answer.match(/^[\s\S]*[.!?]/)?.[0] ?? answer;
+      if (answer) return json({ answer });
+      console.error("Gemini gave no answer", model, JSON.stringify(data).slice(0, 300));
+    } catch (e) {
+      console.error("Ask Ama failed", model, String(e));
     }
+  }
   return json({ error: last === 429 || last === 503 ? "busy" : "failed", status: last }, last === 429 || last === 503 ? 429 : 502);
 });
