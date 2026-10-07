@@ -1,5 +1,6 @@
 "use client";
 
+import { setHoveredBuilding } from "@/components/civ/world/hovered";
 import { useState, type ReactNode } from "react";
 import { BUILDINGS, CANOE, ERAS, LAST, SPACE, TRADE, LOW_WOOD_AFTER_BUY, PLANT_COST, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL, WARRIORS_PER_CAMP } from "@/game/content";
 import {
@@ -362,7 +363,7 @@ export function BottomBar() {
               icon="drop"
               title={
                 everydayWater(state)
-                  ? "People with water: the springs, homes beside the river and (with Pottery) jars. Everyone drinks every day."
+                  ? "People with water: the springs, homes near the river, wells and (with Pottery) jars. Everyone drinks every day."
                   : "Water in a dry year: springs, wells and aqueducts, for this many people"
               }
               bad={waterSupply(state) < state.population}
@@ -412,6 +413,10 @@ export function BottomBar() {
                 data-guide={`build-${b.id}`}
                 disabled={!unlocked || usedUp}
                 onClick={() => setSelected(active ? null : b.id)}
+                onPointerEnter={() => setHoveredBuilding(b.id)}
+                onPointerLeave={() => setHoveredBuilding(null)}
+                onFocus={() => setHoveredBuilding(b.id)}
+                onBlur={() => setHoveredBuilding(null)}
                 title={
                   usedUp
                     ? "Only one of each during the tutorial"
@@ -454,6 +459,17 @@ export function BottomBar() {
             tone={selected === DEMOLISH_TOOL ? "bg-amber-400 text-[#2b2119]" : "bg-[#4a3b2e] hover:bg-[#5c4a3a]"}
           />
           <TradeButton />
+          {/* Planned buildings waiting for resources: how many, and cancel them all. */}
+          {(state.plans?.length ?? 0) > 0 && (
+            <ToolButton
+              guide="tool-plans"
+              icon="scroll"
+              label={`Plans ${state.plans!.length}`}
+              onClick={() => dispatch({ type: "unplanAll" })}
+              title={`Planned: ${state.plans!.map((p) => BUILDINGS.find((b) => b.id === p.building)?.name ?? p.building).join(", ")}. Each is built by itself, in order, as soon as you can afford it. Click to cancel all plans (or click a planned tile with the same building to cancel just that one).`}
+              tone="bg-[#5b4a2e] hover:bg-[#6b5836]"
+            />
+          )}
           {/* Clearing whole patches of forest into open land. */}
           {!inTutorial && (
             <ToolButton

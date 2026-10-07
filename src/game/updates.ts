@@ -17,6 +17,12 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Plan ahead: click to place a building you can't afford yet and it is planned (see-through). It builds itself, in order, once you have the resources. The Plans button cancels them.",
+      "Hover a building card in the bar to see every one of that building on the map.",
+      "Tidier towns: buildings in a cluster turn to face the middle of town.",
+      "Real-world water: wells dig to groundwater and go anywhere (from Pottery). Aqueducts start at fresh water (river, marsh or a mountain spring), never the salty sea, and join arch by arch. Homes up to 2 tiles from the river have water.",
+      "Tired fields now have an orange ring and flag. A conquered kingdom no longer sends envoys, and tribute is smaller.",
+      "Villagers sit properly on the campfire logs.",
       "Raids: the fight starts the moment raiders meet your warriors (no more standing around), runs at game speed, and is shorter. Raiders gather on the beach, then charge in.",
       "Outposts count as home: build anything on islands you have settled, with no coin upkeep and no port needed.",
       "New Clear tool: click a forest to turn it and the forest touching it into grassland at once (+wood, small Sustainability cost). Farmland looks like real golden fields now, and no more flames inside rebuilt huts.",

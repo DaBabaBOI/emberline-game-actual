@@ -522,6 +522,8 @@ export interface GameState {
   forestBaseline: number;
   soldiers: number;
   raid: Raid | null;
+  // Planned buildings, oldest first: each is built by itself as soon as we can afford it.
+  plans?: { tile: number; building: string }[];
   // Raids seen so far (the first is always a small band), and a dev-chosen next kind.
   raidsSeen?: number;
   devNextRaid?: RaidKind;

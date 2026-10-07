@@ -434,18 +434,19 @@ export const BUILDINGS: BuildingDef[] = [
     gain: "Clean water for 12 people, even in a drought",
     landCost: "Draws down the water under the ground: past 4 wells the land around them dries out",
     landImpact: 1,
-    era: 2,
+    era: 1,
     cost: { stone: 8, wood: 6 },
-    terrain: ["grass", "steppe"],
-    requires: "hydraulics",
+    // Dug down to the water under the ground: no river or lake needed nearby.
+    terrain: ["grass", "steppe", "hills"],
+    requires: "pottery",
   },
   {
     id: "aqueduct",
     name: "Aqueduct",
     icon: "aqueduct",
-    description: "Stone arches that carry river water into town and out to the fields. Must touch the river.",
+    description: "Stone arches that carry fresh water downhill into town and out to the fields. Must start at fresh water (the river, a marsh, or a spring at the foot of a mountain) and can be joined on, arch by arch, from there. Not the sea: it is salty.",
     gain: "Water for 40 people; fields within 3 tiles grow 20% more, and keep most of their harvest in a drought",
-    landCost: "Takes water from the river: fish and marshes downstream suffer",
+    landCost: "Takes water from the river and springs: fish and marshes downstream suffer",
     landImpact: 2,
     era: 2,
     cost: { stone: 30, wood: 10, currency: 30 },
@@ -1089,12 +1090,12 @@ export const TREE: TreeNode[] = [
   {
     id: "pottery",
     name: "Pottery & Storage",
-    description: "Fired jars keep grain dry and safe. Unlocks the Granary.",
+    description: "Fired jars keep grain dry and carry water. Unlocks the Granary and the Well.",
     branch: "construction",
     era: 1,
     cost: 20,
     requires: ["agriculture"],
-    unlocks: ["granary"],
+    unlocks: ["granary", "well"],
   },
   {
     id: "bronze",
@@ -1149,12 +1150,12 @@ export const TREE: TreeNode[] = [
   {
     id: "hydraulics",
     name: "Water Engineering",
-    description: "Dig down to the water under the ground. Unlocks the Well.",
+    description: "Deeper wells with stone linings: each Well gives water for 6 more people.",
     branch: "energy",
     era: 2,
     cost: 20,
     requires: ["irrigation"],
-    unlocks: ["well"],
+    unlocks: [],
   },
   {
     id: "watermill",
@@ -1869,7 +1870,7 @@ export const AFTER_STEPS: Record<string, AfterStep> = {
   coinage: { text: "Silver coins! Traders take them anywhere. Once the Roman legion is beaten and we are 35 people, we can enter the Classical era. Watch the goal at the top of the screen." },
   hydraulics: { build: "well", text: "We can dig down to the water under our feet. Dig a Well: clean water for 12 people, even when the rain fails. But too many wells drain the ground dry." },
   watermill: { build: "watermill", text: "Place a Watermill on the river bank: the river turns the millstones, and the fields near it give more. Its dam blocks the fish." },
-  concrete: { build: "aqueduct", text: "Stone and lime that sets even under water! Build an Aqueduct touching the river: it carries water to 40 people and out to the fields. The river pays for it." },
+  concrete: { build: "aqueduct", text: "Stone and lime that sets even under water! Build an Aqueduct touching the river, a marsh or a mountain spring: it carries water to 40 people and out to the fields. The river pays for it." },
   planning: { build: "townhouse", text: "Straight streets and tall houses. Build a Town House: room for 24 people on one tile. A packed town spreads sickness, so plan for latrines too." },
   sanitation: { build: "latrine", text: "Build Public Latrines: drains carry the waste away, and sickness spreads far less in town. The waste still ends up downstream." },
   wheel: { build: "market", text: "Wheels and carts! Build a Market: traders bring coins into town, and now and then sickness from far away." },
@@ -3654,13 +3655,13 @@ export const ANCIENT_DEADLINE: Record<string, number> = { first: 30 * 40, easy: 
 // for this many people. Past `wellsFree` wells the ground dries out (−`wellSustain`
 // Sustainability each). Aqueducts water fields within `aqueductReach` (+`aqueductFarm`);
 // watermills grind for fields within `millReach` (+`millFarm`).
-export const WATER = { chainPeople: 10, base: 10, well: 12, aqueduct: 40, wellsFree: 4, wellSustain: 2, aqueductReach: 3, aqueductFarm: 0.2, millReach: 2, millFarm: 0.25 };
+export const WATER = { deepWell: 6, chainPeople: 10, base: 10, well: 12, aqueduct: 40, wellsFree: 4, wellSustain: 2, aqueductReach: 3, aqueductFarm: 0.2, millReach: 2, millFarm: 0.25 };
 // Everyday water in the Stone and Ancient Ages (up to era `untilEra`): the
-// springs by the camp give water for `WATER.base` people, every home touching
-// the river for everyone living in it, and Pottery & Storage jars carry water
-// for `pots` more. People without water lose up to `thirstMood` happiness and
+// springs by the camp give water for `WATER.base` people, every home within
+// `near` tiles of the river (a short walk with a jar) for everyone living in it,
+// Pottery & Storage jars carry water for `pots` more, and each Well for `WATER.well`. People without water lose up to `thirstMood` happiness and
 // fall sick more often.
-export const DRINKING = { untilEra: 1, pots: 10, thirstMood: 8 };
+export const DRINKING = { untilEra: 1, pots: 10, thirstMood: 8, near: 2 };
 
 // Towns: each Public Latrine keeps the streets clean for `latrine` people and each
 // Bathhouse for `baths`. With Town Houses standing, the share of people without
@@ -3786,7 +3787,7 @@ export const CONQUEST = {
   losses: { won: 0.35, lost: 0.7 },
   happiness: -12,
   fear: -35,
-  tribute: { currency: 0.5, food: 0.3 },
+  tribute: { currency: 0.3, food: 0.2 },
 };
 
 export const KINGDOM_RAID = {
@@ -3984,7 +3985,7 @@ export const TUTORIAL: { text: string; more: string; done: string; unlocks: stri
   },
   {
     text: "Now a roof. Build a Wooden House beside the river, away from the fire.",
-    more: "More homes let more families join us. People drink every day: a home touching the river always has water, while the springs only serve a few. Sparks can set wood alight, so leave a patch of ground between a house and a fire.",
+    more: "More homes let more families join us. People drink every day: a home near the river (up to 2 tiles away) always has water, while the springs only serve a few. Sparks can set wood alight, so leave a patch of ground between a house and a fire.",
     done: "hut",
     unlocks: ["hut"],
     buys: ["hut"],

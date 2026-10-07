@@ -66,6 +66,7 @@ import { ForeignVillages } from "./foreign";
 import { Cracks, DisasterDust, disasterView, FloodWater, QuakeShake, Rubble, StormRain } from "./disasters";
 import { Wildlife } from "./wildlife";
 import { Links } from "./links";
+import { useHoveredBuilding } from "./hovered";
 import { CampfireSmoke, ChimneySmoke, Wildfire } from "./atmosphere";
 import { Clouds, DaySky, FireLights } from "./sky";
 import { Sea } from "./water";
@@ -87,6 +88,85 @@ function HexOutline({ x, y, z, color }: { x: number; y: number; z: number; color
       <ringGeometry args={[0.8, 0.98, 6, 1, Math.PI / 6]} />
       <meshBasicMaterial color={color} transparent opacity={0.85} depthWrite={false} />
     </mesh>
+  );
+}
+
+// Fields with tired soil: an orange ring and a little orange flag on a stake,
+// so you can see at a glance which ones want a rest (click one to rest it).
+function TiredFields({ state }: { state: GameState }) {
+  const tired = state.tiles.filter((t) => soilOf(state, t) === "tired");
+  if (!tired.length) return null;
+  return (
+    <group>
+      {tired.map((t) => (
+        <group key={t.id}>
+          <HexOutline x={t.x} y={tileTop(t)} z={t.z} color="#f97316" />
+          <group position={[t.x - 0.45, tileTop(t), t.z - 0.35]}>
+            <mesh position={[0, 0.3, 0]} raycast={() => null}>
+              <boxGeometry args={[0.035, 0.6, 0.035]} />
+              <meshStandardMaterial color="#5a3b22" />
+            </mesh>
+            <mesh position={[0.11, 0.52, 0]} raycast={() => null}>
+              <boxGeometry args={[0.2, 0.13, 0.02]} />
+              <meshStandardMaterial color="#f97316" emissive="#7c2d12" />
+            </mesh>
+          </group>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+// Planned buildings: see-through, waiting for the resources to build them.
+// The next one up has a gold ring.
+function Plans({ state }: { state: GameState }) {
+  const plans = state.plans ?? [];
+  if (!plans.length) return null;
+  return (
+    <group>
+      {plans.map((p, i) => {
+        const t = state.tiles[p.tile];
+        const Model = MODELS[p.building];
+        if (!t || !Model) return null;
+        return (
+          <group key={p.tile}>
+            <group position={[t.x, tileTop(t), t.z]} scale={BUILDING_SCALE}>
+              <group rotation={[0, turnFor(state.tiles, t, p.building), 0]}>
+                <Model opacity={0.35} />
+              </group>
+            </group>
+            <HexOutline x={t.x} y={tileTop(t)} z={t.z} color={i === 0 ? "#facc15" : "#e7d7b0"} />
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+// Every building of the kind whose card the pointer is over in the bottom bar:
+// a gold ring round its tile and a marker bobbing over it.
+function Spotlight({ tiles }: { tiles: Tile[] }) {
+  const id = useHoveredBuilding();
+  const group = useRef<Group>(null);
+  useFrame(({ clock }) => {
+    if (group.current) group.current.position.y = Math.sin(clock.elapsedTime * 4) * 0.08;
+  });
+  const shown = id ? tiles.filter((t) => t.building === id) : [];
+  if (!shown.length) return null;
+  return (
+    <group>
+      {shown.map((t) => (
+        <HexOutline key={t.id} x={t.x} y={tileTop(t)} z={t.z} color="#facc15" />
+      ))}
+      <group ref={group}>
+        {shown.map((t) => (
+          <mesh key={t.id} position={[t.x, tileTop(t) + 1.5, t.z]} rotation={[Math.PI, 0, 0]} raycast={() => null}>
+            <coneGeometry args={[0.16, 0.34, 4]} />
+            <meshBasicMaterial color="#facc15" />
+          </mesh>
+        ))}
+      </group>
+    </group>
   );
 }
 
@@ -499,7 +579,12 @@ export function WorldCanvas() {
       return;
     }
     if (!selected) return;
-    dispatch({ type: "place", tileId: id, buildingId: selected });
+    // Can't afford it yet (or it's planned there already): plan it, and it goes
+    // up by itself once we can. Not in the tutorial, which builds one of each.
+    const planned = (state.plans ?? []).some((p) => p.tile === id);
+    const short = placementError(state, tile, BUILDINGS_BY_ID[selected]) === "Not enough resources";
+    if ((planned || short) && state.tutorialStep >= TUTORIAL.length) dispatch({ type: "plan", tileId: id, buildingId: selected });
+    else dispatch({ type: "place", tileId: id, buildingId: selected });
     // Build to Last's guide: one of each, so put the tool down once it's placed.
     if (state.mode === "last" && (state.lastStep ?? LAST_TUTORIAL.length) < LAST_TUTORIAL.length) setSelected(null);
     // After a two-tap build on a phone, drop the preview so no stale label lingers.
@@ -784,7 +869,11 @@ export function WorldCanvas() {
             position={[0, 0.3, 0]}
             style={{ pointerEvents: "none", transform: "translate(56px, -50%)" }}
           >
-            {error ? (
+            {error === "Not enough resources" && state.tutorialStep >= TUTORIAL.length ? (
+              <div className="pixel-panel-dark font-pixel w-56 px-2 py-1 text-xs" data-testid="plan-note">
+                <span className="text-amber-200">Not enough yet.</span> Click to plan it: it is built by itself as soon as you can afford it.
+              </div>
+            ) : error ? (
               <div className="pixel-panel-dark font-pixel whitespace-nowrap px-2 py-1 text-xs">{error}</div>
             ) : (
               // The trade-off of this building, right where you're about to place it.
@@ -857,6 +946,9 @@ export function WorldCanvas() {
         </group>
       )}
 
+      <Spotlight tiles={state.tiles} />
+      <Plans state={state} />
+      <TiredFields state={state} />
       {/* Clear land: every tile it would clear, and what it gives and costs. */}
       {clearTiles.map((t) => (
         <HexOutline key={`clear-${t.id}`} x={t.x} y={tileTop(t)} z={t.z} color="#f59e0b" />

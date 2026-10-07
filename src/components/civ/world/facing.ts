@@ -8,7 +8,8 @@ import type { Tile } from "@/game/types";
 //   water channel or the wall carries straight on into the next one;
 // - rows (homes, fields, wind and solar farms) sit side by side, all facing
 //   the same way like a street;
-// - partners that help each other (CONNECTIONS) turn to face each other.
+// - partners that help each other (CONNECTIONS) turn to face each other;
+// - anything else in a cluster faces the middle of the town.
 
 const RUNS = ["aqueduct", "canal", "walls", "seawall"];
 const ROWS = [["hut", "house", "townhouse", "apartments"], ["farm", "vfarm"], ["windfarm", "solarfarm"]];
@@ -42,7 +43,21 @@ export function turnFor(tiles: Tile[], tile: Tile, building: string | null | und
     return along(tile, ends ?? kin[0]);
   }
   const partner = near.find((t) => partners(building, t.building!));
-  return partner ? towards(tile, partner) : own(tile);
+  if (partner) return towards(tile, partner);
+  return tidy(tiles, tile) ?? own(tile);
+}
+
+// In a cluster of buildings, the rest face the middle of the town, turned to
+// the nearest sixth of a circle, so a busy town looks laid out rather than
+// scattered. A building on its own keeps its own turn.
+function tidy(tiles: Tile[], tile: Tile): number | null {
+  const town = tiles.filter((t) => t.building && t.id !== tile.id && t.island === tile.island);
+  if (!town.some((t) => hexDistance(t, tile) <= 2)) return null;
+  const cx = town.reduce((sum, t) => sum + t.x, 0) / town.length;
+  const cz = town.reduce((sum, t) => sum + t.z, 0) / town.length;
+  if (Math.hypot(cx - tile.x, cz - tile.z) < 0.5) return null;
+  const step = Math.PI / 3;
+  return Math.round(Math.atan2(cx - tile.x, cz - tile.z) / step) * step;
 }
 
 // Every building's turn, worked out once per map.

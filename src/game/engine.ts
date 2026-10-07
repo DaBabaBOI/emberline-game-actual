@@ -183,6 +183,9 @@ export type Action =
   // Build to Last's guided start: step `from` is done (-1 skips it all).
   | { type: "lastStep"; from: number }
   | { type: "place"; tileId: number; buildingId: string }
+  // Plan a building (or cancel the plan on that tile); "unplanAll" clears them all.
+  | { type: "plan"; tileId: number; buildingId: string }
+  | { type: "unplanAll" }
   | { type: "scout"; tileId?: number }
   | { type: "research"; nodeId: string }
   | { type: "resolveEvent"; choice: number }
@@ -883,7 +886,9 @@ function pickEvent(roll: number, state: GameState) {
     e.id === state.lastEvent ||
     (e.era ?? 0) > state.era ||
     (e.id === "sacred-grove" && !grovePossible) ||
-    (e.id === "river-spirits" && !riverChoicePossible(state))
+    (e.id === "river-spirits" && !riverChoicePossible(state)) ||
+    // A kingdom we conquered sends no more envoys, demands or pleas.
+    e.choices.some((c) => Object.keys(c.effect.mood ?? {}).some((k) => state.kingdoms?.[k as KingdomId]?.conquered))
       ? 0
       : e.id === "wildfire"
         ? wildfire
@@ -972,11 +977,16 @@ export function placementError(state: GameState, tile: Tile, def: BuildingDef): 
     );
     if (!touchesWater) return "Must touch water";
   }
-  if (def.needsRiver && !touchesRiver(state, tile)) {
-    // An aqueduct may instead join one that already brings river water.
-    const joins = def.id === "aqueduct" && linkedAqueducts(state).some((t) => hexDistance(t, tile) === 1);
-    if (!joins) return def.id === "aqueduct" ? "Must touch the river, or an aqueduct that does" : "Must touch the river";
-  }
+  if (def.id === "aqueduct") {
+    // It starts at fresh water, or joins an aqueduct that already carries some.
+    const joins = linkedAqueducts(state).some((t) => hexDistance(t, tile) === 1);
+    if (!joins && !touchesFreshWater(state, tile)) {
+      const seaside = state.tiles.some((t) => (t.terrain === "shallow" || t.terrain === "deep") && hexDistance(t, tile) === 1);
+      return seaside
+        ? "Sea water is salty: start at the river, a marsh or a mountain spring, or join another aqueduct"
+        : "Must touch fresh water (river, marsh or mountain spring) or another aqueduct";
+    }
+  } else if (def.needsRiver && !touchesRiver(state, tile)) return "Must touch the river";
   if (state.riverChoice === "honour" && (def.id === "aqueduct" || def.id === "watermill")) return "We promised to honour the river";
   if (!canAfford(state, buildingCost(state, def))) return "Not enough resources";
   return null;
@@ -1140,6 +1150,42 @@ export function touchesRiver(state: GameState, tile: Tile) {
   return state.tiles.some((t) => t.terrain === "river" && hexDistance(t, tile) === 1);
 }
 
+// Why a building can't be planned here: anything but not being able to afford
+// it yet (plans wait for that), or another plan already on the tile.
+export function planError(state: GameState, tile: Tile, def: BuildingDef): string | null {
+  if ((state.plans ?? []).some((p) => p.tile === tile.id)) return "Already planned here";
+  const why = placementError(state, tile, def);
+  return why === "Not enough resources" ? null : why;
+}
+
+// Build what was planned, oldest first, as soon as it can be afforded. A plan
+// that can no longer go there (the tile was built on, burned...) is dropped;
+// one we can't afford yet waits, and so do the plans after it, so they go up
+// in the order they were laid out.
+function buildPlans(state: GameState): GameState {
+  let next = state;
+  for (const plan of state.plans ?? []) {
+    const def = BUILDINGS_BY_ID[plan.building];
+    const tile = next.tiles[plan.tile];
+    const why = def && tile ? placementError(next, tile, def) : "gone";
+    if (why === "Not enough resources") break;
+    next = { ...next, plans: (next.plans ?? []).filter((p) => p.tile !== plan.tile) };
+    if (!why) next = reducer(next, { type: "place", tileId: plan.tile, buildingId: plan.building });
+  }
+  return next;
+}
+
+// Fresh water an aqueduct can start from: the river, a marsh, or a spring at
+// the foot of a mountain. Never the sea: it is salty.
+export function touchesFreshWater(state: GameState, tile: Tile) {
+  return state.tiles.some((t) => (t.terrain === "river" || t.terrain === "marsh" || t.terrain === "mountain") && hexDistance(t, tile) === 1);
+}
+
+// A short walk from the river (for everyday water in the Stone and Ancient Ages).
+export function nearRiver(state: GameState, tile: Tile) {
+  return state.tiles.some((t) => t.terrain === "river" && hexDistance(t, tile) <= DRINKING.near);
+}
+
 // The drought is on (after the warning, before the rains return).
 export function inDrought(state: GameState) {
   const d = state.drought;
@@ -1152,7 +1198,7 @@ export function inDrought(state: GameState) {
 // joined to it in a chain of touching tiles. Only these bring water.
 export function linkedAqueducts(state: GameState): Tile[] {
   const all = state.tiles.filter((t) => t.building === "aqueduct");
-  const linked = all.filter((t) => touchesRiver(state, t));
+  const linked = all.filter((t) => touchesFreshWater(state, t));
   const seen = new Set(linked.map((t) => t.id));
   for (let i = 0; i < linked.length; i++)
     for (const t of all)
@@ -1207,7 +1253,7 @@ export function connectionNote(state: GameState, tile: Tile, building: string): 
     const guarded = burnable(state).filter((t) => hexDistance(t, tile) <= WALLS.reach).length;
     parts.push(guarded ? `Guards ${guarded} building${guarded === 1 ? "" : "s"} from raiders' torches` : "Nothing to guard here yet: build walls next to the buildings you want to keep safe");
   }
-  if (everydayWater(state) && BUILDINGS_BY_ID[building]?.housing && touchesRiver(state, tile)) parts.push("Beside the river: its people always have water");
+  if (everydayWater(state) && BUILDINGS_BY_ID[building]?.housing && nearRiver(state, tile)) parts.push("Near the river: its people always have water");
   // A home that turns the homes beside it into a street.
   if (STREET.homes.includes(building)) {
     const isHome = (t: Tile) => !!t.building && STREET.homes.includes(t.building) && t.id !== tile.id;
@@ -1319,14 +1365,15 @@ const potteryHelps = (state: GameState) =>
 // only the drought tests it (springs, wells and aqueducts).
 export function waterSupply(state: GameState) {
   if (everydayWater(state)) {
-    const riverside = state.tiles.filter((t) => homeRoom(t) > 0 && touchesRiver(state, t)).reduce((sum, t) => sum + homeRoom(t), 0);
-    return WATER.base + riverside + (state.researched.includes("pottery") ? DRINKING.pots : 0);
+    const riverside = state.tiles.filter((t) => homeRoom(t) > 0 && nearRiver(state, t)).reduce((sum, t) => sum + homeRoom(t), 0);
+    return WATER.base + riverside + (state.researched.includes("pottery") ? DRINKING.pots : 0) + (countBuildings(state).well ?? 0) * WATER.well;
   }
   const c = countBuildings(state);
   const linked = linkedAqueducts(state);
   // Aqueducts joined in a chain bring a little more water each.
   const chained = linked.filter((a) => linked.some((b) => b.id !== a.id && hexDistance(a, b) === 1)).length;
-  return WATER.base + (c.well ?? 0) * WATER.well + linked.length * WATER.aqueduct + chained * WATER.chainPeople;
+  const well = WATER.well + (state.researched.includes("hydraulics") ? WATER.deepWell : 0);
+  return WATER.base + (c.well ?? 0) * well + linked.length * WATER.aqueduct + chained * WATER.chainPeople;
 }
 
 // How much a town with no water at all loses in happiness.
@@ -2653,7 +2700,7 @@ export function warnings(state: GameState): Warning[] {
     out.push({
       id: "soil",
       icon: "wheat",
-      text: `${tired} field${tired === 1 ? " has" : "s have"} tired soil and grow${tired === 1 ? "s" : ""} half the food. Click one and let it rest, or learn Three-Field Rotation.`,
+      text: `${tired} field${tired === 1 ? " has" : "s have"} tired soil and grow${tired === 1 ? "s" : ""} half the food (orange flags). Click one and let it rest, or learn Three-Field Rotation.`,
       severe: false,
     });
   if (state.famineTicks > 0) {
@@ -5774,7 +5821,21 @@ function reduce(state: GameState, action: Action): GameState {
 function step(state: GameState, action: Action): GameState {
   switch (action.type) {
     case "tick":
-      return tick(state);
+      return buildPlans(tick(state));
+
+    case "plan": {
+      const plans = state.plans ?? [];
+      const def = BUILDINGS_BY_ID[action.buildingId];
+      const tile = state.tiles[action.tileId];
+      if (!def || !tile || !isUnlocked(state, def)) return state;
+      if (plans.some((p) => p.tile === tile.id)) return { ...state, plans: plans.filter((p) => p.tile !== tile.id) };
+      const why = planError(state, tile, def);
+      if (why) return { ...state, log: [`Can't plan a ${def.name} there: ${why}.`, ...state.log].slice(0, 30) };
+      return { ...state, plans: [...plans, { tile: tile.id, building: def.id }] };
+    }
+
+    case "unplanAll":
+      return { ...state, plans: [] };
 
     case "setSpeed":
       // Build to Last's guide: its last step is to speed up time.
