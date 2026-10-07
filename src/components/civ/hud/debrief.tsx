@@ -5,7 +5,7 @@ import { useShot } from "./letterbox";
 import { HOME } from "@/lib/home";
 import { useState, type ReactNode } from "react";
 import { ERAS, formatYear, LAST, LAST_TUTORIAL, LESSONS, METERS, METER_SDG, MIN_SUSTAINABILITY_FOR_BEST_ENDING, REAL_CO2 } from "@/game/content";
-import { clearSave, currentGoal, lastFocus, lastProblems, makeDebrief, readyForNextEra, secs } from "@/game/engine";
+import { clearSave, currentGoal, goalSteps, lastFocus, lastProblems, makeDebrief, readyForNextEra, secs } from "@/game/engine";
 import type { GameState } from "@/game/types";
 import type { Debrief as DebriefData } from "@/game/types";
 import { useGame } from "@/components/civ/game-provider";
@@ -279,25 +279,51 @@ export function GoalLine() {
   if (state.mode === "last") return <ProblemsLine />;
   const goal = currentGoal(state);
   if (!goal) return null;
+  const steps = goalSteps(state);
+  // "How to get there": every step behind the goal, ticked off when done.
+  const how =
+    full && steps?.length ? (
+      <ul className="pixel-panel pointer-events-auto mt-1 flex w-full max-w-[min(92vw,640px)] flex-col gap-1 px-3 py-2 text-left text-xs" data-testid="goal-steps">
+        <li className="font-pixel font-semibold">How to get there</li>
+        {steps.map((st) => (
+          <li key={st.text} className={cn("flex gap-1.5", st.done ? "text-emerald-700" : "text-[#2b2119]")}>
+            <span className="font-bold">{st.done ? "✓" : "○"}</span>
+            {st.text}
+          </li>
+        ))}
+      </ul>
+    ) : null;
   if (compact)
-    // Phones: one line; tap to read it all.
+    // Phones: one line; tap to read it all, with the steps.
     return (
+      <div className="flex w-full flex-col items-stretch">
+        <button
+          type="button"
+          onClick={() => setFull(!full)}
+          aria-expanded={full}
+          className="pixel-panel-dark font-pixel pointer-events-auto flex w-full items-start gap-1 px-2 py-1 text-left text-xs"
+          data-testid="goal-line"
+        >
+          <span className={cn("flex-1", !full && "line-clamp-1")}>{goal}</span>
+          <span className="text-amber-300">{full ? "▴" : "▾"}</span>
+        </button>
+        {how}
+      </div>
+    );
+  return (
+    <div className="pointer-events-none flex flex-col items-center">
       <button
         type="button"
         onClick={() => setFull(!full)}
         aria-expanded={full}
-        className="pixel-panel-dark font-pixel pointer-events-auto flex w-full items-start gap-1 px-2 py-1 text-left text-xs"
+        title={steps?.length ? "Click to see how to get there" : undefined}
+        className="pixel-panel-dark font-pixel pointer-events-auto max-w-[min(92vw,640px)] px-3 py-1 text-center text-xs hover:brightness-125"
         data-testid="goal-line"
       >
-        <span className={cn("flex-1", !full && "line-clamp-1")}>{goal}</span>
-        <span className="text-amber-300">{full ? "▴" : "▾"}</span>
-      </button>
-    );
-  return (
-    <div className="pointer-events-none flex justify-center">
-      <span className="pixel-panel-dark font-pixel max-w-[min(92vw,640px)] px-3 py-1 text-center text-xs" data-testid="goal-line">
         {goal}
-      </span>
+        {!!steps?.length && <span className="ml-1.5 text-amber-300">{full ? "▴" : "How? ▾"}</span>}
+      </button>
+      {how}
     </div>
   );
 }

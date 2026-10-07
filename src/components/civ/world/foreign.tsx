@@ -47,6 +47,7 @@ function Village({ tiles, island, tunics, homes }: { tiles: Tile[]; island: numb
       list.push({ x: t.x, z: t.z, y: tileTop(t), tx: t.x, tz: t.z, wait: i * 0.7, heading: 0, moving: false, scale: i % 4 === 3 ? 0.95 : 1.3, tunic: tunics[i % tunics.length], skin: SKINS[(i + island) % SKINS.length], hair: HAIRS[i % HAIRS.length], phase: i * 1.7 });
     }
     const dt = Math.min(delta, 0.1);
+    list.forEach((w, i) => (w.tunic = tunics[i % tunics.length]));
     for (const w of list) {
       const dx = w.tx - w.x;
       const dz = w.tz - w.z;
@@ -89,14 +90,17 @@ function Village({ tiles, island, tunics, homes }: { tiles: Tile[]; island: numb
   );
 }
 
+// Our own people's clothes, for a kingdom we have conquered.
+const OUR_TUNICS = ["#5b6f8a", "#c58b3a", "#3f5d8a"];
+
 export function ForeignVillages({ state }: { state: GameState }) {
   return (
     <>
-      {NEIGHBOURS.map((n) =>
-        state.tiles.some((t) => t.island === n.island && t.revealed) ? (
-          <Village key={n.island} tiles={state.tiles} island={n.island} tunics={n.tunics} homes={n.homes(state.era)} />
-        ) : null,
-      )}
+      {NEIGHBOURS.map((n) => {
+        if (!state.tiles.some((t) => t.island === n.island && t.revealed)) return null;
+        const conquered = !!state.kingdoms?.[n.island === 1 ? "steppe" : "reach"]?.conquered;
+        return <Village key={n.island} tiles={state.tiles} island={n.island} tunics={conquered ? OUR_TUNICS : n.tunics} homes={n.homes(state.era)} />;
+      })}
     </>
   );
 }

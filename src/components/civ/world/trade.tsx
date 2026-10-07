@@ -256,7 +256,9 @@ export function SeaTraffic({ state, home }: { state: GameState; home: Tile }) {
           <Html key={`label-${id}`} zIndexRange={[12, 0]} center position={[isle.x, 2.4, isle.z]} style={{ pointerEvents: "none" }}>
             <div className="pixel-panel font-pixel flex items-center gap-1 whitespace-nowrap px-1.5 py-0.5 text-[11px]" data-testid={`kingdom-label-${id}`}>
               <span className="capitalize">{KINGDOMS[id].name.replace(/^the /, "")}</span>
-              <span className={mood === "friendly" ? "text-emerald-700" : mood === "hostile" ? "text-red-700" : "text-amber-700"}>· {mood}</span>
+              <span className={state.kingdoms![id].conquered ? "text-sky-800" : mood === "friendly" ? "text-emerald-700" : mood === "hostile" ? "text-red-700" : "text-amber-700"}>
+                · {state.kingdoms![id].conquered ? "ours" : mood}
+              </span>
               {state.kingdoms![id].treaty && <span className="text-emerald-700">· treaty</span>}
             </div>
           </Html>

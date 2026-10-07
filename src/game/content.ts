@@ -3782,6 +3782,19 @@ export const OUTPOST = { upkeep: 0.05, growth: 0.15 };
 // turns hostile (mood moves by `mood`, ending at least at hostile), and its
 // army comes for revenge within `revengeTicks`, `revengeSize` times bigger
 // than a normal army. Our warriors then need `wait` ticks before another raid.
+// Conquering a kingdom: the whole army sails (at least `minWarriors`) against
+// its `defense`. Won: its island is ours to build on and it pays `tribute` a
+// tick, but `losses.won` of the army falls, our people mourn (`happiness`) and
+// the other kingdom fears us (`fear`). Lost: `losses.lost` fall and they want revenge.
+export const CONQUEST = {
+  minWarriors: 10,
+  defense: { steppe: 45, reach: 70 } as Record<KingdomId, number>,
+  losses: { won: 0.35, lost: 0.7 },
+  happiness: -12,
+  fear: -35,
+  tribute: { currency: 0.5, food: 0.3 },
+};
+
 export const KINGDOM_RAID = {
   minWarriors: 5,
   share: 0.6,

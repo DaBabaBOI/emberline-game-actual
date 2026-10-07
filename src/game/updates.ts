@@ -17,6 +17,8 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Click the goal at the top for \"How to get there\": every step behind it, ticked off as you do them (for the Black Death: Quarantine, Healer's Huts, clean streets, closing the harbour, a Cathedral).",
+      "Conquer a kingdom (Medieval era, Kingdoms panel): send the whole army; win and their island is yours to build on and they pay tribute every day, but many warriors fall, your people mourn, and the other kingdom fears you.",
       "The Silk Steppe and the Eastern Reach have people now: once you can see their island, a village appears with folk in their colours going about their day (tents and pens on the Steppe, timber houses and later a castle in the Reach).",
       "Room to build: the Sell tool clears an empty forest back to grassland (+wood), and most buildings can go straight onto forest (the trees are felled for the space). While placing, gold rings mark the 3 best spots: next to their partners and their own kind, away from harm, so the town grows tidy.",
       "Stone Walls guard what stands behind them: buildings within 2 tiles can't be burned by raiders and less is stolen; raiders fight at the wall, and walls next to each other join up. Placing one shows what it guards.",

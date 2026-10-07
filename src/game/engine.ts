@@ -92,6 +92,7 @@ import {
   FALLOW,
   SCRAP,
   CONNECTIONS,
+  CONQUEST,
   SELL,
   DRINKING,
   STREET,
@@ -238,6 +239,7 @@ export type Action =
   | { type: "gift"; kingdom: KingdomId }
   | { type: "treaty"; kingdom: KingdomId }
   | { type: "raidKingdom"; kingdom: KingdomId }
+  | { type: "conquer"; kingdom: KingdomId }
   | { type: "ship" }
   | { type: "harbour"; closed: boolean }
   | { type: "canoe"; tileId?: number }
@@ -935,8 +937,8 @@ export function placementError(state: GameState, tile: Tile, def: BuildingDef): 
   const home = state.tiles[state.startTile].island;
   if (tile.island >= 0 && tile.island !== home) {
     const kingdom = kingdomOfIsland(tile.island);
-    if (kingdom) return `This land belongs to ${KINGDOMS[kingdom].name}`;
-    if (!(state.outposts ?? []).includes(tile.island)) return "Our canoes and ships haven't reached this island";
+    if (kingdom && !state.kingdoms?.[kingdom]?.conquered) return `This land belongs to ${KINGDOMS[kingdom].name}`;
+    if (!kingdom && !(state.outposts ?? []).includes(tile.island)) return "Our canoes and ships haven't reached this island";
     if (!def.overseas) return "Too far from home: only farms, fishing, woodcutters, pens, gatherers and trading posts";
   } else if (def.id === "tradingpost") return "Only on an island our ships have found";
   if (def.unique && (countBuildings(state)[def.id] ?? 0) >= 1) return "There is only one";
@@ -1406,6 +1408,7 @@ function wearBuildings(state: GameState): GameState {
 export function kingdomOfIsland(island: number): KingdomId | null {
   return island === 1 ? "steppe" : island === 2 ? "reach" : null;
 }
+const KINGDOM_ISLAND: Record<KingdomId, number> = { steppe: 1, reach: 2 };
 
 // Our landmark: every stage paid for and the masons done.
 export function landmarkDone(state: GameState) {
@@ -1461,6 +1464,7 @@ export function giftCost(state: GameState, kingdom: KingdomId): Partial<Resource
 export function giftError(state: GameState, kingdom: KingdomId): string | null {
   const k = state.kingdoms?.[kingdom];
   if (!k) return "Not yet";
+  if (k.conquered) return "It is ours now";
   if (state.tick < (k.giftTick ?? -Infinity) + DIPLOMACY.gift.wait) return "Our envoy is still on the way";
   if (!canAfford(state, giftCost(state, kingdom))) return "Not enough coins";
   return null;
@@ -1469,6 +1473,7 @@ export function giftError(state: GameState, kingdom: KingdomId): string | null {
 export function treatyError(state: GameState, kingdom: KingdomId): string | null {
   const k = state.kingdoms?.[kingdom];
   if (!k) return "Not yet";
+  if (k.conquered) return "It is ours now";
   if (k.treaty) return "We already have a treaty";
   if (!state.researched.includes("diplomacy")) return "Learn Diplomacy first";
   if (moodOf(k.mood) !== "friendly") return "They must be friendly first";
@@ -1495,9 +1500,76 @@ export function raidOdds(state: GameState, kingdom: KingdomId) {
   return Math.max(0, Math.min(1, (1.25 - need) / 0.5));
 }
 
+// Conquest: the whole army against the kingdom (CONQUEST).
+function conquestStrength(state: GameState) {
+  const perWarrior = state.soldiers
+    ? (((state.soldiers - spearmenOf(state)) + spearmenOf(state) * SPEARMAN_STRENGTH) * armsFactor(state)) / state.soldiers
+    : 0;
+  return state.soldiers * perWarrior;
+}
+
+export function conquestOdds(state: GameState, kingdom: KingdomId) {
+  const strength = conquestStrength(state);
+  if (!strength) return 0;
+  const need = (CONQUEST.defense[kingdom] * DIFFICULTIES[state.difficulty].raiders) / strength;
+  return Math.max(0, Math.min(1, (1.25 - need) / 0.5));
+}
+
+export function conquestError(state: GameState, kingdom: KingdomId): string | null {
+  const k = state.kingdoms?.[kingdom];
+  if (!k) return "Not yet";
+  if (k.conquered) return "It is ours already";
+  if (state.plague) return "Not while the plague is coming";
+  if (state.raid || state.legion) return "We are under attack ourselves";
+  if (k.treaty) return "We have a treaty with them";
+  if (state.tick < (state.raidedTick ?? -Infinity) + KINGDOM_RAID.wait) return "Our warriors are still recovering";
+  if (state.soldiers < CONQUEST.minWarriors) return `Need at least ${CONQUEST.minWarriors} warriors`;
+  return null;
+}
+
+function conquer(state: GameState, kingdom: KingdomId): GameState {
+  const strength = conquestStrength(state);
+  const luck = 0.75 + mulberry32(state.seed + state.tick * 73)() * 0.5;
+  const won = strength * luck >= CONQUEST.defense[kingdom] * DIFFICULTIES[state.difficulty].raiders;
+  const fell = Math.min(state.soldiers, Math.max(1, Math.round(state.soldiers * (won ? CONQUEST.losses.won : CONQUEST.losses.lost))));
+  const name = KINGDOMS[kingdom].name;
+  const counted = bumpStats(state, (st) => {
+    st.deaths.battle += fell;
+  });
+  const soldiers = state.soldiers - fell;
+  const kingdoms = { ...state.kingdoms! };
+  if (won) {
+    kingdoms[kingdom] = { ...kingdoms[kingdom], conquered: true, treaty: false, mood: 0 };
+    // The other kingdom fears we are next.
+    for (const id of Object.keys(kingdoms) as KingdomId[])
+      if (id !== kingdom && !kingdoms[id].conquered) kingdoms[id] = { ...kingdoms[id], treaty: false, mood: Math.max(-100, kingdoms[id].mood + CONQUEST.fear) };
+  } else kingdoms[kingdom] = { ...kingdoms[kingdom], treaty: false, mood: Math.max(-100, Math.min(DIPLOMACY.hostile - 10, kingdoms[kingdom].mood + KINGDOM_RAID.mood)) };
+  const island = KINGDOM_ISLAND[kingdom];
+  return withMeters({
+    ...counted,
+    soldiers,
+    spearmen: Math.min(spearmenOf(state), soldiers),
+    kingdoms,
+    outposts: won && !(state.outposts ?? []).includes(island) ? [...(state.outposts ?? []), island] : state.outposts,
+    revenge: won ? (state.revenge?.kingdom === kingdom ? null : state.revenge) : { kingdom, tick: state.tick + KINGDOM_RAID.revengeTicks },
+    nextRaidTick: won ? state.nextRaidTick : Math.min(state.nextRaidTick, state.tick + KINGDOM_RAID.revengeTicks),
+    raidedTick: state.tick,
+    // Their land revealed: it is ours to see now.
+    tiles: won ? state.tiles.map((t) => (t.island === island && !t.revealed ? { ...t, revealed: true } : t)) : state.tiles,
+    modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + CONQUEST.happiness },
+    log: [
+      won
+        ? `We conquered ${name}! Their island is ours to build on and they pay tribute every day. ${fell} of our warriors fell, and our people mourn them. The other kingdom fears we are next.`
+        : `Our army could not take ${name}: ${fell} warriors fell. Now they are coming for revenge.`,
+      ...state.log,
+    ].slice(0, 30),
+  });
+}
+
 export function kingdomRaidError(state: GameState, kingdom: KingdomId): string | null {
   const k = state.kingdoms?.[kingdom];
   if (!k) return "Not yet";
+  if (k.conquered) return "It is ours already";
   if (state.plague) return "Not while the plague is coming";
   if (state.raid || state.legion) return "We are under attack ourselves";
   if (k.treaty) return "We have a treaty with them";
@@ -1698,7 +1770,7 @@ function updateKingdoms(state: GameState): GameState {
 
 // Kingdoms at war with us (their armies raid us in the Medieval era).
 export function hostileKingdoms(state: GameState): KingdomId[] {
-  return (Object.keys(state.kingdoms ?? {}) as KingdomId[]).filter((id) => moodOf(state.kingdoms![id].mood) === "hostile");
+  return (Object.keys(state.kingdoms ?? {}) as KingdomId[]).filter((id) => !state.kingdoms![id].conquered && moodOf(state.kingdoms![id].mood) === "hostile");
 }
 
 // Is the Black Death here (after the warning, before it ends)?
@@ -2337,6 +2409,12 @@ export function production(state: GameState): Resources {
   if (state.culture === "traders") out.currency *= 1.5;
   // Treaties: trade every day with a friendly kingdom (not while the harbour is closed).
   if (!closed) for (const k of Object.values(state.kingdoms ?? {})) if (k.treaty) out.currency += DIPLOMACY.treaty.trade;
+  // Conquered kingdoms pay tribute.
+  for (const k of Object.values(state.kingdoms ?? {}))
+    if (k.conquered) {
+      out.currency += CONQUEST.tribute.currency;
+      out.food += CONQUEST.tribute.food;
+    }
   if (state.researched.includes("printing")) out.knowledge *= LEARNING.printingKnowledge;
   if (state.researched.includes("computers")) out.knowledge *= 1.3;
   // Multiplayer: the match's speed.
@@ -5355,7 +5433,7 @@ function updateRaids(state: GameState): GameState {
     const rand = mulberry32(state.seed + state.tick * 31);
     // In the Middle Ages, only a hostile kingdom sends an army; at peace, nobody
     // comes. A kingdom we raided comes for revenge, hostile or not by now.
-    const revenge = state.revenge && state.tick >= state.revenge.tick ? state.revenge.kingdom : undefined;
+    const revenge = state.revenge && state.tick >= state.revenge.tick && !state.kingdoms?.[state.revenge.kingdom]?.conquered ? state.revenge.kingdom : undefined;
     const enemies = revenge ? [revenge] : state.era >= 3 ? hostileKingdoms(state) : [];
     if (state.era >= 3 && !enemies.length) return { ...state, nextRaidTick: state.tick + 60 };
     const from_ = enemies.length ? enemies[Math.floor(rand() * enemies.length)] : undefined;
@@ -5508,6 +5586,68 @@ function addXp(state: GameState, gain: number): GameState {
 
 // The one thing to aim for right now, in a line (null while the tutorial or a
 // guided step is already telling the player what to do).
+// The steps behind the current goal, for the goal line's "How to get there":
+// each with whether it is done, so the player sees exactly what is missing.
+export function goalSteps(state: GameState): { text: string; done: boolean }[] | null {
+  if (state.mode === "last" || state.tutorialStep < TUTORIAL.length || !currentGoal(state)) return null;
+  const c = countBuildings(state);
+  const pop = Math.floor(state.population);
+  const research = (id: string) => {
+    const node = TREE_BY_ID[id];
+    const goals = goalProgress(state, id).map((g) => ({ text: `${g.label}: ${Math.floor(g.have)}/${g.need}`, done: g.done }));
+    const k = Math.floor(state.resources.knowledge);
+    return [
+      ...goals,
+      { text: `${node.cost} Knowledge (you have ${k})`, done: k >= node.cost },
+      { text: `Research ${node.name} in Advancements`, done: state.researched.includes(id) },
+    ];
+  };
+  if (state.era === 0)
+    return state.researched.includes("agriculture")
+      ? [{ text: `Grow to ${NEXT_ERA_POPULATION} people: homes, food and water for everyone (${pop}/${NEXT_ERA_POPULATION})`, done: pop >= NEXT_ERA_POPULATION }]
+      : research("agriculture");
+  if (state.era === 1 && !state.legionDone) {
+    const defense = defenseStrength(state);
+    const size = state.legion?.size ?? legionSize(state);
+    return [
+      { text: `Defense ${defense} against a legion of about ${size}`, done: defense >= size },
+      { text: "Train warriors at the War Camp (Train button)", done: state.soldiers >= Math.min(warriorCap(state), 6) },
+      { text: "Learn Hunting Spears and Bronze Weapons: each warrior fights harder", done: state.researched.includes("spears") && state.researched.includes("bronze-arms") },
+      { text: "Build Stone Walls: +4 defense each, and they guard what stands behind them", done: (c.walls ?? 0) > 0 },
+      { text: "Keep food stored so the town holds out", done: state.resources.food >= 100 },
+    ];
+  }
+  if (state.era === 1)
+    return state.researched.includes("coinage")
+      ? [{ text: `Grow to ${CLASSICAL_POPULATION} people (${pop}/${CLASSICAL_POPULATION})`, done: pop >= CLASSICAL_POPULATION }]
+      : research("coinage");
+  if (state.era === 2 && !state.droughtDone) {
+    const water = waterSupply(state);
+    return [
+      { text: `Water for everyone in a dry year: Wells and Aqueducts from the river (${Math.min(pop, water)}/${pop})`, done: water >= pop },
+      { text: "Granaries to store food for the dry years", done: (c.granary ?? 0) >= 2 },
+      { text: "Fields beside an aqueduct keep most of their harvest in a drought", done: linkedAqueducts(state).length > 0 && (c.farm ?? 0) > 0 },
+      { text: "Keep the forest standing: trees bring the rain back", done: forestCover(state) >= 0.5 },
+    ];
+  }
+  if (state.era === 3 && !state.plagueDone) {
+    const P = PLAGUE.protection;
+    const pct = (v: number) => `+${Math.round(v * 100)}%`;
+    const healers = Math.min(P.healersMax, c.healer ?? 0);
+    const clean = c.townhouse || c.latrine ? sanitation(state) : 0;
+    return [
+      { text: `Learn Quarantine: keep the sick apart (${pct(P.quarantine)})`, done: state.researched.includes("quarantine") },
+      { text: `Build Healer's Huts: ${healers}/${P.healersMax} (${pct(P.healer)} each)`, done: healers >= P.healersMax },
+      { text: `Clean streets: Public Latrines and Bathhouses for everyone (${Math.round(clean * 100)}%, up to ${pct(P.sanitation)})`, done: clean >= 0.9 },
+      { text: `When the news comes, close the harbour at once (${pct(P.closedEarly)})`, done: !!state.plague?.closed },
+      { text: `A Cathedral to care for the sick (${pct(P.cathedral)})`, done: landmarkWorking(state, "cathedral") },
+      { text: "A strong town: everyone housed, fed and happy enough to work", done: housingCapacity(state) >= pop && state.meters.happiness >= 50 && state.meters.food >= 50 },
+    ];
+  }
+  if (state.era === 4) return climateReadiness(state).map((p) => ({ text: p.label, done: p.value > 0 }));
+  return null;
+}
+
 export function currentGoal(state: GameState): string | null {
   if (state.mode === "last") {
     const p = lastProblems(state);
@@ -6149,6 +6289,9 @@ function step(state: GameState, action: Action): GameState {
 
     case "raidKingdom":
       return kingdomRaidError(state, action.kingdom) ? state : raidKingdom(state, action.kingdom);
+
+    case "conquer":
+      return conquestError(state, action.kingdom) ? state : conquer(state, action.kingdom);
 
     case "canoe": {
       if (canoeError(state)) return state;

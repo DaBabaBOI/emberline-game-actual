@@ -354,7 +354,8 @@ export interface GameState {
   landmark?: { kind: LandmarkId; stage: number; tile?: number; readyTick: number } | null;
   // Medieval era: how each neighbouring kingdom feels about us (-100 to 100),
   // whether we have a treaty, and when we last sent a gift.
-  kingdoms?: Record<KingdomId, { mood: number; treaty: boolean; giftTick?: number }>;
+  // `conquered`: we took it; its island is ours and it pays tribute.
+  kingdoms?: Record<KingdomId, { mood: number; treaty: boolean; giftTick?: number; conquered?: boolean }>;
   // Ships out exploring or trading (from a Shipyard), and the islands found
   // overseas where we may build a few things.
   ships?: { start: number; back: number }[];

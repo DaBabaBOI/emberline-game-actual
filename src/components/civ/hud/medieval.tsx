@@ -3,7 +3,7 @@
 // The Medieval era's screens: choosing the landmark that carries the town into
 // the Middle Ages, the two kingdoms, ships, and the Black Death.
 
-import { KINGDOMS, KINGDOM_RAID, LANDMARKS, PLAGUE, DIPLOMACY, REBELLION } from "@/game/content";
+import { CONQUEST, KINGDOMS, KINGDOM_RAID, LANDMARKS, PLAGUE, DIPLOMACY, REBELLION, TICK_SECONDS } from "@/game/content";
 import {
   canAfford,
   crushOdds,
@@ -17,6 +17,8 @@ import {
   plagueShield,
   plagueToll,
   raidOdds,
+  conquestError,
+  conquestOdds,
   secs,
   raidParty,
   treatyError,
@@ -182,12 +184,14 @@ export function KingdomsPanel() {
             const treaty = treatyError(state, id);
             const raid = kingdomRaidError(state, id);
             const odds = Math.round(raidOdds(state, id) * 100);
+            const conquest = conquestError(state, id);
+            const conquestChance = Math.round(conquestOdds(state, id) * 100);
             return (
               <div key={id} className="border-2 border-[#140e0a] bg-white/60 p-2" data-testid={`kingdom-${id}`}>
                 <div className="font-pixel flex items-center justify-between font-semibold">
                   <span className="capitalize">{KINGDOMS[id].name.replace(/^the /, "")}</span>
-                  <span className={cn("px-1.5 text-[11px] text-white", MOOD_STYLE[mood])}>
-                    {mood}
+                  <span className={cn("px-1.5 text-[11px] text-white", k.conquered ? "bg-[#5b6f8a]" : MOOD_STYLE[mood])}>
+                    {k.conquered ? "ours" : mood}
                     {k.treaty ? " · treaty" : ""}
                   </span>
                 </div>
@@ -229,6 +233,28 @@ export function KingdomsPanel() {
                     <span>Raid them</span>
                     <span className="text-[11px]">{raid ? "" : `${party.sent} warriors · ${odds}% chance`}</span>
                   </button>
+                  <button
+                    type="button"
+                    disabled={!!conquest}
+                    onClick={() => dispatch({ type: "conquer", kingdom: id })}
+                    className="pixel-btn flex justify-between bg-[#3b0d0d] px-2 py-1 text-left text-white disabled:opacity-40"
+                    title={conquest ?? "Take the whole kingdom: their island becomes ours and they pay tribute. Many warriors will fall."}
+                    data-testid={`conquer-${id}`}
+                  >
+                    <span>Conquer them</span>
+                    <span className="text-[11px]">{conquest ? "" : `all ${state.soldiers} warriors · ${conquestChance}% chance`}</span>
+                  </button>
+                  {k.conquered ? (
+                    <span className="text-[10px] text-emerald-800">
+                      Ours: they pay about {Math.round((CONQUEST.tribute.currency * 60) / TICK_SECONDS)} coins and {Math.round((CONQUEST.tribute.food * 60) / TICK_SECONDS)} food a minute, and their island is ours to build on.
+                    </span>
+                  ) : (
+                    !conquest && (
+                      <span className="text-[10px] text-red-900">
+                        Conquest: about {Math.round(CONQUEST.losses.won * 100)}% of the army falls even if we win, our people mourn (−{-CONQUEST.happiness} happiness), and the other kingdom will fear and hate us.
+                      </span>
+                    )
+                  )}
                   <span className="text-[10px] text-stone-500">
                     {gift && gift !== "Not enough coins" ? `Gifts: ${gift}. ` : ""}
                     {treaty ? `Treaty: ${treaty}. ` : ""}
