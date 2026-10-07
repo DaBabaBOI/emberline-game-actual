@@ -416,8 +416,8 @@ export const BUILDINGS: BuildingDef[] = [
     id: "walls",
     name: "Stone Walls",
     icon: "castle",
-    description: "A ring of stone walls. Each adds 4 to your defense.",
-    gain: "+4 defense against raiders",
+    description: "Stone walls guard what stands behind them: buildings within 2 tiles are safe from raiders' torches, and less is stolen from them. Raiders have to fight at the wall. Each wall adds 4 to your defense.",
+    gain: "Buildings within 2 tiles can't be burned by raiders; +4 defense",
     landCost: "Stone quarried out of the hills",
     landImpact: 1,
     era: 1,
@@ -3627,6 +3627,9 @@ export const GRANARY_KEEPS = 150;
 export const FORESTER_GROWTH = 0.12;
 export const FORESTER_REACH = 3;
 export const WALL_DEFENSE = 4;
+// Stone walls guard every building within `reach` tiles: raiders can't burn
+// them, and stores behind walls lose up to `shield` less to plunder.
+export const WALLS = { reach: 2, shield: 0.6 };
 
 // The Ancient era ends with a Roman legion. Scouts see it coming when the year
 // reaches warningYear; it lands warningTicks later. Each legionary fights like

@@ -558,16 +558,19 @@ export function WorldCanvas() {
                 <Model opacity={1} />
               </UnderConstruction>
             ) : (
-              <Model opacity={1} lit={t.building === "aqueduct" ? wetIds.includes(t.id) : t.building !== "campfire" || burningIds.includes(t.id)} />
+              <Model
+                opacity={1}
+                lit={
+                  t.building === "aqueduct"
+                    ? wetIds.includes(t.id)
+                    : t.building === "farm"
+                      ? soilOf(state, t) !== "tired"
+                      : t.building !== "campfire" || burningIds.includes(t.id)
+                }
+              />
             )}
             {(t.level ?? 1) >= 2 && <Plinth level={t.level!} />}
-            {/* Tired soil looks dry and pale; a resting field grows over with grass. */}
-            {t.building === "farm" && soilOf(state, t) === "tired" && (
-              <mesh position={[0, 0.2, 0]} raycast={() => null}>
-                <cylinderGeometry args={[0.6, 0.6, 0.02, 6]} />
-                <meshBasicMaterial color="#d8c79a" transparent opacity={0.5} depthWrite={false} />
-              </mesh>
-            )}
+            {/* Tired soil shows in the field itself (FarmModel); a resting field grows over with grass. */}
             {t.building === "farm" && soilOf(state, t) === "resting" && (
               <mesh position={[0, 0.22, 0]} raycast={() => null}>
                 <cylinderGeometry args={[0.63, 0.63, 0.04, 6]} />

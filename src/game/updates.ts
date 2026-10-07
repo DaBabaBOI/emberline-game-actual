@@ -17,6 +17,8 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Stone Walls guard what stands behind them: buildings within 2 tiles can't be burned by raiders and less is stolen; raiders fight at the wall, and walls next to each other join up. Placing one shows what it guards.",
+      "Tired fields look tired (pale cracked earth, drooping brown crops) instead of a strange fog, and scouts walk around water instead of over it.",
       "Sell to the traders: the Trade menu now buys your spare food, wood or stone for coins (they pay less if you sell a lot at once).",
       "Raids are fought at the edge of your land, away from the houses, and villagers near the fight run to the other side of the village so you can watch it.",
       "Tired people sweat where you can see it: bigger drops, from a little tiredness on, and whoever is working sweats first.",

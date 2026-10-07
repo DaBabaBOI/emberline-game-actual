@@ -13,7 +13,8 @@ import type { Tile } from "@/game/types";
 interface ModelProps {
   opacity: number;
   // Campfires: false when it has burned out. Aqueducts: false when no river
-  // water reaches them (the channel runs dry).
+  // water reaches them (the channel runs dry). Fields: false when the soil is
+  // tired (pale, cracked earth and drooping, brown crops).
   lit?: boolean;
 }
 
@@ -459,16 +460,23 @@ export function HealerModel({ opacity }: ModelProps) {
   );
 }
 
-export function FarmModel({ opacity }: ModelProps) {
+export function FarmModel({ opacity, lit = true }: ModelProps) {
   const rows = [-0.36, -0.18, 0, 0.18, 0.36];
   return (
     <group>
-      <Part color="#7a5230" opacity={opacity} position={[0, 0.012, 0]}>
+      <Part color={lit ? "#7a5230" : "#b39a72"} opacity={opacity} position={[0, 0.012, 0]}>
         <cylinderGeometry args={[0.62, 0.62, 0.025, 6]} />
       </Part>
+      {/* Tired soil: dry cracks across the field. */}
+      {!lit &&
+        [0.3, 1.4, 2.5].map((a) => (
+          <Part key={a} color="#6b5638" opacity={opacity} position={[0, 0.027, 0]} rotation={[0, a, 0]}>
+            <boxGeometry args={[1.05, 0.006, 0.018]} />
+          </Part>
+        ))}
       {rows.map((z) => (
         <group key={z}>
-          <Part color="#5e3d22" opacity={opacity} position={[0, 0.03, z]}>
+          <Part color={lit ? "#5e3d22" : "#8e7650"} opacity={opacity} position={[0, 0.03, z]}>
             <boxGeometry args={[0.9 - Math.abs(z) * 0.9, 0.03, 0.06]} />
           </Part>
           {Array.from({ length: Math.round(7 - Math.abs(z) * 6) }, (_, i) => {
@@ -476,11 +484,12 @@ export function FarmModel({ opacity }: ModelProps) {
             const span = 0.8 - Math.abs(z) * 0.9;
             const x = -span / 2 + (span / Math.max(1, n - 1)) * i;
             return (
-              <group key={i} position={[x, 0.04, z]}>
-                <Part color="#d9b44a" opacity={opacity} position={[0, 0.07, 0]}>
+              // Tired soil: fewer, shorter stalks that droop, brown and thin.
+              <group key={i} position={[x, 0.04, z]} rotation={lit ? undefined : [0, 0, i % 2 ? 0.5 : -0.5]} scale={lit ? 1 : 0.6} visible={lit || i % 2 === 0}>
+                <Part color={lit ? "#d9b44a" : "#9a7a45"} opacity={opacity} position={[0, 0.07, 0]}>
                   <cylinderGeometry args={[0.008, 0.008, 0.14, 4]} />
                 </Part>
-                <Part color="#e8c65a" opacity={opacity} position={[0, 0.15, 0]} scale={[1, 2.2, 1]}>
+                <Part color={lit ? "#e8c65a" : "#8a6a3a"} opacity={opacity} position={[0, 0.15, 0]} scale={[1, 2.2, 1]}>
                   <sphereGeometry args={[0.022, 6, 4]} />
                 </Part>
               </group>

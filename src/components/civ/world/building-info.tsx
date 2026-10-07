@@ -34,6 +34,7 @@ import {
   wearsOut,
   woodcutterYield,
   linkedAqueducts,
+  behindWalls,
 } from "@/game/engine";
 import type { GameState, Tile } from "@/game/types";
 import { PixelIcon } from "@/components/civ/pixel-icon";
@@ -133,6 +134,12 @@ export function BuildingInfo({
       {tile.building === "aqueduct" && !linkedAqueducts(state).some((t) => t.id === tile.id) && (
         <p className="mt-1 text-red-800" data-testid="aqueduct-dry">
           Dry: no river water reaches it. Join it to the river with aqueducts that touch each other.
+        </p>
+      )}
+
+      {tile.building !== "walls" && behindWalls(state, tile) && (
+        <p className="mt-1 text-emerald-700" data-testid="behind-walls">
+          Behind the walls: raiders can&apos;t burn it.
         </p>
       )}
 

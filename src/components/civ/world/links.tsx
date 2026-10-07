@@ -10,7 +10,7 @@ const CHANNEL = 0.56 * BUILDING_SCALE;
 
 // One link between two touching tiles: a raised stone channel with water for
 // aqueducts, a short paved path for other buildings that help each other.
-function Link({ a, b, kind }: { a: Tile; b: Tile; kind: "water" | "path" }) {
+function Link({ a, b, kind }: { a: Tile; b: Tile; kind: "water" | "path" | "wall" }) {
   const dx = b.x - a.x;
   const dz = b.z - a.z;
   const flat = Math.hypot(dx, dz);
@@ -33,6 +33,25 @@ function Link({ a, b, kind }: { a: Tile; b: Tile; kind: "water" | "path" }) {
           <mesh key={f} position={[f * flat, (ground + y) / 2, 0]} raycast={() => null}>
             <boxGeometry args={[0.16, y - ground, 0.3]} />
             <meshStandardMaterial color="#b5aa97" flatShading />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+  if (kind === "wall") {
+    // A stretch of stone wall closing the gap between two wall towers.
+    const ground = Math.min(a.height, b.height);
+    const top = Math.max(a.height, b.height) + 0.42 * BUILDING_SCALE;
+    return (
+      <group position={[mid.x, 0, mid.z]} rotation={[0, -yaw, 0]}>
+        <mesh position={[0, (ground + top) / 2, 0]} castShadow raycast={() => null}>
+          <boxGeometry args={[flat * 0.75, top - ground, 0.24]} />
+          <meshStandardMaterial color="#9a9083" flatShading />
+        </mesh>
+        {[-0.25, 0, 0.25].map((f) => (
+          <mesh key={f} position={[f * flat, top + 0.06, 0]} castShadow raycast={() => null}>
+            <boxGeometry args={[0.14, 0.12, 0.26]} />
+            <meshStandardMaterial color="#8a8073" flatShading />
           </mesh>
         ))}
       </group>

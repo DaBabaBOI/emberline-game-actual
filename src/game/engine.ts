@@ -71,6 +71,7 @@ import {
   FIRE_SCARE,
   GATHERING,
   WALL_DEFENSE,
+  WALLS,
   MIN_SUSTAINABILITY_FOR_BEST_ENDING,
   NEXT_ERA_POPULATION,
   IMPROVE,
@@ -1178,6 +1179,10 @@ export function connectionNote(state: GameState, tile: Tile, building: string): 
     .filter((t) => t.building && hexDistance(t, tile) === 1 && CONNECTIONS.some((c) => c.building === t.building && c.to.includes(building)))
     .map((t) => BUILDINGS_BY_ID[t.building!]?.name ?? t.building!))];
   if (helps.length) parts.push(`Helps the ${helps.join(" and ")} next door`);
+  if (building === "walls") {
+    const guarded = burnable(state).filter((t) => hexDistance(t, tile) <= WALLS.reach).length;
+    parts.push(guarded ? `Guards ${guarded} building${guarded === 1 ? "" : "s"} from raiders' torches` : "Nothing to guard here yet: build walls next to the buildings you want to keep safe");
+  }
   if (everydayWater(state) && BUILDINGS_BY_ID[building]?.housing && touchesRiver(state, tile)) parts.push("Beside the river: its people always have water");
   // A home that turns the homes beside it into a street.
   if (STREET.homes.includes(building)) {
@@ -1191,8 +1196,8 @@ export function connectionNote(state: GameState, tile: Tile, building: string): 
 }
 
 // Pairs of touching buildings that help each other, for drawing the links.
-export function connectedPairs(state: GameState): [Tile, Tile, "water" | "path"][] {
-  const out: [Tile, Tile, "water" | "path"][] = [];
+export function connectedPairs(state: GameState): [Tile, Tile, "water" | "path" | "wall"][] {
+  const out: [Tile, Tile, "water" | "path" | "wall"][] = [];
   const linked = linkedAqueducts(state);
   for (let i = 0; i < linked.length; i++)
     for (let j = i + 1; j < linked.length; j++) if (hexDistance(linked[i], linked[j]) === 1) out.push([linked[i], linked[j], "water"]);
@@ -1203,6 +1208,10 @@ export function connectedPairs(state: GameState): [Tile, Tile, "water" | "path"]
         for (const b of built)
           if (c.to.includes(b.building!) && hexDistance(a, b) === 1 && !out.some(([x, y]) => (x.id === b.id && y.id === a.id) || (x.id === a.id && y.id === b.id)))
             out.push([a, b, "path"]);
+  // Stone walls next to each other join into one wall.
+  const wallTiles = built.filter((t) => t.building === "walls");
+  for (let i = 0; i < wallTiles.length; i++)
+    for (let j = i + 1; j < wallTiles.length; j++) if (hexDistance(wallTiles[i], wallTiles[j]) === 1) out.push([wallTiles[i], wallTiles[j], "wall"]);
   // Streets: a path between touching homes when one of them is in a street.
   const homes = built.filter((t) => STREET.homes.includes(t.building!));
   for (let i = 0; i < homes.length; i++)
@@ -1222,6 +1231,9 @@ export function effectAreas(building: string): { range: number; harm: boolean; h
   if (building === "campfire") out.push({ range: FIRE_SCARE.range, harm: true, hits: ["gatherer", "hut", "house"] });
   if (def?.smog) out.push({ range: SMOG.range, harm: true, hits: homes });
   if (building === "aqueduct") out.push({ range: WATER.aqueductReach, harm: false, hits: ["farm"] });
+  // What a wall guards from raiders' torches.
+  if (building === "walls")
+    out.push({ range: WALLS.reach, harm: false, hits: Object.keys(BUILDINGS_BY_ID).filter((id) => !["campfire", "warcamp", "quarry", "walls", "watchfire"].includes(id)) });
   if (building === "watermill") out.push({ range: WATER.millReach, harm: false, hits: ["farm"] });
   if (building === "windmill") out.push({ range: FARMING.windmillReach, harm: false, hits: ["farm"] });
   if (building === "park") out.push({ range: SMOG.parkRange, harm: false, hits: homes });
@@ -4571,9 +4583,16 @@ function pickLanding(state: GameState, rand: () => number) {
   // shore: the fight stays out of the village and can be watched.
   const open = state.tiles.filter((t) => isLand(t.terrain) && t.terrain !== "mountain" && t.revealed && !t.building);
   const built = state.tiles.filter((t) => t.building);
-  const edge = open.filter((t) => hexDistance(t, home) >= 3 && !built.some((b) => hexDistance(b, t) <= 1));
-  const mx = from.x + (home.x - from.x) * 0.15;
-  const mz = from.z + (home.z - from.z) * 0.15;
+  // With walls, the fight is at the wall: open ground just outside one.
+  const walls = built.filter((t) => t.building === "walls");
+  const atWall = open.filter((t) => walls.some((w) => hexDistance(w, t) === 1));
+  const edge = atWall.length
+    ? atWall
+    : open.filter((t) => hexDistance(t, home) >= 3 && !built.some((b) => hexDistance(b, t) <= 1));
+  // The wall facing the shore they landed on; else the edge of our land.
+  const k = atWall.length ? 0 : 0.15;
+  const mx = from.x + (home.x - from.x) * k;
+  const mz = from.z + (home.z - from.z) * k;
   const meet = (edge.length ? edge : open).reduce((best, t) =>
     Math.hypot(t.x - mx, t.z - mz) < Math.hypot(best.x - mx, best.z - mz) ? t : best,
   );
@@ -5154,17 +5173,36 @@ function returnFromFog(state: GameState): GameState {
 }
 
 // Buildings a fire raid could set alight (not fires, pens of stone or the camp).
-function burnable(state: GameState): Tile[] {
+// Buildings raiders could set alight (behind the walls or not).
+function burnableAll(state: GameState): Tile[] {
   return state.tiles.filter((t) => t.building && !["campfire", "warcamp", "quarry", "walls", "watchfire"].includes(t.building));
+}
+
+// Behind the walls: within WALLS.reach of a Stone Wall.
+export function behindWalls(state: GameState, tile: Tile) {
+  return state.tiles.some((w) => w.building === "walls" && hexDistance(w, tile) <= WALLS.reach);
+}
+
+// What raiders can burn: only what stands outside the walls.
+function burnable(state: GameState): Tile[] {
+  return burnableAll(state).filter((t) => !behindWalls(state, t));
+}
+
+// The share of the town behind walls (0–1): that much of the stores is guarded.
+export function walledShare(state: GameState) {
+  const all = burnableAll(state);
+  return all.length ? all.filter((t) => behindWalls(state, t)).length / all.length : 0;
 }
 
 // What raiders take: a share of food and wood, and for a fire raid one building
 // (the one nearest where they landed).
 function plunder(state: GameState, raid: Raid, share: { food: number; wood: number }): Partial<GameState> {
+  // Walls keep raiders out of the stores behind them.
+  const guard = 1 - walledShare(state) * WALLS.shield;
   const resources = {
     ...state.resources,
-    food: state.resources.food * (1 - share.food),
-    wood: state.resources.wood * (1 - share.wood),
+    food: state.resources.food * (1 - share.food * guard),
+    wood: state.resources.wood * (1 - share.wood * guard),
   };
   if (!RAID_KINDS[raid.kind ?? "party"].burns) return { resources };
   const from = state.tiles[raid.fromTile];

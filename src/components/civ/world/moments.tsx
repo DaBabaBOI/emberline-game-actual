@@ -12,6 +12,8 @@ import { tileTop } from "./hex-terrain";
 import { BUILDING_SCALE, buildingTurn } from "./building-models";
 import { Figures, SKINS, type Agent } from "./figures";
 import { makeGround } from "./ground";
+import { NEIGHBOR_OFFSETS } from "@/game/hex";
+import { isLand } from "@/game/map";
 
 // Small moments (berries found, birds coming back, a gust of wind) play out
 // on the map where they happen, for MOMENT_TICKS, with a short label above.
@@ -293,6 +295,42 @@ export function SmallMoment({ state }: { state: GameState }) {
 // The scouts out exploring: three of them walk from the village to the spot
 // picked in the fog (the first half of the trip), look around, and walk back
 // (the second half). Their label follows them.
+// The scouts' way to the spot over land (they ford the river, never walk on the
+// sea or lakes): the tile centres along the shortest land path. Straight there
+// if no land path exists.
+function landPath(tiles: Tile[], from: Tile, to: Tile): { x: number; z: number }[] {
+  const byKey = new Map(tiles.map((t) => [`${t.q},${t.r}`, t]));
+  const walkable = (t: Tile) => isLand(t.terrain) || t.terrain === "river" || t.id === to.id;
+  const prev = new Map<number, Tile | null>([[from.id, null]]);
+  const queue = [from];
+  for (let i = 0; i < queue.length && !prev.has(to.id); i++) {
+    const t = queue[i];
+    for (const [dq, dr] of NEIGHBOR_OFFSETS) {
+      const n = byKey.get(`${t.q + dq},${t.r + dr}`);
+      if (!n || prev.has(n.id) || !walkable(n)) continue;
+      prev.set(n.id, t);
+      queue.push(n);
+    }
+  }
+  if (!prev.has(to.id)) return [from, to];
+  const path: Tile[] = [];
+  for (let t: Tile | null = to; t; t = prev.get(t.id) ?? null) path.unshift(t);
+  return path.map((t) => ({ x: t.x, z: t.z }));
+}
+
+// A point `k` (0–1) of the way along a path, and which way it runs there.
+function alongPath(path: { x: number; z: number }[], lengths: number[], k: number) {
+  const total = lengths[lengths.length - 1] || 1;
+  const d = Math.max(0, Math.min(1, k)) * total;
+  let i = 1;
+  while (i < path.length - 1 && lengths[i] < d) i++;
+  const a = path[i - 1];
+  const b = path[i] ?? a;
+  const seg = lengths[i] - lengths[i - 1] || 1;
+  const f = Math.max(0, Math.min(1, (d - lengths[i - 1]) / seg));
+  return { x: a.x + (b.x - a.x) * f, z: a.z + (b.z - a.z) * f, dx: b.x - a.x, dz: b.z - a.z };
+}
+
 export function ScoutMarker({ state, running, msPerTick }: { state: GameState; running: boolean; msPerTick: number }) {
   const trip = state.scouting;
   const tiles = state.tiles;
@@ -303,6 +341,15 @@ export function ScoutMarker({ state, running, msPerTick }: { state: GameState; r
   const target = trip ? tiles[trip.tile] : null;
   const from = trip ? tiles[trip.from ?? state.startTile] : null;
   const start = trip?.start ?? (trip ? trip.back - 12 : 0);
+  const route = useMemo(() => {
+    if (!target || !from) return null;
+    const path = landPath(tiles, from, target);
+    const lengths = [0];
+    for (let i = 1; i < path.length; i++) lengths.push(lengths[i - 1] + Math.hypot(path[i].x - path[i - 1].x, path[i].z - path[i - 1].z));
+    return { path, lengths };
+    // The way is found once per trip.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target?.id, from?.id]);
   const tick = state.tick;
   const speed = state.speed;
   // When the latest tick came in, to tell how far into the next one we are.
@@ -338,11 +385,12 @@ export function ScoutMarker({ state, running, msPerTick }: { state: GameState; r
       // Single file, a little apart.
       const k = Math.max(0, Math.min(1, along - i * 0.04 * (out ? 1 : -1)));
       const side = (i - 1) * 0.18;
-      const dx = target.x - from.x;
-      const dz = target.z - from.z;
+      const at = route ? alongPath(route.path, route.lengths, k) : { x: from.x, z: from.z, dx: target.x - from.x, dz: target.z - from.z };
+      const dx = at.dx;
+      const dz = at.dz;
       const len = Math.hypot(dx, dz) || 1;
-      const x = from.x + dx * k - (dz / len) * side;
-      const z = from.z + dz * k + (dx / len) * side;
+      const x = at.x - (dz / len) * side;
+      const z = at.z + (dx / len) * side;
       const there = along > 0.97;
       list[i] = {
         x,
