@@ -503,6 +503,8 @@ function maybeHealedScene(before: GameState, after: GameState): GameState {
   const recovered =
     (before.sick ?? 0) > 0 && (Math.floor(after.immune ?? 0) > Math.floor(before.immune ?? 0) || (after.sick ?? 0) === 0);
   if (!recovered || after.raid || after.tick - (after.healedAt ?? -Infinity) < HEALED.gap) return after;
+  // The scene shows remedies and care: only once the tribe has them (Herbalism).
+  if (!after.researched.includes("herbalism") && !countBuildings(after).healer) return after;
   return { ...after, cutscene: "healed", healedAt: after.tick, lastBigTick: after.tick };
 }
 

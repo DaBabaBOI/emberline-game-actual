@@ -258,15 +258,18 @@ export function BottomBar() {
   // (A hint can point at a card too: the shrine.)
   const hintTarget = state.hint ? HINTS_BY_ID[state.hint.id]?.target : undefined;
   const hinted = (typeof hintTarget === "function" ? hintTarget(state) : hintTarget)?.match(/build-([a-z]+)/)?.[1];
-  const pointed = (guide.target?.kind === "ui" ? guide.target.ids.find((id) => id.startsWith("build-"))?.slice(6) : undefined) ?? hinted;
+  // The guide's hand (it waits for that card to be clicked) and, more gently, a hint.
+  const guided = guide.target?.kind === "ui" ? guide.target.ids.find((id) => id.startsWith("build-"))?.slice(6) : undefined;
+  const pointed = guided ?? hinted;
   // Tabs stay put: only the Stone Age tutorial (a handful of buildings) shows them all.
   const grouped = eraBuildings.length >= GROUP_FROM && (!inTutorial || !!pointed);
   const groups = GROUPS.filter((g) => eraBuildings.some((b) => groupOf(b.id) === g.id));
   // The hand's building, else the one in hand, else the tab picked.
   const holding = selected && eraBuildings.some((b) => b.id === selected) ? selected : undefined;
-  // A newly pointed or newly picked-up card opens its tab once; after that the
-  // player's own tab choice sticks, even while the hand keeps pointing.
-  const lead = pointed ?? holding;
+  // A card the guide's hand newly points at (or one newly picked up) opens its
+  // tab once; after that the player's own tab choice sticks. Hints never switch
+  // the tab on their own: their card's tab just glows.
+  const lead = guided ?? holding;
   const [followed, setFollowed] = useState<string | undefined>(undefined);
   if (lead !== followed) {
     setFollowed(lead);

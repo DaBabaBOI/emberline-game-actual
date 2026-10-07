@@ -7,12 +7,14 @@ import {
   countBuildings,
   consumption,
   currentGoal,
+  goalProgress,
   housingCapacity,
   isUnlocked,
   lastProblems,
   powerDemand,
   powerSupply,
   production,
+  researchCost,
   warnings,
 } from "@/game/engine";
 import type { GameState } from "@/game/types";
@@ -44,8 +46,32 @@ export function townSummary(state: GameState): string {
   lines.push(`Buildings: ${built.length ? built.map(([id, n]) => `${name(id)} x${n}`).join(", ") : "none yet"}.`);
   const can = BUILDINGS.filter((b) => b.era <= state.era && isUnlocked(state, b)).slice(-14);
   lines.push(`Can build: ${can.map((b) => `${b.name} (${b.description.slice(0, 70)})`).join("; ")}`);
-  const research = affordableResearch(state).slice(0, 8).map((n) => TREE.find((t) => t.id === n.id)?.name ?? n.id);
-  if (research.length) lines.push(`Can research now (Advancements): ${research.join(", ")}.`);
+  // Advancements: what is learned, and for each one open now its exact cost and
+  // goals, so Ama never has to guess what something needs.
+  const learned = TREE.filter((n) => state.researched.includes(n.id) && !n.secret).map((n) => n.name);
+  lines.push(`Advancements already learned: ${learned.length ? learned.join(", ") : "none"}.`);
+  const ready = new Set(affordableResearch(state).map((n) => n.id));
+  const open = TREE.filter(
+    (n) => n.era <= state.era && !n.secret && !n.comingSoon && !state.researched.includes(n.id) && n.requires.every((r) => state.researched.includes(r)),
+  ).slice(0, 12);
+  if (open.length)
+    lines.push(
+      `Advancements open to learn (these are their ONLY requirements): ${open
+        .map((n) => {
+          const goals = goalProgress(state, n.id).map((g) => `${g.label} ${g.have}/${g.need}`);
+          return `${n.name}: ${researchCost(state, n)} Knowledge${goals.length ? `, goals: ${goals.join("; ")}` : ""}${ready.has(n.id) ? " (can learn now)" : ""}`;
+        })
+        .join(" | ")}`,
+    );
+  const locked = TREE.filter(
+    (n) => n.era <= state.era && !n.secret && !n.comingSoon && !state.researched.includes(n.id) && !n.requires.every((r) => state.researched.includes(r)),
+  ).slice(0, 12);
+  if (locked.length)
+    lines.push(
+      `Locked advancements and the ones each needs first: ${locked
+        .map((n) => `${n.name} needs ${n.requires.map((r) => TREE.find((t) => t.id === r)?.name ?? r).join(" and ")}`)
+        .join("; ")}.`,
+    );
   lines.push(
     `Neighbour rules: ${CONNECTIONS.slice(0, 12).map((c) => `${name(c.building)} next to ${c.to.map(name).join("/")} +${Math.round(c.bonus * 100)}%`).join("; ")}; a home touching 2 other homes is a street and holds ${Math.round(STREET.share * 100)}% more people; aqueducts must touch the river or a watered aqueduct; smoke from coal plants and factories harms nearby homes.`,
   );
