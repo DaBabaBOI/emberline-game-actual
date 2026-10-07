@@ -60,6 +60,7 @@ import { turnFor } from "./facing";
 import { BattleScene, FireVictims, Raiders, Villagers, Warriors } from "./villagers";
 import { PickUp } from "./pick-up";
 import { SeaTraffic, TradeShips, WaitingShips } from "./trade";
+import { ForeignVillages } from "./foreign";
 import { Cracks, DisasterDust, disasterView, FloodWater, QuakeShake, Rubble, StormRain } from "./disasters";
 import { Wildlife } from "./wildlife";
 import { Links } from "./links";
@@ -656,6 +657,7 @@ export function WorldCanvas() {
       <TradeShips tiles={state.tiles} home={home} caravans={state.caravans ?? []} tick={state.tick} speed={state.speed} />
       <ChimneySmoke tiles={buildings} cleanAir={state.researched.includes("cleanair")} />
       <SeaTraffic state={state} home={home} />
+      <ForeignVillages state={state} />
       <WaitingShips state={state} home={home} />
       {/* The plague: rats scurrying round a few homes. */}
       {plagueOn &&
