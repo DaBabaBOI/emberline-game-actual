@@ -1976,6 +1976,17 @@ export function spaceDone(state: GameState, project: string) {
   return (state.space ?? []).includes(project);
 }
 
+// Why a space project can't be launched yet (beyond its cost): the ones it
+// builds on, or, for the Ark, a land in balance.
+export function launchError(state: GameState, project: string): string | null {
+  const p = SPACE.projects.find((x) => x.id === project);
+  if (!p) return "Unknown";
+  const missing = p.needs.filter((n) => !spaceDone(state, n));
+  if (missing.length) return `First launch ${missing.map((n) => SPACE.projects.find((x) => x.id === n)?.name ?? n).join(" and ")}`;
+  if (p.minSustain && state.meters.sustainability < p.minSustain) return `Needs Sustainability ${p.minSustain} or more (now ${Math.round(state.meters.sustainability)})`;
+  return null;
+}
+
 function gridTiles(state: GameState) {
   return state.tiles.filter((t) => t.building && !isFlooded(state, t) && wearFactor(t) > 0);
 }
@@ -2399,6 +2410,7 @@ export function production(state: GameState): Resources {
       (def.era >= 5 && (def.power ?? 0) < 0 ? powerCover(state) : 1) *
       (state.researched.includes("automation") && AUTOMATION.buildings.includes(tile.building) ? 1 + AUTOMATION.boost : 1) *
       (tile.building === "farm" && spaceDone(state, "satellites") ? 1 + SPACE.fieldBoost : 1) *
+      (tile.building === "farm" && spaceDone(state, "mars") ? 1 + SPACE.marsField : 1) *
       // Small advancements: seed saving for fields, baskets for gatherers.
       (tile.building === "farm" && state.researched.includes("seedsaving") ? 1.1 : 1) *
       (tile.building === "gatherer" && state.researched.includes("basketry") ? 1.2 : 1) *
@@ -2466,6 +2478,8 @@ export function production(state: GameState): Resources {
   const tired = 1 - fatigueLoss(state);
   if (tired < 1) for (const k of Object.keys(out) as (keyof Resources)[]) if (out[k] > 0) out[k] *= tired;
   if (spaceDone(state, "telescope")) out.knowledge *= 1 + SPACE.knowledgeBoost;
+  if (spaceDone(state, "probe")) out.knowledge *= 1 + SPACE.probeBoost;
+  if (spaceDone(state, "asteroids")) out.stone += SPACE.asteroidStone;
   // The climate tipped: for good, hotter summers and droughts cut harvests.
   if (state.tipped) out.food *= 1 - TIPPING.food;
   // The climate crisis: heat and storms ruin crops, the warmer the worse.
@@ -6717,7 +6731,7 @@ function step(state: GameState, action: Action): GameState {
     case "launch": {
       // A project launched from the Launch Site (see SPACE).
       const project = SPACE.projects.find((x) => x.id === action.project);
-      if (!project || !countBuildings(state).launchsite || spaceDone(state, project.id) || !canAfford(state, project.cost)) return state;
+      if (!project || !countBuildings(state).launchsite || spaceDone(state, project.id) || !canAfford(state, project.cost) || launchError(state, project.id)) return state;
       const launched = addTally(
         {
           ...state,
@@ -6725,6 +6739,8 @@ function step(state: GameState, action: Action): GameState {
           resources: spend(state.resources, project.cost),
           carbon: (state.carbon ?? CARBON.start) + SPACE.carbon,
           log: [`Launched: ${project.name}. ${project.text}`, ...state.log].slice(0, 30),
+          ...(project.id === "probe" ? { resources: { ...spend(state.resources, project.cost), knowledge: state.resources.knowledge + SPACE.probeKnowledge } } : {}),
+          ...(project.id === "ark" ? { modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + SPACE.arkHappiness } } : {}),
         },
         "launches",
         1,

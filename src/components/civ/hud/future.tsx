@@ -6,7 +6,7 @@ import { useState } from "react";
 // Space (a view of the planet from orbit, with the projects to launch).
 
 import { CARBON, KARDASHEV, SPACE, TIPPING } from "@/game/content";
-import { canAfford, carbonCaptured, carbonFlow, cleanPower, forestSink, kardashev, secs, spaceDone } from "@/game/engine";
+import { canAfford, carbonCaptured, carbonFlow, cleanPower, forestSink, kardashev, launchError, secs, spaceDone } from "@/game/engine";
 import type { Resources } from "@/game/types";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
@@ -105,6 +105,28 @@ export function SpacePanel() {
               </span>
             ) : null,
           )}
+          {/* Further out: Mars, the asteroid belt, and a far star with our probe and Ark on the way. */}
+          <span className="absolute left-[7%] top-[14%] flex flex-col items-center">
+            <span className="block h-7 w-7 rounded-full bg-[#c1440e] shadow-[inset_-5px_-4px_0_#7a2a08]" title="Mars" />
+            {launched.includes("mars") && <span className="mt-0.5 text-[10px] text-teal-200">Greenhouse</span>}
+          </span>
+          <span className="absolute bottom-[10%] right-[4%] flex gap-1" title="The asteroid belt">
+            {[5, 3, 4, 2, 3].map((d, i) => (
+              <span key={i} className="block bg-stone-400" style={{ width: d * 2, height: d * 2, marginTop: (i % 2) * 6 }} />
+            ))}
+            {launched.includes("asteroids") && <span className="ml-1 text-[10px] text-teal-200">Miners</span>}
+          </span>
+          <span className="absolute right-[3%] top-[48%] flex flex-col items-center" title="Alpha Centauri, 4.2 light-years away">
+            <span className="scene-twinkle block h-2 w-2 rounded-full bg-amber-200 shadow-[0_0_8px_3px_rgba(253,230,138,0.7)]" />
+            <span className="mt-0.5 text-[9px] text-white/60">Alpha Centauri</span>
+          </span>
+          {(launched.includes("probe") || launched.includes("ark")) && (
+            <span className="absolute right-[12%] top-[56%] flex items-center gap-1 text-[10px] text-teal-200">
+              {launched.includes("probe") && <PixelIcon name="star" size={12} title="The probe, on its way" />}
+              {launched.includes("ark") && <PixelIcon name="rocket" size={16} title="The Ember Ark, on its way" />}
+              <span>→</span>
+            </span>
+          )}
           <span className="absolute right-[8%] top-[12%] flex flex-col items-center">
             <PixelIcon name="moon" size={40} title="The Moon" />
             {launched.includes("moonbase") && <span className="mt-0.5 text-[10px] text-teal-200">Moon base</span>}
@@ -118,7 +140,8 @@ export function SpacePanel() {
           {SPACE.projects.map((p) => {
             const done = spaceDone(state, p.id);
             const cost = p.cost as Partial<Resources>;
-            const ok = canAfford(state, cost);
+            const locked = done ? null : launchError(state, p.id);
+            const ok = canAfford(state, cost) && !locked;
             return (
               <div key={p.id} className={cn("flex flex-col gap-1 border-2 border-white/15 p-2", done && "border-teal-400/60 bg-teal-900/30")}>
                 <span className="flex items-center gap-1.5 font-semibold">
@@ -128,6 +151,11 @@ export function SpacePanel() {
                 <span className="text-[11px] text-white/80">{p.text}</span>
                 {done ? (
                   <span className="text-[11px] text-teal-200">Launched</span>
+                ) : locked ? (
+                  <span className="mt-auto flex items-center gap-1 text-[11px] text-amber-200" data-testid={`locked-${p.id}`}>
+                    <PixelIcon name="lock" size={12} />
+                    {locked}
+                  </span>
                 ) : (
                   <button
                     type="button"

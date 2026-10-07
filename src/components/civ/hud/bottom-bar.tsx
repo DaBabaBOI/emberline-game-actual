@@ -38,7 +38,10 @@ import {
   tradeOffer,
   sellOffer,
   tutorialLocked,
-  warriorCap, newResearch } from "@/game/engine";
+  warriorCap,
+  newResearch,
+  launchError,
+} from "@/game/engine";
 import type { Resources } from "@/game/types";
 import type { IconId } from "@/game/sprites";
 import { useGame } from "@/components/civ/game-provider";
@@ -565,8 +568,8 @@ export function BottomBar() {
               icon="rocket"
               label="Space"
               onClick={() => setPanel("space")}
-              badge={SPACE.projects.some((p) => !(state.space ?? []).includes(p.id) && canAfford(state, p.cost)) ? "!" : undefined}
-              title="Look at our planet from orbit, and launch satellites, a telescope, a power satellite and a Moon base"
+              badge={SPACE.projects.some((p) => !(state.space ?? []).includes(p.id) && canAfford(state, p.cost) && !launchError(state, p.id)) ? "!" : undefined}
+              title="Look at our planet from orbit, and launch satellites, a Moon base, Mars, asteroid miners and, at last, a ship to the stars"
               tone="bg-indigo-700 hover:bg-indigo-600"
             />
           )}

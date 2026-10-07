@@ -17,6 +17,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Interstellar: after the Moon base, launch a Mars Greenhouse, Asteroid Miners, an Interstellar Probe to Alpha Centauri and, last, the Ember Ark, a generation ship that only a town with Sustainability 80+ can launch.",
       "Plan ahead: click to place a building you can't afford yet and it is planned (see-through). It builds itself, in order, once you have the resources. The Plans button cancels them.",
       "Hover a building card in the bar to see every one of that building on the map.",
       "Tidier towns: buildings in a cluster turn to face the middle of town.",
