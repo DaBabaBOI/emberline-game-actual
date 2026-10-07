@@ -32,7 +32,7 @@ const round = (n: number) => Math.round(n * 10) / 10;
 export function townSummary(state: GameState): string {
   const prod = production(state);
   const lines: string[] = [];
-  lines.push(`Mode: ${state.mode === "last" ? "Build to Last (reach a clean, healthy town before the deadline)" : "Eras"}. Era: ${ERAS[state.era]?.name ?? state.era}. Year: ${Math.round(state.year)}.`);
+  lines.push(`Mode: ${state.mode === "last" ? "Build to Last (reach a clean, healthy town before the deadline)" : "Eras"}. The town is NOW in the ${ERAS[state.era]?.name ?? state.era} era (era ${state.era + 1} of ${ERAS.length}${state.era > 0 ? `; it has already left the ${ERAS.slice(0, state.era).map((e) => e.name).join(", ")}` : ""}${ERAS[state.era + 1] ? `; next comes the ${ERAS[state.era + 1].name} era` : ""}). Year: ${Math.round(state.year)}.`);
   const goal = currentGoal(state);
   if (goal) lines.push(`Current goal: ${goal}`);
   if (state.mode === "last") lines.push(`Big problems: ${lastProblems(state).map((p) => `${p.title} (${p.done ? "solved" : "not yet"})`).join("; ")}`);

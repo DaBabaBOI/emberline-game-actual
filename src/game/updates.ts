@@ -17,6 +17,8 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Sell to the traders: the Trade menu now buys your spare food, wood or stone for coins (they pay less if you sell a lot at once).",
+      "Raids are fought at the edge of your land, away from the houses, and villagers near the fight run to the other side of the village so you can watch it.",
       "Tired people sweat where you can see it: bigger drops, from a little tiredness on, and whoever is working sweats first.",
       "Elder Ama now knows exactly what each advancement needs, so she no longer makes up requirements. Hints never switch the build bar's tab on their own (the tab glows instead), and the healing scene only plays once the tribe knows Herbalism.",
       "Three ways to fight a wildfire: carry water from the river, cut a firebreak, or beat it out (risky). Scouts walk smoothly on slower devices, and villagers no longer squeeze onto the same spot on a log: two fit on each, the rest stand by the fire.",

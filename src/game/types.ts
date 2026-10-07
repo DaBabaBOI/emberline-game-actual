@@ -389,6 +389,8 @@ export interface GameState {
   fatigue?: number;
   // Traders: how much dearer than usual they are now (1 = the usual price).
   tradePrice?: number;
+  // What traders pay for our goods (1 = full price; lower after selling a lot).
+  sellPrice?: number;
   // Type I reached: the story is told (the game can go on after the final debrief).
   finished?: boolean;
   // The discovery scene on screen (an advancement or secret just found), if any.

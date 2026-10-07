@@ -34,6 +34,7 @@ import {
   scoutCost,
   spearmenOf,
   tradeOffer,
+  sellOffer,
   tutorialLocked,
   warriorCap, newResearch } from "@/game/engine";
 import type { Resources } from "@/game/types";
@@ -174,7 +175,7 @@ function TradeButton() {
         disabled={state.tutorialStep < TUTORIAL.length}
         // Shells piling up: worth a trade.
         badge={can && state.resources.currency >= TRADE.idle ? "!" : undefined}
-        title={`${state.resources.currency >= TRADE.idle ? `${Math.floor(state.resources.currency)} ${money} piling up! ` : ""}Traders swap ${TRADE.lot} ${money} for food, wood or stone. Buying wood and stone spares your own forest and hills.`}
+        title={`${state.resources.currency >= TRADE.idle ? `${Math.floor(state.resources.currency)} ${money} piling up! ` : ""}Traders swap ${TRADE.lot} ${money} for food, wood or stone, and buy what you have spare. Buying wood and stone spares your own forest and hills.`}
         tone={open ? "bg-amber-400 text-[#2b2119]" : "bg-[#4a3b2e] hover:bg-[#5c4a3a]"}
       >
         <Cost cost={{ currency: TRADE.lot }} bad={!can} />
@@ -205,6 +206,28 @@ function TradeButton() {
           <span className="text-[10px] text-white/60">
             {(state.tradePrice ?? 1) > 1.05 ? "Prices are up after your trades; they ease back slowly." : "Buying spares your own forest and hills."}
           </span>
+          <span className="mt-1 border-t border-white/15 pt-1 text-white/80">Sell to the traders:</span>
+          {(["food", "wood", "stone"] as const).map((k) => {
+            const offer = sellOffer(state, k);
+            return (
+              <button
+                key={k}
+                type="button"
+                disabled={state.resources[k] < offer.amount}
+                onClick={() => dispatch({ type: "sell", give: k })}
+                className="pixel-btn flex items-center justify-between bg-amber-800 px-2 py-1 text-white hover:bg-amber-700 disabled:opacity-40"
+                data-testid={`sell-${k}`}
+              >
+                <span className="flex items-center gap-1">
+                  −{offer.amount} <PixelIcon name={COST_ICONS[k]} size={14} /> {k}
+                </span>
+                <span className="text-white/70">
+                  +{offer.coins} <PixelIcon name="coin" size={12} />
+                </span>
+              </button>
+            );
+          })}
+          {(state.sellPrice ?? 1) < 0.95 && <span className="text-[10px] text-white/60">You have sold a lot: traders pay less for a while.</span>}
         </span>
       )}
     </span>

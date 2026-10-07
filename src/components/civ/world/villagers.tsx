@@ -48,6 +48,8 @@ export interface Walker extends Agent {
   faceAt?: { x: number; z: number } | null;
   // Gone (dropped in a fire, the sea or the fog) until this time (performance.now ms).
   goneUntil?: number;
+  // Running from a fight (BattleScene) to a safe spot.
+  fleeing?: boolean;
   // Out hunting: the hunter (wildlife.tsx) walks in their place and hands them
   // back where the hunt ends, so nobody appears or vanishes.
   hunting?: boolean;
@@ -102,6 +104,9 @@ const FIRE_PLACES = FIRE_SEATS.flatMap((s) => [s - 0.2, s + 0.2]);
 function placeTaken(key: string, self: Walker) {
   return grabStore.walkers.some((o) => o !== self && o.seat === key && o.sitAt && !o.held);
 }
+
+// People within `radius` of a fight run from it, `speed` times as fast.
+const FLEE = { radius: 4.5, speed: 2.2 };
 
 // How often a grown-up who walks to a workplace gets to work there, and for how long (s).
 const SELF_WORK = { go: 0.35, chance: 0.85, min: 10, extra: 10 };
@@ -244,7 +249,10 @@ export function Villagers({
   cameos = [],
   tired = 0,
   gameSpeed = 1,
+  danger = null,
 }: {
+  // A fight (raiders meeting our warriors): people nearby run from it.
+  danger?: { x: number; z: number } | null;
   // The game's speed (0 paused, 1, 2, 4): people walk that much faster. Only
   // the speed setting changes it, never the era.
   gameSpeed?: number;
@@ -321,7 +329,7 @@ export function Villagers({
       w.baseSpeed ??= w.speed;
       const ill = i < sickFigures;
       w.tunic = ill ? SICK_TUNIC : w.baseTunic;
-      w.speed = ill ? w.baseSpeed * 0.35 : w.baseSpeed;
+      w.speed = (ill ? w.baseSpeed * 0.35 : w.baseSpeed) * (w.fleeing ? FLEE.speed : 1);
     });
     const dt = Math.min(delta, 0.1) * gameSpeed;
     const now = performance.now();
@@ -345,12 +353,33 @@ export function Villagers({
         Object.assign(w, { x: spot.x, z: spot.z, tx: spot.x, tz: spot.z, goneUntil: undefined });
       }
       if (w.held || w.goneUntil || w.hunting) continue;
+      // A fight nearby: drop everything and run to the far side of the village.
+      const near = (t: { x: number; z: number }) => !!danger && Math.hypot(t.x - danger.x, t.z - danger.z) < FLEE.radius;
+      if (danger && !w.fleeing && near(w)) {
+        const away = Math.atan2(w.z - danger.z, w.x - danger.x);
+        const want = { x: danger.x + Math.cos(away) * FLEE.radius * 1.5, z: danger.z + Math.sin(away) * FLEE.radius * 1.5 };
+        const safe = [...spots.wander, ...spots.all]
+          .filter((t) => !near(t))
+          .sort((a, b) => Math.hypot(a.x - want.x, a.z - want.z) - Math.hypot(b.x - want.x, b.z - want.z))[0];
+        if (safe) {
+          const spot = ground.spotOn(safe);
+          Object.assign(w, { tx: spot.x, tz: spot.z, wait: 0, fleeing: true, working: false, workAt: null, goWork: null, sitting: false, sitAt: null, seat: undefined });
+        }
+      } else if (!danger && w.fleeing) w.fleeing = false;
       stepWalker(w, dt, ground, () => {
-        if (spots.fires.length && Math.random() < 0.45) return pick(spots.fires);
-        if (w.child && spots.school.length && Math.random() < 0.6) return pick(spots.school);
-        if (!w.child && spots.work.length && Math.random() < SELF_WORK.go) return pick(spots.work);
-        if (spots.fields.length && Math.random() < 0.3) return pick(spots.fields);
-        return Math.random() < 0.4 ? pick(spots.wander) : pick(spots.all);
+        const choose = () => {
+          if (spots.fires.length && Math.random() < 0.45) return pick(spots.fires);
+          if (w.child && spots.school.length && Math.random() < 0.6) return pick(spots.school);
+          if (!w.child && spots.work.length && Math.random() < SELF_WORK.go) return pick(spots.work);
+          if (spots.fields.length && Math.random() < 0.3) return pick(spots.fields);
+          return Math.random() < 0.4 ? pick(spots.wander) : pick(spots.all);
+        };
+        // While the fight goes on, nobody wanders back towards it.
+        for (let k = 0; k < 6; k++) {
+          const t = choose();
+          if (!near(t)) return t;
+        }
+        return pick(spots.wander.filter((t) => !near(t))) ?? homeTile;
       }, true);
     }
     shown.current = list.filter((w) => !w.goneUntil && !w.hunting);

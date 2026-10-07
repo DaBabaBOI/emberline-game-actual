@@ -90,6 +90,7 @@ import {
   FALLOW,
   SCRAP,
   CONNECTIONS,
+  SELL,
   DRINKING,
   STREET,
   INVENTED,
@@ -211,6 +212,7 @@ export type Action =
   | { type: "devTypeOne" }
   // Multiplayer: gifts and raids between players.
   | { type: "trade"; get: "food" | "wood" | "stone" }
+  | { type: "sell"; give: "food" | "wood" | "stone" }
   | { type: "mpGiftOut"; resources: Partial<Resources>; to: string }
   | { type: "mpGiftIn"; resources: Partial<Resources>; from: string }
   | { type: "mpRaidOut"; warriors: number; to: string }
@@ -4225,6 +4227,7 @@ function tickOnce(state: GameState): GameState {
   next = updateCarbon(next);
   next = updateFatigue(next);
   if ((next.tradePrice ?? 1) > 1) next = { ...next, tradePrice: Math.max(1, (next.tradePrice ?? 1) - TRADE.ease) };
+  if ((next.sellPrice ?? 1) < 1) next = { ...next, sellPrice: Math.min(1, (next.sellPrice ?? 1) + TRADE.ease) };
   next = reachTypeOne(next);
   next = returnCaravans(next);
   next = returnScouts(next);
@@ -4564,11 +4567,16 @@ function pickLanding(state: GameState, rand: () => number) {
   });
   if (shores.length === 0) return null;
   const from = shores[Math.floor(rand() * shores.length)];
-  const mx = from.x + (home.x - from.x) * 0.7;
-  const mz = from.z + (home.z - from.z) * 0.7;
-  const meet = state.tiles
-    .filter((t) => isLand(t.terrain) && t.terrain !== "mountain" && t.revealed && !t.building)
-    .reduce((best, t) => (Math.hypot(t.x - mx, t.z - mz) < Math.hypot(best.x - mx, best.z - mz) ? t : best));
+  // The warriors meet them at the edge of our land, on the way in from the
+  // shore: the fight stays out of the village and can be watched.
+  const open = state.tiles.filter((t) => isLand(t.terrain) && t.terrain !== "mountain" && t.revealed && !t.building);
+  const built = state.tiles.filter((t) => t.building);
+  const edge = open.filter((t) => hexDistance(t, home) >= 3 && !built.some((b) => hexDistance(b, t) <= 1));
+  const mx = from.x + (home.x - from.x) * 0.15;
+  const mz = from.z + (home.z - from.z) * 0.15;
+  const meet = (edge.length ? edge : open).reduce((best, t) =>
+    Math.hypot(t.x - mx, t.z - mz) < Math.hypot(best.x - mx, best.z - mz) ? t : best,
+  );
   return { from, meet, home };
 }
 
@@ -5213,6 +5221,11 @@ export function tributeCoins(raid: Raid) {
 // What one lot of shells or coins buys from the traders right now.
 export function tradeOffer(state: GameState, get: "food" | "wood" | "stone") {
   return Math.max(1, Math.round(TRADE[get] / (state.tradePrice ?? 1)));
+}
+
+// Selling: how much of a good the traders want, and the coins they pay for it.
+export function sellOffer(state: GameState, give: "food" | "wood" | "stone") {
+  return { amount: SELL[give], coins: Math.max(1, Math.round(TRADE.lot * (state.sellPrice ?? 1))) };
 }
 
 function updateRaids(state: GameState): GameState {
@@ -6339,6 +6352,21 @@ function step(state: GameState, action: Action): GameState {
         });
       }
       return { ...state, raid: { ...raid, response: action.choice } };
+    }
+
+    case "sell": {
+      const offer = sellOffer(state, action.give);
+      if (state.tutorialStep < TUTORIAL.length || state.resources[action.give] < offer.amount) return state;
+      return {
+        ...state,
+        resources: {
+          ...state.resources,
+          [action.give]: state.resources[action.give] - offer.amount,
+          currency: state.resources.currency + offer.coins,
+        },
+        sellPrice: Math.max(0.3, (state.sellPrice ?? 1) - SELL.fall),
+        log: [`Sold ${offer.amount} ${action.give} for ${offer.coins} ${ERAS[state.era].currency.toLowerCase()}.`, ...state.log].slice(0, 30),
+      };
     }
 
     case "trade": {

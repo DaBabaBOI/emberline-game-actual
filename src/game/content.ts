@@ -3427,6 +3427,10 @@ export const WORK = {
 };
 
 export const TRADE = { idle: 60, lot: 10, food: 18, wood: 10, stone: 6, rise: 0.2, ease: 0.006 };
+// Selling to the traders: this much of a good fetches TRADE.lot coins (a bit
+// worse than buying, so trading back and forth never pays). Each sale lowers the
+// price by `fall`; it climbs back by TRADE.ease a tick.
+export const SELL = { food: 24, wood: 14, stone: 9, fall: 0.1 };
 
 // A watch tower on the shore sees raiders earlier and adds a little defense
 // (`smoke`: what its big logs cost the land, in Sustainability).

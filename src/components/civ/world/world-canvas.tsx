@@ -416,6 +416,13 @@ export function WorldCanvas() {
   const burning = useMemo(() => litFires(state), [state]);
   // A battle is played out for a few ticks after it happens.
   const battleShowing = !!state.battle && state.tick - state.battle.tick < 7;
+  // Where people should run from: the fight, or raiders about to arrive there.
+  const fightTile = battleShowing
+    ? state.tiles[state.battle!.tile]
+    : state.raid && state.raid.arriveTick - state.tick <= 4
+      ? state.tiles[state.raid.meetTile ?? state.raid.targetTile]
+      : null;
+  const fightAt = useMemo(() => (fightTile ? { x: fightTile.x, z: fightTile.z } : null), [fightTile]);
   const burningIds = burning.map((t) => t.id);
   const wetIds = linkedAqueducts(state).map((t) => t.id);
   // The great drought: warned of (a little dry), then on (parched land, hazy sky).
@@ -600,6 +607,7 @@ export function WorldCanvas() {
         era={state.era}
         cameos={cameos}
         gameSpeed={state.speed}
+        danger={fightAt}
       />
       <PickUp state={state} dispatch={dispatch} enabled={canPickUp} onHolding={setHolding} />
       <KeyboardPan controls={mapControls} enabled={!holding && !shot && !guide.target} />
