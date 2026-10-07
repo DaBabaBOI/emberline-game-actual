@@ -17,6 +17,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Tired people sweat where you can see it: bigger drops, from a little tiredness on, and whoever is working sweats first.",
       "Elder Ama now knows exactly what each advancement needs, so she no longer makes up requirements. Hints never switch the build bar's tab on their own (the tab glows instead), and the healing scene only plays once the tribe knows Herbalism.",
       "Three ways to fight a wildfire: carry water from the river, cut a firebreak, or beat it out (risky). Scouts walk smoothly on slower devices, and villagers no longer squeeze onto the same spot on a log: two fit on each, the rest stand by the fire.",
       "Every person now walks on the map (up to 30 figures): no more one figure standing for 3 people in a small village. Elder Ama answers faster too.",
