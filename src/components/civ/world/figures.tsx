@@ -208,12 +208,12 @@ export function Figures({
       // Or holding something in both hands (also while walking with a load), or praying.
       const holding = !!a.working && !a.held && !!HELD[a.workTool!] && (a.workTool === "carry" || !a.moving);
       const praying = !!a.working && !a.held && a.workTool === "pray" && !a.moving;
-      const kneel = a.sitting || praying;
       // Reading: the book rises and falls a little as the pages turn.
       const hold = holding ? (a.workTool === "book" ? -1.05 + Math.sin(t * 1.3 + a.phase) * 0.06 : -1.3) : null;
       const bob = a.moving ? Math.abs(Math.sin(t * 9 + a.phase)) * 0.015 : 0;
-      // Sitting: hips drop to the ground, legs point forward, hands reach out.
-      fig.position.set(a.x, a.y + bob - (kneel ? 0.15 * a.scale : 0), a.z);
+      // Sitting on a log: hips drop to the top of the log, legs reach down and
+      // forward to the ground, hands out to the fire. Praying: down on the knees.
+      fig.position.set(a.x, a.y + bob - (praying ? 0.15 * a.scale : a.sitting ? 0.075 * a.scale : 0), a.z);
       // Toppling pivots at the feet, forward along the way they face.
       fig.rotation.set(((a.fallen ?? 0) * Math.PI) / 2, a.heading, 0, "YXZ");
       fig.scale.setScalar(a.scale);
@@ -237,7 +237,7 @@ export function Figures({
       const weaponArm = weapon && work === null && !a.sitting ? -0.7 + swing * 0.15 : null;
       for (const side of [-1, 1]) {
         const k = side < 0 ? 0 : 1;
-        const legAngle = kneel ? -Math.PI / 2 + 0.15 : (holding ? swing * 0.6 : swing) * side;
+        const legAngle = praying ? -Math.PI / 2 + 0.15 : a.sitting ? -0.85 : (holding ? swing * 0.6 : swing) * side;
         local.rotation.set(legAngle, 0, 0);
         local.position.set(0.035 * side, 0.19 - 0.09 * Math.cos(legAngle), -0.09 * Math.sin(legAngle));
         put(legs.current, i * 2 + k);

@@ -31,7 +31,8 @@ const own = (tile: Tile) => (tile.id % 6) * (Math.PI / 3);
 // The turn for `building` standing on `tile` (also for a building about to be
 // placed there, so the preview shows how it will sit).
 export function turnFor(tiles: Tile[], tile: Tile, building: string | null | undefined): number {
-  if (!building) return own(tile);
+  // A campfire is round, and villagers find its log seats by its own turn.
+  if (!building || building === "campfire") return own(tile);
   const near = tiles.filter((t) => t.building && t.id !== tile.id && hexDistance(t, tile) === 1).sort((a, b) => a.id - b.id);
   const family = familyOf(building);
   const kin = family ? near.filter((t) => familyOf(t.building!) === family) : [];
