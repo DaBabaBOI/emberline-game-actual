@@ -251,14 +251,16 @@ export function TreeOverlay() {
                 }}
                 title={fromEarlier.length ? `Needs: ${fromEarlier.join(", ")}` : undefined}
               >
-                <span className="flex items-center gap-1 truncate text-sm font-semibold">
-                  {s === "secret" ? "???" : node.name}
-                  {fresh.includes(node.id) && (
-                    <span className="shrink-0 bg-sky-400 px-1 text-[10px] leading-tight text-[#2b2119]" data-testid="tree-new">
-                      New
-                    </span>
-                  )}
-                </span>
+                <span className="truncate text-sm font-semibold">{s === "secret" ? "???" : node.name}</span>
+                {/* On the card's corner, so a long name never cuts it off. */}
+                {fresh.includes(node.id) && (
+                  <span
+                    className="absolute -right-2 -top-2.5 border-2 border-[#2b2119] bg-sky-400 px-1 text-[10px] leading-tight text-[#2b2119]"
+                    data-testid="tree-new"
+                  >
+                    New
+                  </span>
+                )}
                 {(s === "available" || s === "locked") && <GoalLine state={state} nodeId={node.id} reachable={s === "available"} />}
                 <span className="flex items-center gap-1 text-[11px] opacity-80">
                   {s === "done" && "Discovered"}
