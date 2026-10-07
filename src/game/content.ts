@@ -3627,6 +3627,10 @@ export const GRANARY_KEEPS = 150;
 export const FORESTER_GROWTH = 0.12;
 export const FORESTER_REACH = 3;
 export const WALL_DEFENSE = 4;
+// Clearing a forest tile with the Sell tool: it becomes grassland, the trees
+// give up to `wood` wood (as grown as the forest is), and the land pays
+// `sustainability`.
+export const CLEAR_LAND = { wood: 12, sustainability: 2 };
 // Stone walls guard every building within `reach` tiles: raiders can't burn
 // them, and stores behind walls lose up to `shield` less to plunder.
 export const WALLS = { reach: 2, shield: 0.6 };

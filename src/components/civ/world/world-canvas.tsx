@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Vector3 } from "three";
+import { Vector3, type Group } from "three";
 import { MapControls, PerformanceMonitor } from "@react-three/drei";
 import { Html } from "./html";
 import type { MapControls as MapControlsImpl } from "three-stdlib";
-import { BUILDINGS_BY_ID, ERAS, formatYear, IMPROVE, LAST_TUTORIAL, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL, WEAR, SMOG } from "@/game/content";
+import { BUILDINGS_BY_ID, CLEAR_LAND, ERAS, formatYear, IMPROVE, LAST_TUTORIAL, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL, WEAR, SMOG } from "@/game/content";
 import { CANOE_TOOL, SCOUT_TOOL, canoeTargetError, canoeTicks, scoutTargetError, scoutTicks } from "@/game/engine";
 import {
   buildingCost,
@@ -44,13 +44,14 @@ import {
   scrapEra,
   soilOf,
   linkedAqueducts,
+  clearLandWood,
 } from "@/game/engine";
 import { BuildingInfo } from "./building-info";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { ScoutMarker, SmallMoment } from "./moments";
 import { Rebels } from "./rebels";
-import { tileAnchor } from "@/components/civ/guide";
+import { goodSpots, tileAnchor } from "@/components/civ/guide";
 import { useGuide } from "@/components/civ/hud/guide-overlay";
 import type { GameState, Tile } from "@/game/types";
 import { BiomeDetails, Deposits, Forests, HexTerrain, Mountains, tileTop, treeSpots } from "./hex-terrain";
@@ -112,6 +113,29 @@ function ReachArea({ tiles, centre, building }: { tiles: Tile[]; centre: Tile; b
               <meshBasicMaterial color={harm ? "#b91c1c" : "#15803d"} transparent opacity={0.9} depthWrite={false} />
             </mesh>
           </group>
+        );
+      })}
+    </group>
+  );
+}
+
+// While placing: gold rings on the best few spots, to keep the town tidy.
+function GoodSpots({ state, building }: { state: GameState; building: string }) {
+  const ids = useMemo(() => goodSpots(state, building), [building, state.tiles]); // eslint-disable-line react-hooks/exhaustive-deps
+  const rings = useRef<Group>(null);
+  useFrame(({ clock }) => {
+    const s = 1 + Math.sin(clock.elapsedTime * 3) * 0.06;
+    rings.current?.children.forEach((c) => c.scale.set(s, 1, s));
+  });
+  return (
+    <group ref={rings}>
+      {ids.map((id) => {
+        const t = state.tiles[id];
+        return (
+          <mesh key={id} position={[t.x, tileTop(t) + 0.06, t.z]} rotation={[-Math.PI / 2, 0, Math.PI / 6]} raycast={() => null}>
+            <ringGeometry args={[0.72, 0.86, 6]} />
+            <meshBasicMaterial color="#fbbf24" transparent opacity={0.85} depthWrite={false} toneMapped={false} />
+          </mesh>
         );
       })}
     </group>
@@ -363,6 +387,8 @@ export function WorldCanvas() {
       const cost = list(scrapClearCost(state), "−");
       return { ok: true, text: `Clear the scrap${cost ? ` (${cost})` : ""}: ${list(state.scrap[hoverTile.id], "+") || "a little back"}` };
     }
+    if (!hoverTile.building && hoverTile.terrain === "forest")
+      return { ok: true, text: `Clear the trees for open grassland: +${clearLandWood(hoverTile)} wood, −${CLEAR_LAND.sustainability} Sustainability` };
     const target = BUILDINGS_BY_ID[hoverTile.building!];
     if (scrapEra(state)) return { ok: true, text: `Take down the ${target.name}: it leaves scrap worth ${list(salvageOf(state, target), "+") || "a little"} to clear` };
     const refund = Object.entries(demolishRefund(target))
@@ -717,6 +743,7 @@ export function WorldCanvas() {
         />
       )}
       {hoverTile && def && !error && <ReachArea tiles={state.tiles} centre={hoverTile} building={def.id} />}
+      {def && !shot && <GoodSpots state={state} building={def.id} />}
       {hoverTile && dwellers && (
         <Html zIndexRange={[15, 0]} center position={[hoverTile.x, tileTop(hoverTile) + 1.2, hoverTile.z]} style={{ pointerEvents: "none" }}>
           <div className="pixel-panel-dark font-pixel whitespace-nowrap px-2 py-1 text-xs" data-testid="home-label">

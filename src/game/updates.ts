@@ -17,6 +17,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Room to build: the Sell tool clears an empty forest back to grassland (+wood), and most buildings can go straight onto forest (the trees are felled for the space). While placing, gold rings mark the 3 best spots: next to their partners and their own kind, away from harm, so the town grows tidy.",
       "Stone Walls guard what stands behind them: buildings within 2 tiles can't be burned by raiders and less is stolen; raiders fight at the wall, and walls next to each other join up. Placing one shows what it guards.",
       "Tired fields look tired (pale cracked earth, drooping brown crops) instead of a strange fog, and scouts walk around water instead of over it.",
       "Sell to the traders: the Trade menu now buys your spare food, wood or stone for coins (they pay less if you sell a lot at once).",

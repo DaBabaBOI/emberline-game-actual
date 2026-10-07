@@ -449,7 +449,7 @@ export function BottomBar() {
             icon="coin"
             label="Sell"
             onClick={() => setSelected(selected === DEMOLISH_TOOL ? null : DEMOLISH_TOOL)}
-            title="Sell a building to make room. You get half its cost back."
+            title="Sell a building to make room (half its cost back), or clear an empty forest back to grassland for its wood."
             tone={selected === DEMOLISH_TOOL ? "bg-amber-400 text-[#2b2119]" : "bg-[#4a3b2e] hover:bg-[#5c4a3a]"}
           />
           <TradeButton />

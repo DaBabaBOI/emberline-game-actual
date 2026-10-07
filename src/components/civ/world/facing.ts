@@ -13,8 +13,8 @@ import type { Tile } from "@/game/types";
 const RUNS = ["aqueduct", "canal", "walls", "seawall"];
 const ROWS = [["hut", "house", "townhouse", "apartments"], ["farm", "vfarm"], ["windfarm", "solarfarm"]];
 
-const familyOf = (b: string) => (RUNS.includes(b) ? b : ROWS.find((r) => r.includes(b))?.[0]);
-const partners = (a: string, b: string) =>
+export const familyOf = (b: string) => (RUNS.includes(b) ? b : ROWS.find((r) => r.includes(b))?.[0]);
+export const partners = (a: string, b: string) =>
   CONNECTIONS.some((c) => (c.building === a && c.to.includes(b)) || (c.building === b && c.to.includes(a)));
 
 // A model's +x along the line from a to b. Turned into half a circle, so a

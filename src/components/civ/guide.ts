@@ -1,6 +1,7 @@
 import { AFTER_STEPS, BUILDINGS_BY_ID, ERAS, LAST_TUTORIAL, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL } from "@/game/content";
 import { buildingCost, countBuildings, everydayWater, placementError, placementHarm, scoutCost, spearmenOf, touchesRiver, warriorCap } from "@/game/engine";
 import { hexDistance } from "@/game/hex";
+import { familyOf, partners } from "@/components/civ/world/facing";
 import type { GameState, Resources } from "@/game/types";
 
 // The tutorial hand. Each step is broken into clicks; the guide points at the
@@ -47,6 +48,35 @@ export function suggestTile(state: GameState, buildingId: string) {
     if (!best || score < best.score) best = { id: t.id, score };
   }
   return best?.id ?? null;
+}
+
+// The best few places for a building, for the gold markers while placing it
+// (a tidy town: close in, next to its partners and its own kind, never next to
+// harm). Best first.
+export function goodSpots(state: GameState, buildingId: string, n = 3) {
+  const def = BUILDINGS_BY_ID[buildingId];
+  const home = state.tiles[state.startTile];
+  const far = buildingId === "quarry";
+  const family = familyOf(buildingId);
+  const scored: { id: number; score: number }[] = [];
+  for (const t of state.tiles) {
+    const d = hexDistance(t, home);
+    if (d > (far ? 8 : 6) || !t.revealed || placementError(state, t, def)) continue;
+    const near = state.tiles.filter((o) => o.building && hexDistance(o, t) === 1);
+    const kin = family ? near.filter((o) => familyOf(o.building!) === family).length : 0;
+    const helped = near.filter((o) => partners(buildingId, o.building!)).length;
+    const score =
+      (far ? -d : d) * 0.8 -
+      (def.depositBonus && t.deposit === def.depositBonus.deposit ? 2.5 : 0) -
+      Math.min(2, kin) * 1.5 -
+      Math.min(2, helped) * 2 +
+      placementHarm(state, t, buildingId) * 4 -
+      (def.housing && everydayWater(state) && touchesRiver(state, t) ? 2 : 0) +
+      // Open ground before felling a forest.
+      (t.terrain === "forest" && !def.terrain.includes("forest") ? 1.5 : 0);
+    scored.push({ id: t.id, score });
+  }
+  return scored.sort((a, b) => a.score - b.score).slice(0, n).map((x) => x.id);
 }
 
 function buildStep(state: GameState, id: string, selected: string | null, panel: string | null): Guide {

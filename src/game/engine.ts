@@ -71,6 +71,7 @@ import {
   FIRE_SCARE,
   GATHERING,
   WALL_DEFENSE,
+  CLEAR_LAND,
   WALLS,
   MIN_SUSTAINABILITY_FOR_BEST_ENDING,
   NEXT_ERA_POPULATION,
@@ -941,7 +942,8 @@ export function placementError(state: GameState, tile: Tile, def: BuildingDef): 
   if (def.unique && (countBuildings(state)[def.id] ?? 0) >= 1) return "There is only one";
   const ploughed = def.id === "farm" && tile.terrain === "forest" && state.researched.includes("heavy-plough");
   const onBank = !!def.riverTerrain?.includes(tile.terrain) && touchesRiver(state, tile);
-  if (!def.terrain.includes(tile.terrain) && !ploughed && !onBank)
+  if (clearsForest(state, tile, def.id) && (state.protectedTiles ?? []).includes(tile.id)) return "This old grove is protected";
+  if (!def.terrain.includes(tile.terrain) && !ploughed && !onBank && !clearsForest(state, tile, def.id))
     return def.riverTerrain ? `Needs ${def.terrain.join(" / ")}, or the river bank` : `Needs ${def.terrain.join(" / ")}`;
   if (def.needsWaterNeighbor) {
     const touchesWater = state.tiles.some(
@@ -1179,6 +1181,7 @@ export function connectionNote(state: GameState, tile: Tile, building: string): 
     .filter((t) => t.building && hexDistance(t, tile) === 1 && CONNECTIONS.some((c) => c.building === t.building && c.to.includes(building)))
     .map((t) => BUILDINGS_BY_ID[t.building!]?.name ?? t.building!))];
   if (helps.length) parts.push(`Helps the ${helps.join(" and ")} next door`);
+  if (clearsForest(state, tile, building)) parts.push(`Fells the trees here first: +${clearLandWood(tile)} wood, −${CLEAR_LAND.sustainability} Sustainability`);
   if (building === "walls") {
     const guarded = burnable(state).filter((t) => hexDistance(t, tile) <= WALLS.reach).length;
     parts.push(guarded ? `Guards ${guarded} building${guarded === 1 ? "" : "s"} from raiders' torches` : "Nothing to guard here yet: build walls next to the buildings you want to keep safe");
@@ -2433,6 +2436,8 @@ export function scrapClearCost(state: GameState): Partial<Resources> {
 
 export function demolishError(state: GameState, tile: Tile): string | null {
   if (!tile.building && state.scrap?.[tile.id]) return canAfford(state, scrapClearCost(state)) ? null : "Not enough coins to clear the scrap";
+  // An empty forest can be cleared back to grassland (not the protected grove).
+  if (!tile.building && tile.terrain === "forest") return (state.protectedTiles ?? []).includes(tile.id) ? "This old grove is protected" : null;
   if (!tile.building) return "Nothing to sell";
   if (BUILDINGS_BY_ID[tile.building]?.landmark) return "A landmark stays for good";
   if (tile.building === "woodcutter" && (countBuildings(state).woodcutter ?? 0) <= 1) {
@@ -2442,6 +2447,18 @@ export function demolishError(state: GameState, tile: Tile): string | null {
 }
 
 export const DEMOLISH_TOOL = "__demolish";
+
+// A building that needs open grass, placed on forest: the trees are felled
+// first (fields need the Heavy Plough for that).
+export function clearsForest(state: GameState, tile: Tile, building: string) {
+  const def = BUILDINGS_BY_ID[building];
+  return !!def && building !== "farm" && tile.terrain === "forest" && !tile.building && def.terrain.includes("grass") && !def.terrain.includes("forest");
+}
+
+// The wood from clearing a forest tile: more from a grown forest than saplings.
+export function clearLandWood(tile: Tile) {
+  return Math.max(1, Math.round(CLEAR_LAND.wood * Math.min(1, Math.max(0.15, tile.growth))));
+}
 
 // During the tutorial only what it has introduced so far can be used.
 export function tutorialLocked(state: GameState, id: string) {
@@ -5633,9 +5650,11 @@ function step(state: GameState, action: Action): GameState {
       // A new field clears the nearest patch of forest for good.
       const cleared = def.id === "farm" ? forestToClear(state, tile) : null;
       const ploughed = def.id === "farm" && tile.terrain === "forest";
+      // Other buildings on forest: the trees are felled for the space.
+      const felled = clearsForest(state, tile, def.id);
       const tiles = state.tiles.map((t) =>
         t.id === tile.id
-          ? { ...t, building: def.id, worn: 0, level: undefined, ...(ploughed ? { terrain: "grass" as const, height: terrainHeight("grass"), growth: 0 } : {}) }
+          ? { ...t, building: def.id, worn: 0, level: undefined, ...(ploughed || felled ? { terrain: "grass" as const, height: terrainHeight("grass"), growth: 0 } : {}) }
           : t.id === cleared?.id
             ? { ...t, terrain: "grass" as const, height: terrainHeight("grass"), growth: 0 }
             : t,
@@ -5656,10 +5675,15 @@ function step(state: GameState, action: Action): GameState {
         sown,
         tiles,
         fires: def.id === "campfire" ? { ...state.fires, [tile.id]: burnTicks(state) } : state.fires,
-        resources: spend(state.resources, buildingCost(state, def)),
+        resources: felled
+          ? { ...spend(state.resources, buildingCost(state, def)), wood: spend(state.resources, buildingCost(state, def)).wood + clearLandWood(tile) }
+          : spend(state.resources, buildingCost(state, def)),
+        modifiers: felled ? { ...worried.modifiers, sustainability: worried.modifiers.sustainability - CLEAR_LAND.sustainability } : worried.modifiers,
         log: [
           ploughed
             ? `Ploughed the forest into Farmland.`
+            : felled
+              ? `Felled the trees and built ${def.name} (+${clearLandWood(tile)} wood).`
             : cleared
               ? `Built ${def.name}, clearing the forest beside it.`
               : landmark !== state.landmark
@@ -5870,6 +5894,17 @@ function step(state: GameState, action: Action): GameState {
         delete scrap[tile.id];
         const what = Object.entries(got).filter(([, v]) => (v ?? 0) > 0).map(([k, v]) => `${v} ${k === "currency" ? "coins" : k}`).join(", ");
         return withMeters({ ...state, scrap, resources, log: [`Cleared a scrap pile and salvaged ${what || "a little"}.`, ...state.log].slice(0, 30) });
+      }
+      // A forest with nothing on it: fell the trees, leaving grassland to build on.
+      if (!tile.building && tile.terrain === "forest") {
+        const wood = clearLandWood(tile);
+        return withMeters({
+          ...state,
+          tiles: state.tiles.map((t) => (t.id === tile.id ? { ...t, terrain: "grass" as const, height: terrainHeight("grass"), growth: 0 } : t)),
+          resources: { ...state.resources, wood: state.resources.wood + wood },
+          modifiers: { ...state.modifiers, sustainability: state.modifiers.sustainability - CLEAR_LAND.sustainability },
+          log: [`Cleared the trees for open land (+${wood} wood).`, ...state.log].slice(0, 30),
+        });
       }
       const def = BUILDINGS_BY_ID[tile.building!];
       // Industrial era on: no coins back now, a scrap pile to clear instead.
