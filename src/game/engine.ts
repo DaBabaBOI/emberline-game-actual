@@ -240,6 +240,7 @@ export type Action =
   | { type: "treaty"; kingdom: KingdomId }
   | { type: "raidKingdom"; kingdom: KingdomId }
   | { type: "conquer"; kingdom: KingdomId }
+  | { type: "clearArea"; tileId: number }
   | { type: "ship" }
   | { type: "harbour"; closed: boolean }
   | { type: "canoe"; tileId?: number }
@@ -745,6 +746,25 @@ export function woodcutterYield(state: GameState, tile: Tile) {
 }
 
 export const PLANT_TOOL = "__plant";
+export const CLEAR_TOOL = "__clear";
+
+// The Clear land tool: the forest tiles it would clear around `tile` (the tile
+// and the forest touching it, never the protected grove or anything built on).
+export function clearArea(state: GameState, tile: Tile): Tile[] {
+  if (tile.terrain !== "forest" || tile.building || !tile.revealed) return [];
+  return state.tiles.filter(
+    (t) => t.terrain === "forest" && !t.building && t.revealed && hexDistance(t, tile) <= 1 && !(state.protectedTiles ?? []).includes(t.id),
+  );
+}
+
+export function clearAreaError(state: GameState, tile: Tile): string | null {
+  if (state.tutorialStep < TUTORIAL.length) return "Not during the tutorial";
+  if (!tile.revealed) return "Unexplored land";
+  if (tile.terrain !== "forest") return "Click a forest";
+  if (tile.building) return "Something is built here";
+  if ((state.protectedTiles ?? []).includes(tile.id)) return "This old grove is protected";
+  return null;
+}
 // Picking where to send scouts or a canoe.
 export const SCOUT_TOOL = "__scout";
 export const CANOE_TOOL = "__canoe";
@@ -5794,7 +5814,8 @@ function step(state: GameState, action: Action): GameState {
       const felled = clearsForest(state, tile, def.id);
       const tiles = state.tiles.map((t) =>
         t.id === tile.id
-          ? { ...t, building: def.id, worn: 0, level: undefined, ...(ploughed || felled ? { terrain: "grass" as const, height: terrainHeight("grass"), growth: 0 } : {}) }
+          ? // Building on burnt ground clears the ashes.
+            { ...t, building: def.id, worn: 0, level: undefined, scorch: 0, ...(ploughed || felled ? { terrain: "grass" as const, height: terrainHeight("grass"), growth: 0 } : {}) }
           : t.id === cleared?.id
             ? { ...t, terrain: "grass" as const, height: terrainHeight("grass"), growth: 0 }
             : t,
@@ -6289,6 +6310,22 @@ function step(state: GameState, action: Action): GameState {
 
     case "raidKingdom":
       return kingdomRaidError(state, action.kingdom) ? state : raidKingdom(state, action.kingdom);
+
+    case "clearArea": {
+      const tile = state.tiles[action.tileId];
+      if (!tile || clearAreaError(state, tile)) return state;
+      const area = clearArea(state, tile);
+      if (!area.length) return state;
+      const ids = new Set(area.map((t) => t.id));
+      const wood = area.reduce((sum, t) => sum + clearLandWood(t), 0);
+      return withMeters({
+        ...state,
+        tiles: state.tiles.map((t) => (ids.has(t.id) ? { ...t, terrain: "grass" as const, height: terrainHeight("grass"), growth: 0 } : t)),
+        resources: { ...state.resources, wood: state.resources.wood + wood },
+        modifiers: { ...state.modifiers, sustainability: state.modifiers.sustainability - CLEAR_LAND.sustainability * area.length },
+        log: [`Cleared ${area.length} tile${area.length === 1 ? "" : "s"} of forest into open grassland (+${wood} wood).`, ...state.log].slice(0, 30),
+      });
+    }
 
     case "conquer":
       return conquestError(state, action.kingdom) ? state : conquer(state, action.kingdom);

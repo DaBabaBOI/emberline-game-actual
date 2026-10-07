@@ -32,6 +32,9 @@ import {
   demolishError,
   demolishRefund,
   PLANT_TOOL,
+  CLEAR_TOOL,
+  clearArea,
+  clearAreaError,
   plantError,
   placementError,
   townNote,
@@ -364,9 +367,10 @@ export function WorldCanvas() {
   const hoverTile = hovered !== null ? state.tiles[hovered] : null;
   const demolishing = selected === DEMOLISH_TOOL;
   const planting = selected === PLANT_TOOL;
+  const clearing = selected === CLEAR_TOOL;
   const scoutPick = selected === SCOUT_TOOL;
   const canoePick = selected === CANOE_TOOL;
-  const def = selected && !demolishing && !planting ? BUILDINGS_BY_ID[selected] : null;
+  const def = selected && !demolishing && !planting && !clearing ? BUILDINGS_BY_ID[selected] : null;
   // Picking where to send scouts or a canoe: can they go there, and how long.
   const tripNote = (() => {
     if (!hoverTile || !(scoutPick || canoePick)) return null;
@@ -376,6 +380,8 @@ export function WorldCanvas() {
     return { ok: true, text: `${scoutPick ? "Send the scouts here" : "Paddle here"}: back in ${Math.round(ticks * 1.5)} s` };
   })();
   const plantNote = planting && hoverTile ? plantError(state, hoverTile) ?? null : null;
+  const clearNote = clearing && hoverTile ? clearAreaError(state, hoverTile) : null;
+  const clearTiles = useMemo(() => (clearing && hoverTile && !clearNote ? clearArea(state, hoverTile) : []), [clearing, hoverTile, clearNote, state]);
   const error = hoverTile && def ? placementError(state, hoverTile, def) : null;
   const demolishNote = (() => {
     if (!demolishing || !hoverTile) return null;
@@ -478,6 +484,10 @@ export function WorldCanvas() {
     }
     if (planting) {
       dispatch({ type: "plant", tileId: id });
+      return;
+    }
+    if (clearing) {
+      dispatch({ type: "clearArea", tileId: id });
       return;
     }
     if (demolishing) {
@@ -857,6 +867,24 @@ export function WorldCanvas() {
         </group>
       )}
 
+      {/* Clear land: every tile it would clear, and what it gives and costs. */}
+      {clearTiles.map((t) => (
+        <HexOutline key={`clear-${t.id}`} x={t.x} y={tileTop(t)} z={t.z} color="#f59e0b" />
+      ))}
+      {hoverTile && clearing && (
+        <Html zIndexRange={[15, 0]} center position={[hoverTile.x, tileTop(hoverTile) + 1.1, hoverTile.z]} style={{ pointerEvents: "none" }}>
+          <div className="pixel-panel-dark font-pixel w-60 px-2 py-1 text-xs" data-testid="clear-note">
+            {clearNote ? (
+              <span className="text-red-300">{clearNote}</span>
+            ) : (
+              <span className="text-amber-200">
+                Clear {clearTiles.length} forest tile{clearTiles.length === 1 ? "" : "s"} into grassland: +
+                {clearTiles.reduce((sum, t) => sum + clearLandWood(t), 0)} wood, −{CLEAR_LAND.sustainability * clearTiles.length} Sustainability
+              </span>
+            )}
+          </div>
+        </Html>
+      )}
       {hoverTile && planting && (
         <Html zIndexRange={[15, 0]} center position={[hoverTile.x, tileTop(hoverTile) + 1.1, hoverTile.z]} style={{ pointerEvents: "none" }}>
           <div className="pixel-panel-dark font-pixel w-56 px-2 py-1 text-xs">

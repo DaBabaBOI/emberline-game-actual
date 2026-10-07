@@ -461,42 +461,46 @@ export function HealerModel({ opacity }: ModelProps) {
 }
 
 export function FarmModel({ opacity, lit = true }: ModelProps) {
-  const rows = [-0.36, -0.18, 0, 0.18, 0.36];
+  // Six rows of crops across a hexagonal field, each a solid band of wheat on
+  // its furrow, so it reads as a field from far away. Tired soil (lit false):
+  // pale earth and thin, brownish rows with gaps.
+  const rows = [-0.42, -0.25, -0.085, 0.085, 0.25, 0.42];
   return (
     <group>
-      <Part color={lit ? "#7a5230" : "#b39a72"} opacity={opacity} position={[0, 0.012, 0]}>
+      <Part color={lit ? "#8b5e34" : "#c2a878"} opacity={opacity} position={[0, 0.012, 0]}>
         <cylinderGeometry args={[0.62, 0.62, 0.025, 6]} />
       </Part>
-      {/* Tired soil: dry cracks across the field. */}
-      {!lit &&
-        [0.3, 1.4, 2.5].map((a) => (
-          <Part key={a} color="#6b5638" opacity={opacity} position={[0, 0.027, 0]} rotation={[0, a, 0]}>
-            <boxGeometry args={[1.05, 0.006, 0.018]} />
-          </Part>
-        ))}
-      {rows.map((z) => (
-        <group key={z}>
-          <Part color={lit ? "#5e3d22" : "#8e7650"} opacity={opacity} position={[0, 0.03, z]}>
-            <boxGeometry args={[0.9 - Math.abs(z) * 0.9, 0.03, 0.06]} />
-          </Part>
-          {Array.from({ length: Math.round(7 - Math.abs(z) * 6) }, (_, i) => {
-            const n = Math.round(7 - Math.abs(z) * 6);
-            const span = 0.8 - Math.abs(z) * 0.9;
-            const x = -span / 2 + (span / Math.max(1, n - 1)) * i;
-            return (
-              // Tired soil: fewer, shorter stalks that droop, brown and thin.
-              <group key={i} position={[x, 0.04, z]} rotation={lit ? undefined : [0, 0, i % 2 ? 0.5 : -0.5]} scale={lit ? 1 : 0.6} visible={lit || i % 2 === 0}>
-                <Part color={lit ? "#d9b44a" : "#9a7a45"} opacity={opacity} position={[0, 0.07, 0]}>
-                  <cylinderGeometry args={[0.008, 0.008, 0.14, 4]} />
+      {rows.map((z, r) => {
+        const span = Math.max(0.2, 1.02 - Math.abs(z) * 1.05);
+        const tall = 0.1 + (r % 2) * 0.015;
+        const crop = lit ? (r % 2 ? "#c8a540" : "#b9a03a") : "#a88c55";
+        // Tired: only a few thin tufts come up, with bare earth between.
+        const tufts = [-0.36, -0.1, 0.18, 0.4].filter((_, i) => (i + r) % 3 !== 0).map((f) => f * span);
+        return (
+          <group key={z}>
+            <Part color={lit ? "#6b4526" : "#a58c62"} opacity={opacity} position={[0, 0.028, z]}>
+              <boxGeometry args={[span, 0.012, 0.12]} />
+            </Part>
+            {!lit &&
+              tufts.map((x) => (
+                <Part key={x} color={crop} opacity={opacity} position={[x, 0.06, z]}>
+                  <coneGeometry args={[0.035, 0.07, 5]} />
                 </Part>
-                <Part color={lit ? "#e8c65a" : "#8a6a3a"} opacity={opacity} position={[0, 0.15, 0]} scale={[1, 2.2, 1]}>
-                  <sphereGeometry args={[0.022, 6, 4]} />
+              ))}
+            {(lit ? [{ x: 0, w: span }] : []).map((bit) => (
+              <group key={bit.x}>
+                <Part color={crop} opacity={opacity} position={[bit.x, 0.03 + tall / 2, z]}>
+                  <boxGeometry args={[bit.w, tall, 0.08]} />
+                </Part>
+                {/* Ripe ears along the top. */}
+                <Part color="#ead27a" opacity={opacity} position={[bit.x, 0.03 + tall + 0.012, z]}>
+                  <boxGeometry args={[bit.w * 0.96, 0.024, 0.065]} />
                 </Part>
               </group>
-            );
-          })}
-        </group>
-      ))}
+            ))}
+          </group>
+        );
+      })}
       <group position={[0.42, 0, 0.3]}>
         <Log opacity={opacity} position={[0, 0.2, 0]} rotation={[0, 0, 0]} length={0.4} radius={0.015} />
         <Log opacity={opacity} position={[0, 0.3, 0]} rotation={[0, 0, Math.PI / 2]} length={0.26} radius={0.012} />

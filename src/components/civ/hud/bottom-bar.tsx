@@ -22,6 +22,7 @@ import {
   defenseStrength,
   DEMOLISH_TOOL,
   PLANT_TOOL,
+  CLEAR_TOOL,
   SCOUT_TOOL,
   CANOE_TOOL,
   foodKeeps,
@@ -453,6 +454,17 @@ export function BottomBar() {
             tone={selected === DEMOLISH_TOOL ? "bg-amber-400 text-[#2b2119]" : "bg-[#4a3b2e] hover:bg-[#5c4a3a]"}
           />
           <TradeButton />
+          {/* Clearing whole patches of forest into open land. */}
+          {!inTutorial && (
+            <ToolButton
+              guide="tool-clear"
+              icon="axe"
+              label="Clear"
+              onClick={() => setSelected(selected === CLEAR_TOOL ? null : CLEAR_TOOL)}
+              title="Clear land: click a forest to fell it and the forest touching it (up to 7 tiles) into open grassland. You get the wood; the land pays in Sustainability."
+              tone={selected === CLEAR_TOOL ? "bg-amber-400 text-[#2b2119]" : "bg-[#5a3b22] hover:bg-[#6b4a2b]"}
+            />
+          )}
           {/* Planting saplings comes with Early Farming. */}
           {state.researched.includes("early-farming") && (
             <ToolButton

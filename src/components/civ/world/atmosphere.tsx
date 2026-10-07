@@ -61,7 +61,8 @@ export function ChimneySmoke({ tiles, cleanAir }: { tiles: Tile[]; cleanAir: boo
 
 // Tiles that caught fire recently still burn for a while: flames and smoke.
 export function Wildfire({ tiles }: { tiles: Tile[] }) {
-  const burning = useMemo(() => tiles.filter((t) => t.scorch > 0.8).slice(0, 30), [tiles]);
+  // Ground still burning (never inside a building that stands there).
+  const burning = useMemo(() => tiles.filter((t) => t.scorch > 0.8 && !t.building).slice(0, 30), [tiles]);
   return (
     <group>
       {burning.map((t) => (
