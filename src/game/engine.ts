@@ -5692,7 +5692,8 @@ function step(state: GameState, action: Action): GameState {
         for (const [k, v] of Object.entries(gamble.resources ?? {}))
           resources[k as keyof Resources] = Math.max(0, resources[k as keyof Resources] + (v ?? 0));
       }
-      const burnRadius = effect.burn ?? (gamble && unlucky ? gamble.burn : undefined);
+      // An unlucky gamble can make the fire bigger than the choice meant.
+      const burnRadius = gamble && unlucky && gamble.burn !== undefined ? gamble.burn : effect.burn;
       const burned = burnRadius !== undefined ? burnForest(state, burnRadius) : null;
       const cleared = effect.clearForest ? oldestForest(state, effect.clearForest).map((t) => t.id) : [];
       const guarded = effect.protectForest ? oldestForest(state, effect.protectForest).map((t) => t.id) : [];

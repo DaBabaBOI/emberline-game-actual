@@ -12,7 +12,6 @@ import { tileTop } from "./hex-terrain";
 import { BUILDING_SCALE, buildingTurn } from "./building-models";
 import { Figures, SKINS, type Agent } from "./figures";
 import { makeGround } from "./ground";
-import { TICK_SECONDS } from "@/game/content";
 
 // Small moments (berries found, birds coming back, a gust of wind) play out
 // on the map where they happen, for MOMENT_TICKS, with a short label above.
@@ -294,7 +293,7 @@ export function SmallMoment({ state }: { state: GameState }) {
 // The scouts out exploring: three of them walk from the village to the spot
 // picked in the fog (the first half of the trip), look around, and walk back
 // (the second half). Their label follows them.
-export function ScoutMarker({ state }: { state: GameState }) {
+export function ScoutMarker({ state, running, msPerTick }: { state: GameState; running: boolean; msPerTick: number }) {
   const trip = state.scouting;
   const tiles = state.tiles;
   const ground = useMemo(() => makeGround(tiles), [tiles]);
@@ -306,6 +305,8 @@ export function ScoutMarker({ state }: { state: GameState }) {
   const start = trip?.start ?? (trip ? trip.back - 12 : 0);
   const tick = state.tick;
   const speed = state.speed;
+  // When the latest tick came in, to tell how far into the next one we are.
+  const lastTick = useRef({ tick, at: 0 });
 
   useFrame((_, delta) => {
     if (!trip || !target || !from) {
@@ -314,10 +315,19 @@ export function ScoutMarker({ state }: { state: GameState }) {
       return;
     }
     const span = Math.max(1, trip.back - start);
-    // Walk smoothly between ticks, never drifting from the game's clock.
-    const goal = Math.min(1, (tick - start) / span);
-    const step = (speed / TICK_SECONDS / span) * Math.min(delta, 0.1);
-    shown.current = Math.min(goal + 1 / span, Math.max(goal, shown.current + step));
+    const now = performance.now();
+    if (lastTick.current.tick !== tick) lastTick.current = { tick, at: now };
+    // Where the game's clock says they are, counting the part of a tick gone by.
+    const into = running ? Math.min(1.5, (now - lastTick.current.at) / msPerTick) : 0;
+    const goal = Math.min(1, (tick - start + into) / span);
+    if (goal - shown.current > 2 / span || shown.current > goal + 3 / span) shown.current = goal;
+    else if (running) {
+      // Walk at the clock's pace, a little faster when behind and slower when
+      // ahead, so slow or uneven ticks never make them stop and start.
+      const ahead = (shown.current - goal) * span;
+      const pace = Math.max(0.3, Math.min(2, 1 - ahead));
+      shown.current = Math.min(1, shown.current + (1000 / msPerTick / span) * pace * Math.min(delta, 0.5));
+    }
     const p = shown.current;
     const out = p < 0.5;
     // 0 at home, 1 at the spot: out for the first half, back for the second.
@@ -340,7 +350,7 @@ export function ScoutMarker({ state }: { state: GameState }) {
         y: ground.heightAt(x, z),
         // Facing the way they walk; at the spot, looking around.
         heading: there ? Math.sin(p * 40 + i) * 1.2 : Math.atan2(dx * (out ? 1 : -1), dz * (out ? 1 : -1)),
-        moving: !there && speed > 0,
+        moving: !there && speed > 0 && running,
         scale: 1.3,
         tunic: "#c58b3a",
         skin: SKINS[i % SKINS.length],

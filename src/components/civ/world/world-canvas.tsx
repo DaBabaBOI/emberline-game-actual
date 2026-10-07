@@ -587,7 +587,7 @@ export function WorldCanvas() {
 
       {/* Small moments play out where they happen. */}
       <SmallMoment state={state} />
-      <ScoutMarker state={state} />
+      <ScoutMarker state={state} running={clock.running} msPerTick={clock.msPerTick} />
       <Rebels state={state} />
       <Villagers
         tiles={state.tiles}

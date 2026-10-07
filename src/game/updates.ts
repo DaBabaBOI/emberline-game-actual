@@ -17,6 +17,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Three ways to fight a wildfire: carry water from the river, cut a firebreak, or beat it out (risky). Scouts walk smoothly on slower devices, and villagers no longer squeeze onto the same spot on a log: two fit on each, the rest stand by the fire.",
       "Every person now walks on the map (up to 30 figures): no more one figure standing for 3 people in a small village. Elder Ama answers faster too.",
       "The game waits while Elder Ama thinks about your question, and her answers no longer get cut off. Skipping the tutorial also puts your first house beside the river.",
       "The tutorial now teaches water: build your first house beside the river, where its people always have water. The guiding hand points at a riverside spot.",

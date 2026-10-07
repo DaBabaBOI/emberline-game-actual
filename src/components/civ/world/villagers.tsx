@@ -29,6 +29,8 @@ export interface Walker extends Agent {
   wait: number;
   child: boolean;
   sitAt: Tile | null;
+  // The place on a log they are sitting on or walking to ("tile:place").
+  seat?: string;
   // What they look like and how fast they walk when healthy.
   baseTunic?: string;
   baseSpeed?: number;
@@ -93,6 +95,13 @@ function makeWalker(i: number, at: Tile, ground: Ground, look: Partial<Walker> =
 const FIRE_SEAT = 0.5 * BUILDING_SCALE;
 // Model angles of the log seats (must match CampfireModel in building-models.tsx).
 const FIRE_SEATS = [0, 1.3, 2.6, 3.9, 5.2];
+// Two people fit on each log, side by side (angle either side of its middle).
+const FIRE_PLACES = FIRE_SEATS.flatMap((s) => [s - 0.2, s + 0.2]);
+
+// A place on a log is taken while someone is still headed for it or sitting on it.
+function placeTaken(key: string, self: Walker) {
+  return grabStore.walkers.some((o) => o !== self && o.seat === key && o.sitAt && !o.held);
+}
 
 // How often a grown-up who walks to a workplace gets to work there, and for how long (s).
 const SELF_WORK = { go: 0.35, chance: 0.85, min: 10, extra: 10 };
@@ -109,14 +118,24 @@ function retarget(w: Walker, ground: Ground, pickTarget: () => Tile, canWork = f
     const turn = (target.id % 6) * (Math.PI / 3);
     const toWalker = Math.atan2(w.z - target.z, w.x - target.x);
     const off = (s: number) => Math.abs(Math.atan2(Math.sin(s - turn - toWalker), Math.cos(s - turn - toWalker)));
-    const near = FIRE_SEATS.filter((s) => off(s) < 1.4);
-    const seat = near.length
-      ? near[Math.floor(Math.random() * near.length)]
-      : FIRE_SEATS.reduce((a, b) => (off(a) < off(b) ? a : b));
-    const a = seat - turn;
-    w.tx = target.x + Math.cos(a) * FIRE_SEAT;
-    w.tz = target.z + Math.sin(a) * FIRE_SEAT;
-    w.sitAt = target;
+    // Only free places: nobody sits in someone else's lap.
+    const free = FIRE_PLACES.map((s, i) => ({ s, key: `${target.id}:${i}` })).filter((p) => !placeTaken(p.key, w));
+    if (free.length) {
+      const near = free.filter((p) => off(p.s) < 1.4);
+      const place = near.length ? near[Math.floor(Math.random() * near.length)] : free.reduce((a, b) => (off(a.s) < off(b.s) ? a : b));
+      const a = place.s - turn;
+      w.tx = target.x + Math.cos(a) * FIRE_SEAT;
+      w.tz = target.z + Math.sin(a) * FIRE_SEAT;
+      w.sitAt = target;
+      w.seat = place.key;
+      return;
+    }
+    // Every log is full: stand a little behind the logs, warming their hands.
+    const a = toWalker + (Math.random() - 0.5) * 1.6;
+    w.tx = target.x + Math.cos(a) * (FIRE_SEAT + 0.4);
+    w.tz = target.z + Math.sin(a) * (FIRE_SEAT + 0.4);
+    w.sitAt = null;
+    w.seat = undefined;
     return;
   }
   if (target.building) {
@@ -131,6 +150,7 @@ function retarget(w: Walker, ground: Ground, pickTarget: () => Tile, canWork = f
     w.tz = spot.z;
   }
   w.sitAt = null;
+  w.seat = undefined;
 }
 
 // Walks toward the target, standing on whatever tile is underfoot. If the next

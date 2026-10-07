@@ -1948,15 +1948,28 @@ export const EVENTS: EventCard[] = [
     body: "Fire has caught in the dry forest near the village and the wind is picking up. Anything in its path will burn.",
     choices: [
       {
-        label: "Fight it (−25 wood, −5 happiness, it's contained)",
-        effect: { resources: { wood: -25 }, happiness: -5, burn: 0 },
+        label: "Carry water: everyone passes pots from the river in a line (−20 food, −5 happiness; only one tile burns)",
+        effect: { resources: { food: -20 }, happiness: -5, burn: 0 },
+      },
+      {
+        label: "Cut a firebreak: fell the trees in its path so it has nothing to burn (2 forest tiles cut for +15 wood; only one tile burns)",
+        effect: { clearForest: 2, burn: 0, sustainability: -4, resources: { wood: 15 } },
+      },
+      {
+        label: "Beat it out with branches and earth (−3 happiness; quick, but it may get away from us)",
+        effect: {
+          happiness: -3,
+          burn: 0,
+          gamble: { chance: 0.4, burn: 1, happiness: -6, message: "The wind turned and the fire jumped past us: more forest burned.", safeMessage: "We beat the flames down before they spread." },
+        },
       },
       {
         label: "Let it burn (the forest, buildings and people nearby are lost)",
         effect: { burn: 2, sustainability: -25, happiness: -12 },
       },
     ],
-    realWorld: "Wildfires happen naturally, but many are started by people, often by accident. Fires close to homes are the most dangerous.",
+    realWorld:
+      "Wildfires happen naturally, but many are started by people, often by accident. Firefighters still use the same ideas: water, firebreaks that leave a fire nothing to burn, and beating out the edges.",
   },
   {
     id: "eastern-trader",
