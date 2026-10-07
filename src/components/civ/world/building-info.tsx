@@ -16,11 +16,8 @@ import {
   isLit,
   landmarkDone,
   nextStageCost,
-  outpostUpkeep,
   powerCover,
   powerOf,
-  outpostsUnpaid,
-  overseasBuildings,
   stageError,
   loggingMode,
   perSecond,
@@ -207,15 +204,6 @@ export function BuildingInfo({
           {def.carbon ? `Adds ${perSecond(def.carbon).toFixed(2)} ppm of carbon a second, for good.` : ""}
           {def.captures ? `Takes up to ${perSecond(def.captures).toFixed(2)} ppm of carbon a second back out of the air (less on coal power or short of power).` : ""}
           {def.waste ? `Its waste costs the land ${def.waste * (state.researched.includes("plutonium") ? NUCLEAR.breeder : 1)} Sustainability while it stands.` : ""}
-        </p>
-      )}
-
-      {/* An outpost overseas: what it costs to keep supplied. */}
-      {tile.island !== state.tiles[state.startTile].island && tile.island >= 0 && (
-        <p className="mt-2 border-t-2 border-stone-300 pt-1.5" data-testid="outpost-upkeep">
-          {outpostsUnpaid(state)
-            ? "Out of coins: our outposts can't be supplied and stand idle."
-            : `Overseas: our ${overseasBuildings(state)} outpost buildings cost ${perSecond(outpostUpkeep(state)).toFixed(2)} coins/s to supply, each more than the last.`}
         </p>
       )}
 

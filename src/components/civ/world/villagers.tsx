@@ -4,7 +4,7 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "./html";
 import { Object3D, type Group, type InstancedMesh } from "three";
-import { TICK_SECONDS } from "@/game/content";
+import { RAID_RESPONSE, TICK_SECONDS } from "@/game/content";
 import { hexDistance } from "@/game/hex";
 import { isLand } from "@/game/map";
 import type { Battle, Raid, Tile } from "@/game/types";
@@ -502,6 +502,8 @@ export function Warriors({
   );
 }
 
+const MARCH = 6;
+
 export function Raiders({
   tiles,
   raid,
@@ -528,8 +530,10 @@ export function Raiders({
     }
     const from = tiles[raid.fromTile];
     const to = tiles[raid.meetTile ?? raid.targetTile];
-    const span = Math.max(1, raid.arriveTick - raid.startTick);
-    const goal = Math.min(1, (tick - raid.startTick) / span);
+    // They land and gather on the beach, then run in over the last MARCH ticks
+    // (a long slow walk across the island looked sluggish).
+    const span = Math.max(1, Math.min(MARCH, raid.arriveTick - raid.startTick));
+    const goal = Math.max(0, Math.min(1, (tick - (raid.arriveTick - span)) / span));
     // March at a steady pace (one tick of the way every TICK_SECONDS / speed), but
     // never more than one tick behind or ahead of the game. The old easing chased a
     // target that jumped every tick, so at 4x the raiders lurched and stuttered.
@@ -562,7 +566,8 @@ export function Raiders({
       const arc = q * q * (hash(i + 5) - 0.5) * 1.8;
       const rank = raid.roman ? (Math.floor(i / 5) - 2) * 0.22 : (hash(i + 2) - 0.5) * 0.6;
       const file = raid.roman ? ((i % 5) - 2) * 0.24 : (hash(i + 1) - 0.5) * 0.6;
-      const along = len * q - rank;
+      // They stop just short of the meeting place, where the fight picks up.
+      const along = Math.max(0, len - 1.1) * q - rank;
       const across = flank + file + weave + arc;
       const x = from.x + ux * along - uz * across;
       const z = from.z + uz * along + ux * across;
@@ -589,6 +594,8 @@ export function Raiders({
     }
   });
 
+  // Once the fight is on, BattleScene draws them.
+  if (raid && !raid.roman && raid.fightStart !== undefined) return null;
   return raid?.roman ? (
     <Figures agents={agents} max={30} weapon="sword" gear="roman" />
   ) : (
@@ -652,15 +659,18 @@ export function FireVictims({ tiles, victims }: { tiles: Tile[]; victims: { tile
 // their boats, or warriors home) while the winners chase them a little way.
 type Fighter = Agent & { dies: boolean; dieAt: number; side: number; foe: number; orbit: number; spin: number; dart: number; speedK: number; vx: number; vz: number };
 
-export function BattleScene({ tiles, battle, homeTile }: { tiles: Tile[]; battle: Battle | null; homeTile: Tile }) {
+export function BattleScene({ tiles, battle, homeTile, speed = 1 }: { tiles: Tile[]; battle: Battle | null; homeTile: Tile; speed?: number }) {
   const warriors = useRef<Agent[]>([]);
   const raiders = useRef<Agent[]>([]);
-  const started = useRef<{ key: string; at: number }>({ key: "", at: 0 });
+  const started = useRef<{ key: string; at: number; outcome: string }>({ key: "", at: 0, outcome: "" });
+  // Game time (seconds), so the fight keeps pace with the game speed and pauses with it.
+  const clock = useRef(0);
   const ground = useMemo(() => makeGround(tiles), [tiles]);
-  const key = battle ? `${battle.tick}@${battle.tile}` : "";
+  const key = battle ? `${battle.start ?? battle.tick}@${battle.tile}` : "";
 
-  useFrame(({ clock }, delta) => {
-    const now = clock.elapsedTime;
+  useFrame((_, delta) => {
+    clock.current += Math.min(delta, 0.1) * speed;
+    const now = clock.current;
     if (!battle) {
       warriors.current = [];
       raiders.current = [];
@@ -674,10 +684,10 @@ export function BattleScene({ tiles, battle, homeTile }: { tiles: Tile[]; battle
     const dz = (homeTile.z - from.z) / len;
     const px = -dz;
     const pz = dx;
-    const FIGHT = 7;
+    const FIGHT = RAID_RESPONSE.fightTicks * TICK_SECONDS;
 
     if (started.current.key !== key) {
-      started.current = { key, at: now };
+      started.current = { key, at: now, outcome: "" };
       const nW = Math.min(battle.warriors, 8);
       const nR = Math.min(battle.raiders, 10);
       const lostW = battle.warriors ? Math.round((nW * battle.warriorsLost) / battle.warriors) : 0;
@@ -720,7 +730,38 @@ export function BattleScene({ tiles, battle, homeTile }: { tiles: Tile[]; battle
     }
 
     const age = now - started.current.at;
-    if (age > FIGHT + 5) {
+    // Training a warrior mid-fight can change how it ends: more or fewer fall.
+    const outcome = `${battle.won}|${battle.warriorsLost}|${battle.raidersLost}|${battle.warriors}|${battle.raiders}`;
+    if (started.current.outcome !== outcome) {
+      const fresh = started.current.outcome === "";
+      started.current.outcome = outcome;
+      const settle = (list: Fighter[], lost: number) => {
+        const down = (f: Fighter) => f.dies && age >= f.dieAt;
+        let need = lost - list.filter(down).length;
+        // Keep the deaths still to come that are needed; spare the rest.
+        for (const f of list) {
+          if (down(f) || !f.dies) continue;
+          if (need > 0) need--;
+          else f.dies = false;
+        }
+        // Then anyone else who must fall goes down soon, one after another.
+        let late = 0;
+        for (const f of list) {
+          if (need <= 0) break;
+          if (f.dies) continue;
+          f.dies = true;
+          f.dieAt = age + 0.5 + late++ * 0.5;
+          need--;
+        }
+      };
+      if (!fresh) {
+        const nW = warriors.current.length;
+        const nR = raiders.current.length;
+        settle(warriors.current as Fighter[], battle.warriors ? Math.round((nW * battle.warriorsLost) / battle.warriors) : 0);
+        settle(raiders.current as Fighter[], Math.round((nR * battle.raidersLost) / Math.max(1, battle.raiders)));
+      }
+    }
+    if (age > FIGHT + 14) {
       warriors.current = [];
       raiders.current = [];
       return;
@@ -729,7 +770,8 @@ export function BattleScene({ tiles, battle, homeTile }: { tiles: Tile[]; battle
     const ws = warriors.current as Fighter[];
     const rs = raiders.current as Fighter[];
     const alive = (f: Fighter) => !(f.dies && age >= f.dieAt);
-    const over = age >= FIGHT;
+    // Over once the game has decided it (an old fight seen afresh is over at once).
+    const over = !battle.live || age >= FIGHT + 3;
 
     const step = (list: Fighter[], enemies: Fighter[]) => {
       for (const a of list) {

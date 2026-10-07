@@ -17,6 +17,8 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Raids: the fight starts the moment raiders meet your warriors (no more standing around), runs at game speed, and is shorter. Raiders gather on the beach, then charge in.",
+      "Outposts count as home: build anything on islands you have settled, with no coin upkeep and no port needed.",
       "New Clear tool: click a forest to turn it and the forest touching it into grassland at once (+wood, small Sustainability cost). Farmland looks like real golden fields now, and no more flames inside rebuilt huts.",
       "Click the goal at the top for \"How to get there\": every step behind it, ticked off as you do them (for the Black Death: Quarantine, Healer's Huts, clean streets, closing the harbour, a Cathedral).",
       "Conquer a kingdom (Medieval era, Kingdoms panel): send the whole army; win and their island is yours to build on and they pay tribute every day, but many warriors fall, your people mourn, and the other kingdom fears you.",

@@ -3401,7 +3401,7 @@ export const RAID_KINDS: Record<
 // battle plays out over `fightTicks`, and training more warriors can still tip
 // it), hide in the houses (nobody dies, they take a share) or pay tribute (food,
 // `tributePerRaider` each; they leave but come back `tributeSooner` ticks sooner).
-export const RAID_RESPONSE = { fightTicks: 7, tributePerRaider: 4, tributeSooner: 60, hideMood: 4, coinsPerRaider: 3 };
+export const RAID_RESPONSE = { fightTicks: 4, tributePerRaider: 4, tributeSooner: 60, hideMood: 4, coinsPerRaider: 3 };
 // Traders (from the start): `lot` shells/coins buy this much of each good.
 // Every trade raises prices by `rise` (they want more for less); prices ease
 // back by `ease` a tick. Buying wood and stone instead of cutting spares the land.
@@ -3769,12 +3769,6 @@ export const DIPLOMACY = {
 // `ticks` later. The first finds an island to settle, then the kingdoms'
 // coasts, then more islands; after that each voyage brings trade.
 export const SHIP = { cost: { wood: 30, food: 20 }, ticks: 50, coins: 70, mood: 5, meetMood: 10, secret: 4, secretKnowledge: 12, secretHappiness: 10 };
-// Overseas outposts: build as much as fits on the islands your ships have
-// found, but each building there costs coins every tick (sailors, supplies),
-// and each one more than the last: the nth costs upkeep * (1 + growth * (n-1)).
-// They only work while a Shipyard or the Grand Harbour links them home, and
-// stop when the upkeep can't be paid.
-export const OUTPOST = { upkeep: 0.05, growth: 0.15 };
 // Raiding a kingdom (Medieval era): `share` of our warriors sail over. They
 // win if their strength, with luck (x0.75 to x1.25), beats the kingdom's
 // `defense`. A win brings back `loot` and costs `losses.won` of those sent; a

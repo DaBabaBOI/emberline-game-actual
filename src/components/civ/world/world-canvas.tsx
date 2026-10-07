@@ -15,8 +15,6 @@ import {
   dustNote,
   landmarkDone,
   inPlague,
-  nextOutpostUpkeep,
-  perSecond,
   sparkNote,
   forestToClear,
   rainfall,
@@ -48,6 +46,7 @@ import {
   soilOf,
   linkedAqueducts,
   clearLandWood,
+  shownBattle,
 } from "@/game/engine";
 import { BuildingInfo } from "./building-info";
 import { useGame } from "@/components/civ/game-provider";
@@ -440,18 +439,15 @@ export function WorldCanvas() {
           .filter(Boolean)
           .join(" ")
       : null;
-  // Overseas: each building there costs more coins to keep supplied.
-  const overseas =
-    def && !error && hoverTile && hoverTile.island >= 0 && hoverTile.island !== state.tiles[state.startTile].island
-      ? `Overseas: costs ${perSecond(nextOutpostUpkeep(state)).toFixed(2)} more coins/s to keep supplied.`
-      : null;
 
   const burning = useMemo(() => litFires(state), [state]);
-  // A battle is played out for a few ticks after it happens.
-  const battleShowing = !!state.battle && state.tick - state.battle.tick < 7;
+  // A fight is played out from the moment the two sides meet until a few
+  // seconds after it is decided.
+  const shown = shownBattle(state);
+  const battleShowing = !!shown;
   // Where people should run from: the fight, or raiders about to arrive there.
-  const fightTile = battleShowing
-    ? state.tiles[state.battle!.tile]
+  const fightTile = shown
+    ? state.tiles[shown.tile]
     : state.raid && state.raid.arriveTick - state.tick <= 4
       ? state.tiles[state.raid.meetTile ?? state.raid.targetTile]
       : null;
@@ -662,7 +658,7 @@ export function WorldCanvas() {
         hidden={battleShowing}
         gameSpeed={state.speed}
       />
-      <BattleScene tiles={state.tiles} battle={battleShowing ? state.battle ?? null : null} homeTile={home} />
+      <BattleScene tiles={state.tiles} battle={shown} homeTile={home} speed={state.speed} />
       <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} speed={state.speed} />
       <TradeShips tiles={state.tiles} home={home} caravans={state.caravans ?? []} tick={state.tick} speed={state.speed} />
       <ChimneySmoke tiles={buildings} cleanAir={state.researched.includes("cleanair")} />
@@ -831,12 +827,6 @@ export function WorldCanvas() {
                     {industry}
                   </span>
                 )}
-                {overseas && (
-                  <span className="flex items-start gap-1.5 text-amber-200" data-testid="overseas-note">
-                    <PixelIcon name="coin" size={12} />
-                    {overseas}
-                  </span>
-                )}
                 {dust && (
                   <span className="flex items-start gap-1.5 text-amber-200">
                     <PixelIcon name="warning" size={12} />
@@ -919,7 +909,7 @@ export function WorldCanvas() {
       <GuideAnchor tile={guideTile === null ? null : state.tiles[guideTile]} />
 
       <PerformanceMonitor bounds={() => [24, 50]} onDecline={() => setStruggling(true)} />
-      <CinematicCamera home={home} battleTick={state.battle?.tick ?? null} />
+      <CinematicCamera home={home} battleTick={shown ? shown.start ?? shown.tick : null} />
       {fancy && <FilmLook era={state.era} cinematic={!!shot} />}
 
       <MapControls

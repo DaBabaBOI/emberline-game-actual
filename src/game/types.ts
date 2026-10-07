@@ -78,6 +78,10 @@ export interface Raid {
 
 export interface Battle {
   tick: number;
+  // When the fight began (the raiders met our warriors), and whether it is
+  // still going on (then this is how it stands, not how it ended).
+  start?: number;
+  live?: boolean;
   tile: number;
   fromTile: number;
   warriors: number;

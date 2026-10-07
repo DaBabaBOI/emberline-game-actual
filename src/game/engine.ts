@@ -38,7 +38,6 @@ import {
   KINGDOMS,
   DIPLOMACY,
   SHIP,
-  OUTPOST,
   KINGDOM_RAID,
   INDUSTRIAL_POPULATION,
   FUTURE_POPULATION,
@@ -159,6 +158,7 @@ import type {
   MeterKey,
   Meters,
   Raid,
+  Battle,
   RaidKind,
   RaidResponse,
   Resources,
@@ -959,7 +959,6 @@ export function placementError(state: GameState, tile: Tile, def: BuildingDef): 
     const kingdom = kingdomOfIsland(tile.island);
     if (kingdom && !state.kingdoms?.[kingdom]?.conquered) return `This land belongs to ${KINGDOMS[kingdom].name}`;
     if (!kingdom && !(state.outposts ?? []).includes(tile.island)) return "Our canoes and ships haven't reached this island";
-    if (!def.overseas) return "Too far from home: only farms, fishing, woodcutters, pens, gatherers and trading posts";
   } else if (def.id === "tradingpost") return "Only on an island our ships have found";
   if (def.unique && (countBuildings(state)[def.id] ?? 0) >= 1) return "There is only one";
   const ploughed = def.id === "farm" && tile.terrain === "forest" && state.researched.includes("heavy-plough");
@@ -1706,7 +1705,7 @@ function returnCanoes(state: GameState): GameState {
         ...next,
         tiles,
         outposts: [...(next.outposts ?? []), CANOE.island],
-        log: [`Our canoe reached the ${ISLANDS[CANOE.island]?.name ?? "isles"}! We can build farms, fishing, woodcutters, pens and gatherers there. Each costs coins to keep supplied, and small islands are fragile.`, ...next.log].slice(0, 30),
+        log: [`Our canoe reached the ${ISLANDS[CANOE.island]?.name ?? "isles"}! It is home now: we can build anything there, but small islands are fragile.`, ...next.log].slice(0, 30),
       };
     } else {
       next = {
@@ -1754,7 +1753,7 @@ function returnShips(state: GameState): GameState {
       next = { ...next, tiles };
       const name = ISLANDS[voyage.island]?.name ?? "an island";
       if (voyage.kind === "outpost") {
-        next = { ...say(`Our ship found ${name}! We can build farms, fishing, woodcutters, pens and a Trading Post there. Each costs coins to keep supplied.`), outposts: [...(next.outposts ?? []), voyage.island] };
+        next = { ...say(`Our ship found ${name}! It is home now: we can build anything there, a Trading Post too.`), outposts: [...(next.outposts ?? []), voyage.island] };
       } else {
         const kingdom = kingdomOfIsland(voyage.island)!;
         next = changeMood(say(`Our ship reached the coast of ${KINGDOMS[kingdom].name}. They welcomed our sailors.`), { [kingdom]: SHIP.meetMood });
@@ -2308,30 +2307,10 @@ export function overseasBuildings(state: GameState) {
   return state.tiles.filter((t) => t.building && t.island >= 0 && t.island !== home).length;
 }
 
-// Coins a tick to keep `n` overseas buildings supplied (each costs more than the last).
-export function outpostUpkeep(state: GameState, n = overseasBuildings(state)) {
-  return OUTPOST.upkeep * (n + (OUTPOST.growth * n * (n - 1)) / 2);
-}
-
-// What one more overseas building would add to the upkeep.
-export function nextOutpostUpkeep(state: GameState) {
-  return outpostUpkeep(state, overseasBuildings(state) + 1) - outpostUpkeep(state);
-}
-
-// Out of coins: the outposts can't be supplied and make nothing.
-export function outpostsUnpaid(state: GameState) {
-  const cost = outpostUpkeep(state);
-  return cost > 0 && state.resources.currency < cost;
-}
-
 export function production(state: GameState): Resources {
   // No base Knowledge: it comes from milestones, teaching buildings and literacy.
   const out: Resources = { food: 0, wood: 0, stone: 0, knowledge: 0, currency: 0 };
-  const home = state.tiles[state.startTile]?.island ?? 0;
-  // A Canoe Dock links the outposts home too.
-  const port = hasPort(state) || (countBuildings(state).dock ?? 0) > 0;
   const closed = !!state.plague?.closed;
-  const unpaid = outpostsUnpaid(state);
   // Industrial: electric factories (as well as the grid covers them), and
   // railway stations that carry goods to markets, factories and trading posts.
   const electric = state.researched.includes("electricity") ? 1 + POWER.factoryBoost * powerCover(state) : 1;
@@ -2346,9 +2325,6 @@ export function production(state: GameState): Resources {
     const def = BUILDINGS_BY_ID[tile.building];
     // A landmark gives nothing until it's finished.
     if (def.landmark && !landmarkWorking(state, tile.building)) continue;
-    // An outpost overseas only ships its goods home while a port links it, and
-    // not while the harbour is closed.
-    if (tile.island >= 0 && tile.island !== home && (!port || closed || unpaid)) continue;
     // A closed harbour: no sea trade.
     if (closed && (tile.building === "harbour" || tile.building === "tradingpost")) continue;
     const factor =
@@ -2451,8 +2427,6 @@ export function production(state: GameState): Resources {
   // The many smaller Industrial advancements.
   const more: [keyof Resources, BoostKey][] = [["food", "food"], ["wood", "wood"], ["stone", "stone"], ["knowledge", "knowledge"], ["currency", "coins"]];
   for (const [r, key] of more) if (out[r] > 0) out[r] *= 1 + boostOf(state, key);
-  // Keeping the outposts supplied (when we can pay; otherwise they stand idle).
-  if (!unpaid) out.currency -= outpostUpkeep(state);
   return out;
 }
 
@@ -5381,6 +5355,37 @@ export function sellOffer(state: GameState, give: "food" | "wood" | "stone") {
   return { amount: SELL[give], coins: Math.max(1, Math.round(TRADE.lot * (state.sellPrice ?? 1))) };
 }
 
+// How a fight with raiders goes with the warriors we have now: the result
+// once it is decided, and, while it is on, what the 3D scene plays out (so the
+// fight starts the moment the two sides meet; training a warrior mid-fight
+// still changes the outcome).
+function raidBattle(state: GameState, raid: Raid): Battle {
+  const won = defenseStrength(state) >= raid.strength;
+  return {
+    tick: state.tick,
+    start: raid.fightStart ?? state.tick,
+    tile: raid.meetTile ?? raid.targetTile,
+    fromTile: raid.fromTile,
+    warriors: state.soldiers,
+    raiders: raid.strength,
+    warriorsLost: won ? Math.min(state.soldiers, Math.floor(raid.strength / 3)) : Math.min(state.soldiers, raid.strength),
+    raidersLost: won
+      ? Math.min(raid.strength, Math.max(1, Math.ceil(raid.strength * 0.6)))
+      : Math.min(raid.strength - 1, Math.floor(defenseStrength(state) / 2)),
+    won,
+    rival: raid.rival,
+  };
+}
+
+// The fight to show in 3D: the one going on, or the last one for a few
+// seconds after it is decided (the losers running off).
+export function shownBattle(state: GameState): Battle | null {
+  const raid = state.raid;
+  if (raid && !raid.roman && raid.fightStart !== undefined) return { ...raidBattle(state, raid), live: true };
+  const b = state.battle;
+  return b && state.tick - b.tick < 4 ? b : null;
+}
+
 function updateRaids(state: GameState): GameState {
   const { raid } = state;
   if (raid?.roman) return state.tick >= raid.arriveTick ? resolveLegion(state) : state;
@@ -5393,7 +5398,6 @@ function updateRaids(state: GameState): GameState {
     }
     if (state.tick < raid.fightStart + RAID_RESPONSE.fightTicks) return state;
     const defense = defenseStrength(state);
-    const battleAt = raid.meetTile ?? raid.targetTile;
     if (defense >= raid.strength) {
       const losses = Math.min(state.soldiers, Math.floor(raid.strength / 3));
       const won = bumpStats(state, (st) => {
@@ -5403,17 +5407,7 @@ function updateRaids(state: GameState): GameState {
       return {
         ...won,
         raid: null,
-        battle: {
-          tick: state.tick,
-          tile: battleAt,
-          fromTile: raid.fromTile,
-          warriors: state.soldiers,
-          raiders: raid.strength,
-          warriorsLost: losses,
-          raidersLost: Math.min(raid.strength, Math.max(1, Math.ceil(raid.strength * 0.6))),
-          won: true,
-          rival: raid.rival,
-        },
+        battle: raidBattle(state, raid),
         soldiers: state.soldiers - losses,
         kingdoms: raid.kingdom ? changeMood(state, { [raid.kingdom]: DIPLOMACY.raidWonMood }).kingdoms : state.kingdoms,
         modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + 6 },
@@ -5430,17 +5424,7 @@ function updateRaids(state: GameState): GameState {
     return {
       ...lost,
       raid: null,
-      battle: {
-        tick: state.tick,
-        tile: battleAt,
-        fromTile: raid.fromTile,
-        warriors: state.soldiers,
-        raiders: raid.strength,
-        warriorsLost: Math.min(state.soldiers, raid.strength),
-        raidersLost: Math.min(raid.strength - 1, Math.floor(defense / 2)),
-        won: false,
-        rival: raid.rival,
-      },
+      battle: raidBattle(state, raid),
       soldiers: Math.max(0, state.soldiers - raid.strength),
       spearmen: Math.min(spearmenOf(state), Math.max(0, state.soldiers - raid.strength)),
       ...plunder(state, raid, RAID_KINDS[raid.kind ?? "party"].steal),
