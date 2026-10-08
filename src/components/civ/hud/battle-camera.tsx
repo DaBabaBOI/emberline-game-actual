@@ -14,6 +14,8 @@ export function BattleCamera() {
   const started = useRef<number | null>(null);
 
   useEffect(() => {
+    // Leader mode: the chief is there in person, no need to fly the camera in.
+    if (state.leader) return;
     if (!fighting || started.current === fighting.fightStart) return;
     started.current = fighting.fightStart!;
     const tile = state.tiles[fighting.meetTile ?? fighting.targetTile];
@@ -26,7 +28,7 @@ export function BattleCamera() {
           ? "An army is attacking"
           : "Raiders are attacking";
     playShot({ kind: "battle", title: who, subtitle: "Click to leave the fight", seconds: 600, at: { x: tile.x, z: tile.z, y: tile.height } });
-  }, [fighting, state.tiles]);
+  }, [fighting, state.tiles, state.leader]);
 
   // The fight is over (the raid is gone): back to the village after a moment.
   useEffect(() => {

@@ -68,6 +68,8 @@ import { Cracks, DisasterDust, disasterView, FloodWater, QuakeShake, Rubble, Sto
 import { Wildlife } from "./wildlife";
 import { Links } from "./links";
 import { RebuildDust, RebuildPop } from "./rebuild";
+import { LeaderRig } from "./leader-rig";
+import { useLeader } from "./leader";
 import { useHoveredBuilding } from "./hovered";
 import { usePlanMode } from "./plan-mode";
 import { CampfireSmoke, ChimneySmoke, Wildfire } from "./atmosphere";
@@ -486,6 +488,9 @@ export function WorldCanvas() {
       .join(", ");
     return { ok: true, text: `Sell ${target.name}${refund ? ` (${refund})` : ""}` };
   })();
+  // Leader mode: walking in first person (not while a camera shot plays).
+  const leaderView = useLeader().view;
+  const fpActive = !!state.leader && leaderView === "fp" && !shot;
   const planning = usePlanMode();
   const Ghost = def ? MODELS[def.id] : null;
   // Warn before a purchase that would leave the fires short of wood.
@@ -559,6 +564,8 @@ export function WorldCanvas() {
 
   // On a phone there is no hover: the first tap previews, the second tap builds.
   function pick(id: number, touch = false) {
+    // Leader mode, in first person: a click is a blow, not a pick on the map.
+    if (fpActive) return;
     if (guideTile !== null && id !== guideTile) return;
     const tile = state.tiles[id];
     if (touch && selected && rawHovered !== id) {
@@ -747,7 +754,7 @@ export function WorldCanvas() {
         gameSpeed={state.speed}
         danger={fightAt}
       />
-      <PickUp state={state} dispatch={dispatch} enabled={canPickUp} onHolding={setHolding} />
+      <PickUp state={state} dispatch={dispatch} enabled={canPickUp && !fpActive} onHolding={setHolding} />
       <KeyboardPan controls={mapControls} enabled={!holding && !shot && !guide.target} />
       <Warriors
         tiles={state.tiles}
@@ -968,6 +975,7 @@ export function WorldCanvas() {
       )}
 
       <Spotlight tiles={state.tiles} />
+      {state.leader && <LeaderRig tiles={state.tiles} home={home} active={fpActive} battle={shown} onStrike={() => dispatch({ type: "leaderStrike" })} />}
       {makeover && rebuildOrder && <RebuildDust tiles={state.tiles} ids={rebuildOrder.ids} playKey={makeover.tick * 10 + state.era} />}
       <Plans state={state} />
       <TiredFields state={state} />
@@ -1031,7 +1039,7 @@ export function WorldCanvas() {
         makeDefault
         // During guided steps the camera still turns and zooms, but doesn't
         // slide, so a click on the highlighted spot can't turn into a drag.
-        enabled={!holding && !shot}
+        enabled={!holding && !shot && !fpActive}
         enablePan={!guide.target}
         target={target}
         enableDamping

@@ -3356,6 +3356,10 @@ export const LEFT_BEHIND_WARN = 200;
 // A person dropped on a working building helps there: +`helpBoost` output for
 // `helpTicks`. One who wanders into the fog comes back after `fogTicks`, with
 // news of new land only `fogLuck` of the time (5%: scouting is the real way to explore), revealing `fogReveal` tiles around.
+// Leader mode: each blow the chief strikes in a raid adds `hit` to the defense
+// (up to `maxHits`); a villager the chief sends to a workplace makes it work
+// faster (DROP.helpBoost) for `helpTicks`.
+export const LEADER = { hit: 0.6, maxHits: 8, helpTicks: 30 };
 export const DROP = { helpBoost: 0.5, helpTicks: 20, fogTicks: 20, fogLuck: 0.05, fogReveal: 2 };
 // Someone dropped into a fire or the open sea dies, and the tribe grieves: each
 // death costs `happiness`, taken off after the 0-100 cap so it always shows. It

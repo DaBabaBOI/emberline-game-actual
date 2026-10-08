@@ -17,6 +17,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Leader mode (first person): walk your island as the chief with WASD and the mouse, talk to villagers (E) and send them to work, strike raiders yourself in a fight, and press Tab for the build view.",
       "Story mode: The Ember Keepers. Thirteen chapters across all six eras, with scenes between Elder Ama, Kito and Lina, objectives and rewards for every chapter, and one ending: the Ember Ark.",
       "New Plan button: turn it on, pick a building and click the map to lay out blueprints. Each goes up by itself, in order, as soon as you can afford it.",
       "Public worlds: listed games that are already running show under Play together, and anyone can drop in (taking a bot's seat). The host can remove a player from the room or the game.",

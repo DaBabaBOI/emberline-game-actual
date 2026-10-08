@@ -22,6 +22,8 @@ import { DiscoveryScene } from "./hud/discovery-scene";
 import { FinalEnding } from "./hud/final-ending";
 import { NameEggCard } from "./hud/name-egg-card";
 import { StoryPanel, StoryScene } from "./hud/story";
+import { LeaderHud } from "./hud/leader-hud";
+import { setLeaderView, useLeader } from "./world/leader";
 import { Letterbox, useShot } from "./hud/letterbox";
 import { HintPanel } from "./hud/hints";
 import { GameAudio } from "./hud/game-audio";
@@ -48,6 +50,7 @@ const WorldCanvas = dynamic(
 
 function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null }) {
   const { panel, setSelected, state } = useGame();
+  const leaderView = useLeader().view;
   // The Advancements tree fills the screen: Elder Ama moves out of the way.
   const treeOpen = panel === "tree";
   const { target } = useGuide();
@@ -129,7 +132,8 @@ function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null 
           </div>
         </div>
         <Warnings />
-        <BottomBar />
+        {/* Leader mode: building happens in the build view. */}
+        {!(state.leader && leaderView === "fp") && <BottomBar />}
         {panel === "tree" && <TreeOverlay />}
         {panel === "kingdoms" && <KingdomsPanel />}
         {panel === "space" && <SpacePanel />}
@@ -140,6 +144,7 @@ function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null 
       </div>
       <FinalEnding />
       <NameEggCard />
+      <LeaderHud />
       <StoryScene />
       <Letterbox />
       <BattleCamera />
@@ -241,6 +246,8 @@ export function GameScreen() {
           clearSave();
           // Story mode tells its own beginning.
           setIntro(!options?.dev && options?.mode !== "last" && !options?.story);
+          // Leader mode starts in first person, beside the fire.
+          if (options?.leader) setLeaderView("fp");
           // Name eggs: the same one twice in a row and the second game is cursed.
           const last = readLastEgg();
           const game = newGame(culture, difficulty, { ...options, lastNameEgg: last });

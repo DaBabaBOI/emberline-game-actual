@@ -72,6 +72,8 @@ export interface Raid {
   // Raiders sent by a rival player (multiplayer): their name.
   rival?: string;
   rivalSeat?: number;
+  // Leader mode: blows the chief struck in this fight (each adds to the defense).
+  leaderHits?: number;
   startTick: number;
   arriveTick: number;
 }
@@ -426,6 +428,8 @@ export interface GameState {
   // 1970) from `start`, a split for each era reached, and `end` once the story
   // is told. `invalid` says why it can't go on the records.
   speedrun?: { start: number; splits: { era: number; ms: number }[]; end?: number; invalid?: string };
+  // Leader mode: you walk the island in first person as the chief.
+  leader?: boolean;
   // Story mode (story.ts): the chapter we're on, the scene showing (its intro
   // before the objectives, its outro once they're done), and the chapters done.
   story?: { chapter: number; scene: "intro" | "outro" | null; done: number[] };

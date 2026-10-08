@@ -206,6 +206,18 @@ export function TitleScreen({
                 testId="start-story"
               />
             </div>
+            <div className="mb-3">
+              <ModeCard
+                icon="crown"
+                title="Leader mode (first person)"
+                blurb="Be the chief, not a hand in the sky. Walk your island, tell villagers where to work, and fight raiders yourself. Switch to the build view to place buildings."
+                facts={["Walk with WASD, look with the mouse", "Talk to villagers and give them jobs", "Fight in the line when raiders come", "Needs a keyboard and mouse"]}
+                tone="bg-rose-700 hover:bg-rose-600"
+                action="Walk as the chief"
+                onClick={() => start({ nation, leader: true, skipTutorial: true })}
+                testId="start-leader"
+              />
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <ModeCard
                 icon="flame"

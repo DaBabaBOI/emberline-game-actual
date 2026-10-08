@@ -136,6 +136,7 @@ import {
   WARRIORS_PER_CAMP,
   ERA_MAKEOVER,
   UPGRADES,
+  LEADER,
 } from "./content";
 import { cureHint, diseaseName, isCalm, maybeOutbreak, sickShare, stepDisease } from "./disease";
 import { hexDistance } from "./hex";
@@ -227,6 +228,9 @@ export type Action =
   | { type: "seeNameEgg" }
   // Story mode: on from the chapter's scene.
   | { type: "storyNext" }
+  // Leader mode: send a villager to work at a building; strike a raider.
+  | { type: "leaderAssign"; tileId: number; who: string }
+  | { type: "leaderStrike" }
   // Multiplayer: gifts and raids between players.
   | { type: "trade"; get: "food" | "wood" | "stone" }
   | { type: "sell"; give: "food" | "wood" | "stone" }
@@ -308,6 +312,8 @@ export interface NewGameOptions {
   speedrun?: boolean;
   // Story mode: The Ember Keepers (story.ts).
   story?: boolean;
+  // Leader mode: walk the island in first person.
+  leader?: boolean;
   // Multiplayer: everyone in a room plays the same island (the room's seed).
   seed?: number;
   // "Build to Last": start in the Industrial era with three big problems.
@@ -379,6 +385,7 @@ export function newGame(
     ...(nameEgg ? { nameEgg } : {}),
     ...(options.speedrun && !options.dev && !options.story ? { speedrun: { start: Date.now(), splits: [] } } : {}),
     ...(options.story ? { story: { chapter: 0, scene: "intro" as const, done: [] } } : {}),
+    ...(options.leader ? { leader: true } : {}),
   };
   state.forestBaseline = forestGrowthNearHome(state);
   // Elder Ama hands over what each tutorial step needs when it starts (see
@@ -3670,7 +3677,9 @@ export function defenseStrength(state: GameState) {
     ((counts.warcamp ?? 0) > 0 ? 1 : 0) +
     (counts.walls ?? 0) * WALL_DEFENSE +
     (counts.castle ?? 0) * CASTLE.defense +
-    watchDefense(state)
+    watchDefense(state) +
+    // Leader mode: the chief fighting in the line.
+    (state.raid?.leaderHits ?? 0) * LEADER.hit
   );
 }
 
@@ -6905,6 +6914,23 @@ function step(state: GameState, action: Action): GameState {
       );
       const next = withMeters(addXp(project.id === "moonbase" ? addTally(launched, "moonbase", 1) : launched, XP.research));
       return project.id === "ark" ? launchArk(next) : next;
+    }
+
+    case "leaderAssign": {
+      const tile = state.tiles[action.tileId];
+      const def = tile?.building ? BUILDINGS_BY_ID[tile.building] : null;
+      if (!state.leader || !tile || !def || state.phase !== "playing") return state;
+      return {
+        ...state,
+        helpers: { ...state.helpers, [tile.id]: Math.max(state.helpers?.[tile.id] ?? 0, state.tick + LEADER.helpTicks) },
+        log: [`${action.who.slice(0, 24)} heads off to work at the ${def.name}: it works faster for a while.`, ...state.log].slice(0, 30),
+      };
+    }
+
+    case "leaderStrike": {
+      const raid = state.raid;
+      if (!state.leader || !raid || raid.fightStart === undefined || raid.roman || (raid.leaderHits ?? 0) >= LEADER.maxHits) return state;
+      return { ...state, raid: { ...raid, leaderHits: (raid.leaderHits ?? 0) + 1 } };
     }
 
     case "storyNext": {
