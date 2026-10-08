@@ -21,6 +21,7 @@ import { Debrief, GoalLine, LastIntro, LastTutorialPanel, NextEraPrompt } from "
 import { DiscoveryScene } from "./hud/discovery-scene";
 import { FinalEnding } from "./hud/final-ending";
 import { NameEggCard } from "./hud/name-egg-card";
+import { StoryPanel, StoryScene } from "./hud/story";
 import { Letterbox, useShot } from "./hud/letterbox";
 import { HintPanel } from "./hud/hints";
 import { GameAudio } from "./hud/game-audio";
@@ -113,6 +114,7 @@ function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null 
             )}
           >
             <DevPanel />
+            <StoryPanel />
             <TutorialPanel />
             <LastTutorialPanel />
             <CoachPanel />
@@ -138,6 +140,7 @@ function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null 
       </div>
       <FinalEnding />
       <NameEggCard />
+      <StoryScene />
       <Letterbox />
       <BattleCamera />
       <LastIntro />
@@ -236,7 +239,8 @@ export function GameScreen() {
         onLoadCloud={(state) => setGame(state)}
         onStart={(culture: CultureId, difficulty: DifficultyId, options?: NewGameOptions) => {
           clearSave();
-          setIntro(!options?.dev && options?.mode !== "last");
+          // Story mode tells its own beginning.
+          setIntro(!options?.dev && options?.mode !== "last" && !options?.story);
           // Name eggs: the same one twice in a row and the second game is cursed.
           const last = readLastEgg();
           const game = newGame(culture, difficulty, { ...options, lastNameEgg: last });

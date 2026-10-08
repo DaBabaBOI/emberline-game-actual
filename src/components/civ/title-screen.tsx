@@ -194,6 +194,18 @@ export function TitleScreen({
               </span>
             </label>
             <h2 className="font-pixel mb-3 mt-6 text-lg font-semibold">Choose a game</h2>
+            <div className="mb-3">
+              <ModeCard
+                icon="elder"
+                title="Story: The Ember Keepers"
+                blurb="One ember survived the flight from the dry lands. Carry it through thirteen chapters and six eras, with Elder Ama, bold Kito and clever Lina, all the way to the stars."
+                facts={["A told story with scenes between the characters", "Objectives for every chapter, and rewards", "One ending: the Ember Ark"]}
+                tone="bg-purple-700 hover:bg-purple-600"
+                action="Begin the story"
+                onClick={() => start({ nation, story: true })}
+                testId="start-story"
+              />
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <ModeCard
                 icon="flame"

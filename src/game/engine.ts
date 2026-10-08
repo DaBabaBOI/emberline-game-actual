@@ -142,6 +142,7 @@ import { hexDistance } from "./hex";
 import { generateMap, ISLANDS, isLand, revealAround, riverPath, terrainHeight } from "./map";
 import { mulberry32 } from "./noise";
 import { sealMatches, sealOf } from "./seal";
+import { CHAPTERS, type Objective } from "./story";
 import { cameosFor, EGGS, GOLDEN_DEER_FOOD, LITERACY_BUILDINGS, NAME_EGGS, nameEggMeters, nameEggOf, type EggId } from "./easter";
 import type { IconId } from "./sprites";
 import type {
@@ -224,6 +225,8 @@ export type Action =
   | { type: "seenEnding" }
   // The name egg's card has been read.
   | { type: "seeNameEgg" }
+  // Story mode: on from the chapter's scene.
+  | { type: "storyNext" }
   // Multiplayer: gifts and raids between players.
   | { type: "trade"; get: "food" | "wood" | "stone" }
   | { type: "sell"; give: "food" | "wood" | "stone" }
@@ -303,6 +306,8 @@ export interface NewGameOptions {
   lastNameEgg?: string | null;
   // Speedrun: a real-time timer, no tutorial, no Elder Ama, no secret names.
   speedrun?: boolean;
+  // Story mode: The Ember Keepers (story.ts).
+  story?: boolean;
   // Multiplayer: everyone in a room plays the same island (the room's seed).
   seed?: number;
   // "Build to Last": start in the Industrial era with three big problems.
@@ -372,7 +377,8 @@ export function newGame(
       `${cleanNation(options.nation)} gather on the shores of Westmarch.`,
     ],
     ...(nameEgg ? { nameEgg } : {}),
-    ...(options.speedrun && !options.dev ? { speedrun: { start: Date.now(), splits: [] } } : {}),
+    ...(options.speedrun && !options.dev && !options.story ? { speedrun: { start: Date.now(), splits: [] } } : {}),
+    ...(options.story ? { story: { chapter: 0, scene: "intro" as const, done: [] } } : {}),
   };
   state.forestBaseline = forestGrowthNearHome(state);
   // Elder Ama hands over what each tutorial step needs when it starts (see
@@ -5676,6 +5682,7 @@ export function reducer(state: GameState, action: Action): GameState {
   const guideBuild = next.mode === "last" ? LAST_TUTORIAL[next.lastStep ?? LAST_TUTORIAL.length]?.build : undefined;
   if (action.type === "place" && guideBuild && action.buildingId === guideBuild && next !== state) next = lastStepDone(next, next.lastStep!);
   if (next.speedrun && !next.speedrun.end) next = speedrunStep(state, next);
+  if (next.story && !next.story.scene) next = storyStep(next);
   return awardXp(state, next.coach ? advanceCoach(next) : next);
 }
 
@@ -5691,6 +5698,52 @@ function speedrunStep(prev: GameState, next: GameState): GameState {
   if (next.finished && !prev.finished) speedrun = { ...speedrun, end: now };
   const quiet = next.lesson || next.cutscene ? { lesson: null, cutscene: null } : {};
   return speedrun === run && !next.lesson && !next.cutscene ? next : { ...next, ...quiet, speedrun };
+}
+
+// Story mode: has this objective been met?
+export function storyObjectiveDone(state: GameState, o: Objective): boolean {
+  const counts = countBuildings(state);
+  switch (o.kind) {
+    case "have":
+      return (Array.isArray(o.building) ? o.building : [o.building]).reduce((n, b) => n + (counts[b] ?? 0), 0) >= o.amount;
+    case "researched":
+      return state.researched.includes(o.id);
+    case "population":
+      return state.population >= o.amount;
+    case "stored":
+      return state.resources[o.resource] >= o.amount;
+    case "meter":
+      return state.meters[o.key] >= o.min;
+    case "soldiers":
+      return state.soldiers >= o.amount;
+    case "flag":
+      return !!state[o.flag];
+    case "landmark":
+      return landmarkDone(state);
+    case "water":
+      return waterSupply(state) >= Math.floor(state.population);
+    case "friendly":
+      return Object.values(state.kingdoms ?? {}).some((k) => !k.conquered && moodOf(k.mood) === "friendly");
+    case "space":
+      return spaceDone(state, o.id);
+  }
+}
+
+// The chapter's objectives met: its reward, and its closing scene (or, for the
+// last chapter, the Ark's own ending).
+function storyStep(state: GameState): GameState {
+  const story = state.story!;
+  const chapter = CHAPTERS[story.chapter];
+  if (!chapter || !chapter.objectives.every((o) => storyObjectiveDone(state, o))) return state;
+  const resources = { ...state.resources };
+  for (const [k, v] of Object.entries(chapter.reward ?? {})) resources[k as keyof Resources] += v ?? 0;
+  const more = !!CHAPTERS[story.chapter + 1];
+  return {
+    ...state,
+    resources,
+    story: { chapter: chapter.outro ? story.chapter : story.chapter + 1, scene: chapter.outro ? "outro" : more ? "intro" : null, done: [...story.done, story.chapter] },
+    log: [`Chapter complete: ${chapter.title}.`, ...state.log].slice(0, 30),
+  };
 }
 
 // How long a speedrun has taken (ms), or took.
@@ -6852,6 +6905,15 @@ function step(state: GameState, action: Action): GameState {
       );
       const next = withMeters(addXp(project.id === "moonbase" ? addTally(launched, "moonbase", 1) : launched, XP.research));
       return project.id === "ark" ? launchArk(next) : next;
+    }
+
+    case "storyNext": {
+      const story = state.story;
+      if (!story?.scene) return state;
+      if (story.scene === "intro") return { ...state, story: { ...story, scene: null } };
+      // After a chapter's closing scene, the next chapter begins with its own.
+      const chapter = story.chapter + 1;
+      return { ...state, story: { ...story, chapter, scene: CHAPTERS[chapter] ? "intro" : null } };
     }
 
     case "seeNameEgg":

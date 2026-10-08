@@ -426,6 +426,9 @@ export interface GameState {
   // 1970) from `start`, a split for each era reached, and `end` once the story
   // is told. `invalid` says why it can't go on the records.
   speedrun?: { start: number; splits: { era: number; ms: number }[]; end?: number; invalid?: string };
+  // Story mode (story.ts): the chapter we're on, the scene showing (its intro
+  // before the objectives, its outro once they're done), and the chapters done.
+  story?: { chapter: number; scene: "intro" | "outro" | null; done: number[] };
   // Loaded from a save that was changed outside the game (see seal.ts), or
   // one without a seal at all (older, or with the seal removed): either way
   // it plays on, but can't post scores or speedrun times.
