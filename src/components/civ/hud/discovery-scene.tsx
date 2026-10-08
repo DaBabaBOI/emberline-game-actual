@@ -6,6 +6,8 @@ import { useGame } from "@/components/civ/game-provider";
 import { MODELS } from "@/components/civ/world/building-models";
 import { Stage3D } from "@/components/civ/cutscene/stage";
 import { discoveryShot } from "@/components/civ/cutscene/shots";
+import { useCutsceneStyle } from "@/lib/graphics";
+import { PixelDiscoveryStage } from "./pixel-scenes";
 
 // How long each line stays before the next one (ms).
 const LINE_MS = 2600;
@@ -28,6 +30,7 @@ export function DiscoveryScene() {
     return () => clearTimeout(t);
   }, [id, scene, lines]);
 
+  const style = useCutsceneStyle();
   const node = id ? TREE_BY_ID[id] : null;
   const era = state.era;
   const unlocks = node?.unlocks?.find((b) => MODELS[b]) ?? null;
@@ -51,7 +54,10 @@ export function DiscoveryScene() {
           </button>
         </div>
 
-        {/* The stage, in 3D. Clicking it goes on to the next line. */}
+        {/* The stage (pixel art, or 3D). Clicking it goes on to the next line. */}
+        {style === "pixel" ? (
+          <PixelDiscoveryStage id={id} scene={scene} lines={lines} era={era} name={node?.name ?? "discovery"} onAdvance={() => (done ? close() : setShown({ id, lines: lines + 1 }))} />
+        ) : (
         <div className="relative aspect-[16/7] w-full overflow-hidden border-[3px] border-[#2b2119] bg-black">
           <Stage3D shot={shot} className="absolute inset-0" />
           <span key={`${id}-${lines}`} className="scene-beat-wash pointer-events-none absolute inset-0" aria-hidden="true" />
@@ -64,6 +70,7 @@ export function DiscoveryScene() {
             data-era={era}
           />
         </div>
+        )}
 
         <div className="mt-3 min-h-[5.5rem] text-sm md:text-base" aria-live="polite">
           {scene.lines.slice(0, lines).map((l, i) => (

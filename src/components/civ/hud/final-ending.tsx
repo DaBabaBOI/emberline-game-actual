@@ -11,6 +11,8 @@ import { PixelIcon } from "@/components/civ/pixel-icon";
 import { playSfx, type Sfx } from "@/lib/audio";
 import { Stage3D, type Shot } from "@/components/civ/cutscene/stage";
 import { ARK_SHOTS, FALLEN_SHOTS, memoryShot, planetShot, townShot } from "@/components/civ/cutscene/shots";
+import { useCutsceneStyle } from "@/lib/graphics";
+import { FinalEndingPixel } from "./final-ending-pixel";
 
 // The end of the story, as a short film. Two of them:
 // - the Ember Ark launches (a town in balance): the launch, the climb out of
@@ -35,7 +37,12 @@ type Beat = {
   last?: boolean;
 };
 
+// Filmed in 3D, or the pixel-art film (Menu > Graphics > Cutscenes).
 export function FinalEnding() {
+  return useCutsceneStyle() === "pixel" ? <FinalEndingPixel /> : <FinalEnding3D />;
+}
+
+function FinalEnding3D() {
   const { state, dispatch } = useGame();
   const ark = state.ending === "ark" && state.endingSeen === false;
   const fallen = !ark && state.phase === "gameover" && state.era >= 5 && state.mode !== "last" && !state.endingSeen;

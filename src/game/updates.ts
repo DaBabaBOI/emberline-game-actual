@@ -17,6 +17,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "New setting (Menu > Graphics > Cutscenes): 3D or Pixel. Pixel brings back the flat pixel-art discovery scenes, story scenes and endings, for everyone who missed them.",
       "Fixed: in the tutorial, picking up a building card made the build bar drop its tabs and spill every building into one long row. The tabs now stay.",
       "Fixed: in Leader mode you sometimes couldn't move at all (the chief could start inside the campfire). They now start on open ground, WASD works on any keyboard layout, and phones and tablets get a stick to walk, drag to look, and Use / Act / Plant / Jump buttons.",
       "Plan mode now says what it does on screen when it's on: pick a building, lay out free blueprints, and they build themselves in order as soon as you can afford them.",

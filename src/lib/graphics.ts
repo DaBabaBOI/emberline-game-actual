@@ -83,6 +83,36 @@ export function useDaylight(): Daylight {
   return useSyncExternalStore(subscribe, getDaylight, () => "cycle");
 }
 
+// Cutscenes: "3d" films them on little islands built like the game; "pixel"
+// draws them flat in pixel art, the way they first were.
+export type CutsceneStyle = "3d" | "pixel";
+const SCENE_KEY = "emberline-cutscenes";
+let sceneStyle: CutsceneStyle | null = null;
+
+export function getCutsceneStyle(): CutsceneStyle {
+  if (sceneStyle) return sceneStyle;
+  try {
+    sceneStyle = localStorage.getItem(SCENE_KEY) === "pixel" ? "pixel" : "3d";
+  } catch {
+    sceneStyle = "3d";
+  }
+  return sceneStyle;
+}
+
+export function setCutsceneStyle(next: CutsceneStyle) {
+  sceneStyle = next;
+  try {
+    localStorage.setItem(SCENE_KEY, next);
+  } catch {
+    // Storage blocked: the choice still holds until the page is closed.
+  }
+  listeners.forEach((l) => l());
+}
+
+export function useCutsceneStyle(): CutsceneStyle {
+  return useSyncExternalStore(subscribe, getCutsceneStyle, () => "3d");
+}
+
 // Players who ask their device for less motion get no camera fly-bys or shakes.
 export function prefersLessMotion() {
   try {

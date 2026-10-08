@@ -7,6 +7,8 @@ import { CAST, CHAPTERS } from "@/game/story";
 import { useGame } from "@/components/civ/game-provider";
 import { Stage3D } from "@/components/civ/cutscene/stage";
 import { storySet, storyShot } from "@/components/civ/cutscene/shots";
+import { useCutsceneStyle } from "@/lib/graphics";
+import { PixelStoryStage } from "./pixel-scenes";
 import { cn } from "@/lib/utils";
 import { playSfx } from "@/lib/audio";
 import { useShot } from "./letterbox";
@@ -19,6 +21,7 @@ import { useShot } from "./letterbox";
 export function StoryScene() {
   const { state, dispatch } = useGame();
   const shot = useShot();
+  const style = useCutsceneStyle();
   const story = state.story;
   const chapter = story ? CHAPTERS[story.chapter] : null;
   const sceneName = story?.scene;
@@ -77,7 +80,7 @@ export function StoryScene() {
     <div className="pointer-events-auto fixed inset-0 z-[56] flex flex-col bg-black text-white" data-testid="story-scene" onClick={next} role="presentation">
       {/* The scene, in 3D. */}
       <div className="story-stage relative flex-1 overflow-hidden" data-era={chapter.era}>
-        <Stage3D shot={stageShot} className="absolute inset-0" />
+        {style === "pixel" ? <PixelStoryStage era={chapter.era} cast={cast} speaker={speaker} /> : <Stage3D shot={stageShot} className="absolute inset-0" />}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-black/30" />
 
         {/* The chapter's title, as the scene opens. */}
@@ -96,8 +99,8 @@ export function StoryScene() {
           )}
         </div>
 
-        {/* Who is on stage, the speaker lit up. */}
-        <div className="pointer-events-none absolute bottom-3 left-3 flex gap-1.5">
+        {/* Who is on stage, the speaker lit up (the pixel stage names them itself). */}
+        <div className={cn("pointer-events-none absolute bottom-3 left-3 flex gap-1.5", style === "pixel" && "hidden")}>
           {cast.map((who) => (
             <span
               key={who}

@@ -5,7 +5,7 @@ import { UPDATES } from "@/game/updates";
 import type { GameState } from "@/game/types";
 import { useGame } from "@/components/civ/game-provider";
 import { AccessibilityMenuSection } from "@/components/accessibility-settings";
-import { setDaylight, setGraphics, useDaylight, useGraphics } from "@/lib/graphics";
+import { setCutsceneStyle, setDaylight, setGraphics, useCutsceneStyle, useDaylight, useGraphics } from "@/lib/graphics";
 import { SoundOptions } from "./game-audio";
 import { HowToPlay } from "@/components/civ/how-to-play";
 import { FEEDBACK_LIMITS, postScore, saveToCloud, scoreFor, sendFeedback, topScores, type ScoreRow, trusted } from "@/lib/online";
@@ -173,6 +173,7 @@ export function GameMenu() {
 function GraphicsOption() {
   const graphics = useGraphics();
   const daylight = useDaylight();
+  const scenes = useCutsceneStyle();
   return (
     <div className="flex flex-col gap-1">
       <span className="font-semibold text-amber-300">Graphics</span>
@@ -203,6 +204,22 @@ function GraphicsOption() {
         />
       </label>
       <span className="text-white/60">{daylight === "cycle" ? "The sun rises and sets." : "Always day."}</span>
+      <span className="mt-1 text-white">Cutscenes</span>
+      <div className="grid grid-cols-2 gap-2">
+        {(["3d", "pixel"] as const).map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => setCutsceneStyle(c)}
+            aria-pressed={scenes === c}
+            data-testid={`cutscenes-${c}`}
+            className={"pixel-btn px-2 py-1 text-xs font-semibold " + (scenes === c ? "bg-amber-300 text-[#2b2119]" : "bg-[#4a3b2e] text-white")}
+          >
+            {c === "3d" ? "3D" : "Pixel"}
+          </button>
+        ))}
+      </div>
+      <span className="text-white/60">{scenes === "3d" ? "Filmed on little islands, like the game." : "Drawn flat in pixel art, the way they first were."}</span>
     </div>
   );
 }
