@@ -3359,7 +3359,11 @@ export const LEFT_BEHIND_WARN = 200;
 // Leader mode: each blow the chief strikes in a raid adds `hit` to the defense
 // (up to `maxHits`); a villager the chief sends to a workplace makes it work
 // faster (DROP.helpBoost) for `helpTicks`.
-export const LEADER = { hit: 0.6, maxHits: 8, helpTicks: 30 };
+// Leader mode: each blow in a fight adds `hit` defense (up to `maxHits`); a
+// villager sent to work helps for `helpTicks`. By hand the chief chops `wood`
+// a swing (thinning the forest by `chopThin`, never below `chopMin`) or breaks
+// `stone` off a hill.
+export const LEADER = { hit: 0.6, maxHits: 8, helpTicks: 30, wood: 1, stone: 1, chopThin: 0.03, chopMin: 0.2 };
 export const DROP = { helpBoost: 0.5, helpTicks: 20, fogTicks: 20, fogLuck: 0.05, fogReveal: 2 };
 // Someone dropped into a fire or the open sea dies, and the tribe grieves: each
 // death costs `happiness`, taken off after the 0-100 cap so it always shows. It

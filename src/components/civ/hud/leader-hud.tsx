@@ -1,13 +1,14 @@
 "use client";
 
-import { BUILDINGS_BY_ID, LEADER } from "@/game/content";
+import { useEffect } from "react";
+import { BUILDINGS, BUILDINGS_BY_ID, LEADER, PLANT_COST, RELIGHT_WOOD } from "@/game/content";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { WORK_TOOLS } from "@/components/civ/world/figures";
-import { leader, setLeaderMenu, setLeaderView, useLeader } from "@/components/civ/world/leader";
+import { leader, setLeaderBuild, setLeaderMenu, setLeaderView, useLeader } from "@/components/civ/world/leader";
 import { grabStore } from "@/components/civ/world/villagers";
 import { hexDistance, worldToAxial } from "@/game/hex";
-import { soilOf } from "@/game/engine";
+import { buildingCost, canAfford, isLit, isUnlocked, placementError, plantError, soilOf } from "@/game/engine";
 import type { IconId } from "@/game/sprites";
 
 // Leader mode on screen: in first person, a crosshair, what you can do right
@@ -15,7 +16,34 @@ import type { IconId } from "@/game/sprites";
 // in the build view, a way back to the chief.
 export function LeaderHud() {
   const { state, dispatch } = useGame();
-  const { view, prompt, menu, locked } = useLeader();
+  const { view, prompt, menu, locked, build } = useLeader();
+  // What the chief can build now, for the hotbar.
+  const hotbar = BUILDINGS.filter((b) => b.era <= state.era && isUnlocked(state, b));
+  const fp = !!state.leader && view === "fp";
+
+  // 1-9 pick a building (again: put it away); the wheel runs through them all.
+  useEffect(() => {
+    if (!fp) return;
+    const key = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+      const n = Number(e.key);
+      if (Number.isInteger(n) && n >= 1 && n <= 9 && hotbar[n - 1]) setLeaderBuild(build === hotbar[n - 1].id ? null : hotbar[n - 1].id);
+    };
+    const wheel = (e: WheelEvent) => {
+      if (!document.pointerLockElement || !hotbar.length) return;
+      const at = hotbar.findIndex((b) => b.id === build);
+      const next = at < 0 ? 0 : (at + (e.deltaY > 0 ? 1 : -1) + hotbar.length) % hotbar.length;
+      setLeaderBuild(hotbar[next].id);
+    };
+    window.addEventListener("keydown", key);
+    window.addEventListener("wheel", wheel);
+    return () => {
+      window.removeEventListener("keydown", key);
+      window.removeEventListener("wheel", wheel);
+    };
+  });
+
   if (!state.leader) return null;
 
   if (view === "map")
@@ -53,15 +81,7 @@ export function LeaderHud() {
       {prompt && !menu && (
         <div className="pointer-events-none fixed inset-x-0 top-[58%] z-[15] flex justify-center" data-testid="leader-prompt">
           <span className="pixel-panel-dark font-pixel px-3 py-1 text-sm text-white">
-            {prompt.kind === "talk" ? (
-              <>
-                <span className="text-amber-300">E</span>: talk to {prompt.name}
-              </>
-            ) : (
-              <>
-                <span className="text-red-300">Click</span>: strike the raiders! ({hits}/{LEADER.maxHits} blows, each +{LEADER.hit} defense)
-              </>
-            )}
+            <PromptText prompt={prompt} hits={hits} />
           </span>
         </div>
       )}
@@ -73,10 +93,43 @@ export function LeaderHud() {
         </div>
       )}
 
+      {/* The hotbar: what the chief can build, right here. */}
+      {hotbar.length > 0 && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-[3.6rem] z-[15] flex justify-center px-3" data-testid="leader-hotbar">
+          <div className="pixel-panel-dark pointer-events-auto flex max-w-[94vw] gap-1 overflow-x-auto p-1">
+            {hotbar.map((b, i) => {
+              const cost = buildingCost(state, b);
+              const afford = canAfford(state, cost);
+              const on = build === b.id;
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => setLeaderBuild(on ? null : b.id)}
+                  title={`${b.name}: ${Object.entries(cost)
+                    .filter(([, v]) => v)
+                    .map(([k, v]) => `${v} ${k === "currency" ? "coins" : k}`)
+                    .join(", ")}`}
+                  className={
+                    "relative flex h-11 w-11 shrink-0 items-center justify-center border-2 " +
+                    (on ? "border-amber-300 bg-amber-400/30" : "border-white/15 bg-black/30") +
+                    (afford ? "" : " opacity-45")
+                  }
+                  data-testid={`hotbar-${b.id}`}
+                >
+                  <PixelIcon name={b.icon as IconId} size={26} />
+                  {i < 9 && <span className="font-num absolute left-0.5 top-0 text-[10px] text-white/80">{i + 1}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* The controls, and the way to the build view. */}
-      <div className="pointer-events-none fixed bottom-3 left-1/2 z-[15] flex -translate-x-1/2 flex-wrap items-center justify-center gap-2 px-3" data-testid="leader-controls">
-        <span className="pixel-panel-dark font-pixel px-2 py-1 text-[11px] text-white/85">
-          WASD / arrows: walk · Shift: run · Mouse: look · E: talk · Click: strike · Esc: free the mouse
+      <div className="pointer-events-none fixed bottom-1 left-1/2 z-[15] flex -translate-x-1/2 items-center justify-center gap-2 whitespace-nowrap px-3" data-testid="leader-controls">
+        <span className="pixel-panel-dark font-pixel hidden px-2 py-1 text-[11px] text-white/85 md:inline">
+          WASD walk · Shift run · Space jump · E talk / go in · Click act · P plant · 1-9 build · Q put away · Esc mouse
         </span>
         <button type="button" onClick={() => setLeaderView("map")} className="pixel-btn font-pixel pointer-events-auto bg-amber-400 px-3 py-1 text-sm text-[#2b2119]" data-testid="leader-to-map">
           Build view (Tab)
@@ -134,6 +187,71 @@ export function LeaderHud() {
           </div>
         </div>
       )}
+    </>
+  );
+}
+
+// What you can do with what's under the crosshair, in words.
+function PromptText({ prompt, hits }: { prompt: NonNullable<ReturnType<typeof useLeader>["prompt"]>; hits: number }) {
+  const { state } = useGame();
+  const { build } = useLeader();
+  const key = (k: string, red = false) => <span className={red ? "text-red-300" : "text-amber-300"}>{k}</span>;
+  if (prompt.kind === "talk")
+    return (
+      <>
+        {key("E")}: talk to {prompt.name}
+      </>
+    );
+  if (prompt.kind === "fight")
+    return (
+      <>
+        {key("Click", true)}: strike the raiders! ({hits}/{LEADER.maxHits} blows, each +{LEADER.hit} defense)
+      </>
+    );
+  const tile = state.tiles[prompt.tile];
+  if (!tile) return null;
+  if (prompt.kind === "build") {
+    const def = build ? BUILDINGS_BY_ID[build] : null;
+    if (!def) return null;
+    const why = placementError(state, tile, def);
+    return why ? (
+      <>
+        {def.name}: <span className="text-red-300">{why}</span>
+      </>
+    ) : (
+      <>
+        {key("Click")}: build the {def.name} here
+      </>
+    );
+  }
+  if (prompt.kind === "building") {
+    const name = BUILDINGS_BY_ID[tile.building ?? ""]?.name ?? "building";
+    return tile.building === "campfire" && !isLit(state, tile) ? (
+      <>
+        {key("E")}: relight the fire (−{RELIGHT_WOOD} wood)
+      </>
+    ) : (
+      <>
+        {key("E")}: go into the {name}
+      </>
+    );
+  }
+  if (prompt.kind === "gather")
+    return prompt.what === "wood" ? (
+      <>
+        {key("Click")}: chop wood (+{LEADER.wood}) · {key("P")}: plant more trees here
+      </>
+    ) : (
+      <>
+        {key("Click")}: break stone (+{LEADER.stone})
+      </>
+    );
+  const why = plantError(state, tile);
+  return why ? (
+    <span className="text-white/70">Can&apos;t plant here: {why}</span>
+  ) : (
+    <>
+      {key("P")}: plant a tree here (−{PLANT_COST.food} food)
     </>
   );
 }

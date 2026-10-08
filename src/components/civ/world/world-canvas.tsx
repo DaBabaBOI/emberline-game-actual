@@ -7,6 +7,7 @@ import { Vector3, type Group } from "three";
 import { MapControls, PerformanceMonitor } from "@react-three/drei";
 import { Html } from "./html";
 import type { MapControls as MapControlsImpl } from "three-stdlib";
+import { playSfx } from "@/lib/audio";
 import { BUILDINGS_BY_ID, CLEAR_LAND, ERAS, formatYear, IMPROVE, LAST_TUTORIAL, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL, WEAR, SMOG } from "@/game/content";
 import { CANOE_TOOL, SCOUT_TOOL, canoeTargetError, canoeTicks, scoutTargetError, scoutTicks } from "@/game/engine";
 import {
@@ -495,7 +496,8 @@ export function WorldCanvas() {
     return { ok: true, text: `Sell ${target.name}${refund ? ` (${refund})` : ""}` };
   })();
   // Leader mode: walking in first person (not while a camera shot plays).
-  const leaderView = useLeader().view;
+  const leaderSnap = useLeader();
+  const leaderView = leaderSnap.view;
   const fpActive = !!state.leader && leaderView === "fp" && !shot;
   const worldHeld = useWorldHeld();
   const planning = usePlanMode();
@@ -995,7 +997,48 @@ export function WorldCanvas() {
       )}
 
       <Spotlight tiles={state.tiles} />
-      {state.leader && <LeaderRig tiles={state.tiles} home={home} active={fpActive} battle={shown} onStrike={() => dispatch({ type: "leaderStrike" })} />}
+      {state.leader && (
+        <LeaderRig
+          tiles={state.tiles}
+          home={home}
+          active={fpActive}
+          battle={shown}
+          coldFires={outFires.map((t) => t.id)}
+          onStrike={() => dispatch({ type: "leaderStrike" })}
+          onAct={({ kind, tile }) => {
+            if (kind === "build" && leaderSnap.build) {
+              const why = placementError(state, state.tiles[tile], BUILDINGS_BY_ID[leaderSnap.build]);
+              if (!why) playSfx("build");
+              dispatch({ type: "place", tileId: tile, buildingId: leaderSnap.build });
+            } else if (kind === "gather") {
+              playSfx("step");
+              dispatch({ type: "leaderGather", tileId: tile });
+            } else if (kind === "plant") dispatch({ type: "plant", tileId: tile });
+            else if (kind === "relight") dispatch({ type: "relight", tileId: tile });
+            else if (kind === "open") setInspected(tile);
+          }}
+        />
+      )}
+      {/* First person, holding a building from the hotbar: where it would go,
+          green when it can, red when it can't. */}
+      {fpActive &&
+        leaderSnap.build &&
+        leaderSnap.prompt?.kind === "build" &&
+        (() => {
+          const t = state.tiles[leaderSnap.prompt.tile];
+          const d = BUILDINGS_BY_ID[leaderSnap.build];
+          const Model = d && MODELS[d.id];
+          if (!t || !Model) return null;
+          const ok = !placementError(state, t, d);
+          return (
+            <group>
+              <HexOutline x={t.x} y={tileTop(t)} z={t.z} color={ok ? "#4ade80" : "#ef4444"} />
+              <group position={[t.x, tileTop(t), t.z]} scale={BUILDING_SCALE} rotation={[0, turnFor(state.tiles, t, d.id), 0]}>
+                <Model opacity={ok ? 0.55 : 0.3} />
+              </group>
+            </group>
+          );
+        })()}
       {makeover && rebuildOrder && <RebuildDust tiles={state.tiles} ids={rebuildOrder.ids} playKey={makeover.tick * 10 + state.era} />}
       <Plans state={state} />
       <TiredFields state={state} />

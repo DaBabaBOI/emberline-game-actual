@@ -231,6 +231,7 @@ export type Action =
   // Leader mode: send a villager to work at a building; strike a raider.
   | { type: "leaderAssign"; tileId: number; who: string }
   | { type: "leaderStrike" }
+  | { type: "leaderGather"; tileId: number }
   // Multiplayer: gifts and raids between players.
   | { type: "trade"; get: "food" | "wood" | "stone" }
   | { type: "sell"; give: "food" | "wood" | "stone" }
@@ -6935,6 +6936,24 @@ function step(state: GameState, action: Action): GameState {
       const raid = state.raid;
       if (!state.leader || !raid || raid.fightStart === undefined || raid.roman || (raid.leaderHits ?? 0) >= LEADER.maxHits) return state;
       return { ...state, raid: { ...raid, leaderHits: (raid.leaderHits ?? 0) + 1 } };
+    }
+
+    case "leaderGather": {
+      // The chief works with their own hands: an armful of wood from the forest
+      // (it thins it a little), or a few stones broken off a hill.
+      const tile = state.tiles[action.tileId];
+      if (!state.leader || !tile || tile.building || !tile.revealed || state.phase !== "playing") return state;
+      if (tile.terrain === "forest" && tile.growth > LEADER.chopMin) {
+        return withMeters({
+          ...state,
+          resources: { ...state.resources, wood: state.resources.wood + LEADER.wood },
+          tiles: state.tiles.map((t) => (t.id === tile.id ? { ...t, growth: Math.max(LEADER.chopMin, t.growth - LEADER.chopThin) } : t)),
+        });
+      }
+      if (tile.terrain === "hills" || tile.terrain === "mountain") {
+        return withMeters({ ...state, resources: { ...state.resources, stone: state.resources.stone + LEADER.stone } });
+      }
+      return state;
     }
 
     case "storyNext": {

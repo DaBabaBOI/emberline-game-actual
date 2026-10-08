@@ -7,27 +7,57 @@ import type { Battle, Tile } from "@/game/types";
 import { makeGround } from "./ground";
 import { grabStore } from "./villagers";
 import { Figures, type Agent } from "./figures";
-import { leader, leaderSnapshot, setLeaderLocked, setLeaderMenu, setLeaderPrompt, setLeaderView, villagerName } from "./leader";
+import { isLand } from "@/game/map";
+import { leader, leaderSnapshot, setLeaderBuild, setLeaderLocked, setLeaderMenu, setLeaderPrompt, setLeaderView, villagerName, type LeaderPrompt } from "./leader";
 
 // Leader mode: the chief, walked in first person. WASD or the arrows to move
-// (Shift to run), the mouse to look (click the view to take the mouse; Esc gives
-// it back), E to talk to the villager in front, a click to strike in a fight,
-// Tab for the build view (and back).
+// (Shift to run, Space to jump), the mouse to look (click the view to take the
+// mouse; Esc gives it back). What's under the crosshair decides what you can
+// do: E to talk to a villager, step into a building or relight a cold fire; a
+// click to strike in a fight, chop wood or break stone; P to plant a tree.
+// Pick a building from the hotbar (1-9 or the wheel) and a click builds it
+// where you look (Q puts it away). Tab for the build view (and back).
 
 const EYE = 0.62;
 const WALK = 2.2;
 const RUN = 4;
 const REACH = 1.25;
+// How far the crosshair reaches: to build or plant, and to work or step in.
+const SIGHT = 7;
+const HANDS = 3.2;
 
-export function LeaderRig({ tiles, home, active, battle, onStrike }: { tiles: Tile[]; home: Tile; active: boolean; battle: Battle | null; onStrike: () => void }) {
+export type LeaderAct = { kind: "build" | "gather" | "plant" | "open" | "relight"; tile: number };
+
+export function LeaderRig({
+  tiles,
+  home,
+  active,
+  battle,
+  onStrike,
+  onAct,
+  coldFires = [],
+}: {
+  tiles: Tile[];
+  home: Tile;
+  active: boolean;
+  battle: Battle | null;
+  onStrike: () => void;
+  onAct: (act: LeaderAct) => void;
+  // Campfires gone cold (E relights them).
+  coldFires?: number[];
+}) {
   const { gl } = useThree();
   // Whether the first-person lens is on, and the map's lens to put back.
   const lens = useRef<{ on: boolean; fov: number; near: number }>({ on: false, fov: 38, near: 0.5 });
   const ground = useMemo(() => makeGround(tiles), [tiles]);
   const keys = useRef(new Set<string>());
   const strike = useRef(onStrike);
+  const act = useRef(onAct);
+  const cold = useRef(coldFires);
   useEffect(() => {
     strike.current = onStrike;
+    act.current = onAct;
+    cold.current = coldFires;
   });
   const fight = battle?.live ? tiles[battle.tile] : null;
   const fightRef = useRef(fight);
@@ -61,13 +91,27 @@ export function LeaderRig({ tiles, home, active, battle, onStrike }: { tiles: Ti
         return;
       }
       if (!active) return;
-      keys.current.add(e.key.toLowerCase());
-      if (e.key.toLowerCase() === "e") {
-        const p = leaderSnapshot().prompt;
+      const key = e.key.toLowerCase();
+      keys.current.add(key);
+      const p = leaderSnapshot().prompt;
+      if (key === "e") {
         if (p?.kind === "talk") {
           if (document.pointerLockElement) document.exitPointerLock();
           setLeaderMenu({ index: p.index, name: p.name });
+        } else if (p?.kind === "building") {
+          if (cold.current.includes(p.tile)) act.current({ kind: "relight", tile: p.tile });
+          else {
+            // Step in: its panel, with the mouse free to use it.
+            if (document.pointerLockElement) document.exitPointerLock();
+            act.current({ kind: "open", tile: p.tile });
+          }
         }
+      }
+      if (key === "p" && (p?.kind === "plant" || (p?.kind === "gather" && p.what === "wood"))) act.current({ kind: "plant", tile: p.tile });
+      if (key === "q") setLeaderBuild(null);
+      if (key === " ") {
+        e.preventDefault();
+        if (leader.hop === 0) leader.vy = 2.8;
       }
     };
     const up = (e: KeyboardEvent) => keys.current.delete(e.key.toLowerCase());
@@ -82,11 +126,19 @@ export function LeaderRig({ tiles, home, active, battle, onStrike }: { tiles: Ti
         if (!leaderSnapshot().menu) gl.domElement.requestPointerLock?.();
         return;
       }
-      // A blow, when the raiders are within reach (at most two a second).
+      // A blow, when the raiders are within reach (at most two a second);
+      // otherwise build, or work with your hands, at what's under the crosshair.
       const now = performance.now();
-      if (fightRef.current && now - leader.strikeAt > 450) {
-        leader.strikeAt = now;
-        strike.current();
+      const p = leaderSnapshot().prompt;
+      if (p?.kind === "fight") {
+        if (now - leader.strikeAt > 450) {
+          leader.strikeAt = now;
+          strike.current();
+        }
+      } else if (p?.kind === "build") act.current({ kind: "build", tile: p.tile });
+      else if (p?.kind === "gather" && now - leader.actAt > 350) {
+        leader.actAt = now;
+        act.current({ kind: "gather", tile: p.tile });
       }
     };
     const lock = () => setLeaderLocked(document.pointerLockElement === gl.domElement);
@@ -150,15 +202,46 @@ export function LeaderRig({ tiles, home, active, battle, onStrike }: { tiles: Ti
       else if (ground.walkable(leader.x, leader.z + dz)) leader.z += dz;
     }
     leader.y += (ground.heightAt(leader.x, leader.z) - leader.y) * Math.min(1, dt * 10);
+    // A jump: up, and back down.
+    if (leader.hop > 0 || leader.vy > 0) {
+      leader.hop += leader.vy * dt;
+      leader.vy -= 9 * dt;
+      if (leader.hop <= 0) leader.hop = leader.vy = 0;
+    }
     if (!active) return;
 
-    const bob = leader.moving ? Math.sin(performance.now() / 120) * 0.025 : 0;
-    camera.position.set(leader.x, leader.y + EYE + bob, leader.z);
-    camera.rotation.set(leader.pitch, leader.yaw, 0, "YXZ");
+    const now = performance.now();
+    const bob = leader.moving ? Math.sin(now / 120) * 0.025 : 0;
+    // The view dips with a swing of the axe (or a blow).
+    const swing = Math.max(0, 1 - (now - Math.max(leader.actAt, leader.strikeAt)) / 260);
+    camera.position.set(leader.x, leader.y + EYE + bob + leader.hop, leader.z);
+    camera.rotation.set(leader.pitch - Math.sin(swing * Math.PI) * 0.06, leader.yaw, 0, "YXZ");
 
     // Within reach: a fight, or a villager in front.
     if (fightRef.current && Math.hypot(fightRef.current.x - leader.x, fightRef.current.z - leader.z) < 3.2) {
       setLeaderPrompt({ kind: "fight" });
+      return;
+    }
+    // What the crosshair is on: a building (it stands about this high over the
+    // middle of its tile) or the ground.
+    const lx = -Math.sin(leader.yaw) * Math.cos(leader.pitch);
+    const ly = Math.sin(leader.pitch);
+    const lz = -Math.cos(leader.yaw) * Math.cos(leader.pitch);
+    let aim: { tile: Tile; d: number } | null = null;
+    for (let t = 0.3; t <= SIGHT; t += 0.08) {
+      const x = leader.x + lx * t;
+      const y = leader.y + EYE + leader.hop + ly * t;
+      const z = leader.z + lz * t;
+      const tile = ground.tileAt(x, z);
+      if (!tile) continue;
+      if ((tile.building && Math.hypot(x - tile.x, z - tile.z) < 0.62 && y < tile.height + 0.8) || y <= ground.heightAt(x, z)) {
+        aim = { tile, d: t };
+        break;
+      }
+    }
+    // Holding a building from the hotbar: it goes where you look.
+    if (leaderSnapshot().build) {
+      setLeaderPrompt(aim && aim.tile.revealed ? { kind: "build", tile: aim.tile.id } : null);
       return;
     }
     let best: { index: number; d: number } | null = null;
@@ -168,12 +251,24 @@ export function LeaderRig({ tiles, home, active, battle, onStrike }: { tiles: Ti
       const vz = w.z - leader.z;
       const d = Math.hypot(vx, vz);
       if (d > REACH || d < 1e-3) return;
-      // In front of us, not behind.
-      if ((vx * fx + vz * fz) / d < 0.35) return;
+      // Right in front of us (where we look), not off to the side.
+      if ((vx * fx + vz * fz) / d < 0.85) return;
       if (!best || d < best.d) best = { index, d };
     });
     const found = best as { index: number; d: number } | null;
-    setLeaderPrompt(found ? { kind: "talk", index: found.index, name: villagerName(found.index) } : null);
+    if (found) {
+      setLeaderPrompt({ kind: "talk", index: found.index, name: villagerName(found.index) });
+      return;
+    }
+    let prompt: LeaderPrompt = null;
+    if (aim && aim.d <= HANDS && aim.tile.revealed) {
+      const t = aim.tile;
+      if (t.building) prompt = { kind: "building", tile: t.id };
+      else if (t.terrain === "forest" && t.growth > 0.2) prompt = { kind: "gather", tile: t.id, what: "wood" };
+      else if (t.terrain === "hills" || t.terrain === "mountain") prompt = { kind: "gather", tile: t.id, what: "stone" };
+      else if (isLand(t.terrain)) prompt = { kind: "plant", tile: t.id };
+    }
+    setLeaderPrompt(prompt);
   });
 
   // In the build view the chief stands on the map, crowned, so you can find them.
