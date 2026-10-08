@@ -169,6 +169,8 @@ export function StoryPanel() {
         Chapter {story.chapter + 1} of {CHAPTERS.length}
       </div>
       <div className="font-pixel text-lg font-semibold leading-tight">{chapter.title}</div>
+      {/* How story mode works, in a line (players asked). */}
+      <p className="mt-0.5 text-xs text-stone-600">Play as normal and do these. When all are ticked, a scene plays and the next chapter begins (13 in all, ending with the Ark).</p>
       <ul className="mt-1.5 space-y-1">
         {chapter.objectives.map((o) => {
           const done = storyObjectiveDone(state, o);

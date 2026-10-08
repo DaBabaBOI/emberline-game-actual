@@ -8,7 +8,7 @@ import { makeGround } from "./ground";
 import { grabStore } from "./villagers";
 import { Figures, type Agent } from "./figures";
 import { isLand } from "@/game/map";
-import { leader, leaderSnapshot, setLeaderBuild, setLeaderLocked, setLeaderMenu, setLeaderPrompt, setLeaderView, villagerName, type LeaderPrompt } from "./leader";
+import { leader, leaderButtons, leaderSnapshot, leaderStick, setLeaderBuild, setLeaderLocked, setLeaderMenu, setLeaderPrompt, setLeaderView, villagerName, type LeaderPrompt } from "./leader";
 
 // Leader mode: the chief, walked in first person. WASD or the arrows to move
 // (Shift to run, Space to jump), the mouse to look (click the view to take the
@@ -65,12 +65,23 @@ export function LeaderRig({
     fightRef.current = fight;
   });
 
-  // The chief starts beside the fire, looking out over the village.
+  // The chief starts near the fire, looking across the village: on open
+  // ground (not inside the fire, a hut or the sea), the nearest free spot.
   useEffect(() => {
     if (leader.ready) return;
-    const spot = ground.spotOn(home);
-    leader.x = spot.x + 0.9;
-    leader.z = spot.z + 0.9;
+    // A couple of steps back from the fire, so it isn't right in your face.
+    let at = { x: home.x + 1.3, z: home.z + 1.3 };
+    for (let r = 1.8; r < 4 && !ground.walkable(at.x, at.z); r += 0.3) {
+      for (let a = 0; a < 12; a++) {
+        const p = { x: home.x + Math.cos((a * Math.PI) / 6) * r, z: home.z + Math.sin((a * Math.PI) / 6) * r };
+        if (ground.walkable(p.x, p.z)) {
+          at = p;
+          break;
+        }
+      }
+    }
+    leader.x = at.x;
+    leader.z = at.z;
     leader.y = ground.heightAt(leader.x, leader.z);
     leader.yaw = Math.atan2(leader.x - home.x, leader.z - home.z);
     leader.ready = true;
@@ -93,41 +104,29 @@ export function LeaderRig({
       if (!active) return;
       const key = e.key.toLowerCase();
       keys.current.add(key);
-      const p = leaderSnapshot().prompt;
-      if (key === "e") {
-        if (p?.kind === "talk") {
-          if (document.pointerLockElement) document.exitPointerLock();
-          setLeaderMenu({ index: p.index, name: p.name });
-        } else if (p?.kind === "building") {
-          if (cold.current.includes(p.tile)) act.current({ kind: "relight", tile: p.tile });
-          else {
-            // Step in: its panel, with the mouse free to use it.
-            if (document.pointerLockElement) document.exitPointerLock();
-            act.current({ kind: "open", tile: p.tile });
-          }
-        }
-      }
-      if (key === "p" && (p?.kind === "plant" || (p?.kind === "gather" && p.what === "wood"))) act.current({ kind: "plant", tile: p.tile });
+      // WASD by where the keys are, whatever the keyboard's layout.
+      if (/^Key[WASD]$/.test(e.code)) keys.current.add(e.code.slice(3).toLowerCase());
+      // E: talk, or step into a building (its panel, with the mouse free to use it).
+      if (key === "e") interact();
+      if (key === "p") plant();
       if (key === "q") setLeaderBuild(null);
       if (key === " ") {
         e.preventDefault();
-        if (leader.hop === 0) leader.vy = 2.8;
+        jump();
       }
     };
-    const up = (e: KeyboardEvent) => keys.current.delete(e.key.toLowerCase());
+    const up = (e: KeyboardEvent) => {
+      keys.current.delete(e.key.toLowerCase());
+      if (/^Key[WASD]$/.test(e.code)) keys.current.delete(e.code.slice(3).toLowerCase());
+    };
     const move = (e: MouseEvent) => {
       if (!active || document.pointerLockElement !== gl.domElement) return;
       leader.yaw -= e.movementX * 0.0024;
       leader.pitch = Math.max(-1.2, Math.min(1.0, leader.pitch - e.movementY * 0.0024));
     };
-    const click = () => {
-      if (!active) return;
-      if (document.pointerLockElement !== gl.domElement) {
-        if (!leaderSnapshot().menu) gl.domElement.requestPointerLock?.();
-        return;
-      }
-      // A blow, when the raiders are within reach (at most two a second);
-      // otherwise build, or work with your hands, at what's under the crosshair.
+    // A blow, when the raiders are within reach (at most two a second);
+    // otherwise build, or work with your hands, at what's under the crosshair.
+    const doAct = () => {
       const now = performance.now();
       const p = leaderSnapshot().prompt;
       if (p?.kind === "fight") {
@@ -141,6 +140,37 @@ export function LeaderRig({
         act.current({ kind: "gather", tile: p.tile });
       }
     };
+    const click = (e: MouseEvent) => {
+      if (!active) return;
+      // Touch screens use the on-screen buttons (and have no pointer lock).
+      if ((e as PointerEvent).pointerType === "touch") return;
+      if (document.pointerLockElement !== gl.domElement) {
+        if (!leaderSnapshot().menu) gl.domElement.requestPointerLock?.();
+        return;
+      }
+      doAct();
+    };
+    const interact = () => {
+      const p = leaderSnapshot().prompt;
+      if (p?.kind === "talk") {
+        if (document.pointerLockElement) document.exitPointerLock();
+        setLeaderMenu({ index: p.index, name: p.name });
+      } else if (p?.kind === "building") {
+        if (cold.current.includes(p.tile)) act.current({ kind: "relight", tile: p.tile });
+        else {
+          if (document.pointerLockElement) document.exitPointerLock();
+          act.current({ kind: "open", tile: p.tile });
+        }
+      }
+    };
+    const plant = () => {
+      const p = leaderSnapshot().prompt;
+      if (p?.kind === "plant" || (p?.kind === "gather" && p.what === "wood")) act.current({ kind: "plant", tile: p.tile });
+    };
+    const jump = () => {
+      if (leader.hop === 0) leader.vy = 2.8;
+    };
+    if (active) Object.assign(leaderButtons, { act: doAct, use: interact, plant, jump });
     const lock = () => setLeaderLocked(document.pointerLockElement === gl.domElement);
     const blur = () => keys.current.clear();
     window.addEventListener("keydown", down);
@@ -184,18 +214,20 @@ export function LeaderRig({
     }
     const dt = Math.min(delta, 0.1);
     const k = keys.current;
-    const ahead = (k.has("w") || k.has("arrowup") ? 1 : 0) - (k.has("s") || k.has("arrowdown") ? 1 : 0);
-    const side = (k.has("d") || k.has("arrowright") ? 1 : 0) - (k.has("a") || k.has("arrowleft") ? 1 : 0);
+    // The keys, or the on-screen stick.
+    const ahead = Math.max(-1, Math.min(1, (k.has("w") || k.has("arrowup") ? 1 : 0) - (k.has("s") || k.has("arrowdown") ? 1 : 0) + leaderStick.ahead));
+    const side = Math.max(-1, Math.min(1, (k.has("d") || k.has("arrowright") ? 1 : 0) - (k.has("a") || k.has("arrowleft") ? 1 : 0) + leaderStick.side));
     const fx = -Math.sin(leader.yaw);
     const fz = -Math.cos(leader.yaw);
     leader.moving = active && (ahead !== 0 || side !== 0);
     if (leader.moving) {
-      const len = Math.hypot(ahead, side) || 1;
+      const len = Math.max(1, Math.hypot(ahead, side));
       const step = ((k.has("shift") ? RUN : WALK) * dt) / len;
       const dx = (fx * ahead - fz * side) * step;
       const dz = (fz * ahead + fx * side) * step;
-      // Slide along whatever is in the way (water, a building, a mountain).
-      if (ground.walkable(leader.x + dx, leader.z + dz)) {
+      // Slide along whatever is in the way (water, a building, a mountain);
+      // and if somehow standing inside something, any step gets you out.
+      if (!ground.walkable(leader.x, leader.z) || ground.walkable(leader.x + dx, leader.z + dz)) {
         leader.x += dx;
         leader.z += dz;
       } else if (ground.walkable(leader.x + dx, leader.z)) leader.x += dx;

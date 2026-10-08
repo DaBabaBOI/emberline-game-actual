@@ -479,6 +479,22 @@ export function BottomBar() {
               tone={planning ? "bg-amber-400 text-[#2b2119]" : "bg-[#5b4a2e] hover:bg-[#6b5836]"}
             />
           )}
+          {/* What Plan mode does, in words on screen (not only in a tooltip). */}
+          {planning && !inTutorial && (
+            <div className={"pointer-events-none fixed inset-x-0 z-[25] flex justify-center px-3 " + (state.leader ? "top-[8.5rem]" : "top-[5.5rem]")} data-testid="plan-banner">
+              <div className="pixel-panel-dark font-pixel w-[min(94vw,560px)] px-3 py-2 text-xs text-white md:text-sm">
+                <div className="font-semibold text-amber-300">Plan mode is on</div>
+                <ol className="mt-0.5 list-decimal space-y-0.5 pl-5">
+                  <li>Pick a building card below.</li>
+                  <li>Click the map to lay out its blueprint. It costs nothing yet, even if you can&apos;t afford it.</li>
+                  <li>Blueprints build themselves, one by one in the order you laid them out, as soon as you have the resources.</li>
+                </ol>
+                <div className="mt-1 text-white/70">
+                  {(state.plans?.length ?? 0) > 0 ? `${state.plans!.length} planned, waiting for resources. ` : ""}Click Plan again to go back to building straight away.
+                </div>
+              </div>
+            </div>
+          )}
           {(state.plans?.length ?? 0) > 0 && planning && (
             <ToolButton
               guide="tool-plans"

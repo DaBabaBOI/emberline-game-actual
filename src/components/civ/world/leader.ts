@@ -9,6 +9,16 @@ import { useSyncExternalStore } from "react";
 export const leader = { x: 0, z: 0, y: 0, yaw: 0, pitch: -0.08, ready: false, moving: false, strikeAt: 0, hop: 0, vy: 0, actAt: 0 };
 
 export type LeaderView = "fp" | "map";
+
+// Touch screens: the on-screen stick (-1..1 each way: `ahead` forward, `side`
+// to the right), and what the buttons do (filled in by the rig).
+export const leaderStick = { ahead: 0, side: 0 };
+export const leaderButtons: { act: () => void; use: () => void; plant: () => void; jump: () => void } = {
+  act: () => {},
+  use: () => {},
+  plant: () => {},
+  jump: () => {},
+};
 // What the chief could do right now, by what's in front of them: talk to a
 // villager, strike a raider, step into a building (or relight a cold fire),
 // chop wood or break stone, plant a tree, or (a building picked from the

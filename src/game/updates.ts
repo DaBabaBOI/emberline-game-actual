@@ -17,6 +17,9 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Fixed: in Leader mode you sometimes couldn't move at all (the chief could start inside the campfire). They now start on open ground, WASD works on any keyboard layout, and phones and tablets get a stick to walk, drag to look, and Use / Act / Plant / Jump buttons.",
+      "Plan mode now says what it does on screen when it's on: pick a building, lay out free blueprints, and they build themselves in order as soon as you can afford them.",
+      "Story mode: the chapter panel says how it works (do the goals, a scene plays, the next chapter begins).",
       "Leader mode: much more to do in first person. Build right where you look (a hotbar: 1-9 or the mouse wheel, Q to put it away), chop wood and break stone with your own hands, plant trees (P), step into any building to open its panel or relight a cold fire (E), and jump (Space). Talking to a villager now needs you to look at them, so they don't get in the way.",
       "Earthquakes look like earthquakes now: the ground rumbles (building up and dying away, no more jittery camera), the buildings rock, shock waves roll out across the land with low clouds of dust, real jagged cracks run out from where it struck, and buildings it brings down leave ruins behind.",
       "Raids reworked: raiders land in war canoes, the fight starts right where both sides stand (no more jumping), and it's a real fight: spears thrust, clubs come down, every blow lands with a spark, the fallen are knocked back, and the winners cheer. It lasts longer, the close-up shows who's winning (train warriors to tip it), and ends with a big result. The losers row away.",

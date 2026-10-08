@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { BUILDINGS, BUILDINGS_BY_ID, LEADER, PLANT_COST, RELIGHT_WOOD } from "@/game/content";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { WORK_TOOLS } from "@/components/civ/world/figures";
-import { leader, setLeaderBuild, setLeaderMenu, setLeaderView, useLeader } from "@/components/civ/world/leader";
+import { leader, leaderButtons, leaderStick, setLeaderBuild, setLeaderMenu, setLeaderView, useLeader } from "@/components/civ/world/leader";
 import { grabStore } from "@/components/civ/world/villagers";
 import { hexDistance, worldToAxial } from "@/game/hex";
 import { buildingCost, canAfford, isLit, isUnlocked, placementError, plantError, soilOf } from "@/game/engine";
@@ -20,6 +20,7 @@ export function LeaderHud() {
   // What the chief can build now, for the hotbar.
   const hotbar = BUILDINGS.filter((b) => b.era <= state.era && isUnlocked(state, b));
   const fp = !!state.leader && view === "fp";
+  const touch = useTouchScreen();
 
   // 1-9 pick a building (again: put it away); the wheel runs through them all.
   useEffect(() => {
@@ -86,8 +87,11 @@ export function LeaderHud() {
         </div>
       )}
 
+      {/* On a touch screen: a stick to walk, drag to look, and buttons. */}
+      {touch && !menu && <TouchControls />}
+
       {/* Take the mouse to look around. */}
-      {!locked && !menu && (
+      {!locked && !menu && !touch && (
         <div className="pointer-events-none fixed inset-x-0 top-[40%] z-[15] flex justify-center">
           <span className="pixel-panel-dark font-pixel px-3 py-1.5 text-sm text-white">Click the view to look around</span>
         </div>
@@ -128,7 +132,7 @@ export function LeaderHud() {
 
       {/* The controls, and the way to the build view. */}
       <div className="pointer-events-none fixed bottom-1 left-1/2 z-[15] flex -translate-x-1/2 items-center justify-center gap-2 whitespace-nowrap px-3" data-testid="leader-controls">
-        <span className="pixel-panel-dark font-pixel hidden px-2 py-1 text-[11px] text-white/85 md:inline">
+        <span className={"pixel-panel-dark font-pixel hidden px-2 py-1 text-[11px] text-white/85" + (touch ? "" : " md:inline")}>
           WASD walk · Shift run · Space jump · E talk / go in · Click act · P plant · 1-9 build · Q put away · Esc mouse
         </span>
         <button type="button" onClick={() => setLeaderView("map")} className="pixel-btn font-pixel pointer-events-auto bg-amber-400 px-3 py-1 text-sm text-[#2b2119]" data-testid="leader-to-map">
@@ -252,6 +256,105 @@ function PromptText({ prompt, hits }: { prompt: NonNullable<ReturnType<typeof us
   ) : (
     <>
       {key("P")}: plant a tree here (−{PLANT_COST.food} food)
+    </>
+  );
+}
+
+// A touch screen (no mouse to lock, no keys): the leader gets on-screen controls.
+function useTouchScreen() {
+  return useSyncExternalStore(
+    (l) => {
+      const m = window.matchMedia("(pointer: coarse)");
+      m.addEventListener("change", l);
+      return () => m.removeEventListener("change", l);
+    },
+    () => window.matchMedia("(pointer: coarse)").matches,
+    () => false,
+  );
+}
+
+// Walk with the stick (bottom left), drag anywhere else to look round, and the
+// buttons (bottom right): act (chop, strike, build), use (talk, go in), plant, jump.
+function TouchControls() {
+  const knob = useRef<HTMLSpanElement>(null);
+  const look = useRef<{ id: number; x: number; y: number } | null>(null);
+  const stick = useRef<{ id: number; x: number; y: number } | null>(null);
+  const R = 48;
+  const moveStick = (x: number, y: number) => {
+    const s = stick.current;
+    if (!s) return;
+    let dx = x - s.x;
+    let dy = y - s.y;
+    const d = Math.hypot(dx, dy);
+    if (d > R) {
+      dx = (dx / d) * R;
+      dy = (dy / d) * R;
+    }
+    leaderStick.side = dx / R;
+    leaderStick.ahead = -dy / R;
+    if (knob.current) knob.current.style.transform = `translate(${dx}px, ${dy}px)`;
+  };
+  const stopStick = () => {
+    stick.current = null;
+    leaderStick.side = 0;
+    leaderStick.ahead = 0;
+    if (knob.current) knob.current.style.transform = "";
+  };
+  useEffect(() => stopStick, []);
+  const button = (label: string, run: () => void, cls = "") => (
+    <button
+      type="button"
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        run();
+      }}
+      className={"pixel-btn font-pixel pointer-events-auto select-none text-sm text-white " + cls}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <>
+      {/* Drag to look (behind everything else). */}
+      <div
+        className="pointer-events-auto fixed inset-x-0 bottom-44 top-24 z-[14] touch-none"
+        onPointerDown={(e) => (look.current = { id: e.pointerId, x: e.clientX, y: e.clientY })}
+        onPointerMove={(e) => {
+          const l = look.current;
+          if (!l || l.id !== e.pointerId) return;
+          leader.yaw -= (e.clientX - l.x) * 0.006;
+          leader.pitch = Math.max(-1.2, Math.min(1.0, leader.pitch - (e.clientY - l.y) * 0.006));
+          look.current = { id: e.pointerId, x: e.clientX, y: e.clientY };
+        }}
+        onPointerUp={() => (look.current = null)}
+        onPointerCancel={() => (look.current = null)}
+        data-testid="leader-look-pad"
+      />
+      <div
+        className="pointer-events-auto fixed bottom-24 left-6 z-[16] flex h-28 w-28 touch-none items-center justify-center rounded-full border-2 border-white/40 bg-black/30"
+        onPointerDown={(e) => {
+          try {
+            e.currentTarget.setPointerCapture(e.pointerId);
+          } catch {
+            // (No live pointer to hold: the stick still follows this one's moves.)
+          }
+          const r = e.currentTarget.getBoundingClientRect();
+          stick.current = { id: e.pointerId, x: r.left + r.width / 2, y: r.top + r.height / 2 };
+          moveStick(e.clientX, e.clientY);
+        }}
+        onPointerMove={(e) => stick.current?.id === e.pointerId && moveStick(e.clientX, e.clientY)}
+        onPointerUp={stopStick}
+        onPointerCancel={stopStick}
+        data-testid="leader-stick"
+      >
+        <span ref={knob} className="block h-12 w-12 rounded-full bg-white/70 shadow" />
+      </div>
+      <div className="pointer-events-none fixed bottom-24 right-4 z-[16] grid grid-cols-2 gap-2">
+        {button("Use (E)", () => leaderButtons.use(), "bg-[#4a3b2e] px-3 py-3")}
+        {button("Act", () => leaderButtons.act(), "bg-red-800 px-3 py-3")}
+        {button("Plant", () => leaderButtons.plant(), "bg-emerald-800 px-3 py-2")}
+        {button("Jump", () => leaderButtons.jump(), "bg-[#4a3b2e] px-3 py-2")}
+      </div>
     </>
   );
 }
