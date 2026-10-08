@@ -73,6 +73,13 @@ export const HINTS: Hint[] = [
     target: guide("tool-scout"),
   },
   {
+    id: "plan",
+    when: (s) => s.tutorialStep >= TUTORIAL.length && playedTicks(s) > 300 && !(s.plans ?? []).length && !s.speedrun,
+    text: () => "Plan ahead: press Plan, pick a building and click the map to lay out blueprints. Each one goes up by itself, in order, as soon as you can afford it.",
+    target: guide("tool-plan"),
+    done: (s) => (s.plans ?? []).length > 0,
+  },
+  {
     id: "trade",
     when: (s) => playedTicks(s) > 30 && s.resources.currency >= 20,
     text: () => "Use Trade for food, wood or stone. Buying wood spares the forest.",

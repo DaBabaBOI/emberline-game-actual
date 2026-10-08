@@ -47,6 +47,7 @@ import {
   linkedAqueducts,
   clearLandWood,
   shownBattle,
+  planError,
 } from "@/game/engine";
 import { BuildingInfo } from "./building-info";
 import { useGame } from "@/components/civ/game-provider";
@@ -68,6 +69,7 @@ import { Wildlife } from "./wildlife";
 import { Links } from "./links";
 import { RebuildDust, RebuildPop } from "./rebuild";
 import { useHoveredBuilding } from "./hovered";
+import { usePlanMode } from "./plan-mode";
 import { CampfireSmoke, ChimneySmoke, Wildfire } from "./atmosphere";
 import { Clouds, DaySky, FireLights } from "./sky";
 import { Sea } from "./water";
@@ -484,6 +486,7 @@ export function WorldCanvas() {
       .join(", ");
     return { ok: true, text: `Sell ${target.name}${refund ? ` (${refund})` : ""}` };
   })();
+  const planning = usePlanMode();
   const Ghost = def ? MODELS[def.id] : null;
   // Warn before a purchase that would leave the fires short of wood.
   const woodLeft = def ? Math.floor(state.resources.wood - (buildingCost(state, def).wood ?? 0)) : null;
@@ -595,7 +598,7 @@ export function WorldCanvas() {
     // up by itself once we can. Not in the tutorial, which builds one of each.
     const planned = (state.plans ?? []).some((p) => p.tile === id);
     const short = placementError(state, tile, BUILDINGS_BY_ID[selected]) === "Not enough resources";
-    if ((planned || short) && state.tutorialStep >= TUTORIAL.length) dispatch({ type: "plan", tileId: id, buildingId: selected });
+    if ((planned || short || planning) && state.tutorialStep >= TUTORIAL.length) dispatch({ type: "plan", tileId: id, buildingId: selected });
     else dispatch({ type: "place", tileId: id, buildingId: selected });
     // Build to Last's guide: one of each, so put the tool down once it's placed.
     if (state.mode === "last" && (state.lastStep ?? LAST_TUTORIAL.length) < LAST_TUTORIAL.length) setSelected(null);
@@ -883,7 +886,11 @@ export function WorldCanvas() {
             position={[0, 0.3, 0]}
             style={{ pointerEvents: "none", transform: "translate(56px, -50%)" }}
           >
-            {error === "Not enough resources" && state.tutorialStep >= TUTORIAL.length ? (
+            {planning && (!error || error === "Not enough resources") && hoverTile && def && !planError(state, hoverTile, def) ? (
+              <div className="pixel-panel-dark font-pixel w-56 px-2 py-1 text-xs" data-testid="plan-note">
+                <span className="text-amber-200">Plan mode.</span> Click to lay out a blueprint: it is built by itself, in order, when you can afford it.
+              </div>
+            ) : error === "Not enough resources" && state.tutorialStep >= TUTORIAL.length ? (
               <div className="pixel-panel-dark font-pixel w-56 px-2 py-1 text-xs" data-testid="plan-note">
                 <span className="text-amber-200">Not enough yet.</span> Click to plan it: it is built by itself as soon as you can afford it.
               </div>

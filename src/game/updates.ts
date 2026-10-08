@@ -17,6 +17,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "New Plan button: turn it on, pick a building and click the map to lay out blueprints. Each goes up by itself, in order, as soon as you can afford it.",
       "Public worlds: listed games that are already running show under Play together, and anyone can drop in (taking a bot's seat). The host can remove a player from the room or the game.",
       "Speedruns: tick Speedrun on the title screen for a real-time clock with era splits, no tutorial and no Elder Ama. Finish the story to post your time to the speedrun records (also on the home page).",
       "Saves are now sealed: a save changed outside the game is marked \"Edited save\" and can't post to the leaderboard or the records.",

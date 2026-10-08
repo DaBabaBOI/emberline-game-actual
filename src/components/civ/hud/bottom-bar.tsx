@@ -1,6 +1,7 @@
 "use client";
 
 import { setHoveredBuilding } from "@/components/civ/world/hovered";
+import { setPlanMode, usePlanMode } from "@/components/civ/world/plan-mode";
 import { useState, type ReactNode } from "react";
 import { BUILDINGS, CANOE, ERAS, LAST, SPACE, TRADE, LOW_WOOD_AFTER_BUY, PLANT_COST, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL, WARRIORS_PER_CAMP } from "@/game/content";
 import {
@@ -255,6 +256,7 @@ const GROUP_FROM = 9;
 
 export function BottomBar() {
   const { state, dispatch, selected, setSelected, setPanel } = useGame();
+  const planning = usePlanMode();
   const prod = production(state);
   const net = prod.food - consumption(state) - foodSpoiling(state);
   // Build to Last keeps the bar short: no Stone Age buildings, no army, scouts or ships.
@@ -462,15 +464,29 @@ export function BottomBar() {
             tone={selected === DEMOLISH_TOOL ? "bg-amber-400 text-[#2b2119]" : "bg-[#4a3b2e] hover:bg-[#5c4a3a]"}
           />
           <TradeButton />
-          {/* Planned buildings waiting for resources: how many, and cancel them all. */}
-          {(state.plans?.length ?? 0) > 0 && (
+          {/* Plan mode: lay out blueprints, built by themselves as the resources come in. */}
+          {!inTutorial && (
+            <ToolButton
+              guide="tool-plan"
+              icon="scroll"
+              label={planning ? "Planning" : (state.plans?.length ?? 0) > 0 ? `Plan (${state.plans!.length})` : "Plan"}
+              onClick={() => setPlanMode(!planning)}
+              title={
+                planning
+                  ? "Plan mode is on: pick a building card, then click the map to lay out a blueprint. Click Plan again to stop."
+                  : `Plan ahead: lay out buildings as blueprints, free. Each is built by itself, in order, as soon as you can afford it.${(state.plans?.length ?? 0) > 0 ? ` Planned now: ${state.plans!.map((p) => BUILDINGS.find((b) => b.id === p.building)?.name ?? p.building).join(", ")}.` : ""}`
+              }
+              tone={planning ? "bg-amber-400 text-[#2b2119]" : "bg-[#5b4a2e] hover:bg-[#6b5836]"}
+            />
+          )}
+          {(state.plans?.length ?? 0) > 0 && planning && (
             <ToolButton
               guide="tool-plans"
-              icon="scroll"
-              label={`Plans ${state.plans!.length}`}
+              icon="warning"
+              label="Clear plans"
               onClick={() => dispatch({ type: "unplanAll" })}
-              title={`Planned: ${state.plans!.map((p) => BUILDINGS.find((b) => b.id === p.building)?.name ?? p.building).join(", ")}. Each is built by itself, in order, as soon as you can afford it. Click to cancel all plans (or click a planned tile with the same building to cancel just that one).`}
-              tone="bg-[#5b4a2e] hover:bg-[#6b5836]"
+              title="Cancel every blueprint (or click one blueprint with the same building to cancel just that one)."
+              tone="bg-stone-700 hover:bg-stone-600"
             />
           )}
           {/* Clearing whole patches of forest into open land. */}
