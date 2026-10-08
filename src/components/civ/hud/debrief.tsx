@@ -85,7 +85,7 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
       : d.kind === "final" && state.mode === "last"
         ? `${who} cleared the air, run on clean power, and give ${Math.floor(state.population)} people a home and food, with the forest still standing, in ${formatYear(d.year)}.`
       : d.kind === "final"
-        ? `${who} reached Type I on the Kardashev scale (${(d.kardashev ?? 1).toFixed(2)}): the whole planet runs on clean energy${d.tipped ? ", though the climate tipped on the way" : ", and the climate held"}. Here is the whole story, from the first fire.`
+        ? `${who} powered the whole planet with clean energy (Kardashev ${(d.kardashev ?? 1).toFixed(2)})${d.tipped ? ", though the climate tipped on the way" : ", and the climate held"}, then sent the Ember Ark to the stars. Here is the whole story, from the first fire.`
         : state.lostTo === "time"
           ? `${LAST.deadline} came, and ${who} still hadn't solved all three problems at once. ${lastProblems(state).filter((p) => !p.done).map((p) => p.title).join(" and ")} ${lastProblems(state).filter((p) => !p.done).length === 1 ? "was" : "were"} still left to do.`
         : state.lostTo === "conquest"

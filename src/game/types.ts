@@ -396,8 +396,15 @@ export interface GameState {
   tradePrice?: number;
   // What traders pay for our goods (1 = full price; lower after selling a lot).
   sellPrice?: number;
-  // Type I reached: the story is told (the game can go on after the final debrief).
+  // The story is told (the Ember Ark has launched, or, in Build to Last, the town
+  // lasts); the game can go on after the final debrief.
   finished?: boolean;
+  // Type I on the Kardashev scale reached (Future): the last step is the Ark.
+  typeOne?: boolean;
+  // How the story ended, for the final cutscene: the Ark to the stars, or the
+  // world lost in the Future era. `endingSeen` once it has played.
+  ending?: "ark" | "fallen";
+  endingSeen?: boolean;
   // The discovery scene on screen (an advancement or secret just found), if any.
   cutscene?: string | null;
   // A natural disaster: warned of at warnTick, strikes at startTick, over at

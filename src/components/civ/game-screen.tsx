@@ -19,6 +19,7 @@ import { TreeOverlay } from "./hud/tree-overlay";
 import { GuideOverlay, useGuide } from "./hud/guide-overlay";
 import { Debrief, GoalLine, LastIntro, LastTutorialPanel, NextEraPrompt } from "./hud/debrief";
 import { DiscoveryScene } from "./hud/discovery-scene";
+import { FinalEnding } from "./hud/final-ending";
 import { Letterbox, useShot } from "./hud/letterbox";
 import { HintPanel } from "./hud/hints";
 import { GameAudio } from "./hud/game-audio";
@@ -133,6 +134,7 @@ function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null 
         <DiscoveryScene />
         <Debrief onRestart={onRestart} />
       </div>
+      <FinalEnding />
       <Letterbox />
       <BattleCamera />
       <LastIntro />

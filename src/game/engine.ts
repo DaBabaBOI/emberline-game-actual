@@ -216,6 +216,9 @@ export type Action =
   | { type: "launch"; project: string }
   | { type: "devTipping"; when: "soon" | "now" | "end" }
   | { type: "devTypeOne" }
+  | { type: "devEnding"; kind: "ark" | "fallen" }
+  // The final cutscene has played.
+  | { type: "seenEnding" }
   // Multiplayer: gifts and raids between players.
   | { type: "trade"; get: "food" | "wood" | "stone" }
   | { type: "sell"; give: "food" | "wood" | "stone" }
@@ -1983,6 +1986,7 @@ export function launchError(state: GameState, project: string): string | null {
   if (!p) return "Unknown";
   const missing = p.needs.filter((n) => !spaceDone(state, n));
   if (missing.length) return `First launch ${missing.map((n) => SPACE.projects.find((x) => x.id === n)?.name ?? n).join(" and ")}`;
+  if (p.id === "ark" && !state.typeOne && !state.finished) return "First reach Type I: clean power for the whole planet";
   if (p.minSustain && state.meters.sustainability < p.minSustain) return `Needs Sustainability ${p.minSustain} or more (now ${Math.round(state.meters.sustainability)})`;
   return null;
 }
@@ -2154,9 +2158,32 @@ export function typeOneReady(state: GameState) {
   );
 }
 
+// Type I is the last milestone before the stars: the story ends when the
+// Ember Ark launches (see the "launch" action).
 function reachTypeOne(state: GameState): GameState {
-  if (state.debrief || state.finished || !typeOneReady(state)) return state;
-  const done = { ...state, finished: true, log: [`Type I! ${state.nation ?? "Our people"} power the whole planet cleanly, and the land is still healthy.`, ...state.log].slice(0, 30) };
+  if (state.typeOne || !typeOneReady(state)) return state;
+  return addXp(
+    {
+      ...state,
+      typeOne: true,
+      log: [
+        `Type I! ${state.nation ?? "Our people"} power the whole planet cleanly, and the land is still healthy. One journey is left: build the Ember Ark (Space) and send an ember of our people to the stars.`,
+        ...state.log,
+      ].slice(0, 30),
+    },
+    XP.research,
+  );
+}
+
+// The Ark has launched: the end of the story, with its cutscene and the final debrief.
+function launchArk(state: GameState): GameState {
+  const done: GameState = {
+    ...state,
+    finished: true,
+    ending: "ark",
+    endingSeen: false,
+    log: [`The Ember Ark has launched. ${state.nation ?? "Our people"} carry an ember of the first fire to the stars.`, ...state.log].slice(0, 30),
+  };
   return { ...done, debrief: makeDebrief(done, "final") };
 }
 
@@ -5819,7 +5846,12 @@ export function currentGoal(state: GameState): string | null {
     const clean = `${Math.round(cleanPower(state))}/${KARDASHEV.clean} clean power`;
     if (state.tipping)
       return `Goal: carbon down to ${TIPPING.safe} ppm before the climate tips (now ${Math.round(state.carbon ?? CARBON.start)}). Air capture, forest and no coal help.`;
-    if (state.finished) return `Type I reached. Keep the planet thriving: land health ${state.meters.sustainability}.`;
+    if (state.finished) return `The Ember Ark is on its way to the stars. Keep the planet thriving: land health ${state.meters.sustainability}.`;
+    if (state.typeOne) {
+      const left = SPACE.projects.filter((p) => !spaceDone(state, p.id)).length;
+      const land = state.meters.sustainability < 80 ? ` Land health 80+ (now ${state.meters.sustainability}).` : "";
+      return `Goal: the stars. Launch the Ember Ark from the Launch Site (Space)${left > 1 ? `, after the ${left - 1} launch${left - 1 === 1 ? "" : "es"} before it` : ""}.${land}`;
+    }
     const land = state.meters.sustainability < KARDASHEV.minLand ? ` and land health ${KARDASHEV.minLand}+ (now ${state.meters.sustainability})` : "";
     return `Goal: Type I on the Kardashev scale (now ${k}): ${clean}${land}.${state.tippingDone ? "" : " The tipping point is coming."}`;
   }
@@ -6745,7 +6777,18 @@ function step(state: GameState, action: Action): GameState {
         "launches",
         1,
       );
-      return withMeters(addXp(project.id === "moonbase" ? addTally(launched, "moonbase", 1) : launched, XP.research));
+      const next = withMeters(addXp(project.id === "moonbase" ? addTally(launched, "moonbase", 1) : launched, XP.research));
+      return project.id === "ark" ? launchArk(next) : next;
+    }
+
+    case "seenEnding":
+      return state.endingSeen === false || state.phase === "gameover" ? { ...state, endingSeen: true } : state;
+
+    case "devEnding": {
+      // Play an ending now (dev mode), to see the cutscene.
+      if (!state.dev) return state;
+      if (action.kind === "ark") return launchArk({ ...state, space: [...SPACE.projects.map((p) => p.id)], typeOne: true });
+      return { ...state, era: 5, phase: "gameover", lostTo: "collapse", endingSeen: false, log: ["The land gave out, and your people had to leave.", ...state.log] };
     }
 
     case "devTipping": {

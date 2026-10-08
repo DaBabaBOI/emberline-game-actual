@@ -164,7 +164,7 @@ export function SpacePanel() {
                     className="pixel-btn mt-auto bg-indigo-600 px-2 py-1 text-left text-white hover:bg-indigo-500 disabled:opacity-50"
                     data-testid={`launch-${p.id}`}
                   >
-                    Launch:{" "}
+                    {p.id === "ark" ? "Launch the Ark, the last chapter: " : "Launch: "}
                     {Object.entries(cost)
                       .map(([r, v]) => `${v} ${r === "currency" ? "coins" : r}`)
                       .join(", ")}

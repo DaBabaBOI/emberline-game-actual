@@ -17,6 +17,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "A real ending: Type I is now the last step before the stars. Launch the Ember Ark for the final cutscene: the launch, a look back at every era, and home still green. Lose the world in the Future era and you see what that looks like too.",
       "Interstellar: after the Moon base, launch a Mars Greenhouse, Asteroid Miners, an Interstellar Probe to Alpha Centauri and, last, the Ember Ark, a generation ship that only a town with Sustainability 80+ can launch.",
       "Plan ahead: click to place a building you can't afford yet and it is planned (see-through). It builds itself, in order, once you have the resources. The Plans button cancels them.",
       "Hover a building card in the bar to see every one of that building on the map.",
