@@ -291,11 +291,15 @@ export function BottomBar() {
   // The guide's hand (it waits for that card to be clicked) and, more gently, a hint.
   const guided = guide.target?.kind === "ui" ? guide.target.ids.find((id) => id.startsWith("build-"))?.slice(6) : undefined;
   const pointed = guided ?? hinted;
-  // Tabs stay put: only the Stone Age tutorial (a handful of buildings) shows them all.
-  const grouped = eraBuildings.length >= GROUP_FROM && (!inTutorial || !!pointed);
-  const groups = GROUPS.filter((g) => eraBuildings.some((b) => groupOf(b.id) === g.id));
   // The hand's building, else the one in hand, else the tab picked.
   const holding = selected && eraBuildings.some((b) => b.id === selected) ? selected : undefined;
+  // Tabs stay put: the Stone Age tutorial shows every card until the hand first
+  // points at one; from then on the tabs stay (picking up the card, or the hand
+  // moving on to the map, used to drop them and spill every card into one row).
+  const [tabsShown, setTabsShown] = useState(false);
+  if (inTutorial && (pointed || holding) && !tabsShown) setTabsShown(true);
+  const grouped = eraBuildings.length >= GROUP_FROM && (!inTutorial || !!pointed || !!holding || tabsShown);
+  const groups = GROUPS.filter((g) => eraBuildings.some((b) => groupOf(b.id) === g.id));
   // A card the guide's hand newly points at (or one newly picked up) opens its
   // tab once; after that the player's own tab choice sticks. Hints never switch
   // the tab on their own: their card's tab just glows.
