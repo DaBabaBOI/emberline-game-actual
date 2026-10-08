@@ -4759,6 +4759,7 @@ function growForests(state: GameState): GameState {
     }
     // Earthquake cracks and landslide rubble fade slowly (about 15 minutes).
     if ((t.cracked ?? 0) > 0) changes.set(t.id, { ...changes.get(t.id), cracked: Math.max(0, (t.cracked ?? 0) - 0.005) });
+    if ((t.ruin ?? 0) > 0) changes.set(t.id, { ...changes.get(t.id), ruin: t.building ? 0 : Math.max(0, (t.ruin ?? 0) - 0.005) });
     if ((t.rubble ?? 0) > 0) changes.set(t.id, { ...changes.get(t.id), rubble: Math.max(0, (t.rubble ?? 0) - 0.005) });
     if (t.terrain === "forest" && t.growth < 1 && t.scorch < 0.4) {
       if (strain < 1)
@@ -5034,9 +5035,9 @@ function strike(state: GameState, rand: () => number): GameState {
     );
     const hit = shaken.filter((t) => rand() < (STONE_BUILDINGS.includes(t.building!) ? H.quake.stone : H.quake.wood)).slice(0, H.quake.max).map((t) => t.id);
     const homesLost = hit.filter((id) => BUILDINGS_BY_ID[state.tiles[id].building!].housing).length;
-    const { tiles, lost } = wreck(next, hit, { cracked: 1 });
+    const { tiles, lost } = wreck(next, hit, { cracked: 1, ruin: 1 });
     const cracks = new Set(state.tiles.filter((t) => isLand(t.terrain) && hexDistance(t, centre) <= 2 && rand() < 0.5).map((t) => t.id));
-    next = { ...next, tiles: tiles.map((t) => (cracks.has(t.id) || t.id === centre.id ? { ...t, cracked: 1 } : t)) };
+    next = { ...next, quakeAt: centre.id, tiles: tiles.map((t) => (cracks.has(t.id) || t.id === centre.id ? { ...t, cracked: 1 } : t)) };
     const deaths = Math.min(homesLost * H.quake.deaths, Math.floor(state.population) - 1);
     next = hurt(next, deaths);
     return say(

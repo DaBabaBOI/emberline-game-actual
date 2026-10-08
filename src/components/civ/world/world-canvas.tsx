@@ -64,7 +64,7 @@ import { BattleScene, FireVictims, RaidBoats, Raiders, Villagers, Warriors } fro
 import { PickUp } from "./pick-up";
 import { SeaTraffic, TradeShips, WaitingShips } from "./trade";
 import { ForeignVillages } from "./foreign";
-import { Cracks, DisasterDust, disasterView, FloodWater, QuakeShake, Rubble, StormRain } from "./disasters";
+import { Cracks, disasterView, FloodWater, GroundDust, QuakeShake, QuakeSway, QuakeWaves, Rubble, Ruins, StormRain } from "./disasters";
 import { Wildlife } from "./wildlife";
 import { Links } from "./links";
 import { RebuildDust, RebuildPop } from "./rebuild";
@@ -566,6 +566,8 @@ export function WorldCanvas() {
   const plagueOn = inPlague(state);
   // A storm, flood, earthquake or landslide: warned of, then striking.
   const disaster = disasterView(state);
+  // Buildings an earthquake just brought down (dust rises from them).
+  const ruinIds = state.tiles.filter((t) => (t.ruin ?? 0) > 0.95).map((t) => t.id);
   const storm = disaster.kind === "storm" ? (disaster.active ? 1 : 0.5) : 0;
   const outFires = buildings.filter((t) => t.building === "campfire" && !isLit(state, t));
 
@@ -708,16 +710,19 @@ export function WorldCanvas() {
               </UnderConstruction>
             ) : (
               <RebuildPop playKey={rebuildOrder?.order.has(t.id) ? makeover!.tick * 10 + state.era : null} order={rebuildOrder?.order.get(t.id) ?? 0}>
-                <Model
-                  opacity={1}
-                  lit={
-                    t.building === "aqueduct"
-                      ? wetIds.includes(t.id)
-                      : t.building === "farm"
-                        ? soilOf(state, t) !== "tired"
-                        : t.building !== "campfire" || burningIds.includes(t.id)
-                  }
-                />
+                {/* Rocking on its footing while the ground shakes. */}
+                <QuakeSway seed={t.id}>
+                  <Model
+                    opacity={1}
+                    lit={
+                      t.building === "aqueduct"
+                        ? wetIds.includes(t.id)
+                        : t.building === "farm"
+                          ? soilOf(state, t) !== "tired"
+                          : t.building !== "campfire" || burningIds.includes(t.id)
+                    }
+                  />
+                </QuakeSway>
               </RebuildPop>
             )}
             {(t.level ?? 1) >= 2 && <Plinth level={t.level!} />}
@@ -796,11 +801,15 @@ export function WorldCanvas() {
               <Mice />
             </group>
           ))}
-      <QuakeShake active={disaster.kind === "earthquake" && disaster.active} />
+      <QuakeShake active={disaster.kind === "earthquake" && disaster.active} warning={disaster.kind === "earthquake" && disaster.warning} />
+      {disaster.kind === "earthquake" && disaster.active && state.tiles[disaster.tiles[0]] && <QuakeWaves centre={state.tiles[disaster.tiles[0]]} />}
       {disaster.kind === "flood" && disaster.active && <FloodWater tiles={state.tiles} ids={disaster.tiles} progress={disaster.progress} />}
       {storm > 0 && <StormRain centre={home} heavy={disaster.active} />}
-      {(disaster.kind === "earthquake" || disaster.kind === "landslide") && disaster.active && <DisasterDust tiles={state.tiles} ids={disaster.tiles} />}
-      <Cracks tiles={state.tiles} />
+      {(disaster.kind === "earthquake" || disaster.kind === "landslide") && disaster.active && state.tiles[disaster.tiles[0]] && (
+        <GroundDust tiles={state.tiles} ids={ruinIds} centre={state.tiles[disaster.tiles[0]]} />
+      )}
+      <Cracks tiles={state.tiles} centre={state.quakeAt} />
+      <Ruins tiles={state.tiles} />
       <Links state={state} />
       <ScrapPiles state={state} />
       <HazardMarks state={state} />

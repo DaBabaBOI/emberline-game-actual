@@ -43,6 +43,8 @@ export interface Tile {
   // 0–1: cracks from an earthquake, and rubble from a landslide. Both fade.
   cracked?: number;
   rubble?: number;
+  // 0–1: the ruins of a building an earthquake brought down (fades like the cracks).
+  ruin?: number;
 }
 
 export type RaidKind = "band" | "party" | "fire";
@@ -549,6 +551,8 @@ export interface GameState {
   forestBaseline: number;
   soldiers: number;
   raid: Raid | null;
+  // Where the last earthquake struck (the cracks run out from there).
+  quakeAt?: number;
   // Planned buildings, oldest first: each is built by itself as soon as we can afford it.
   plans?: { tile: number; building: string }[];
   // Raids seen so far (the first is always a small band), and a dev-chosen next kind.

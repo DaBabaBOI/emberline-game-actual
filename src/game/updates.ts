@@ -17,6 +17,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Earthquakes look like earthquakes now: the ground rumbles (building up and dying away, no more jittery camera), the buildings rock, shock waves roll out across the land with low clouds of dust, real jagged cracks run out from where it struck, and buildings it brings down leave ruins behind.",
       "Raids reworked: raiders land in war canoes, the fight starts right where both sides stand (no more jumping), and it's a real fight: spears thrust, clubs come down, every blow lands with a spark, the fallen are knocked back, and the winners cheer. It lasts longer, the close-up shows who's winning (train warriors to tip it), and ends with a big result. The losers row away.",
       "New name egg: call your people Jai and every band of raiders comes with 5 fewer fighters (use it twice in a row and they bring 5 more).",
       "Resting fields: nobody works a field lying fallow any more, and resting fields have a blue outline so you can tell them from tired ones (orange flag).",
