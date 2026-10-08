@@ -2479,6 +2479,27 @@ export const LESSONS: { id: string; title: string; text: string; sdg: string }[]
 ];
 
 // Elder Ama's welcome when the tribe enters a new era (shown like a lesson).
+// A new era rebuilds the town for its age, free: older homes and teaching
+// buildings become this era's (by the era just entered: from -> to). Only on
+// ground the new building can stand on.
+export const ERA_MAKEOVER: Record<number, Record<string, string>> = {
+  1: { hut: "house" },
+  2: { hut: "house", elder: "school" },
+  3: { hut: "townhouse", house: "townhouse", elder: "academy", school: "academy" },
+  4: { hut: "townhouse", house: "townhouse", elder: "university", school: "university", academy: "university" },
+  5: { hut: "apartments", house: "apartments", townhouse: "apartments", elder: "university", school: "university", academy: "university", healer: "hospital" },
+};
+// What a building can be upgraded to by hand (click it), once that is unlocked.
+export const UPGRADES: Record<string, string> = {
+  hut: "house",
+  house: "townhouse",
+  townhouse: "apartments",
+  elder: "school",
+  school: "academy",
+  academy: "university",
+  healer: "hospital",
+};
+
 export const ERA_INTROS: Record<number, { id: string; title: string; text: string; sdg: string }> = {
   2: {
     id: "era-2",

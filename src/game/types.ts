@@ -435,6 +435,8 @@ export interface GameState {
   unrestTicks: number;
   // When the current era's clock started (the end of the tutorial, or entering the era).
   eraStartTick?: number;
+  // The buildings a new era rebuilt (ERA_MAKEOVER), for the 3D scene's dust and sparkle.
+  makeover?: { tick: number; tiles: number[] } | null;
   // People picked up and dropped: who is helping at which building (until tick),
   // and who wandered into the fog and when they come back.
   helpers?: Record<number, number>;

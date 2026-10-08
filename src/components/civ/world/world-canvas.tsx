@@ -66,6 +66,7 @@ import { ForeignVillages } from "./foreign";
 import { Cracks, DisasterDust, disasterView, FloodWater, QuakeShake, Rubble, StormRain } from "./disasters";
 import { Wildlife } from "./wildlife";
 import { Links } from "./links";
+import { RebuildDust, RebuildPop } from "./rebuild";
 import { useHoveredBuilding } from "./hovered";
 import { CampfireSmoke, ChimneySmoke, Wildfire } from "./atmosphere";
 import { Clouds, DaySky, FireLights } from "./sky";
@@ -521,6 +522,17 @@ export function WorldCanvas() {
       : null;
 
   const burning = useMemo(() => litFires(state), [state]);
+  // A new era just rebuilt the town (ERA_MAKEOVER): who pops back up when, in a
+  // ripple out from the middle of town. Only soon after, not on a later reload.
+  const makeover = state.makeover && state.tick - state.makeover.tick < 20 ? state.makeover : null;
+  const rebuildOrder = useMemo(() => {
+    if (!makeover) return null;
+    const centre = state.tiles[state.startTile];
+    const ids = [...makeover.tiles].sort((a, b) => Math.hypot(state.tiles[a].x - centre.x, state.tiles[a].z - centre.z) - Math.hypot(state.tiles[b].x - centre.x, state.tiles[b].z - centre.z));
+    return { ids, order: new Map(ids.map((id, i) => [id, i])) };
+    // Recomputed per makeover, not on every tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [makeover?.tick]);
   // A fight is played out from the moment the two sides meet until a few
   // seconds after it is decided.
   const shown = shownBattle(state);
@@ -676,16 +688,18 @@ export function WorldCanvas() {
                 <Model opacity={1} />
               </UnderConstruction>
             ) : (
-              <Model
-                opacity={1}
-                lit={
-                  t.building === "aqueduct"
-                    ? wetIds.includes(t.id)
-                    : t.building === "farm"
-                      ? soilOf(state, t) !== "tired"
-                      : t.building !== "campfire" || burningIds.includes(t.id)
-                }
-              />
+              <RebuildPop playKey={rebuildOrder?.order.has(t.id) ? makeover!.tick * 10 + state.era : null} order={rebuildOrder?.order.get(t.id) ?? 0}>
+                <Model
+                  opacity={1}
+                  lit={
+                    t.building === "aqueduct"
+                      ? wetIds.includes(t.id)
+                      : t.building === "farm"
+                        ? soilOf(state, t) !== "tired"
+                        : t.building !== "campfire" || burningIds.includes(t.id)
+                  }
+                />
+              </RebuildPop>
             )}
             {(t.level ?? 1) >= 2 && <Plinth level={t.level!} />}
             {/* Tired soil shows in the field itself (FarmModel); a resting field grows over with grass. */}
@@ -947,6 +961,7 @@ export function WorldCanvas() {
       )}
 
       <Spotlight tiles={state.tiles} />
+      {makeover && rebuildOrder && <RebuildDust tiles={state.tiles} ids={rebuildOrder.ids} playKey={makeover.tick * 10 + state.era} />}
       <Plans state={state} />
       <TiredFields state={state} />
       {/* Clear land: every tile it would clear, and what it gives and costs. */}

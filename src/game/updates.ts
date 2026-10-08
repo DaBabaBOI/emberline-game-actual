@@ -17,6 +17,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "A new era rebuilds your town: older homes and schools become this era's (Wooden Houses into Mud-brick, then Town Houses, then Apartment Blocks), with a dust-and-sparkle rebuild during the era fly-over. You can also upgrade schools, healers and homes up the same chains by hand.",
       "Secret names now get their own golden blessing card (or a purple curse card) when the game begins.",
       "Secret names: some people names bring a blessing for the whole game. Use the same one twice in a row and the second game is cursed.",
       "Villagers no longer keep chopping or digging at a building that was sold and replaced (no more axes at the data centre).",

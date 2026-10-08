@@ -134,6 +134,8 @@ import {
   TUTORIAL,
   TUTORIAL_FAREWELL,
   WARRIORS_PER_CAMP,
+  ERA_MAKEOVER,
+  UPGRADES,
 } from "./content";
 import { cureHint, diseaseName, isCalm, maybeOutbreak, sickShare, stepDisease } from "./disease";
 import { hexDistance } from "./hex";
@@ -856,8 +858,34 @@ export function improveNext(state: GameState, tile: Tile) {
 
 // What a building can be upgraded into in the current era (e.g. Hut → House).
 export function upgradeFor(state: GameState, buildingId: string): BuildingDef | null {
-  const next = buildingId === "hut" ? BUILDINGS_BY_ID.house : buildingId === "house" ? BUILDINGS_BY_ID.townhouse : null;
+  const next = UPGRADES[buildingId] ? BUILDINGS_BY_ID[UPGRADES[buildingId]] : null;
   return next && isUnlocked(state, next) ? next : null;
+}
+
+// A new era rebuilds older homes and teaching buildings as this era's, free
+// (ERA_MAKEOVER), keeping how far each was improved. Returns the new tiles and
+// a line for the log ("6 Wooden Houses became Mud-brick Houses, ...").
+function eraMakeover(state: GameState, era: number): { tiles: Tile[]; changed: number[]; text: string | null } {
+  const swaps = ERA_MAKEOVER[era] ?? {};
+  const counts: Record<string, number> = {};
+  const changed: number[] = [];
+  const tiles = state.tiles.map((t) => {
+    const to = t.building ? swaps[t.building] : undefined;
+    const def = to ? BUILDINGS_BY_ID[to] : undefined;
+    if (!def || !def.terrain.includes(t.terrain)) return t;
+    const key = `${t.building}>${to}`;
+    counts[key] = (counts[key] ?? 0) + 1;
+    changed.push(t.id);
+    return { ...t, building: to!, worn: 0 };
+  });
+  const many = (name: string) => (name.endsWith("s") ? name : /[^aeiou]y$/.test(name) ? `${name.slice(0, -1)}ies` : `${name}s`);
+  const article = (name: string) => (/^([AEIO]|U(?!ni))/.test(name) ? "an" : "a");
+  const parts = Object.entries(counts).map(([key, n]) => {
+    const from = BUILDINGS_BY_ID[key.split(">")[0]].name;
+    const to = BUILDINGS_BY_ID[key.split(">")[1]].name;
+    return n === 1 ? `${article(from)} ${from} became ${article(to)} ${to}` : `${n} ${many(from)} became ${many(to)}`;
+  });
+  return { tiles, changed, text: parts.length ? `The town rebuilt for the new age: ${parts.join(", ")}.` : null };
 }
 
 // Where saplings can go: open grass or steppe, or forest that has been thinned.
@@ -6315,15 +6343,18 @@ function step(state: GameState, action: Action): GameState {
       if (state.debrief?.kind !== "era" || !ERAS[state.era + 1]) return state;
       const era = state.era + 1;
       const intro = ERA_INTROS[era];
+      const rebuilt = eraMakeover(state, era);
       return withMeters({
         ...withKingdoms({ ...state, era }),
+        tiles: rebuilt.tiles,
+        makeover: rebuilt.changed.length ? { tick: state.tick, tiles: rebuilt.changed } : null,
         era,
         year: ERAS[era].startYear,
         eraStartTick: state.tick,
         debrief: null,
         // Elder Ama welcomes the tribe to the new era (like a lesson).
         ...(intro ? { lesson: intro.id, lessonTick: state.tick } : {}),
-        log: [`${state.nation ?? "Your people"} enter the ${ERAS[era].name} era.`, ...state.log].slice(0, 30),
+        log: [...(rebuilt.text ? [rebuilt.text] : []), `${state.nation ?? "Your people"} enter the ${ERAS[era].name} era.`, ...state.log].slice(0, 30),
       });
     }
 
