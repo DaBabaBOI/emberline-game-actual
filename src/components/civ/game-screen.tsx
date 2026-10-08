@@ -46,7 +46,7 @@ const WorldCanvas = dynamic(
 );
 
 function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null }) {
-  const { panel, setSelected } = useGame();
+  const { panel, setSelected, state } = useGame();
   // The Advancements tree fills the screen: Elder Ama moves out of the way.
   const treeOpen = panel === "tree";
   const { target } = useGuide();
@@ -117,8 +117,9 @@ function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null 
             <LastTutorialPanel />
             <CoachPanel />
             <ElderLesson />
-          <HintPanel />
-            <AskAma />
+            {/* A speedrun goes without Elder Ama and her hints. */}
+            {!state.speedrun && <HintPanel />}
+            {!state.speedrun && <AskAma />}
           </div>
           <div className="flex flex-col items-end gap-2 lg:absolute lg:right-16 lg:top-20 lg:w-64">
             {match && <MultiplayerPanel match={match} />}

@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ERAS, formatYear } from "@/game/content";
-import { makeDebrief } from "@/game/engine";
+import { makeDebrief, speedrunTime } from "@/game/engine";
+import { formatRunTime } from "@/lib/online";
 import type { GameState } from "@/game/types";
 import type { IconId } from "@/game/sprites";
 import { useGame } from "@/components/civ/game-provider";
@@ -477,6 +478,11 @@ function arkBeats(state: GameState): Beat[] {
           <p className="fin-sub-2 font-pixel mt-6 text-sm text-white/70 md:text-base">
             {who} · {formatYear(ERAS[0].startYear)} to {formatYear(state.year)}
           </p>
+          {state.speedrun && (
+            <p className="fin-sub-3 font-num mt-3 text-2xl text-amber-200 md:text-3xl" data-testid="ending-run-time">
+              ⏱ {formatRunTime(speedrunTime(state))}
+            </p>
+          )}
           <p className="fin-sub-3 font-pixel mt-2 text-xs text-white/50 md:text-sm">Thank you for playing.</p>
         </div>
       ),

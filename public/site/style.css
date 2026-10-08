@@ -1131,3 +1131,31 @@ h1 img {
     transition: none;
   }
 }
+
+/* Speedrun records ------------------------------------------------------------ */
+
+.records {
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+}
+
+.records table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.records th {
+  padding: 0.25rem 0.5rem 0.25rem 0;
+  font-weight: 600;
+}
+
+.records td {
+  padding: 0.3rem 0.5rem 0.3rem 0;
+  border-top: 2px solid rgba(43, 33, 25, 0.15);
+}
+
+.records td:nth-child(3) {
+  font-family: var(--font-numbers);
+  font-size: 1.15rem;
+}

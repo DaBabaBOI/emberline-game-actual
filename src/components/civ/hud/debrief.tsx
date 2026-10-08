@@ -10,6 +10,7 @@ import type { GameState } from "@/game/types";
 import type { Debrief as DebriefData } from "@/game/types";
 import { useGame } from "@/components/civ/game-provider";
 import { LeaderboardPanel } from "./online";
+import { SpeedrunPanel } from "./speedrun";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { cn } from "@/lib/utils";
 import { useCompact } from "@/lib/use-compact";
@@ -216,6 +217,7 @@ export function Debrief({ onRestart }: { onRestart: () => void }) {
         )}
 
         {/* The story is over (won or lost): post it to the leaderboard. */}
+        {d.kind !== "era" && <SpeedrunPanel />}
         {d.kind !== "era" && <LeaderboardPanel />}
 
         <div className="mt-5 flex flex-wrap justify-end gap-2">

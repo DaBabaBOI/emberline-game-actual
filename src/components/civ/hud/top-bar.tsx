@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import type { IconId } from "@/game/sprites";
 import { GameMenu } from "./online";
+import { EditedBadge, SpeedrunClock } from "./speedrun";
 import { MuteButton } from "./game-audio";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { figureCounts, highlight } from "@/components/civ/world/crowd";
@@ -317,7 +318,9 @@ export function TopBar({ children }: { children?: React.ReactNode }) {
             </button>
           ))}
         </div>
-        <span className="order-3 lg:order-none">
+        <span className="order-3 flex items-center gap-1 lg:order-none">
+          <SpeedrunClock />
+          <EditedBadge />
           <MuteButton />
         </span>
         <span className="order-4 lg:order-none">

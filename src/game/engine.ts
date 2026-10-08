@@ -141,6 +141,7 @@ import { cureHint, diseaseName, isCalm, maybeOutbreak, sickShare, stepDisease } 
 import { hexDistance } from "./hex";
 import { generateMap, ISLANDS, isLand, revealAround, riverPath, terrainHeight } from "./map";
 import { mulberry32 } from "./noise";
+import { sealMatches, sealOf } from "./seal";
 import { cameosFor, EGGS, GOLDEN_DEER_FOOD, LITERACY_BUILDINGS, NAME_EGGS, nameEggMeters, nameEggOf, type EggId } from "./easter";
 import type { IconId } from "./sprites";
 import type {
@@ -300,6 +301,8 @@ export interface NewGameOptions {
   nation?: string;
   // The name egg the last new game used (the same one again is cursed).
   lastNameEgg?: string | null;
+  // Speedrun: a real-time timer, no tutorial, no Elder Ama, no secret names.
+  speedrun?: boolean;
   // Multiplayer: everyone in a room plays the same island (the room's seed).
   seed?: number;
   // "Build to Last": start in the Industrial era with three big problems.
@@ -323,7 +326,7 @@ export function newGame(
   const seed = options.seed ?? Math.floor(Math.random() * 1e9);
   const { tiles, startTile } = generateMap(seed);
   // A name egg (not in multiplayer): blessed, or cursed if it was used last time too.
-  const eggId = options.mp ? null : nameEggOf(options.nation);
+  const eggId = options.mp || options.speedrun ? null : nameEggOf(options.nation);
   const nameEgg = eggId ? { id: eggId, cursed: options.lastNameEgg === eggId } : undefined;
   const state: GameState = {
     version: SAVE_VERSION,
@@ -369,6 +372,7 @@ export function newGame(
       `${cleanNation(options.nation)} gather on the shores of Westmarch.`,
     ],
     ...(nameEgg ? { nameEgg } : {}),
+    ...(options.speedrun && !options.dev ? { speedrun: { start: Date.now(), splits: [] } } : {}),
   };
   state.forestBaseline = forestGrowthNearHome(state);
   // Elder Ama hands over what each tutorial step needs when it starts (see
@@ -377,7 +381,7 @@ export function newGame(
   state.resources.food += TUTORIAL_START_FOOD;
   const started = options.dev ? applyDevStart(state, options.startEra ?? 0) : options.mode === "last" ? applyLastStart(state) : state;
   if (options.mode === "last") return { ...started, meters: computeMeters(started) };
-  if (options.skipTutorial && !options.dev) return reducer({ ...started, meters: computeMeters(started) }, { type: "skipTutorial" });
+  if ((options.skipTutorial || options.speedrun) && !options.dev) return reducer({ ...started, meters: computeMeters(started) }, { type: "skipTutorial" });
   return { ...started, meters: computeMeters(started) };
 }
 
@@ -5671,7 +5675,28 @@ export function reducer(state: GameState, action: Action): GameState {
   // the next tick), so the hand never points at a spot for a second one.
   const guideBuild = next.mode === "last" ? LAST_TUTORIAL[next.lastStep ?? LAST_TUTORIAL.length]?.build : undefined;
   if (action.type === "place" && guideBuild && action.buildingId === guideBuild && next !== state) next = lastStepDone(next, next.lastStep!);
+  if (next.speedrun && !next.speedrun.end) next = speedrunStep(state, next);
   return awardXp(state, next.coach ? advanceCoach(next) : next);
+}
+
+// A speedrun: a split each time an era starts, the clock stops when the story
+// is told (the Ark, or a town built to last), and no Elder Ama lessons or
+// discovery scenes to wait through. Dev tools void the run.
+function speedrunStep(prev: GameState, next: GameState): GameState {
+  const run = next.speedrun!;
+  const now = Date.now();
+  let speedrun = run;
+  if ((next.dev || next.devGoals) && !run.invalid) speedrun = { ...speedrun, invalid: "dev tools were used" };
+  if (next.era > prev.era) speedrun = { ...speedrun, splits: [...speedrun.splits, { era: next.era, ms: now - run.start }] };
+  if (next.finished && !prev.finished) speedrun = { ...speedrun, end: now };
+  const quiet = next.lesson || next.cutscene ? { lesson: null, cutscene: null } : {};
+  return speedrun === run && !next.lesson && !next.cutscene ? next : { ...next, ...quiet, speedrun };
+}
+
+// How long a speedrun has taken (ms), or took.
+export function speedrunTime(state: GameState, now = Date.now()) {
+  const run = state.speedrun;
+  return run ? (run.end ?? now) - run.start : 0;
 }
 
 // Chief XP for what just happened: compare the state before and after an action.
@@ -7174,10 +7199,13 @@ function step(state: GameState, action: Action): GameState {
 }
 
 const SAVE_KEY = "emberline-save";
+// The save's seal (see seal.ts): changed by hand, it no longer matches.
+const SEAL_KEY = "emberline-save-seal";
 
 export function saveGame(state: GameState) {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    localStorage.setItem(SEAL_KEY, sealOf(state));
   } catch {
     // storage full or blocked; autosave is best-effort
   }
@@ -7189,6 +7217,7 @@ export function loadGame(): GameState | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as GameState;
     if (parsed.version !== SAVE_VERSION) return null;
+    markSeal(parsed, localStorage.getItem(SEAL_KEY));
     // Mountains used to be tall pillars; older saves keep the new, lower base.
     for (const t of parsed.tiles) if (t.terrain === "mountain") t.height = cutHeight(t);
     // Saves from before spearmen: Hunting Spears used to arm every warrior.
@@ -7207,9 +7236,24 @@ export function loadGame(): GameState | null {
   }
 }
 
+// Check a loaded save against its seal: one changed outside the game is marked
+// as edited, for good (it plays on, but posts nowhere). One with no seal at all
+// (from before seals, or with it removed) is unverified: the same, but kinder words.
+export function markSeal(state: GameState, seal: string | null | undefined) {
+  if (!seal) {
+    state.unverified = true;
+    if (state.speedrun && !state.speedrun.invalid) state.speedrun = { ...state.speedrun, invalid: "the save has no seal" };
+    return;
+  }
+  if (sealMatches(state, seal)) return;
+  state.edited = true;
+  if (state.speedrun) state.speedrun = { ...state.speedrun, invalid: "the save was edited" };
+}
+
 export function clearSave() {
   try {
     localStorage.removeItem(SAVE_KEY);
+    localStorage.removeItem(SEAL_KEY);
   } catch {
     // ignore
   }

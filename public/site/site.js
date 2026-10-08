@@ -209,8 +209,57 @@ function setUpReveal() {
   });
 }
 
+// Speedrun records: the ten fastest runs from the Stone Age, read from the
+// game's database with its publishable key (it may only read and add runs).
+const RECORDS_URL =
+  "https://lgfrxrnjexdcjhpwztpy.supabase.co/rest/v1/speedruns?select=nation,ms,difficulty,created_at&mode=eq.stone&order=ms.asc&limit=10";
+const RECORDS_KEY = "sb_publishable_2ehFe1z5_RD_IxrNcSH1bg_eKQMbV5U";
+
+function formatRunTime(ms) {
+  const tenths = Math.floor(ms / 100) % 10;
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const pad = (n) => String(n).padStart(2, "0");
+  return h ? `${h}:${pad(m)}:${pad(s % 60)}.${tenths}` : `${m}:${pad(s % 60)}.${tenths}`;
+}
+
+async function setUpSpeedruns() {
+  const body = document.getElementById("speedrun-rows");
+  if (!body) return;
+  const message = (text) => {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 5;
+    cell.textContent = text;
+    row.append(cell);
+    body.replaceChildren(row);
+  };
+  try {
+    const res = await fetch(RECORDS_URL, { headers: { apikey: RECORDS_KEY } });
+    if (!res.ok) throw new Error(String(res.status));
+    const runs = await res.json();
+    if (!runs.length) return message("No runs posted yet. Be the first!");
+    // Plain text only: names come from players.
+    body.replaceChildren(
+      ...runs.map((run, i) => {
+        const row = document.createElement("tr");
+        for (const text of [String(i + 1), run.nation, formatRunTime(run.ms), run.difficulty, formatDate(run.created_at.slice(0, 10))]) {
+          const cell = document.createElement("td");
+          cell.textContent = text;
+          row.append(cell);
+        }
+        return row;
+      }),
+    );
+  } catch {
+    message("The records are offline right now.");
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   setUpSettings();
   setUpUpdates();
   setUpReveal();
+  setUpSpeedruns();
 });

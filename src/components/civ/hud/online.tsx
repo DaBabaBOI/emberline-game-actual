@@ -8,7 +8,7 @@ import { AccessibilityMenuSection } from "@/components/accessibility-settings";
 import { setDaylight, setGraphics, useDaylight, useGraphics } from "@/lib/graphics";
 import { SoundOptions } from "./game-audio";
 import { HowToPlay } from "@/components/civ/how-to-play";
-import { FEEDBACK_LIMITS, postScore, saveToCloud, scoreFor, sendFeedback, topScores, type ScoreRow } from "@/lib/online";
+import { FEEDBACK_LIMITS, postScore, saveToCloud, scoreFor, sendFeedback, topScores, type ScoreRow, trusted } from "@/lib/online";
 
 const VERSION = UPDATES[0]?.date ?? "dev";
 
@@ -227,7 +227,9 @@ export function LeaderboardPanel() {
     <div className="mt-4 border-t-2 border-stone-300 pt-3" data-testid="leaderboard-panel">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="font-pixel text-lg font-semibold">Leaderboard</h3>
-        {row.ending === "lost" ? (
+        {!trusted(state) ? (
+          <span className="text-sm text-stone-500">This save was changed outside the game (or has no seal), so it can&apos;t post.</span>
+        ) : row.ending === "lost" ? (
           <span className="text-sm text-stone-500">Only villages that survive make the board.</span>
         ) : posted === "yes" ? (
           <span className="text-sm text-emerald-700">Posted!</span>

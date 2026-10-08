@@ -7,6 +7,8 @@
 // add leaderboard rows (never change or delete them), and save/load a game only
 // through the save_game/load_game functions, by code.
 import type { GameState } from "@/game/types";
+import { markSeal, speedrunTime } from "@/game/engine";
+import { sealOf } from "@/game/seal";
 import { HIDDEN_NAME, isOffensive } from "./names";
 
 export const SUPABASE_URL = "https://lgfrxrnjexdcjhpwztpy.supabase.co";
@@ -85,6 +87,11 @@ export interface ScoreRow {
   created_at?: string;
 }
 
+// Edited or unsealed saves don't go on the board (see seal.ts).
+export function trusted(state: GameState) {
+  return !state.edited && !state.unverified && !state.dev;
+}
+
 export function scoreFor(state: GameState): ScoreRow | null {
   const d = state.debrief;
   if (!d) return null;
@@ -122,7 +129,8 @@ export async function topScores(limit = 10): Promise<ScoreRow[] | null> {
 
 // Save the whole game; returns a code like "K7PM-2QXA" to load it anywhere.
 export async function saveToCloud(state: GameState): Promise<string | null> {
-  const res = await call("rpc/save_game", { p_data: state });
+  // Sealed, so a save changed in the cloud can be told apart when it's loaded.
+  const res = await call("rpc/save_game", { p_data: { ...state, _seal: sealOf(state) } });
   if (!res) return null;
   try {
     const code = (await res.json()) as string;
@@ -138,8 +146,72 @@ export async function loadFromCloud(code: string): Promise<GameState | null> {
   const res = await call("rpc/load_game", { p_code: clean });
   if (!res) return null;
   try {
-    return ((await res.json()) as GameState | null) ?? null;
+    const data = (await res.json()) as (GameState & { _seal?: string }) | null;
+    if (!data) return null;
+    const { _seal: seal, ...state } = data;
+    markSeal(state, seal);
+    // A cloud code can be shared, so a speedrun loaded from one never counts.
+    if (state.speedrun && !state.speedrun.invalid) state.speedrun = { ...state.speedrun, invalid: "loaded from a cloud code" };
+    return state;
   } catch {
     return null;
   }
+}
+
+// ---- Speedrun records --------------------------------------------------------
+
+export interface SpeedrunRow {
+  nation: string;
+  ms: number;
+  mode: "stone" | "last";
+  difficulty: string;
+  splits: { era: number; ms: number }[];
+  seal: string;
+  version?: string;
+  created_at?: string;
+}
+
+// A finished, valid speedrun, ready to post (or null, and why not).
+export function speedrunFor(state: GameState, version: string): { row: SpeedrunRow | null; why: string | null } {
+  const run = state.speedrun;
+  if (!run) return { row: null, why: null };
+  if (!run.end) return { row: null, why: "The run isn't finished yet." };
+  if (run.invalid) return { row: null, why: `This run can't go on the records: ${run.invalid}.` };
+  if (!trusted(state)) return { row: null, why: "This run can't go on the records: the save was changed outside the game." };
+  const row = {
+    nation: (state.nation ?? "The Emberfolk").slice(0, 40),
+    ms: speedrunTime(state),
+    mode: state.mode === "last" ? ("last" as const) : ("stone" as const),
+    difficulty: state.difficulty,
+    splits: run.splits.slice(0, 12),
+    version,
+  };
+  return { row: { ...row, seal: sealOf({ ...row, seed: state.seed, start: run.start }) }, why: null };
+}
+
+export async function postSpeedrun(row: SpeedrunRow): Promise<boolean> {
+  if (isOffensive(row.nation)) row = { ...row, nation: HIDDEN_NAME };
+  return !!(await call("speedruns", row, "return=minimal"));
+}
+
+// The fastest runs of a mode.
+export async function topSpeedruns(mode: "stone" | "last", limit = 10): Promise<SpeedrunRow[] | null> {
+  const res = await call(`speedruns?select=nation,ms,mode,difficulty,splits,created_at&mode=eq.${mode}&order=ms.asc&limit=${limit}`);
+  if (!res) return null;
+  try {
+    return ((await res.json()) as SpeedrunRow[]).filter((r) => !isOffensive(r.nation));
+  } catch {
+    return null;
+  }
+}
+
+// 1:02:03.4 / 4:05.6
+export function formatRunTime(ms: number) {
+  const tenths = Math.floor(ms / 100) % 10;
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return h ? `${h}:${pad(m)}:${pad(sec)}.${tenths}` : `${m}:${pad(sec)}.${tenths}`;
 }

@@ -422,6 +422,15 @@ export interface GameState {
   nation?: string;
   // A name egg (see NAME_EGGS): blessed, or cursed for using it twice in a row.
   nameEgg?: { id: "prithu" | "suveer" | "advik"; cursed: boolean; seen?: boolean };
+  // A speedrun (a new game started with the timer on): real time (ms since
+  // 1970) from `start`, a split for each era reached, and `end` once the story
+  // is told. `invalid` says why it can't go on the records.
+  speedrun?: { start: number; splits: { era: number; ms: number }[]; end?: number; invalid?: string };
+  // Loaded from a save that was changed outside the game (see seal.ts), or
+  // one without a seal at all (older, or with the seal removed): either way
+  // it plays on, but can't post scores or speedrun times.
+  edited?: boolean;
+  unverified?: boolean;
   tiles: Tile[];
   startTile: number;
   era: number;

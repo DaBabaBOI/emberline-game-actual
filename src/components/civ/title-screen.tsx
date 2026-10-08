@@ -42,6 +42,7 @@ export function TitleScreen({
   const [culture, setCulture] = useState<CultureId>("balanced");
   const [nation, setNation] = useState("");
   const [realistic, setRealistic] = useState(false);
+  const [speedrun, setSpeedrun] = useState(false);
   // Someone who has never started a game here gets First-time mode by default.
   const [difficulty, setDifficulty] = useState<DifficultyId>(() => {
     try {
@@ -59,7 +60,7 @@ export function TitleScreen({
     } catch {
       // Private mode: fine, they just see First time again next visit.
     }
-    onStart(culture, difficulty, options);
+    onStart(culture, difficulty, speedrun ? { ...options, speedrun: true, realTimeFrom: undefined } : options);
   };
   const [guide, setGuide] = useState(false);
   const [cloudCode, setCloudCode] = useState("");
@@ -177,6 +178,19 @@ export function TitleScreen({
               />
               <span>
                 <span className="font-semibold">Realistic time</span> (a joke, Stone Age only): the calendar runs in real time, with hours and seasons.
+              </span>
+            </label>
+            <label className="mt-2 flex items-center gap-2 text-sm text-stone-700">
+              <input
+                type="checkbox"
+                checked={speedrun}
+                onChange={(e) => setSpeedrun(e.target.checked)}
+                className="h-4 w-4 accent-amber-600"
+                data-testid="speedrun-toggle"
+              />
+              <span>
+                <span className="font-semibold">Speedrun</span>: a real-time timer from the first second to the end of the story, with a split for every era. No
+                tutorial, no Elder Ama, no secret names. Finish to post your time to the records (new games only; edited saves don&apos;t count).
               </span>
             </label>
             <h2 className="font-pixel mb-3 mt-6 text-lg font-semibold">Choose a game</h2>
