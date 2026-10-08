@@ -1,9 +1,12 @@
 "use client";
 
+import { useEffect, useMemo, useRef } from "react";
 import type { DiscoveryScene as Scene, SceneSky } from "@/game/content";
+import { WALKS, fxNow, iconsOf, poseNow, scriptFor, type FxKind, type SceneFx, type SceneScript } from "@/game/scenes";
 import { CAST, type Speaker } from "@/game/story";
 import type { IconId } from "@/game/sprites";
 import { PixelIcon } from "@/components/civ/pixel-icon";
+import { useHoldWorld } from "@/components/civ/cutscene/active";
 import { cn } from "@/lib/utils";
 
 // The pixel-art cutscenes (Menu > Graphics > Cutscenes: Pixel): the flat
@@ -39,6 +42,10 @@ const ERA_BACKDROPS: { skyline: [IconId, number][]; haze?: string; planet?: bool
 // buildings, near hills, the ground, people walking in, and what they found
 // appearing in light. Click it to go on.
 export function PixelDiscoveryStage({ id, scene, lines, era, name, onAdvance }: { id: string; scene: Scene; lines: number; era: number; name: string; onAdvance: () => void }) {
+  // The game's 3D world behind stops drawing meanwhile (as for a 3D scene).
+  useHoldWorld();
+  // One script for the whole scene (so a re-render never restarts a line).
+  const script = useMemo(() => scriptFor(id, scene), [id, scene]);
   const sky = SKIES[scene.bg];
   const backdrop = ERA_BACKDROPS[Math.min(era, ERA_BACKDROPS.length - 1)];
   // Out in the open (not in a cave or at sea), the era shows on the hills.
@@ -110,50 +117,8 @@ export function PixelDiscoveryStage({ id, scene, lines, era, name, onAdvance }: 
       )}
       <span className="scene-ground-shade pointer-events-none absolute inset-x-0 bottom-0 h-[38%]" />
 
-      {/* What else is there: shown from its line, gone after its `until` line. */}
-      {(scene.props ?? [])
-        .filter((p) => lines - 1 >= (p.from ?? 0) && (p.until === undefined || lines - 1 < p.until))
-        .map((p, i) => (
-          <span
-            key={`${p.icon}-${i}`}
-            className={(p.from ?? 0) > 0 ? "scene-prop scene-pop absolute" : "scene-prop absolute"}
-            style={{ left: `${p.x}%`, bottom: `${p.y ?? 18}%`, transform: "translateX(-50%)" }}
-          >
-            <span className="block" style={p.flip ? { transform: "scaleX(-1)" } : undefined}>
-              <PixelIcon name={p.icon} size={p.size ?? 40} />
-            </span>
-          </span>
-        ))}
-
-      {/* The people walk in from the left (those sitting are already there). */}
-      <span className="absolute bottom-[18%] left-[8%] flex items-end gap-1">
-        {scene.actors.map((a, i) =>
-          a.endsWith("-sit") ? (
-            <span key={i} className="scene-line block">
-              <PixelIcon name={a} size={56} />
-            </span>
-          ) : (
-            <span key={i} className="scene-walk block" style={{ animationDelay: `${i * 0.25}s` }}>
-              <span className="scene-bob block" style={{ animationDelay: `${i * 0.2}s` }}>
-                <PixelIcon name={a} size={56} />
-              </span>
-            </span>
-          ),
-        )}
-      </span>
-
-      {/* What they discovered appears with light around it. */}
-      {lines - 1 >= (scene.itemFrom ?? 1) && (
-        <span
-          className="absolute flex -translate-x-1/2 items-center justify-center"
-          style={{ left: `${scene.itemX ?? 74}%`, bottom: scene.bg === "cave" ? "38%" : "20%" }}
-        >
-          <span className="scene-rays absolute h-28 w-28 rounded-full" />
-          <span className="scene-reveal relative block">
-            <PixelIcon name={scene.item} size={80} />
-          </span>
-        </span>
-      )}
+      {/* The scene's script, acted out: people and things moving line by line. */}
+      <PixelScript script={script} line={lines - 1} sceneKey={id} sea={scene.bg === "sea"} />
       <span key={`${id}-${lines}`} className="scene-beat-wash pointer-events-none absolute inset-0" aria-hidden="true" />
       </span>
     </button>
@@ -174,6 +139,7 @@ const BACKDROPS: { sky: string; ground: string; hills: string; skyline: IconId[]
 // The stage of a story scene, drawn flat: the era behind (its sky, hills and
 // skyline), and the characters in front, whoever speaks stepping up.
 export function PixelStoryStage({ era, cast, speaker }: { era: number; cast: Speaker[]; speaker: Speaker }) {
+  useHoldWorld();
   const backdrop = BACKDROPS[Math.min(era, BACKDROPS.length - 1)];
   return (
     <div className="absolute inset-0" style={{ background: backdrop.sky }}>
@@ -213,5 +179,158 @@ export function PixelStoryStage({ era, cast, speaker }: { era: number; cast: Spe
         })}
       </div>
     </div>
+  );
+}
+
+// ---- A scene's script, drawn flat ---------------------------------------------------
+
+// People and things are pixel icons placed by percent (left: x, bottom: y) and
+// moved every frame from the script (the same timing as the 3D scene); the
+// effects are little squares (seeds, sparks, splashes) and puffs (smoke, dust).
+const FX_COLOR: Record<FxKind, string> = {
+  seeds: "#8a5a2b",
+  sparks: "#ffd860",
+  smoke: "rgba(220,214,204,0.75)",
+  splash: "#8fd0ff",
+  glow: "#ffd23f",
+  dust: "rgba(205,185,149,0.7)",
+  leaves: "#5fae4a",
+  stars: "#fff6c0",
+  rain: "rgba(184,200,224,0.7)",
+};
+const FX_POOL = 80;
+
+// Where particle i of an effect is, and how big, at this point in its life (0..1).
+function fxSpot(f: SceneFx, i: number, life: number, rand: number, y0: number, time: number): [number, number, number] {
+  switch (f.kind) {
+    case "seeds":
+      return [f.x + (rand - 0.5) * 6, y0 + 14 - life * (14 + y0 - 18), 3];
+    case "sparks":
+      return [f.x + Math.cos(i * 2.1) * life * 8, y0 + 6 + Math.sin(i * 1.7) * life * 8 + life * 6, 4];
+    case "smoke":
+      return [f.x + Math.sin(time + i) * 3 * life, y0 + 8 + life * 34, 10 + life * 22];
+    case "splash":
+      return [f.x + (rand - 0.5) * 10, y0 + Math.sin(life * Math.PI) * 10, 4];
+    case "dust":
+      return [f.x + (rand - 0.5) * 18 * life, y0 + 2 + life * 8, 10 + life * 16];
+    case "leaves":
+      return [f.x - 30 + life * 60, y0 + Math.sin(life * 8 + i) * 6 - life * 8, 5];
+    case "stars":
+      return [f.x + (rand - 0.5) * 80, y0 + Math.cos(i * 3.3) * 14, Math.abs(Math.sin(time * 3 + i)) * 5];
+    case "rain":
+      return [f.x + (rand - 0.5) * 80, 90 - life * 80, 2];
+    default:
+      return [f.x, y0, 4];
+  }
+}
+
+function PixelScript({ script, line, sceneKey, sea }: { script: SceneScript; line: number; sceneKey: string; sea: boolean }) {
+  const entries = useMemo(() => Object.entries(script.things), [script]);
+  const els = useRef<Record<string, HTMLSpanElement | null>>({});
+  const iconEls = useRef<Record<string, HTMLSpanElement | null>>({});
+  const fxEls = useRef<(HTMLSpanElement | null)[]>([]);
+  const glowEls = useRef<(HTMLSpanElement | null)[]>([]);
+  const glowFx = useMemo(() => (script.fx ?? []).filter((f) => f.kind === "glow"), [script]);
+
+  useEffect(() => {
+    const begin = performance.now();
+    let raf = 0;
+    const frame = () => {
+      const time = (performance.now() - begin) / 1000;
+      const pose = Object.fromEntries(entries.map(([id, t]) => [id, poseNow(t, line, time, script)]));
+      // Riders sit on their carrier: its spot plus their offset. At sea, what
+      // is further out looks smaller, and what floats bobs on the swell.
+      const spot: Record<string, { x: number; y: number; far: number }> = {};
+      for (let pass = 0; pass < 3; pass++)
+        for (const [id] of entries) {
+          const p = pose[id];
+          if (spot[id]) continue;
+          if (p.on && pose[p.on]) {
+            const c = spot[p.on];
+            if (c) spot[id] = { x: c.x + p.dx * c.far, y: c.y + p.dy * c.far, far: c.far };
+          } else {
+            const afloat = sea && p.y > 21 && p.y <= 44;
+            const far = afloat ? Math.max(0.6, 1 - (p.y - 21) * 0.016) : 1;
+            spot[id] = { x: p.x, y: p.y + (afloat ? Math.sin(time * 1.8 + id.length * 1.7 + id.charCodeAt(0)) * 0.5 : 0), far };
+          }
+        }
+      for (const [id, t] of entries) {
+        const el = els.current[id];
+        const p = pose[id];
+        const at = spot[id];
+        if (!el || !at) continue;
+        const pop = p.appeared !== null ? Math.min(1, (time - p.appeared) / 0.35) : 1;
+        const popScale = pop >= 1 ? 1 : 1 + 2.2 * Math.pow(pop - 1, 3) + 1.2 * Math.pow(pop - 1, 2);
+        el.style.display = p.show && p.scale > 0.01 ? "block" : "none";
+        el.style.left = `${at.x}%`;
+        el.style.bottom = `${at.y}%`;
+        const size = p.scale * popScale * at.far;
+        el.style.transform = `translateX(-50%) scale(${(p.flip ? -1 : 1) * size}, ${size}) rotate(${p.spin ? -time * 280 : 0}deg)`;
+        // People and animals step as they go (and people at work bob).
+        el.classList.toggle("scene-bob-loop", !!p.work || (p.moving && (!!t.person || WALKS.includes(p.icon ?? t.icon!))));
+        // People: sitting or standing; things: their icon now.
+        const want = t.person ? (t.person === "elder" ? (p.sit ? "elder-sit" : "elder") : t.person === "robot" ? "robot" : p.sit ? "person-sit" : "person") : (p.icon ?? t.icon);
+        for (const icon of t.person ? ["person", "person-sit", "elder", "elder-sit", "robot"] : iconsOf(t)) {
+          const ie = iconEls.current[`${id}:${icon}`];
+          if (ie) ie.style.display = icon === want ? "block" : "none";
+        }
+      }
+      // Effects.
+      let n = 0;
+      (script.fx ?? []).forEach((f, fi) => {
+        const k = fxNow(f, line, time);
+        if (k === null || f.kind === "glow") return;
+        const age = k * (f.secs ?? 1.5);
+        for (let i = 0; i < 10 && n < FX_POOL; i++) {
+          const el = fxEls.current[n++];
+          if (!el) continue;
+          const r = Math.sin(fi * 31 + i * 12.9898) * 43758.5453;
+          const rand = r - Math.floor(r);
+          const life = (age * 1.4 + i / 10) % 1;
+          const y0 = f.y ?? 18;
+          const [x, y, size] = fxSpot(f, i, life, rand, y0, time);
+          el.style.display = "block";
+          el.style.left = `${x}%`;
+          el.style.bottom = `${y}%`;
+          el.style.width = el.style.height = `${size}px`;
+          el.style.background = FX_COLOR[f.kind];
+          el.style.borderRadius = f.kind === "smoke" || f.kind === "dust" ? "50%" : "0";
+          el.style.opacity = f.kind === "smoke" || f.kind === "dust" ? String(1 - life) : "1";
+        }
+      });
+      for (let i = n; i < FX_POOL; i++) if (fxEls.current[i]) fxEls.current[i]!.style.display = "none";
+      glowFx.forEach((f, i) => {
+        const el = glowEls.current[i];
+        if (el) el.style.display = line > f.line || (line === f.line && time >= (f.delay ?? 0)) ? "block" : "none";
+      });
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, [entries, line, script, glowFx, sceneKey, sea]);
+
+  return (
+    <>
+      {glowFx.map((f, i) => (
+        <span
+          key={`glow${i}`}
+          ref={(el) => void (glowEls.current[i] = el)}
+          className="scene-rays pointer-events-none absolute h-28 w-28 -translate-x-1/2 rounded-full"
+          style={{ left: `${f.x}%`, bottom: `${(f.y ?? 18) - 6}%`, display: "none" }}
+        />
+      ))}
+      {entries.map(([id, t]) => (
+        <span key={`${sceneKey}-${id}`} ref={(el) => void (els.current[id] = el)} className="absolute block origin-bottom" style={{ display: "none" }}>
+          {(t.person ? ["person", "person-sit", "elder", "elder-sit", "robot"] : iconsOf(t)).map((icon) => (
+            <span key={icon} ref={(el) => void (iconEls.current[`${id}:${icon}`] = el)} className="block" style={{ display: "none" }}>
+              <PixelIcon name={icon as IconId} size={t.person ? (t.person === "child" ? 40 : 56) : (t.size ?? 40)} />
+            </span>
+          ))}
+        </span>
+      ))}
+      {Array.from({ length: FX_POOL }, (_, i) => (
+        <span key={`fx${i}`} ref={(el) => void (fxEls.current[i] = el)} className="pointer-events-none absolute block -translate-x-1/2" style={{ display: "none" }} />
+      ))}
+    </>
   );
 }

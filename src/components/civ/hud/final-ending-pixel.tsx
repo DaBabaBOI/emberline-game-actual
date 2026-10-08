@@ -8,6 +8,7 @@ import type { GameState } from "@/game/types";
 import type { IconId } from "@/game/sprites";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
+import { useHoldWorld } from "@/components/civ/cutscene/active";
 import { playSfx, type Sfx } from "@/lib/audio";
 
 // The end of the story, as a short film (the pixel-art version: Menu >
@@ -32,6 +33,7 @@ export function FinalEndingPixel() {
 }
 
 function Film({ beats, onDone }: { beats: Beat[]; onDone: () => void }) {
+  useHoldWorld();
   const [at, setAt] = useState(0);
   const beat = beats[at];
   const next = useCallback(() => setAt((i) => Math.min(beats.length - 1, i + 1)), [beats.length]);

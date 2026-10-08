@@ -698,6 +698,8 @@ button {
    fights the "transform" that scales up whoever speaks). */
 .story-actor { animation: story-actor 0.7s ease both; }
 @keyframes story-actor { from { opacity: 0; translate: 0 30px; } to { opacity: 1; translate: 0 0; } }
+/* Pixel scenes: someone at work (or walking) bobs as they go. */
+.scene-bob-loop > span { animation: scene-bob 0.5s steps(2) infinite; }
 /* A quick dip to black between shots of the film. */
 .fin-cut { animation: fin-cut 0.7s ease-out both; }
 @keyframes fin-cut { from { opacity: 1; } to { opacity: 0; } }

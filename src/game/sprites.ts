@@ -546,6 +546,21 @@ export const SPRITES = {
     ".....oo.....",
     "............",
   ],
+  // Logs lashed together with vines.
+  raft: [
+    "............",
+    "............",
+    "............",
+    "............",
+    ".bbgbbbbgbb.",
+    "bttgtttttgtb",
+    "bbbgbbbbbgbb",
+    "dddgdddddgdd",
+    ".ddgddddgdd.",
+    "uuuuuuuuuuuu",
+    ".uu..uu..uu.",
+    "............",
+  ],
   boat: [
     "......k.....",
     "......kw....",

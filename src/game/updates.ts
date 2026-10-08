@@ -7,6 +7,12 @@ export interface Update {
 
 export const UPDATES: Update[] = [
   {
+    date: "2026-10-08",
+    items: [
+      "Discovery scenes act out what happened: logs drift in with a bird on them, get tied into a raft, two people sit on it and drift out to sea; seeds fall into the soil and sprout into wheat. Animals walk in, ideas come down in light, and each line stays up until its moment has played. Same story in 3D and pixel art.",
+    ],
+  },
+  {
     date: "2026-10-05",
     items: [
       "Build to Last starts with one clear focus: house and feed your people before switching to clean power and lowering carbon.",

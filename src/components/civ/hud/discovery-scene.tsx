@@ -3,14 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { DISCOVERIES, TREE_BY_ID } from "@/game/content";
 import { useGame } from "@/components/civ/game-provider";
-import { MODELS } from "@/components/civ/world/building-models";
 import { Stage3D } from "@/components/civ/cutscene/stage";
 import { discoveryShot } from "@/components/civ/cutscene/shots";
+import { lineEnds, scriptFor } from "@/game/scenes";
 import { useCutsceneStyle } from "@/lib/graphics";
 import { PixelDiscoveryStage } from "./pixel-scenes";
 
-// How long each line stays before the next one (ms).
-const LINE_MS = 2600;
+// How long each line stays before the next one (ms): long enough to read it
+// and to see what it acts out happen, within limits.
+const lineMs = (end: number) => Math.min(4400, Math.max(2600, end * 1000 + 500));
 
 // A short scene of the moment an advancement was discovered, played in 3D on a
 // little island of the era: the people walk up, and what they found appears
@@ -25,16 +26,15 @@ export function DiscoveryScene() {
   const lines = shown.id === id ? shown.lines : 1;
 
   useEffect(() => {
-    if (!scene || lines >= scene.lines.length) return;
-    const t = setTimeout(() => setShown({ id, lines: lines + 1 }), LINE_MS);
+    if (!scene || !id || lines >= scene.lines.length) return;
+    const t = setTimeout(() => setShown({ id, lines: lines + 1 }), lineMs(lineEnds(scriptFor(id, scene), lines - 1)));
     return () => clearTimeout(t);
   }, [id, scene, lines]);
 
   const style = useCutsceneStyle();
   const node = id ? TREE_BY_ID[id] : null;
   const era = state.era;
-  const unlocks = node?.unlocks?.find((b) => MODELS[b]) ?? null;
-  const shot = useMemo(() => (scene && id ? discoveryShot(id, scene, era, lines - 1, unlocks) : null), [scene, id, era, lines, unlocks]);
+  const shot = useMemo(() => (scene && id ? discoveryShot(id, scene, era, lines - 1) : null), [scene, id, era, lines]);
 
   if (!scene || !id || !shot) return null;
   const secret = !!node?.secret;

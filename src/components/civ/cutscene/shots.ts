@@ -1,5 +1,7 @@
 import type { ActorSpec, Extra, Shot } from "./stage";
 import type { IconId } from "@/game/sprites";
+import type { DiscoveryScene } from "@/game/content";
+import { scriptFor } from "@/game/scenes";
 import { at } from "./diorama";
 
 // The sets the cutscenes are filmed on: each era's town (by axial position on
@@ -277,70 +279,16 @@ export interface DiscoveryLayout {
 }
 
 const STRIP_Z = 2.6;
-const PX = 0.63 / 56;
 
-export function discoveryShot(id: string, d: DiscoveryLayout, era: number, line: number, unlocks: string | null): Shot {
+export function discoveryShot(id: string, d: DiscoveryLayout, era: number, line: number): Shot {
   const sea = d.bg === "sea";
   const cave = d.bg === "cave";
-  // From the scene's x (0-100) to the world: across the strip, left to right as we look.
-  const across = (pct: number) => (sea ? -1 : 1) * (pct / 100 - 0.5) * 7;
   const stripZ = sea ? 5.4 : cave ? 0 : STRIP_Z;
-  const ground = 0.5;
-  const place = (pct: number, y = 18) => {
-    const inWater = sea && y > 20;
-    return {
-      x: across(pct),
-      z: inWater ? stripZ + 2.2 : stripZ,
-      y: inWater ? 0.16 : ground + Math.max(0, (y - 18) / 100) * 3.8,
-    };
-  };
-  const turn = sea ? Math.PI : 0;
-  const itemPct = d.itemX ?? 74;
-  const item = place(itemPct);
-  const shown = line >= (d.itemFrom ?? 1);
-
-  // The people walk in from the side and stop in a row, facing what they find
-  // (those sitting are already there).
-  const actors: ActorSpec[] = [];
-  const extras: Extra[] = [];
-  d.actors.forEach((icon, i) => {
-    const slot = place(12 + i * 8);
-    const sit = icon.endsWith("-sit");
-    const look: ActorSpec["look"] = icon.startsWith("elder") ? "elder" : "villager";
-    if (icon !== "person" && icon !== "elder" && !sit) {
-      extras.push({ kind: "voxel", id: `actor-${i}`, icon: icon as IconId, ...slot, size: 0.55, turn });
-      return;
-    }
-    const start = place(-14 - i * 6);
-    actors.push(
-      sit
-        ? { ...slot, look, sit: true, face: [item.x, item.z] }
-        : { x: start.x, z: start.z, walkTo: [slot.x, slot.z], walkAt: i * 0.25, speed: 1.5, look, face: [item.x, item.z] },
-    );
-  });
-  (d.props ?? []).forEach((p, i) => {
-    if (line < (p.from ?? 0) || (p.until !== undefined && line >= p.until)) return;
-    const at = place(p.x, p.y);
-    // People in the props are people.
-    if (p.icon === "person" || p.icon === "person-sit" || p.icon === "elder" || p.icon === "elder-sit") {
-      actors.push({ x: at.x, z: at.z, look: p.icon.startsWith("elder") ? "elder" : "villager", sit: p.icon.endsWith("-sit"), face: [across(p.flip ? 0 : 100), at.z] });
-      return;
-    }
-    extras.push({ kind: "voxel", id: `prop-${i}-${p.icon}`, icon: p.icon, ...at, size: (p.size ?? 40) * PX, flip: p.flip, turn });
-  });
-  if (shown) {
-    extras.push({ kind: "glow", x: item.x, z: item.z });
-    extras.push({ kind: "voxel", id: `item-${d.item}`, icon: d.item, x: item.x, z: item.z, y: item.y + 0.12, size: 80 * PX, spin: true, turn });
-    // What it lets them build rises behind it.
-    if (unlocks && !sea && !cave) extras.push({ kind: "rise", x: item.x + (item.x > 0 ? -0.2 : 0.2), z: stripZ - 1.7, building: unlocks });
-  }
-  if (cave) extras.push({ kind: "cave" });
-
+  const extras: Extra[] = cave ? [{ kind: "cave" }] : [];
+  // The town of the era behind the strip (behind the camera, at sea).
   const town = ERA_SETS[Math.min(era, 5)].filter(([q, r]) => {
-    const [x, z] = at(q, r);
-    if (sea) return z < -1;
-    // Keep clear of the strip, and of where a new building rises.
-    return z < STRIP_Z - 1.4 && !(unlocks && Math.hypot(x - item.x, z - (stripZ - 1.7)) < 1.4);
+    const z = at(q, r)[1];
+    return sea ? z < -1 : z < STRIP_Z - 1.4;
   });
   const camera: Shot["camera"] = sea
     ? { from: [0, 2.4, 0], to: [0, 1.8, 1.4], lookFrom: [0, 0.5, 6.5], seconds: 7 }
@@ -353,8 +301,8 @@ export function discoveryShot(id: string, d: DiscoveryLayout, era: number, line:
       ? null
       : { seed: 200 + era, buildings: town, forest: 0.4, mountains: era === 0, open: sea ? { x: 0, z: 2.5, r: 4.2 } : { x: 0, z: STRIP_Z + 1.2, r: 4 } },
     sky: d.bg === "sea" ? "day" : d.bg,
-    actors,
     extras,
     camera,
+    script: { script: scriptFor(id, d as DiscoveryScene), line, key: id, sea, cave, stripZ },
   };
 }

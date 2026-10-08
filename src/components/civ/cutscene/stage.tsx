@@ -1,10 +1,12 @@
 "use client";
 
-import { createContext, memo, useContext, useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { createContext, memo, useContext, useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Color, Object3D, Vector3, type Group, type InstancedMesh, type Mesh } from "three";
 import type { Tile } from "@/game/types";
-import { PALETTE, SPRITES, type IconId } from "@/game/sprites";
+import type { IconId } from "@/game/sprites";
+import { VoxelIcon } from "./voxel";
+import { ScriptedScene, type ScriptView } from "./scripted";
 import { HexTerrain, Forests, Mountains, BiomeDetails } from "@/components/civ/world/hex-terrain";
 import { BUILDING_SCALE, MODELS } from "@/components/civ/world/building-models";
 import { Wildfire } from "@/components/civ/world/atmosphere";
@@ -62,6 +64,8 @@ export interface Shot {
   actors?: ActorSpec[];
   camera: CameraSpec;
   extras?: Extra[];
+  // A discovery scene's script, acted out on the strip in front of the camera.
+  script?: ScriptView;
 }
 
 export type Extra =
@@ -139,6 +143,7 @@ function Scene({ shot }: { shot: Shot }) {
         </>
       )}
       <Actors key={shot.key} tiles={tiles} actors={shot.actors ?? []} />
+      {shot.script && <ScriptedScene view={shot.script} tiles={tiles} />}
       {(shot.sky === "night" || shot.sky === "space") && <StarDome />}
       {(shot.extras ?? []).map((e, i) => (
         <ExtraPiece key={("id" in e && e.id) || `${shot.key}-${i}`} extra={e} />
@@ -718,52 +723,4 @@ function Cave() {
   );
 }
 
-// One of the game's pixel icons, built of little blocks (12 by 12) and standing
-// on its bottom edge. It pops up when it appears; `spin` turns it slowly.
-export function VoxelIcon({ name, size = 0.8, flip = false, spin = false }: { name: IconId; size?: number; flip?: boolean; spin?: boolean }) {
-  const cells = useMemo(() => {
-    const out: { x: number; y: number; color: string }[] = [];
-    SPRITES[name].forEach((row, y) => Array.from(row).forEach((ch, x) => ch !== "." && out.push({ x, y, color: PALETTE[ch] })));
-    return out;
-  }, [name]);
-  return <Voxels key={name} cells={cells} size={size} flip={flip} spin={spin} />;
-}
-
-function Voxels({ cells, size, flip, spin }: { cells: { x: number; y: number; color: string }[]; size: number; flip: boolean; spin: boolean }) {
-  const mesh = useRef<InstancedMesh>(null);
-  const g = useRef<Group>(null);
-  const since = useSince();
-  const px = size / 12;
-  useLayoutEffect(() => {
-    const m = mesh.current;
-    if (!m) return;
-    const d = new Object3D();
-    const c = new Color();
-    cells.forEach((cell, i) => {
-      d.position.set((cell.x - 5.5) * px * (flip ? -1 : 1), (11.5 - cell.y) * px, 0);
-      d.scale.set(px, px, px * 1.6);
-      d.updateMatrix();
-      m.setMatrixAt(i, d.matrix);
-      m.setColorAt(i, c.set(cell.color));
-    });
-    m.instanceMatrix.needsUpdate = true;
-    if (m.instanceColor) m.instanceColor.needsUpdate = true;
-  }, [cells, px, flip]);
-  useFrame(({ clock }) => {
-    const p = Math.min(1, since.current.t / 0.45);
-    // Up with a little overshoot, like the icons popping in the old scenes.
-    const s = p >= 1 ? 1 : 1 + 2.2 * Math.pow(p - 1, 3) + 1.2 * Math.pow(p - 1, 2);
-    if (g.current) {
-      g.current.scale.setScalar(Math.max(0.001, s));
-      g.current.rotation.y = spin ? Math.sin(clock.elapsedTime * 0.9) * 0.6 : 0;
-    }
-  });
-  return (
-    <group ref={g}>
-      <instancedMesh ref={mesh} args={[undefined, undefined, cells.length]} castShadow frustumCulled={false}>
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial roughness={0.8} />
-      </instancedMesh>
-    </group>
-  );
-}
+export { VoxelIcon };
