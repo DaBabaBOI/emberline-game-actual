@@ -159,6 +159,24 @@ function useUnlockAudio() {
   }, []);
 }
 
+// The last name egg a new game used (see NAME_EGGS), kept in this browser.
+const LAST_EGG = "emberline-last-name-egg";
+function readLastEgg(): string | null {
+  try {
+    return localStorage.getItem(LAST_EGG);
+  } catch {
+    return null;
+  }
+}
+function writeLastEgg(id: string | null) {
+  try {
+    if (id) localStorage.setItem(LAST_EGG, id);
+    else localStorage.removeItem(LAST_EGG);
+  } catch {
+    // Private mode: no memory, so no curse either.
+  }
+}
+
 export function GameScreen() {
   useUnlockAudio();
   const [game, setGame] = useState<GameState | null>(null);
@@ -216,7 +234,11 @@ export function GameScreen() {
         onStart={(culture: CultureId, difficulty: DifficultyId, options?: NewGameOptions) => {
           clearSave();
           setIntro(!options?.dev && options?.mode !== "last");
-          setGame(newGame(culture, difficulty, options));
+          // Name eggs: the same one twice in a row and the second game is cursed.
+          const last = readLastEgg();
+          const game = newGame(culture, difficulty, { ...options, lastNameEgg: last });
+          writeLastEgg(game.nameEgg && !game.nameEgg.cursed ? game.nameEgg.id : null);
+          setGame(game);
         }}
       />
     );

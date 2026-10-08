@@ -1,13 +1,15 @@
 // Easter eggs. Each one found is counted with the other secrets ("Secrets
 // found" in Advancements) as `egg-<id>`.
 //
-// - Team cameos: name your people after someone on the team (or "SHISTECH"
-//   for all four) and they join the tribe, wearing a gold crown.
+// - Team cameos: name your people after someone on the team (or "Emberline
+//   team" for all four) and they join the tribe, wearing a gold crown.
 // - Elder Ama: poke her picture ten times.
 // - Fireworks: the Konami code (up up down down left right left right B A).
 // - A golden deer, very rarely, in the forest.
 // - A message in a bottle, sometimes, on the beach.
 // - A tiny island far out at sea: click it once you have a canoe.
+// - Name eggs: name your people after a friend of the game for a blessing (see
+//   NAME_EGGS). The same name twice in a row and the second game is cursed.
 
 export const TEAM = [
   { name: "Prithu", joke: "Prithu has joined the tribe and is already asking for more features." },
@@ -19,7 +21,7 @@ export const TEAM = [
 // Who from the team joins a people with this name.
 export function cameosFor(nation: string | undefined) {
   const name = (nation ?? "").toLowerCase();
-  if (/shistech/.test(name)) return [...TEAM];
+  if (/emberline team|\bteam emberline\b/.test(name)) return [...TEAM];
   return TEAM.filter((m) => new RegExp(`\\b${m.name.toLowerCase()}\\b`).test(name));
 }
 
@@ -36,3 +38,68 @@ export const EGGS: Record<EggId, { text: string; knowledge?: number; mood?: numb
 export const GOLDEN_DEER_FOOD = 40;
 // How often an animal in the forest is the golden deer.
 export const GOLDEN_DEER_CHANCE = 0.02;
+
+// ---- Name eggs ------------------------------------------------------------------
+// A people named after a friend of the game (or close to the name) is blessed
+// for the whole game. Start a new game with the same egg straight after and
+// that one is cursed instead (the title screen remembers the last egg used);
+// the one after is blessed again. Not in multiplayer.
+export type NameEggId = "prithu" | "suveer" | "advik";
+
+export const NAME_EGGS: Record<NameEggId, { name: string; also: RegExp; blessing: string; curse: string }> = {
+  prithu: {
+    name: "prithu",
+    also: /pr[iy]+th/,
+    blessing: "Prithu's blessing: every meter stays at 100, for the whole game.",
+    curse: "Prithu again? The spirits are tired of the same name: every meter is 20 lower, for the whole game.",
+  },
+  suveer: {
+    name: "suveer",
+    also: /suv[ie]+r/,
+    blessing: "Suveer's blessing: nobody here needs to learn to read (literacy is full, and no advancement asks for a school), and scouts go for free.",
+    curse: "Suveer again? Scouts cost double, and reading comes slowly (literacy is halved).",
+  },
+  advik: {
+    name: "advik",
+    also: /adv[ie]+k/,
+    blessing: "Advik's blessing: everyone is cheerful (+50 happiness, for the whole game).",
+    curse: "Advik again? A gloom settles over the tribe (-30 happiness, for the whole game).",
+  },
+};
+
+// Same word, or one letter added, missing or changed.
+function oneOff(a: string, b: string) {
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  if (i === a.length && i === b.length) return true;
+  return a.slice(i + 1) === b.slice(i + 1) || a.slice(i + 1) === b.slice(i) || a.slice(i) === b.slice(i + 1);
+}
+
+// Which name egg a people's name calls up, if any.
+export function nameEggOf(nation: string | undefined): NameEggId | null {
+  const words = (nation ?? "").toLowerCase().split(/[^a-z]+/).filter(Boolean);
+  const joined = words.join("");
+  for (const id of Object.keys(NAME_EGGS) as NameEggId[]) {
+    const egg = NAME_EGGS[id];
+    if (words.some((w) => oneOff(w, egg.name)) || egg.also.test(joined)) return id;
+  }
+  return null;
+}
+
+// What the name eggs do to the meters (computeMeters).
+export function nameEggMeters<T extends Record<"food" | "shelter" | "happiness" | "literacy" | "energy" | "sustainability", number>>(
+  egg: { id: NameEggId; cursed: boolean } | undefined,
+  meters: T,
+): T {
+  if (!egg) return meters;
+  const m = { ...meters };
+  const keys = Object.keys(m) as (keyof T & string)[];
+  if (egg.id === "prithu") for (const k of keys) (m[k] as number) = egg.cursed ? Math.max(0, (m[k] as number) - 20) : 100;
+  if (egg.id === "suveer") m.literacy = egg.cursed ? Math.round(m.literacy / 2) : 100;
+  if (egg.id === "advik") m.happiness = egg.cursed ? Math.max(0, m.happiness - 30) : Math.min(100, m.happiness + 50);
+  return m;
+}
+
+// The buildings that teach people to read (Suveer's blessing: never needed for an advancement).
+export const LITERACY_BUILDINGS = ["elder", "school", "academy", "university", "library"];

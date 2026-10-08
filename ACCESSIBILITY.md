@@ -26,7 +26,7 @@ The game supports mouse input and touch layouts. Some actions also have keyboard
 
 ## Report a barrier
 
-Open a [bug report](https://github.com/DaBabaBOI/shistech-hackathon/issues/new?template=bug_report.yml) for a barrier in the current experience, or a [feature request](https://github.com/DaBabaBOI/shistech-hackathon/issues/new?template=feature_request.yml) for an improvement. Start the title with `[Accessibility]` and include, when possible:
+Open a [bug report](https://github.com/DaBabaBOI/emberline-game-actual/issues/new?template=bug_report.yml) for a barrier in the current experience, or a [feature request](https://github.com/DaBabaBOI/emberline-game-actual/issues/new?template=feature_request.yml) for an improvement. Start the title with `[Accessibility]` and include, when possible:
 
 - What you were trying to do and what happened
 - What you expected to happen

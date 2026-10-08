@@ -139,7 +139,7 @@ import { cureHint, diseaseName, isCalm, maybeOutbreak, sickShare, stepDisease } 
 import { hexDistance } from "./hex";
 import { generateMap, ISLANDS, isLand, revealAround, riverPath, terrainHeight } from "./map";
 import { mulberry32 } from "./noise";
-import { cameosFor, EGGS, GOLDEN_DEER_FOOD, type EggId } from "./easter";
+import { cameosFor, EGGS, GOLDEN_DEER_FOOD, LITERACY_BUILDINGS, NAME_EGGS, nameEggMeters, nameEggOf, type EggId } from "./easter";
 import type { IconId } from "./sprites";
 import type {
   BoostKey,
@@ -294,6 +294,8 @@ export interface NewGameOptions {
   realTimeFrom?: number;
   startEra?: number;
   nation?: string;
+  // The name egg the last new game used (the same one again is cursed).
+  lastNameEgg?: string | null;
   // Multiplayer: everyone in a room plays the same island (the room's seed).
   seed?: number;
   // "Build to Last": start in the Industrial era with three big problems.
@@ -316,6 +318,9 @@ export function newGame(
 ): GameState {
   const seed = options.seed ?? Math.floor(Math.random() * 1e9);
   const { tiles, startTile } = generateMap(seed);
+  // A name egg (not in multiplayer): blessed, or cursed if it was used last time too.
+  const eggId = options.mp ? null : nameEggOf(options.nation);
+  const nameEgg = eggId ? { id: eggId, cursed: options.lastNameEgg === eggId } : undefined;
   const state: GameState = {
     version: SAVE_VERSION,
     phase: "playing",
@@ -354,7 +359,12 @@ export function newGame(
     event: null,
     nextEventTick: 90,
     // Team cameos (easter eggs): their joke, newest first, after the opening line.
-    log: [...cameosFor(options.nation).map((m) => m.joke).reverse(), `${cleanNation(options.nation)} gather on the shores of Westmarch.`],
+    log: [
+      ...(nameEgg ? [nameEgg.cursed ? NAME_EGGS[nameEgg.id].curse : NAME_EGGS[nameEgg.id].blessing] : []),
+      ...cameosFor(options.nation).map((m) => m.joke).reverse(),
+      `${cleanNation(options.nation)} gather on the shores of Westmarch.`,
+    ],
+    ...(nameEgg ? { nameEgg } : {}),
   };
   state.forestBaseline = forestGrowthNearHome(state);
   // Elder Ama hands over what each tutorial step needs when it starts (see
@@ -915,7 +925,9 @@ function travelDiscount(state: GameState) {
 
 export function scoutCost(state: GameState): Partial<Resources> {
   const n = state.scoutsSent;
-  const discount = travelDiscount(state);
+  // Suveer's blessing: scouts go for free (cursed: they cost double).
+  const egg = state.nameEgg?.id === "suveer" ? (state.nameEgg.cursed ? 2 : 0) : 1;
+  const discount = travelDiscount(state) * egg;
   return {
     food: Math.round((25 + n * 20) * discount),
     wood: Math.round((10 + n * 10) * discount),
@@ -3773,7 +3785,8 @@ export function computeMeters(state: GameState): Meters {
     fatigueMood(state) +
     state.modifiers.happiness;
 
-  return {
+  // Name eggs (blessings and curses) last the whole game.
+  return nameEggMeters(state.nameEgg, {
     food: clamp(food),
     shelter: clamp(shelter),
     // Grief comes off after the cap, so a happy tribe still feels it.
@@ -3781,7 +3794,7 @@ export function computeMeters(state: GameState): Meters {
     literacy: clamp(literacy),
     energy: clamp(energy),
     sustainability: clamp(sustainability),
-  };
+  });
 }
 
 function checkSecrets(state: GameState): GameState {
@@ -4001,6 +4014,8 @@ function goalHave(state: GameState, nodeId: string, g: Goal): number {
       return start === undefined ? 0 : tallyOf(state, g.key!) - start;
     }
     case "have":
+      // Suveer's blessing: schools and the like are never needed.
+      if (state.nameEgg?.id === "suveer" && !state.nameEgg.cursed && LITERACY_BUILDINGS.includes(g.building!)) return g.amount;
       return countBuildings(state)[g.building!] ?? 0;
     case "population":
       return Math.floor(state.population);

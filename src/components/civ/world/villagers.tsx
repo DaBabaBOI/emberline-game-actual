@@ -172,8 +172,11 @@ function stepWalker(w: Walker, dt: number, ground: Ground, pickTarget: () => Til
   if (dist < 0.05) {
     w.moving = false;
     // Arrived at a workplace they chose: get to work there for a while.
-    if (w.goWork) {
-      const tile = w.goWork;
+    // (What stands there now: it may have been sold and something else built.)
+    const there = w.goWork && ground.tileAt(w.goWork.x, w.goWork.z);
+    if (w.goWork && (!there || !WORK_TOOLS[there.building ?? ""])) w.goWork = null;
+    if (w.goWork && there) {
+      const tile = there;
       w.goWork = null;
       w.working = true;
       w.workAt = tile;
@@ -190,6 +193,12 @@ function stepWalker(w: Walker, dt: number, ground: Ground, pickTarget: () => Til
       w.wait = 6 + Math.random() * 8;
     }
     w.wait -= dt;
+    // The workplace changed under them (a woodcutter sold, a data centre built
+    // there): no more chopping at it.
+    if (w.workAt && ground.tileAt(w.workAt.x, w.workAt.z)?.building !== w.workAt.building) {
+      w.workUntil = 0;
+      w.working = false;
+    }
     if (w.wait <= 0 && w.workAt && performance.now() < (w.workUntil ?? 0)) {
       // Done with this patch (or tree): on to the next one.
       const spot = ground.workSpot(w.workAt, w.workTool);

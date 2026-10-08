@@ -123,6 +123,6 @@ bot can't see:
 
 ### Dev mode
 
-`/play/?dev` lets anyone, including judges, check a feature in seconds: start in
+`/play/?dev` lets anyone check a feature in seconds: start in
 any era with plenty of resources, then trigger raids, the legion, wildfire,
 sparks, outbreaks, any event card or lesson, or end the era.

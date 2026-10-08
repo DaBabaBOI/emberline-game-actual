@@ -13,8 +13,8 @@ Thanks for helping improve Emberline.
 ## Development setup
 
 ```bash
-git clone https://github.com/DaBabaBOI/shistech-hackathon.git
-cd shistech-hackathon
+git clone https://github.com/DaBabaBOI/emberline-game-actual.git
+cd emberline-game-actual
 npm install
 npm run dev
 ```

@@ -2,7 +2,7 @@
 
 **Grow a civilization from the Stone Age to space, without wrecking the land it lives on.**
 
-Emberline is a real-time hex-island city builder where every home, farm and power plant brings a benefit *and* a cost. Built for the **SHISTECH Hacktrack** hackathon (UN Sustainable Development Goals theme) around **SDG 11: Sustainable Cities and Communities**.
+Emberline is a real-time hex-island city builder where every home, farm and power plant brings a benefit *and* a cost. It is built around the UN Sustainable Development Goals, and most of all **SDG 11: Sustainable Cities and Communities**. We keep making it better, one update at a time.
 
 ### ▶ [Play it now](https://dabababoi.github.io/emberline-game-actual/)
 
@@ -14,9 +14,7 @@ No install. Runs in the browser on a laptop or a phone.
 | --- | --- | --- |
 | ![A Medieval town](public/site/shots/medieval.jpg) | ![An Industrial city](public/site/shots/industrial.jpg) | ![A Future city](public/site/shots/future.jpg) |
 
-> **Judges:** full documentation, mapped to each judging criterion, is in [`docs/`](docs/README.md): [game design](docs/design.md) · [architecture](docs/architecture.md) · [process and testing](docs/process.md) · [finals presentation plan](docs/presentation.md).
->
-> **Still to add:** gameplay GIF (`assets/gameplay.gif`) and demo video link.
+> **More:** full documentation is in [`docs/`](docs/README.md): [game design](docs/design.md) · [architecture](docs/architecture.md) · [process and testing](docs/process.md).
 
 ---
 
