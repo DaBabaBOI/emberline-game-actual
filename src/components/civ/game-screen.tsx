@@ -20,6 +20,7 @@ import { GuideOverlay, useGuide } from "./hud/guide-overlay";
 import { Debrief, GoalLine, LastIntro, LastTutorialPanel, NextEraPrompt } from "./hud/debrief";
 import { DiscoveryScene } from "./hud/discovery-scene";
 import { FinalEnding } from "./hud/final-ending";
+import { NameEggCard } from "./hud/name-egg-card";
 import { Letterbox, useShot } from "./hud/letterbox";
 import { HintPanel } from "./hud/hints";
 import { GameAudio } from "./hud/game-audio";
@@ -135,6 +136,7 @@ function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null 
         <Debrief onRestart={onRestart} />
       </div>
       <FinalEnding />
+      <NameEggCard />
       <Letterbox />
       <BattleCamera />
       <LastIntro />

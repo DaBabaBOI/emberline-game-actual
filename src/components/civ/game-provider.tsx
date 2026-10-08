@@ -61,7 +61,7 @@ export function GameProvider({
   // The world waits while the debrief is on screen.
   // ...and while a discovery scene plays.
   // ...and while Elder Ama thinks about a question.
-  const paused = !!state.debrief || !!state.cutscene || asking;
+  const paused = !!state.debrief || !!state.cutscene || asking || (!!state.nameEgg && !state.nameEgg.seen);
 
   // First-time mode starts with a slower clock (tickSeconds).
   const perTick = tickSeconds(state);

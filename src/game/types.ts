@@ -421,7 +421,7 @@ export interface GameState {
   // The name the player gave their people.
   nation?: string;
   // A name egg (see NAME_EGGS): blessed, or cursed for using it twice in a row.
-  nameEgg?: { id: "prithu" | "suveer" | "advik"; cursed: boolean };
+  nameEgg?: { id: "prithu" | "suveer" | "advik"; cursed: boolean; seen?: boolean };
   tiles: Tile[];
   startTile: number;
   era: number;

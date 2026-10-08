@@ -219,6 +219,8 @@ export type Action =
   | { type: "devEnding"; kind: "ark" | "fallen" }
   // The final cutscene has played.
   | { type: "seenEnding" }
+  // The name egg's card has been read.
+  | { type: "seeNameEgg" }
   // Multiplayer: gifts and raids between players.
   | { type: "trade"; get: "food" | "wood" | "stone" }
   | { type: "sell"; give: "food" | "wood" | "stone" }
@@ -6795,6 +6797,9 @@ function step(state: GameState, action: Action): GameState {
       const next = withMeters(addXp(project.id === "moonbase" ? addTally(launched, "moonbase", 1) : launched, XP.research));
       return project.id === "ark" ? launchArk(next) : next;
     }
+
+    case "seeNameEgg":
+      return state.nameEgg && !state.nameEgg.seen ? { ...state, nameEgg: { ...state.nameEgg, seen: true } } : state;
 
     case "seenEnding":
       return state.endingSeen === false || state.phase === "gameover" ? { ...state, endingSeen: true } : state;

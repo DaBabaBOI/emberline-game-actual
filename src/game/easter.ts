@@ -46,22 +46,60 @@ export const GOLDEN_DEER_CHANCE = 0.02;
 // the one after is blessed again. Not in multiplayer.
 export type NameEggId = "prithu" | "suveer" | "advik";
 
-export const NAME_EGGS: Record<NameEggId, { name: string; also: RegExp; blessing: string; curse: string }> = {
+export const NAME_EGGS: Record<
+  NameEggId,
+  { name: string; also: RegExp; blessing: string; curse: string; card: { title: string; lines: string[] }; curseCard: { title: string; lines: string[] } }
+> = {
   prithu: {
     name: "prithu",
     also: /pr[iy]+th/,
+    card: {
+      title: "The Founder's Blessing",
+      lines: [
+        "The one who lit the very first ember of Emberline walks among your people.",
+        "Every meter stays at 100, for the whole game.",
+        "(He is already asking the elders for more features.)",
+      ],
+    },
+    curseCard: {
+      title: "The Founder Is Busy",
+      lines: [
+        "You called on Prithu twice in a row. He is busy fixing bugs.",
+        "Every meter is 20 lower, for the whole game.",
+        "Pick another name next time, and his blessing comes back.",
+      ],
+    },
     blessing: "Prithu's blessing: every meter stays at 100, for the whole game.",
     curse: "Prithu again? The spirits are tired of the same name: every meter is 20 lower, for the whole game.",
   },
   suveer: {
     name: "suveer",
     also: /suv[ie]+r/,
+    card: {
+      title: "The Pathfinder's Blessing",
+      lines: [
+        "Suveer knows every path on these islands, and never once needed a map.",
+        "Scouts go for free. Nobody here needs schooling: literacy is full, and no advancement asks for a school.",
+      ],
+    },
+    curseCard: {
+      title: "Suveer Got Lost",
+      lines: ["Twice in a row? Suveer took a wrong turn somewhere.", "Scouts cost double, and reading comes slowly (literacy is halved).", "Pick another name next time, and his blessing comes back."],
+    },
     blessing: "Suveer's blessing: nobody here needs to learn to read (literacy is full, and no advancement asks for a school), and scouts go for free.",
     curse: "Suveer again? Scouts cost double, and reading comes slowly (literacy is halved).",
   },
   advik: {
     name: "advik",
     also: /adv[ie]+k/,
+    card: {
+      title: "The Joyful Blessing",
+      lines: ["Advik's laugh carries right across the island, and nobody can stay grumpy for long.", "+50 happiness, for the whole game."],
+    },
+    curseCard: {
+      title: "Advik Is Grumpy Today",
+      lines: ["The same name twice? Advik is not amused.", "-30 happiness, for the whole game.", "Pick another name next time, and his blessing comes back."],
+    },
     blessing: "Advik's blessing: everyone is cheerful (+50 happiness, for the whole game).",
     curse: "Advik again? A gloom settles over the tribe (-30 happiness, for the whole game).",
   },

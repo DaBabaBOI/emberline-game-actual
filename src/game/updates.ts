@@ -17,6 +17,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Secret names now get their own golden blessing card (or a purple curse card) when the game begins.",
       "Secret names: some people names bring a blessing for the whole game. Use the same one twice in a row and the second game is cursed.",
       "Villagers no longer keep chopping or digging at a building that was sold and replaced (no more axes at the data centre).",
       "A real ending: Type I is now the last step before the stars. Launch the Ember Ark for the final cutscene: the launch, a look back at every era, and home still green. Lose the world in the Future era and you see what that looks like too.",
