@@ -69,6 +69,7 @@ import { Wildlife } from "./wildlife";
 import { Links } from "./links";
 import { RebuildDust, RebuildPop } from "./rebuild";
 import { LeaderRig } from "./leader-rig";
+import { useWorldHeld } from "@/components/civ/cutscene/active";
 import { useLeader } from "./leader";
 import { useHoveredBuilding } from "./hovered";
 import { usePlanMode } from "./plan-mode";
@@ -491,6 +492,7 @@ export function WorldCanvas() {
   // Leader mode: walking in first person (not while a camera shot plays).
   const leaderView = useLeader().view;
   const fpActive = !!state.leader && leaderView === "fp" && !shot;
+  const worldHeld = useWorldHeld();
   const planning = usePlanMode();
   const Ghost = def ? MODELS[def.id] : null;
   // Warn before a purchase that would leave the fires short of wood.
@@ -615,6 +617,8 @@ export function WorldCanvas() {
 
   return (
     <Canvas
+      // A 3D cutscene is playing over the world: stop drawing it meanwhile.
+      frameloop={worldHeld ? "never" : "always"}
       // The tutorial overlay forwards camera turns and zooms here (guide-overlay.tsx).
       data-world-map=""
       // Plain PCF shadows: three.js dropped the soft kind.

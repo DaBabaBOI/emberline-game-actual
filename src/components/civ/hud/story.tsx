@@ -1,36 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ERAS } from "@/game/content";
 import { storyObjectiveDone } from "@/game/engine";
-import { CAST, CHAPTERS, type Speaker } from "@/game/story";
-import type { IconId } from "@/game/sprites";
+import { CAST, CHAPTERS } from "@/game/story";
 import { useGame } from "@/components/civ/game-provider";
-import { PixelIcon } from "@/components/civ/pixel-icon";
+import { Stage3D } from "@/components/civ/cutscene/stage";
+import { storySet, storyShot } from "@/components/civ/cutscene/shots";
 import { cn } from "@/lib/utils";
 import { playSfx } from "@/lib/audio";
 import { useShot } from "./letterbox";
 
-// Story mode (The Ember Keepers): the chapter's scene, told like a picture
-// book: the era behind, the characters in front (whoever speaks steps up), and
-// their words typed out underneath. Click, Space or Enter to go on.
-
-// Each era behind the scene: its sky, its ground and what stands on its hills.
-const BACKDROPS: { sky: string; ground: string; hills: string; skyline: IconId[] }[] = [
-  { sky: "linear-gradient(#f6b58c, #fbe3b8 70%)", ground: "#7cae4c", hills: "#5b8f3a", skyline: ["sapling", "campfire", "hut", "sapling"] },
-  { sky: "linear-gradient(#7cc4ee, #d6f0fb 75%)", ground: "#a7b85a", hills: "#86a04a", skyline: ["wheat", "bricks", "well", "wheat"] },
-  { sky: "linear-gradient(#e9c27a, #fbe9c4 75%)", ground: "#b8a46a", hills: "#9c8a52", skyline: ["column", "aqueduct", "insula", "baths"] },
-  { sky: "linear-gradient(#6b4a8a, #e98b5a 80%)", ground: "#5f8a3e", hills: "#3f6a2e", skyline: ["windmill", "castle", "church", "boat"] },
-  { sky: "linear-gradient(#5c544c, #b9ab98 80%)", ground: "#6a6a5a", hills: "#4f4f44", skyline: ["factory", "train", "powerplant", "turbine"] },
-  { sky: "linear-gradient(#123a52, #6fc3d6 80%)", ground: "#4f9a5a", hills: "#3a7a46", skyline: ["solar", "arcology", "rocket", "turbine"] },
-];
+// Story mode (The Ember Keepers): the chapter's scene, played in 3D on a
+// little island of its era: Ama, Kito and Lina stand in front of the town, the
+// camera goes to whoever speaks (wide over the town for the narrator), and
+// their words are typed out underneath. Click, Space or Enter to go on.
 
 export function StoryScene() {
   const { state, dispatch } = useGame();
   const shot = useShot();
   const story = state.story;
   const chapter = story ? CHAPTERS[story.chapter] : null;
-  const lines = !story?.scene || !chapter ? [] : story.scene === "intro" ? chapter.intro : chapter.outro ?? [];
+  const sceneName = story?.scene;
+  const lines = useMemo(() => (!sceneName || !chapter ? [] : sceneName === "intro" ? chapter.intro : chapter.outro ?? []), [sceneName, chapter]);
   const key = story?.scene ? `${story.chapter}-${story.scene}` : "";
   const [at, setAt] = useState({ key, line: 0, chars: 0 });
   const line = at.key === key ? at.line : 0;
@@ -38,6 +30,16 @@ export function StoryScene() {
   const text = lines[line]?.[1] ?? "";
   const typing = chars < text.length;
   const showing = !!story?.scene && !!chapter && !shot;
+  const speaker = lines[line]?.[0] ?? "narrator";
+
+  // The set for this scene, and the shot for this line (only when the speaker
+  // changes, so the typing doesn't redraw the 3D scene).
+  const chapterIndex = story?.chapter ?? 0;
+  const scene = story?.scene ?? "intro";
+  const set = useMemo(() => (chapter ? storySet(chapter, scene, chapterIndex) : null), [chapter, scene, chapterIndex]);
+  // Everyone who speaks in this scene stands on stage.
+  const cast = useMemo(() => Array.from(new Set(lines.map(([who]) => who).filter((w) => w !== "narrator"))) as ("ama" | "kito" | "lina")[], [lines]);
+  const stageShot = useMemo(() => (set ? storyShot(`story-${key}`, set, cast, speaker) : null), [set, cast, speaker, key]);
 
   // Type the line out, a few letters at a time.
   useEffect(() => {
@@ -68,28 +70,18 @@ export function StoryScene() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  if (!showing || !story || !chapter) return null;
+  if (!showing || !story || !chapter || !stageShot) return null;
   const outro = story.scene === "outro";
-  const speaker = lines[line]?.[0] ?? "narrator";
-  const backdrop = BACKDROPS[Math.min(chapter.era, BACKDROPS.length - 1)];
-  // Everyone who speaks in this scene stands on stage.
-  const cast = Array.from(new Set(lines.map(([who]) => who).filter((w) => w !== "narrator"))) as Speaker[];
   const last = !typing && line === lines.length - 1;
   return (
     <div className="pointer-events-auto fixed inset-0 z-[56] flex flex-col bg-black text-white" data-testid="story-scene" onClick={next} role="presentation">
-      {/* The era behind them. */}
-      <div className="story-stage relative flex-1 overflow-hidden" style={{ background: backdrop.sky }}>
-        <div className="absolute inset-x-[-5%] bottom-[22%] h-[30%] rounded-t-[50%]" style={{ background: backdrop.hills }} />
-        <div className="absolute inset-x-0 bottom-[44%] flex justify-around px-[8%] opacity-60" style={{ filter: "saturate(0.6)" }}>
-          {backdrop.skyline.map((icon, i) => (
-            <PixelIcon key={i} name={icon} size={56} />
-          ))}
-        </div>
-        <div className="absolute inset-x-0 bottom-0 h-[24%]" style={{ background: backdrop.ground }} />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/50" />
+      {/* The scene, in 3D. */}
+      <div className="story-stage relative flex-1 overflow-hidden" data-era={chapter.era}>
+        <Stage3D shot={stageShot} className="absolute inset-0" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-black/30" />
 
         {/* The chapter's title, as the scene opens. */}
-        <div className="story-title font-pixel absolute inset-x-0 top-[8%] text-center drop-shadow-[0_3px_0_rgba(0,0,0,0.6)]">
+        <div className="story-title font-pixel pointer-events-none absolute inset-x-0 top-[6%] text-center drop-shadow-[0_3px_0_rgba(0,0,0,0.6)]">
           <div className="text-xs uppercase tracking-[0.35em] text-amber-200 md:text-sm">
             {outro ? "Chapter complete" : `Chapter ${story.chapter + 1} of ${CHAPTERS.length} · ${ERAS[chapter.era].name}`}
           </div>
@@ -104,34 +96,23 @@ export function StoryScene() {
           )}
         </div>
 
-        {/* The characters: whoever speaks steps forward. */}
-        <div className="absolute inset-x-0 bottom-[6%] flex items-end justify-center gap-6 md:gap-14">
-          {cast.map((who) => {
-            const c = CAST[who];
-            const speaking = who === speaker;
-            return (
-              <div key={who} className={cn("story-actor flex flex-col items-center transition-all duration-300", speaking ? "scale-110 opacity-100" : "scale-90 opacity-60 grayscale-[40%]")}>
-                <span className="relative block">
-                  <span className={cn("block", speaking && "scene-bob")}>
-                    <PixelIcon name={c.icon as IconId} size={104} />
-                  </span>
-                  {c.badge && (
-                    <span className="absolute -right-3 bottom-2">
-                      <PixelIcon name={c.badge as IconId} size={40} />
-                    </span>
-                  )}
-                </span>
-                <span className="font-pixel mt-1 px-2 text-sm font-semibold" style={{ background: c.color }}>
-                  {c.name}
-                </span>
-              </div>
-            );
-          })}
+        {/* Who is on stage, the speaker lit up. */}
+        <div className="pointer-events-none absolute bottom-3 left-3 flex gap-1.5">
+          {cast.map((who) => (
+            <span
+              key={who}
+              className={cn("font-pixel px-2 py-0.5 text-xs font-semibold transition-opacity duration-300", who === speaker ? "opacity-100" : "opacity-45")}
+              style={{ background: CAST[who].color }}
+            >
+              {CAST[who].name}
+            </span>
+          ))}
         </div>
       </div>
 
-      {/* What they say. */}
-      <div className="font-pixel relative min-h-[26vh] border-t-4 border-[#2b2119] bg-[#1b140f] px-5 py-4 md:px-12" data-testid="story-line">
+      {/* What they say. The whole line is laid out from the start (the part not
+          yet typed is invisible), so words never jump from line to line. */}
+      <div className="font-pixel relative h-[26vh] min-h-[9.5rem] border-t-4 border-[#2b2119] bg-[#1b140f] px-5 py-4 md:px-12" data-testid="story-line">
         {speaker !== "narrator" ? (
           <div className="mb-1 inline-block px-2 text-sm font-semibold" style={{ background: CAST[speaker].color }}>
             {CAST[speaker].name}
@@ -139,9 +120,16 @@ export function StoryScene() {
         ) : (
           <div className="mb-1 text-xs uppercase tracking-[0.3em] text-amber-300/80">The story so far</div>
         )}
-        <p className={cn("max-w-4xl text-base leading-relaxed md:text-xl", speaker === "narrator" && "italic text-amber-50/90")}>
-          {text.slice(0, chars)}
-          {typing && <span className="story-caret">▌</span>}
+        <p className={cn("max-w-4xl text-base leading-relaxed md:text-xl", speaker === "narrator" && "italic text-amber-50/90")} aria-label={text}>
+          <span aria-hidden="true">{text.slice(0, chars)}</span>
+          {typing && (
+            <span className="relative inline-block w-0" aria-hidden="true">
+              <span className="story-caret absolute left-0">▌</span>
+            </span>
+          )}
+          <span className="invisible" aria-hidden="true">
+            {text.slice(chars)}
+          </span>
         </p>
         <div className="absolute bottom-3 right-5 flex items-center gap-3 text-xs text-white/60">
           <span>

@@ -692,8 +692,9 @@ button {
 /* ---- Story mode scene (hud/story.tsx) -------------------------------------- */
 .story-stage { animation: fin-in 0.8s ease both; }
 .story-title { animation: story-title 1.2s ease both; }
-@keyframes story-title { from { opacity: 0; transform: translateY(-12px); letter-spacing: 0.08em; } to { opacity: 1; transform: none; } }
-.story-actor { animation: story-actor 0.7s ease both; }
-@keyframes story-actor { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; } }
+@keyframes story-title { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: none; } }
 .story-caret { animation: scene-twinkle 0.8s steps(2) infinite; }
-@media (prefers-reduced-motion: reduce) { .story-stage, .story-title, .story-actor, .story-caret { animation: none; } }
+/* A quick dip to black between shots of the film. */
+.fin-cut { animation: fin-cut 0.7s ease-out both; }
+@keyframes fin-cut { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .story-stage, .story-title, .story-caret, .fin-cut { animation: none; } }

@@ -17,6 +17,8 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Cutscenes are now filmed in 3D, like the game itself: discoveries play on a little island of your era (what they found is built of blocks, and a building it unlocks rises behind it), story scenes put Ama, Kito and Lina in front of their town with the camera on whoever speaks, and the Ark and lost-world endings are full 3D films.",
+      "Story mode: the typed-out lines no longer jitter (words used to jump from line to line as they were typed).",
       "Leader mode (first person): walk your island as the chief with WASD and the mouse, talk to villagers (E) and send them to work, strike raiders yourself in a fight, and press Tab for the build view.",
       "Story mode: The Ember Keepers. Thirteen chapters across all six eras, with scenes between Elder Ama, Kito and Lina, objectives and rewards for every chapter, and one ending: the Ember Ark.",
       "New Plan button: turn it on, pick a building and click the map to lay out blueprints. Each goes up by itself, in order, as soon as you can afford it.",
