@@ -7,6 +7,7 @@ import { WORK_TOOLS } from "@/components/civ/world/figures";
 import { leader, setLeaderMenu, setLeaderView, useLeader } from "@/components/civ/world/leader";
 import { grabStore } from "@/components/civ/world/villagers";
 import { hexDistance, worldToAxial } from "@/game/hex";
+import { soilOf } from "@/game/engine";
 import type { IconId } from "@/game/sprites";
 
 // Leader mode on screen: in first person, a crosshair, what you can do right
@@ -33,7 +34,8 @@ export function LeaderHud() {
   const here = worldToAxial(leader.x, leader.z);
   const jobs = menu
     ? state.tiles
-        .filter((t) => t.building && WORK_TOOLS[t.building])
+        // Not a field lying fallow: there's nothing to do there till it's back.
+        .filter((t) => t.building && WORK_TOOLS[t.building] && soilOf(state, t) !== "resting")
         .map((t) => ({ tile: t, d: hexDistance(t, { q: here.q, r: here.r }) }))
         .sort((a, b) => a.d - b.d)
         .slice(0, 8)

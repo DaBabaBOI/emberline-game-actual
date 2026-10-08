@@ -29,6 +29,10 @@ export interface Agent {
   fallen?: number;
   // A gold crown (the team cameos, an easter egg).
   crown?: boolean;
+  // Fighting: 0–1 through one blow with the weapon (wind up, strike, recover).
+  strike?: number;
+  // Weapon raised high in triumph.
+  cheer?: boolean;
 }
 
 export type WorkTool = "hoe" | "axe" | "pick" | "hammer" | "shovel" | "book" | "carry" | "pray";
@@ -115,6 +119,29 @@ function workStroke(t: number, phase: number) {
     return { swing: HIGH + (LOW - HIGH) * k * k, hit: 0 };
   }
   return { swing: LOW, hit: 1 - (p - 0.68) / 0.32 };
+}
+
+// One blow in a fight, 0–1 through it: where the weapon arm is, and the angle
+// the weapon points (same convention as the arms). A spear is drawn back,
+// lowered and thrust forward; a club or sword goes up over the head and comes
+// down hard. Either way it lands at 0.6 and comes back to the ready.
+const smooth = (k: number) => k * k * (3 - 2 * k);
+function blow(u: number, weapon: "spear" | "club" | "sword") {
+  const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
+  if (weapon === "spear") {
+    if (u < 0.45) return { arm: lerp(-0.7, -0.3, smooth(u / 0.45)), angle: lerp(-2.75, -1.75, smooth(u / 0.45)) };
+    if (u < 0.6) return { arm: lerp(-0.3, -1.6, (u - 0.45) / 0.15), angle: lerp(-1.75, -1.6, (u - 0.45) / 0.15) };
+    const k = smooth((u - 0.6) / 0.4);
+    return { arm: lerp(-1.6, -0.7, k), angle: lerp(-1.6, -2.75, k) };
+  }
+  const rest = weapon === "sword" ? -2.55 : -2.6;
+  if (u < 0.45) return { arm: lerp(-0.7, -2.9, smooth(u / 0.45)), angle: lerp(rest, -3.5, smooth(u / 0.45)) };
+  if (u < 0.6) {
+    const k = (u - 0.45) / 0.15;
+    return { arm: lerp(-2.9, -0.8, k * k), angle: lerp(-3.5, -1.1, k * k) };
+  }
+  const k = smooth((u - 0.6) / 0.4);
+  return { arm: lerp(-0.8, -0.7, k), angle: lerp(-1.1, rest, k) };
 }
 
 // Puts `obj` so a stick of `length` (built along y, like a cylinder) points
@@ -233,8 +260,12 @@ export function Figures({
       put(crown.current, i);
       local.scale.set(1, 1, 1);
 
-      // The weapon arm stays bent forward, gripping it, with only a small swing.
-      const weaponArm = weapon && work === null && !a.sitting ? -0.7 + swing * 0.15 : null;
+      // The weapon arm stays bent forward, gripping it, with only a small swing;
+      // in a fight it strikes, and after a win it is thrust up in the air.
+      const fighting = weapon && !a.fallen && a.strike !== undefined ? blow(a.strike, weapon) : null;
+      const cheering = weapon && !a.fallen && a.cheer ? { arm: -2.85 + Math.sin(t * 6 + a.phase) * 0.12, angle: -3.05 } : null;
+      const pose = cheering ?? fighting;
+      const weaponArm = weapon && work === null && !a.sitting ? (pose ? pose.arm : -0.7 + swing * 0.15) : null;
       for (const side of [-1, 1]) {
         const k = side < 0 ? 0 : 1;
         const legAngle = praying ? -Math.PI / 2 + 0.15 : a.sitting ? -0.85 : (holding ? swing * 0.6 : swing) * side;
@@ -267,17 +298,18 @@ export function Figures({
         // sword raised ready in front.
         const hand = handAt(1, weaponArm ?? (a.sitting ? -0.75 : 0), 0.12);
         if (weapon === "spear") {
-          holdStick(local, hand, -2.75, 0.6, 0.2);
+          const angle = pose?.angle ?? -2.75;
+          holdStick(local, hand, angle, 0.6, 0.2);
           put(tool.current, i);
           // The stone point at the top end.
-          const d = { y: -Math.cos(-2.75), z: -Math.sin(-2.75) };
+          const d = { y: -Math.cos(angle), z: -Math.sin(angle) };
           local.position.set(hand.x, hand.y + d.y * 0.42, hand.z + d.z * 0.42);
           put(tip.current, i);
         } else if (weapon === "sword") {
-          holdStick(local, hand, -2.55, 0.2, 0.0);
+          holdStick(local, hand, pose?.angle ?? -2.55, 0.2, 0.0);
           put(tool.current, i);
         } else {
-          holdStick(local, hand, -2.6, 0.2, 0.02);
+          holdStick(local, hand, pose?.angle ?? -2.6, 0.2, 0.02);
           put(tool.current, i);
         }
       }

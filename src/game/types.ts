@@ -423,7 +423,7 @@ export interface GameState {
   // The name the player gave their people.
   nation?: string;
   // A name egg (see NAME_EGGS): blessed, or cursed for using it twice in a row.
-  nameEgg?: { id: "prithu" | "suveer" | "advik"; cursed: boolean; seen?: boolean };
+  nameEgg?: { id: "prithu" | "suveer" | "advik" | "jai"; cursed: boolean; seen?: boolean };
   // A speedrun (a new game started with the timer on): real time (ms since
   // 1970) from `start`, a split for each era reached, and `end` once the story
   // is told. `invalid` says why it can't go on the records.

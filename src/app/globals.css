@@ -698,3 +698,8 @@ button {
 .fin-cut { animation: fin-cut 0.7s ease-out both; }
 @keyframes fin-cut { from { opacity: 1; } to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .story-stage, .story-title, .story-caret, .fin-cut { animation: none; } }
+
+/* The end of a fight: the result pops up over the battle shot. */
+.battle-result { animation: battle-result 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+@keyframes battle-result { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .battle-result { animation: none; } }

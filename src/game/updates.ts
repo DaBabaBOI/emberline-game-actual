@@ -17,6 +17,9 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Raids reworked: raiders land in war canoes, the fight starts right where both sides stand (no more jumping), and it's a real fight: spears thrust, clubs come down, every blow lands with a spark, the fallen are knocked back, and the winners cheer. It lasts longer, the close-up shows who's winning (train warriors to tip it), and ends with a big result. The losers row away.",
+      "New name egg: call your people Jai and every band of raiders comes with 5 fewer fighters (use it twice in a row and they bring 5 more).",
+      "Resting fields: nobody works a field lying fallow any more, and resting fields have a blue outline so you can tell them from tired ones (orange flag).",
       "Cutscenes are now filmed in 3D, like the game itself: discoveries play on a little island of your era (what they found is built of blocks, and a building it unlocks rises behind it), story scenes put Ama, Kito and Lina in front of their town with the camera on whoever speaks, and the Ark and lost-world endings are full 3D films.",
       "Story mode: the typed-out lines no longer jitter (words used to jump from line to line as they were typed).",
       "Leader mode (first person): walk your island as the chief with WASD and the mouse, talk to villagers (E) and send them to work, strike raiders yourself in a fight, and press Tab for the build view.",

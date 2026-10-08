@@ -60,7 +60,7 @@ import type { GameState, Tile } from "@/game/types";
 import { BiomeDetails, Deposits, Forests, HexTerrain, Mountains, tileTop, treeSpots } from "./hex-terrain";
 import { BUILDING_SCALE, MODELS, buildingTurn } from "./building-models";
 import { turnFor } from "./facing";
-import { BattleScene, FireVictims, Raiders, Villagers, Warriors } from "./villagers";
+import { BattleScene, FireVictims, RaidBoats, Raiders, Villagers, Warriors } from "./villagers";
 import { PickUp } from "./pick-up";
 import { SeaTraffic, TradeShips, WaitingShips } from "./trade";
 import { ForeignVillages } from "./foreign";
@@ -101,9 +101,14 @@ function HexOutline({ x, y, z, color }: { x: number; y: number; z: number; color
 // so you can see at a glance which ones want a rest (click one to rest it).
 function TiredFields({ state }: { state: GameState }) {
   const tired = state.tiles.filter((t) => soilOf(state, t) === "tired");
-  if (!tired.length) return null;
+  // Fields lying fallow: a calm blue outline (nobody works them till they're back).
+  const resting = state.tiles.filter((t) => soilOf(state, t) === "resting");
+  if (!tired.length && !resting.length) return null;
   return (
     <group>
+      {resting.map((t) => (
+        <HexOutline key={`r${t.id}`} x={t.x} y={tileTop(t)} z={t.z} color="#38bdf8" />
+      ))}
       {tired.map((t) => (
         <group key={t.id}>
           <HexOutline x={t.x} y={tileTop(t)} z={t.z} color="#f97316" />
@@ -757,6 +762,7 @@ export function WorldCanvas() {
         cameos={cameos}
         gameSpeed={state.speed}
         danger={fightAt}
+        resting={state.tiles.filter((t) => soilOf(state, t) === "resting").map((t) => t.id)}
       />
       <PickUp state={state} dispatch={dispatch} enabled={canPickUp && !fpActive} onHolding={setHolding} />
       <KeyboardPan controls={mapControls} enabled={!holding && !shot && !guide.target} />
@@ -773,6 +779,7 @@ export function WorldCanvas() {
       />
       <BattleScene tiles={state.tiles} battle={shown} homeTile={home} speed={state.speed} />
       <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} speed={state.speed} />
+      <RaidBoats tiles={state.tiles} raid={state.raid} homeTile={home} speed={state.speed} />
       <TradeShips tiles={state.tiles} home={home} caravans={state.caravans ?? []} tick={state.tick} speed={state.speed} />
       <ChimneySmoke tiles={buildings} cleanAir={state.researched.includes("cleanair")} />
       <SeaTraffic state={state} home={home} />

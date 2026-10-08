@@ -144,7 +144,7 @@ import { generateMap, ISLANDS, isLand, revealAround, riverPath, terrainHeight } 
 import { mulberry32 } from "./noise";
 import { sealMatches, sealOf } from "./seal";
 import { CHAPTERS, type Objective } from "./story";
-import { cameosFor, EGGS, GOLDEN_DEER_FOOD, LITERACY_BUILDINGS, NAME_EGGS, nameEggMeters, nameEggOf, type EggId } from "./easter";
+import { cameosFor, EGGS, GOLDEN_DEER_FOOD, LITERACY_BUILDINGS, NAME_EGGS, nameEggMeters, nameEggOf, nameEggRaiders, type EggId } from "./easter";
 import type { IconId } from "./sprites";
 import type {
   BoostKey,
@@ -5626,13 +5626,16 @@ function updateRaids(state: GameState): GameState {
           : roll < 0.7 || burnable(state).length === 0
             ? "party"
             : "fire";
-    const strength = Math.max(
-      2,
-      Math.round(
-        (2 + state.tick / RAID_GROWTH_TICKS + state.population / GROWTH_PRESSURE.raidersPerPeople) *
-          DIFFICULTIES[state.difficulty].raiders *
-          RAID_KINDS[kind].size *
-          (revenge ? KINGDOM_RAID.revengeSize : 1),
+    const strength = nameEggRaiders(
+      state.nameEgg,
+      Math.max(
+        2,
+        Math.round(
+          (2 + state.tick / RAID_GROWTH_TICKS + state.population / GROWTH_PRESSURE.raidersPerPeople) *
+            DIFFICULTIES[state.difficulty].raiders *
+            RAID_KINDS[kind].size *
+            (revenge ? KINGDOM_RAID.revengeSize : 1),
+        ),
       ),
     );
     const early = ((countBuildings(state).watchfire ?? 0) > 0 ? WATCH_FIRE.warnTicks : 0) + (state.researched.includes("townwatch") ? 6 : 0);

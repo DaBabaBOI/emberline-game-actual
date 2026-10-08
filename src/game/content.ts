@@ -3427,7 +3427,7 @@ export const RAID_KINDS: Record<
 // battle plays out over `fightTicks`, and training more warriors can still tip
 // it), hide in the houses (nobody dies, they take a share) or pay tribute (food,
 // `tributePerRaider` each; they leave but come back `tributeSooner` ticks sooner).
-export const RAID_RESPONSE = { fightTicks: 4, tributePerRaider: 4, tributeSooner: 60, hideMood: 4, coinsPerRaider: 3 };
+export const RAID_RESPONSE = { fightTicks: 7, tributePerRaider: 4, tributeSooner: 60, hideMood: 4, coinsPerRaider: 3 };
 // Traders (from the start): `lot` shells/coins buy this much of each good.
 // Every trade raises prices by `rise` (they want more for less); prices ease
 // back by `ease` a tick. Buying wood and stone instead of cutting spares the land.

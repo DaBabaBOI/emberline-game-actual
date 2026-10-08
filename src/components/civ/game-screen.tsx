@@ -30,7 +30,7 @@ import { GameAudio } from "./hud/game-audio";
 import { setMusicScene, unlockAudio } from "@/lib/audio";
 import { KingdomsPanel, LandmarkPicker } from "./hud/medieval";
 import { SpacePanel } from "./hud/future";
-import { BattleCamera } from "./hud/battle-camera";
+import { BattleBar, BattleCamera } from "./hud/battle-camera";
 import {
   DevPanel,
   ElderLesson,
@@ -148,6 +148,7 @@ function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null 
       <StoryScene />
       <Letterbox />
       <BattleCamera />
+      <BattleBar />
       <LastIntro />
       <GameAudio />
       <KonamiFireworks />

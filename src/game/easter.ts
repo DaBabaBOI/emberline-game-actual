@@ -44,11 +44,12 @@ export const GOLDEN_DEER_CHANCE = 0.02;
 // for the whole game. Start a new game with the same egg straight after and
 // that one is cursed instead (the title screen remembers the last egg used);
 // the one after is blessed again. Not in multiplayer.
-export type NameEggId = "prithu" | "suveer" | "advik";
+export type NameEggId = "prithu" | "suveer" | "advik" | "jai";
 
 export const NAME_EGGS: Record<
   NameEggId,
-  { name: string; also: RegExp; blessing: string; curse: string; card: { title: string; lines: string[] }; curseCard: { title: string; lines: string[] } }
+  // `exact`: only the name itself (a short name is too easy to hit by accident).
+  { name: string; also: RegExp; exact?: boolean; blessing: string; curse: string; card: { title: string; lines: string[] }; curseCard: { title: string; lines: string[] } }
 > = {
   prithu: {
     name: "prithu",
@@ -103,7 +104,29 @@ export const NAME_EGGS: Record<
     blessing: "Advik's blessing: everyone is cheerful (+50 happiness, for the whole game).",
     curse: "Advik again? A gloom settles over the tribe (-30 happiness, for the whole game).",
   },
+  jai: {
+    name: "jai",
+    also: /^jai$/,
+    exact: true,
+    card: {
+      title: "The Victor's Blessing",
+      lines: ["Jai means victory. Word of his name has spread across the sea.", "Every band of raiders comes with 5 fewer fighters, for the whole game."],
+    },
+    curseCard: {
+      title: "Jai Picked a Fight",
+      lines: ["Jai twice in a row? He went and insulted the raiders' chief.", "Every band of raiders brings 5 more fighters, for the whole game.", "Pick another name next time, and his blessing comes back."],
+    },
+    blessing: "Jai's blessing: raiders who hear his name come with 5 fewer fighters, for the whole game.",
+    curse: "Jai again? He picked a fight: every band of raiders brings 5 more fighters, for the whole game.",
+  },
 };
+
+// Jai's blessing (or curse): how many fewer raiders come (negative: more).
+export const JAI_RAIDERS = 5;
+export function nameEggRaiders(egg: { id: NameEggId; cursed: boolean } | undefined, strength: number) {
+  if (egg?.id !== "jai") return strength;
+  return egg.cursed ? strength + JAI_RAIDERS : Math.max(1, strength - JAI_RAIDERS);
+}
 
 // Same word, or one letter added, missing or changed.
 function oneOff(a: string, b: string) {
@@ -120,7 +143,7 @@ export function nameEggOf(nation: string | undefined): NameEggId | null {
   const joined = words.join("");
   for (const id of Object.keys(NAME_EGGS) as NameEggId[]) {
     const egg = NAME_EGGS[id];
-    if (words.some((w) => oneOff(w, egg.name)) || egg.also.test(joined)) return id;
+    if (words.some((w) => (egg.exact ? w === egg.name : oneOff(w, egg.name))) || egg.also.test(joined)) return id;
   }
   return null;
 }
