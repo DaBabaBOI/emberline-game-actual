@@ -34,6 +34,8 @@ export interface Seat {
   population: number;
   updated_at: string;
   gone: boolean;
+  // Removed by the host (gone too).
+  kicked?: boolean;
 }
 
 export interface MpEvent {
@@ -138,7 +140,7 @@ export async function getRoom(code: string) {
 }
 
 export async function getSeats(code: string) {
-  return (await read<Seat[]>(`mp_players?room=eq.${encodeURIComponent(code)}&select=seat,name,xp,era,sustainability,population,updated_at,gone&order=seat`)) ?? [];
+  return (await read<Seat[]>(`mp_players?room=eq.${encodeURIComponent(code)}&select=seat,name,xp,era,sustainability,population,updated_at,gone,kicked&order=seat`)) ?? [];
 }
 
 export async function getEvents(code: string, after: number) {
@@ -148,8 +150,25 @@ export async function getEvents(code: string, after: number) {
 // Open rooms anyone may join: listed, waiting, made in the last half hour.
 export async function openRooms() {
   const since = new Date(Date.now() - 30 * 60_000).toISOString();
-  const rooms = (await read<Room[]>(`mp_rooms?status=eq.lobby&listed=eq.true&created_at=gt.${since}&select=code,mode,speed,host_name,created_at&order=created_at.desc&limit=10`)) ?? [];
+  const rooms = (await read<Room[]>(`mp_rooms?status=eq.lobby&listed=eq.true&created_at=gt.${since}&select=code,mode,speed,host_name,created_at,status,ends_at&order=created_at.desc&limit=10`)) ?? [];
   return rooms;
+}
+
+// Public worlds: listed games already running that someone can still drop
+// into (taking a seat a bot or a leaver had), with a few minutes left.
+export async function runningWorlds() {
+  const soon = new Date(Date.now() + 3 * 60_000).toISOString();
+  return (await read<Room[]>(`mp_rooms?status=eq.playing&listed=eq.true&ends_at=gt.${soon}&select=code,mode,speed,host_name,created_at,status,ends_at&order=ends_at.desc&limit=10`)) ?? [];
+}
+
+// The host removes a player (their seat goes back to a bot).
+export async function kickPlayer(s: Session, seat: number) {
+  return rpc("mp_kick_player", { p_player: s.player, p_secret: s.secret, p_seat: seat });
+}
+
+// "Someone was removed" news in a batch of events.
+export function kickNews(events: MpEvent[]): { seat: number; name: string; id: number }[] {
+  return events.filter((e) => e.kind === "chat" && e.payload.kicked !== undefined).map((e) => ({ seat: Number(e.payload.kicked), name: String(e.payload.name ?? "A player"), id: e.id }));
 }
 
 export function shareLink(code: string) {

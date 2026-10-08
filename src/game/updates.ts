@@ -17,6 +17,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-01",
     items: [
+      "Public worlds: listed games that are already running show under Play together, and anyone can drop in (taking a bot's seat). The host can remove a player from the room or the game.",
       "Speedruns: tick Speedrun on the title screen for a real-time clock with era splits, no tutorial and no Elder Ama. Finish the story to post your time to the speedrun records (also on the home page).",
       "Saves are now sealed: a save changed outside the game is marked \"Edited save\" and can't post to the leaderboard or the records.",
       "A new era rebuilds your town: older homes and schools become this era's (Wooden Houses into Mud-brick, then Town Houses, then Apartment Blocks), with a dust-and-sparkle rebuild during the era fly-over. You can also upgrade schools, healers and homes up the same chains by hand.",

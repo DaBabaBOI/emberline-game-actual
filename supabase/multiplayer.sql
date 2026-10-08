@@ -48,3 +48,11 @@ create table public.mp_events (
 -- mp_update_player(player, secret, xp, era, sustainability, population)
 -- (clamped), mp_send_event(player, secret, to, kind, payload) (20 a minute),
 -- mp_leave_room(player, secret). mp_sender() is internal.
+--
+-- Public worlds and kicking (migration mp_public_worlds_and_kick):
+-- mp_players.kicked (readable). mp_join_room also lets people drop into a
+-- listed game that is still running (more than 2 minutes left), taking a free
+-- seat or one someone left (never the host's); someone the host removed can't
+-- rejoin that room under the same name. mp_kick_player(player, secret, seat):
+-- host only; marks the seat gone and kicked, and posts a chat event
+-- {kicked: seat, name} so everyone hears.

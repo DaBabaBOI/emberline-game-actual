@@ -6,6 +6,7 @@ import { defenseStrength } from "@/game/engine";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { cn } from "@/lib/utils";
+import { HOME } from "@/lib/home";
 import { ChatBox } from "./mp-chat";
 import { BattleViewer } from "./battle-viewer";
 import {
@@ -19,6 +20,9 @@ import {
   cleanChat,
   fightNews,
   fightResult,
+  kickNews,
+  kickPlayer,
+  saveSession,
   getEvents,
   getSeats,
   reportScore,
@@ -55,6 +59,8 @@ export function MultiplayerPanel({ match }: { match: Match }) {
   // The player whose gift and raid buttons are showing.
   const [picked, setPicked] = useState<number | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  // The host removed me from the game.
+  const [removed, setRemoved] = useState(false);
   const [raidSize, setRaidSize] = useState(3);
   // The chat: the messages, whether it's open, how many came in while it was
   // closed, and the newest one shown for a few seconds under the menu.
@@ -95,7 +101,12 @@ export function MultiplayerPanel({ match }: { match: Match }) {
   const end = Date.parse(room.ends_at ?? new Date(start + MP.minutes[room.speed] * 60_000).toISOString());
   const minutes = Math.max(0, (Math.min(now, end) - start) / 60_000);
   const over = now >= end;
-  const humanSeats = useMemo(() => match.humans.map((h) => h.seat), [match.humans]);
+  // Who is a person now: those still here (someone can drop into a public
+  // world mid-game, taking a bot's seat), and me.
+  const humanSeats = useMemo(
+    () => Array.from(new Set([...seats.filter((x) => !x.gone).map((x) => x.seat), session.seat])).sort(),
+    [seats, session.seat],
+  );
   const plan = useMemo(
     () => botActions(room.seed, [0, 1, 2, 3].filter((n) => !humanSeats.includes(n)), humanSeats, room.mode, MP.minutes[room.speed]),
     [room, humanSeats],
@@ -116,6 +127,14 @@ export function MultiplayerPanel({ match }: { match: Match }) {
       const [rows, events] = await Promise.all([getSeats(room.code), getEvents(room.code, lastEvent.current)]);
       if (!alive) return;
       if (rows.length) setSeats(rows);
+      // Removed by the host: the game stops here for me.
+      if (rows.find((r) => r.seat === session.seat)?.kicked) {
+        saveSession(null);
+        setRemoved(true);
+        dispatch({ type: "setSpeed", speed: 0 });
+        return;
+      }
+      for (const k of kickNews(events)) if (!firstSync.current) announce(`${k.name} was removed by the host.`, `k${k.id}`);
       const incoming = chatLines(events, session.seat, (n) => rows.find((r) => r.seat === n)?.name ?? BOT_NAMES[n], firstSync.current);
       if (incoming.length) {
         setChat((c) => [...c, ...incoming].slice(-CHAT.keep));
@@ -285,6 +304,19 @@ export function MultiplayerPanel({ match }: { match: Match }) {
     }
   };
 
+  if (removed)
+    return (
+      <div className="pointer-events-auto fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-3" data-testid="mp-kicked">
+        <div className="pixel-panel flex max-w-sm flex-col gap-3 p-5 text-center">
+          <h2 className="font-pixel text-2xl font-bold">You were removed</h2>
+          <p className="text-sm text-stone-600">The host of room {room.code} removed you from the game. A bot plays your seat now.</p>
+          <a href={HOME} className="pixel-btn font-pixel bg-amber-400 py-2 font-semibold">
+            Home
+          </a>
+        </div>
+      </div>
+    );
+
   return (
     <>
       {/* A small side menu: one line until opened; a player's buttons show when you pick them. */}
@@ -366,6 +398,21 @@ export function MultiplayerPanel({ match }: { match: Match }) {
                         title="They don't come back, but if they win they send loot home"
                       >
                         Raid ({Math.min(raidSize, state.soldiers)})
+                      </button>
+                    )}
+                    {session.seat === 0 && !r.bot && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!window.confirm(`Remove ${r.name} from the game? A bot takes their seat.`)) return;
+                          const res = await kickPlayer(session, r.seat);
+                          flash(res.error ?? `${r.name} was removed.`);
+                          setPicked(null);
+                        }}
+                        className="pixel-btn bg-stone-700 px-1 py-0.5 text-[10px]"
+                        data-testid={`mp-kick-${r.seat}`}
+                      >
+                        Remove
                       </button>
                     )}
                     {room.mode === "race" && (

@@ -14,6 +14,9 @@ import {
   joinRoom,
   leaveRoom,
   openRooms,
+  runningWorlds,
+  kickPlayer,
+  kickNews,
   saveSession,
   sendChat,
   shareLink,
@@ -57,12 +60,17 @@ export function MultiplayerLobby({
   const [session, setSession] = useState<Session | null>(null);
   // null: still looking.
   const [open, setOpen] = useState<Room[] | null>(null);
+  // Public worlds already running, to drop into.
+  const [running, setRunning] = useState<{ rooms: Room[]; at: number }>({ rooms: [], at: 0 });
 
   // The open rooms, refreshed while choosing.
   useEffect(() => {
     if (session) return;
     let alive = true;
-    const load = () => openRooms().then((r) => alive && setOpen(r));
+    const load = () => {
+      openRooms().then((r) => alive && setOpen(r));
+      runningWorlds().then((r) => alive && setRunning({ rooms: r, at: Date.now() }));
+    };
     load();
     const id = setInterval(load, 5000);
     return () => {
@@ -156,6 +164,28 @@ export function MultiplayerLobby({
                 <span className="font-pixel tracking-widest">{r.code}</span>
               </button>
             ))}
+            {running.rooms.length > 0 && (
+              <>
+                <span className="font-pixel mt-2 text-xs font-semibold text-stone-600">Public worlds in progress: drop in</span>
+                {running.rooms.map((r) => (
+                  <button
+                    key={r.code}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => enter(() => joinRoom(r.code, who))}
+                    className="pixel-btn flex items-center justify-between bg-emerald-50 px-3 py-1.5 text-left text-sm"
+                    data-testid="mp-running-world"
+                  >
+                    <span>
+                      <span className="font-pixel font-semibold">{r.host_name}</span> · {r.mode === "race" ? "Race" : "Co-op"} ·{" "}
+                      {Math.max(1, Math.round((Date.parse(r.ends_at ?? "") - running.at) / 60_000))} min left
+                    </span>
+                    <span className="font-pixel tracking-widest">{r.code}</span>
+                  </button>
+                ))}
+                <span className="text-[11px] text-stone-500">You take a seat a bot (or someone who left) had, and start your own island from the beginning.</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -220,6 +250,7 @@ function WaitingRoom({ session, onStart, onLeave }: { session: Session; onStart:
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [chat, setChat] = useState<ChatLine[]>([]);
+  const [kicked, setKicked] = useState(false);
   const lastEvent = useRef(0);
   // The first read brings back the history, my own messages too (after a reload).
   const first = useRef(true);
@@ -231,10 +262,17 @@ function WaitingRoom({ session, onStart, onLeave }: { session: Session; onStart:
       if (!alive) return;
       for (const e of events) lastEvent.current = Math.max(lastEvent.current, e.id);
       const incoming = chatLines(events, session.seat, (n) => s.find((x) => x.seat === n)?.name ?? BOT_NAMES[n], first.current);
+      const removed = kickNews(events).map((k) => ({ key: `k${k.id}`, from: "", text: `${k.name} was removed by the host.`, mine: false, system: true }));
       first.current = false;
-      if (incoming.length) setChat((c) => [...c, ...incoming].slice(-CHAT.keep));
+      if (incoming.length || removed.length) setChat((c) => [...c, ...incoming, ...removed].slice(-CHAT.keep));
       if (r) setRoom(r);
       setSeats(s.filter((x) => !x.gone));
+      // Removed by the host: back out of the room.
+      if (s.find((x) => x.seat === session.seat)?.kicked) {
+        saveSession(null);
+        setKicked(true);
+        return;
+      }
       if (r?.status === "playing") onStart(r, session, s.filter((x) => !x.gone));
       if (r?.status === "done") setError("The host closed this room.");
     };
@@ -247,6 +285,18 @@ function WaitingRoom({ session, onStart, onLeave }: { session: Session; onStart:
   }, [session, onStart]);
 
   const host = session.seat === 0;
+  if (kicked)
+    return (
+      <main className="flex min-h-dvh items-center justify-center bg-[#e8f4fb] px-4 py-8">
+        <div className="pixel-panel flex max-w-sm flex-col gap-3 p-5 text-center" data-testid="mp-kicked">
+          <h1 className="font-pixel text-2xl font-bold">You were removed</h1>
+          <p className="text-sm text-stone-600">The host of room {session.code} removed you. You can join another room.</p>
+          <button type="button" onClick={onLeave} className="pixel-btn font-pixel bg-amber-400 py-2 font-semibold">
+            Back
+          </button>
+        </div>
+      </main>
+    );
   return (
     <main className="min-h-dvh bg-[#e8f4fb] px-4 py-8">
       <div className="mx-auto flex max-w-xl flex-col gap-4" data-testid="mp-waiting">
@@ -280,6 +330,20 @@ function WaitingRoom({ session, onStart, onLeave }: { session: Session; onStart:
                 <span className="font-pixel font-semibold">{s ? s.name : `${BOT_NAMES[n]} (bot)`}</span>
                 {s && n === 0 && <span className="text-xs text-stone-500">host</span>}
                 {s && n === session.seat && <span className="text-xs text-emerald-700">you</span>}
+                {host && s && n !== 0 && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!window.confirm(`Remove ${s.name} from the room?`)) return;
+                      const r = await kickPlayer(session, n);
+                      if (r.error) setError(r.error);
+                    }}
+                    className="ml-auto text-xs text-red-700 underline"
+                    data-testid={`mp-kick-${n}`}
+                  >
+                    Remove
+                  </button>
+                )}
               </div>
             );
           })}
