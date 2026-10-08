@@ -23,7 +23,7 @@ import { FinalEnding } from "./hud/final-ending";
 import { NameEggCard } from "./hud/name-egg-card";
 import { StoryPanel, StoryScene } from "./hud/story";
 import { LeaderHud } from "./hud/leader-hud";
-import { setLeaderView, useLeader } from "./world/leader";
+import { resetLeader, useLeader } from "./world/leader";
 import { Letterbox, useShot } from "./hud/letterbox";
 import { HintPanel } from "./hud/hints";
 import { GameAudio } from "./hud/game-audio";
@@ -133,7 +133,7 @@ function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null 
         </div>
         <Warnings />
         {/* Leader mode: building happens in the build view. */}
-        {!(state.leader && leaderView === "fp") && <BottomBar />}
+        {leaderView !== "fp" && <BottomBar />}
         {panel === "tree" && <TreeOverlay />}
         {panel === "kingdoms" && <KingdomsPanel />}
         {panel === "space" && <SpacePanel />}
@@ -241,14 +241,20 @@ export function GameScreen() {
       <TitleScreen
         onMultiplayer={() => setLobby({})}
         canContinue={Boolean(saved && saved.phase === "playing")}
-        onContinue={() => setGame(saved)}
-        onLoadCloud={(state) => setGame(state)}
+        onContinue={() => {
+          resetLeader(saved?.leader ? "fp" : "map");
+          setGame(saved);
+        }}
+        onLoadCloud={(state) => {
+          resetLeader(state.leader ? "fp" : "map");
+          setGame(state);
+        }}
         onStart={(culture: CultureId, difficulty: DifficultyId, options?: NewGameOptions) => {
           clearSave();
           // Story mode tells its own beginning.
           setIntro(!options?.dev && options?.mode !== "last" && !options?.story);
-          // Leader mode starts in first person, beside the fire.
-          if (options?.leader) setLeaderView("fp");
+          // Leader mode starts in first person, beside the fire; any other game on the map.
+          resetLeader(options?.leader ? "fp" : "map");
           // Name eggs: the same one twice in a row and the second game is cursed.
           const last = readLastEgg();
           const game = newGame(culture, difficulty, { ...options, lastNameEgg: last });

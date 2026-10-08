@@ -29,6 +29,7 @@ const HANDS = 3.2;
 export type LeaderAct = { kind: "build" | "gather" | "plant" | "open" | "relight"; tile: number };
 
 export function LeaderRig({
+  leaderMode = false,
   tiles,
   home,
   active,
@@ -37,6 +38,8 @@ export function LeaderRig({
   onAct,
   coldFires = [],
 }: {
+  // Leader mode (started as the chief): Tab switches views, and the chief always stands on the map.
+  leaderMode?: boolean;
   tiles: Tile[];
   home: Tile;
   active: boolean;
@@ -95,7 +98,8 @@ export function LeaderRig({
     };
     const down = (e: KeyboardEvent) => {
       if (typing(e)) return;
-      if (e.key === "Tab") {
+      // V (any game), or Tab in Leader mode: walk, or back to the map.
+      if ((e.key === "Tab" && leaderMode) || (e.key.toLowerCase() === "v" && !e.ctrlKey && !e.metaKey && !e.altKey)) {
         e.preventDefault();
         if (document.pointerLockElement) document.exitPointerLock();
         setLeaderView(leaderSnapshot().view === "fp" ? "map" : "fp");
@@ -187,7 +191,7 @@ export function LeaderRig({
       gl.domElement.removeEventListener("mousedown", click);
       document.removeEventListener("pointerlockchange", lock);
     };
-  }, [active, gl]);
+  }, [active, gl, leaderMode]);
 
   // Walk, look, and see what's within reach.
   useFrame((three, delta) => {
@@ -306,7 +310,8 @@ export function LeaderRig({
   // In the build view the chief stands on the map, crowned, so you can find them.
   const body = useRef<Agent[]>([]);
   useFrame(() => {
-    body.current = active
+    if (active) leader.walked = true;
+    body.current = active || !(leaderMode || leader.walked)
       ? []
       : [{ x: leader.x, y: leader.y, z: leader.z, heading: leader.yaw + Math.PI, moving: leader.moving, scale: 1.55, tunic: "#7c3aed", skin: "#e0ac69", hair: "#2b1b10", phase: 0, crown: true }];
   });

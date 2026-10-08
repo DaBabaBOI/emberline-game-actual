@@ -19,7 +19,9 @@ export function LeaderHud() {
   const { view, prompt, menu, locked, build } = useLeader();
   // What the chief can build now, for the hotbar.
   const hotbar = BUILDINGS.filter((b) => b.era <= state.era && isUnlocked(state, b));
-  const fp = !!state.leader && view === "fp";
+  // First person: Leader mode, or any game where the player chose to walk.
+  const fp = view === "fp";
+  const switchKey = state.leader ? "Tab" : "V";
   const touch = useTouchScreen();
 
   // 1-9 pick a building (again: put it away); the wheel runs through them all.
@@ -45,7 +47,8 @@ export function LeaderHud() {
     };
   });
 
-  if (!state.leader) return null;
+  // The base game on the map: nothing here (the Walk button is in the bottom bar).
+  if (!state.leader && view === "map") return null;
 
   if (view === "map")
     return (
@@ -53,7 +56,7 @@ export function LeaderHud() {
         <div className="pixel-panel-dark font-pixel pointer-events-auto flex items-center gap-3 px-3 py-1.5 text-xs text-white" data-testid="leader-build-view">
           <span>Build view: pick a building and place it. The chief waits where you left them (the crowned figure).</span>
           <button type="button" onClick={() => setLeaderView("fp")} className="pixel-btn bg-amber-400 px-2 py-0.5 text-[#2b2119]">
-            Walk (Tab)
+            Walk ({switchKey})
           </button>
         </div>
       </div>
@@ -133,10 +136,10 @@ export function LeaderHud() {
       {/* The controls, and the way to the build view. */}
       <div className="pointer-events-none fixed bottom-1 left-1/2 z-[15] flex -translate-x-1/2 items-center justify-center gap-2 whitespace-nowrap px-3" data-testid="leader-controls">
         <span className={"pixel-panel-dark font-pixel hidden px-2 py-1 text-[11px] text-white/85" + (touch ? "" : " md:inline")}>
-          WASD walk · Shift run · Space jump · E talk / go in · Click act · P plant · 1-9 build · Q put away · Esc mouse
+          WASD walk · Shift run · Space jump · E talk / go in · Click act · P plant · 1-9 build · Q put away · {switchKey} map · Esc mouse
         </span>
         <button type="button" onClick={() => setLeaderView("map")} className="pixel-btn font-pixel pointer-events-auto bg-amber-400 px-3 py-1 text-sm text-[#2b2119]" data-testid="leader-to-map">
-          Build view (Tab)
+          {state.leader ? "Build view" : "Back to the map"} ({switchKey})
         </button>
       </div>
 

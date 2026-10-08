@@ -6,7 +6,9 @@ import { useSyncExternalStore } from "react";
 
 // `hop`/`vy`: how high a jump has taken them, and how fast they're rising.
 // `actAt`: when they last swung at something (the view dips with the swing).
-export const leader = { x: 0, z: 0, y: 0, yaw: 0, pitch: -0.08, ready: false, moving: false, strikeAt: 0, hop: 0, vy: 0, actAt: 0 };
+// `walked`: they've walked in first person this game (in the base game the
+// chief only stands on the map once they have).
+export const leader = { x: 0, z: 0, y: 0, yaw: 0, pitch: -0.08, ready: false, moving: false, strikeAt: 0, hop: 0, vy: 0, actAt: 0, walked: false };
 
 export type LeaderView = "fp" | "map";
 
@@ -33,7 +35,7 @@ export type LeaderPrompt =
   | null;
 
 type Snapshot = { view: LeaderView; prompt: LeaderPrompt; menu: { index: number; name: string } | null; locked: boolean; build: string | null };
-let snap: Snapshot = { view: "fp", prompt: null, menu: null, locked: false, build: null };
+let snap: Snapshot = { view: "map", prompt: null, menu: null, locked: false, build: null };
 const listeners = new Set<() => void>();
 
 function set(next: Partial<Snapshot>) {
@@ -51,6 +53,12 @@ function set(next: Partial<Snapshot>) {
 }
 
 export const setLeaderView = (view: LeaderView) => set({ view, menu: null });
+// A game begins (or is loaded): the chief is placed afresh on its island, in
+// first person for Leader mode, on the map otherwise.
+export function resetLeader(view: LeaderView) {
+  Object.assign(leader, { ready: false, walked: view === "fp", hop: 0, vy: 0 });
+  set({ view, menu: null, prompt: null, build: null });
+}
 export const setLeaderPrompt = (prompt: LeaderPrompt) => set({ prompt });
 export const setLeaderMenu = (menu: Snapshot["menu"]) => set({ menu });
 export const setLeaderLocked = (locked: boolean) => set({ locked });

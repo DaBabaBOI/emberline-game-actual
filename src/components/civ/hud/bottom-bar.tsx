@@ -2,6 +2,7 @@
 
 import { setHoveredBuilding } from "@/components/civ/world/hovered";
 import { setPlanMode, usePlanMode } from "@/components/civ/world/plan-mode";
+import { setLeaderView } from "@/components/civ/world/leader";
 import { useState, type ReactNode } from "react";
 import { BUILDINGS, CANOE, ERAS, LAST, SPACE, TRADE, LOW_WOOD_AFTER_BUY, PLANT_COST, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL, WARRIORS_PER_CAMP } from "@/game/content";
 import {
@@ -507,6 +508,17 @@ export function BottomBar() {
               onClick={() => dispatch({ type: "unplanAll" })}
               title="Cancel every blueprint (or click one blueprint with the same building to cancel just that one)."
               tone="bg-stone-700 hover:bg-stone-600"
+            />
+          )}
+          {/* Walk the island yourself, in first person (V). */}
+          {!inTutorial && !state.leader && (
+            <ToolButton
+              guide="tool-walk"
+              icon="person"
+              label="Walk"
+              onClick={() => setLeaderView("fp")}
+              title="Walk your island in first person (V): build where you look, chop wood, plant trees, talk to people and fight raiders up close. V again for the map."
+              tone="bg-[#3f5a6b] hover:bg-[#4b6a7d]"
             />
           )}
           {/* Clearing whole patches of forest into open land. */}

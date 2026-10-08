@@ -498,7 +498,7 @@ export function WorldCanvas() {
   // Leader mode: walking in first person (not while a camera shot plays).
   const leaderSnap = useLeader();
   const leaderView = leaderSnap.view;
-  const fpActive = !!state.leader && leaderView === "fp" && !shot;
+  const fpActive = leaderView === "fp" && !shot;
   const worldHeld = useWorldHeld();
   const planning = usePlanMode();
   const Ghost = def ? MODELS[def.id] : null;
@@ -997,8 +997,8 @@ export function WorldCanvas() {
       )}
 
       <Spotlight tiles={state.tiles} />
-      {state.leader && (
-        <LeaderRig
+      <LeaderRig
+          leaderMode={!!state.leader}
           tiles={state.tiles}
           home={home}
           active={fpActive}
@@ -1018,7 +1018,6 @@ export function WorldCanvas() {
             else if (kind === "open") setInspected(tile);
           }}
         />
-      )}
       {/* First person, holding a building from the hotbar: where it would go,
           green when it can, red when it can't. */}
       {fpActive &&

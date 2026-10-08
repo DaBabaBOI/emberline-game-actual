@@ -6924,7 +6924,7 @@ function step(state: GameState, action: Action): GameState {
     case "leaderAssign": {
       const tile = state.tiles[action.tileId];
       const def = tile?.building ? BUILDINGS_BY_ID[tile.building] : null;
-      if (!state.leader || !tile || !def || state.phase !== "playing") return state;
+      if (!tile || !def || state.phase !== "playing") return state;
       return {
         ...state,
         helpers: { ...state.helpers, [tile.id]: Math.max(state.helpers?.[tile.id] ?? 0, state.tick + LEADER.helpTicks) },
@@ -6934,7 +6934,7 @@ function step(state: GameState, action: Action): GameState {
 
     case "leaderStrike": {
       const raid = state.raid;
-      if (!state.leader || !raid || raid.fightStart === undefined || raid.roman || (raid.leaderHits ?? 0) >= LEADER.maxHits) return state;
+      if (!raid || raid.fightStart === undefined || raid.roman || (raid.leaderHits ?? 0) >= LEADER.maxHits) return state;
       return { ...state, raid: { ...raid, leaderHits: (raid.leaderHits ?? 0) + 1 } };
     }
 
@@ -6942,7 +6942,7 @@ function step(state: GameState, action: Action): GameState {
       // The chief works with their own hands: an armful of wood from the forest
       // (it thins it a little), or a few stones broken off a hill.
       const tile = state.tiles[action.tileId];
-      if (!state.leader || !tile || tile.building || !tile.revealed || state.phase !== "playing") return state;
+      if (!tile || tile.building || !tile.revealed || state.phase !== "playing") return state;
       if (tile.terrain === "forest" && tile.growth > LEADER.chopMin) {
         return withMeters({
           ...state,

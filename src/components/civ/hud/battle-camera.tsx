@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useGame } from "@/components/civ/game-provider";
 import { defenseStrength } from "@/game/engine";
 import { currentShot, endShot, playShot, useShot } from "./letterbox";
+import { useLeader } from "@/components/civ/world/leader";
 
 // When our warriors start fighting, the camera goes in close over the field
 // (a "battle" shot, with the black bars) and comes back a few seconds after the
@@ -13,10 +14,11 @@ export function BattleCamera() {
   const raid = state.raid;
   const fighting = raid?.fightStart !== undefined ? raid : null;
   const started = useRef<number | null>(null);
+  const walking = useLeader().view === "fp";
 
   useEffect(() => {
-    // Leader mode: the chief is there in person, no need to fly the camera in.
-    if (state.leader) return;
+    // Walking in first person: you're there in person, no need to fly the camera in.
+    if (walking) return;
     if (!fighting || started.current === fighting.fightStart) return;
     started.current = fighting.fightStart!;
     const tile = state.tiles[fighting.meetTile ?? fighting.targetTile];
@@ -29,7 +31,7 @@ export function BattleCamera() {
           ? "An army is attacking"
           : "Raiders are attacking";
     playShot({ kind: "battle", title: who, subtitle: "Click to leave the fight (train warriors to tip it)", seconds: 600, at: { x: tile.x, z: tile.z, y: tile.height } });
-  }, [fighting, state.tiles, state.leader]);
+  }, [fighting, state.tiles, walking]);
 
   // The fight is over (the raid is gone): back to the village after a moment.
   useEffect(() => {
