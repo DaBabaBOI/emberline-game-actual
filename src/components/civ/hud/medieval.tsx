@@ -94,10 +94,10 @@ export function PlagueBanner() {
   const parts = plagueProtection(state);
   const ready = Math.round((Math.max(0, plagueShield(state)) / PLAGUE.maxProtection) * 100);
   return (
-    <div className="pointer-events-none flex justify-center" data-testid="plague-banner">
+    <div className="pointer-events-none flex w-full justify-center" data-testid="plague-banner">
       <div
         className={cn(
-          "font-pixel flex w-[min(92vw,560px)] flex-col gap-1.5 border-[3px] border-[#140e0a] px-4 py-2 text-xs text-white md:text-sm",
+          "font-pixel flex w-full max-w-[560px] flex-col gap-1.5 border-[3px] border-[#140e0a] px-4 py-2 text-xs text-white md:text-sm",
           on ? "bg-[#3b1f2b]/95" : "bg-[#4a3b2e]/95",
         )}
       >
@@ -279,8 +279,8 @@ export function RebellionBanner() {
   const demands = rebelDemands(state);
   const odds = Math.round(crushOdds(state) * 100);
   return (
-    <div className="pointer-events-none flex justify-center" data-testid="rebellion-banner">
-      <div className={cn("font-pixel flex w-[min(92vw,560px)] flex-col gap-1.5 border-[3px] border-[#140e0a] px-4 py-2 text-xs text-white md:text-sm", risen ? "bg-[#5a1414]/95" : "bg-[#4a3b2e]/95")}>
+    <div className="pointer-events-none flex w-full justify-center" data-testid="rebellion-banner">
+      <div className={cn("font-pixel flex w-full max-w-[560px] flex-col gap-1.5 border-[3px] border-[#140e0a] px-4 py-2 text-xs text-white md:text-sm", risen ? "bg-[#5a1414]/95" : "bg-[#4a3b2e]/95")}>
         <span className="flex items-start gap-2 font-semibold">
           <PixelIcon name={risen ? "sword" : "sad"} size={20} />
           <span>

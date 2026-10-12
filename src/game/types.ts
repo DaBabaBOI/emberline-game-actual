@@ -94,6 +94,8 @@ export interface Battle {
   raidersLost: number;
   // True when the village held.
   won: boolean;
+  // What the beaten raiders left behind.
+  spoils?: Partial<Resources>;
   // Raiders a rival player sent (multiplayer).
   rival?: string;
   roman?: boolean;
@@ -432,6 +434,9 @@ export interface GameState {
   speedrun?: { start: number; splits: { era: number; ms: number }[]; end?: number; invalid?: string };
   // Leader mode: you walk the island in first person as the chief.
   leader?: boolean;
+  // First person: the tree or rock the chief is working by hand, and how many
+  // blows so far (every LEADER.fellHits-th brings a bonus).
+  leaderWork?: { tile: number; hits: number };
   // Story mode (story.ts): the chapter we're on, the scene showing (its intro
   // before the objectives, its outro once they're done), and the chapters done.
   story?: { chapter: number; scene: "intro" | "outro" | null; done: number[] };
@@ -545,6 +550,11 @@ export interface GameState {
   sustainTrail?: number[];
   // The last fight with raiders, so the 3D scene can play it out.
   battle?: Battle | null;
+  // After beating raiders from the sea: the chance (till `until`) to strike
+  // back at their camp, and our warriors out doing it (`sent`, `spears` of
+  // them with spears; home at `back`).
+  strikeOffer?: { until: number; strength: number; fromTile: number } | null;
+  strike?: { start: number; back: number; sent: number; spears: number; strength: number; fromTile: number } | null;
   // People caught in the last wildfire: where they fell and when (for the 3D scene).
   fireVictims?: { tile: number; tick: number }[];
   // Total forest growth near the village when the game began (100% Sustainability).

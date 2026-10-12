@@ -717,6 +717,75 @@ export function RaidBoats({ tiles, raid, homeTile, speed = 1 }: { tiles: Tile[];
   );
 }
 
+// Our warriors striking back: war canoes (blue) push off from the shore the
+// raiders came from, row out of sight, and come back as the strike ends.
+// `progress` runs 0 to 1 over the strike (smoothed between ticks here).
+export function StrikeBoats({ tiles, strike, homeTile, tick, speed = 1 }: { tiles: Tile[]; strike: { start: number; back: number; sent: number; fromTile: number } | null; homeTile: Tile; tick: number; speed?: number }) {
+  const boats = useRef<(Group | null)[]>([]);
+  const last = useRef({ tick, at: 0 });
+  useFrame(({ clock }) => {
+    const now = clock.elapsedTime;
+    if (last.current.tick !== tick) last.current = { tick, at: now };
+    // A tick is about 1.5 s at normal speed.
+    const frac = speed > 0 ? Math.min(1, ((now - last.current.at) * speed) / 1.5) : 0;
+    const shore = strike ? tiles[strike.fromTile] : null;
+    const n = strike ? Math.max(1, Math.min(4, Math.ceil(strike.sent / 3))) : 0;
+    for (let i = 0; i < 4; i++) {
+      const g = boats.current[i];
+      if (!g) continue;
+      if (!strike || !shore || i >= n) {
+        g.visible = false;
+        continue;
+      }
+      const p = (tick + frac - strike.start) / Math.max(1, strike.back - strike.start);
+      // Out over the first quarter, home over the last; away in between.
+      const away = p < 0.25 ? Math.pow(p / 0.25, 2) : p > 0.75 ? Math.pow((1 - p) / 0.25, 2) : 1;
+      const len = Math.hypot(shore.x - homeTile.x, shore.z - homeTile.z) || 1;
+      const dx = (shore.x - homeTile.x) / len;
+      const dz = (shore.z - homeTile.z) / len;
+      const across = (i - (n - 1) / 2) * 0.6;
+      const off = away * BOATS.out * 1.3 + 0.2;
+      g.visible = away < 0.97;
+      g.position.set(shore.x + dx * off - dz * across, 0.2 + Math.sin(now * 2 + i) * 0.025, shore.z + dz * off + dx * across);
+      g.rotation.y = Math.atan2(dx, dz) + (p > 0.5 ? Math.PI : 0);
+      g.rotation.z = Math.sin(now * 1.5 + i) * 0.05;
+      g.scale.setScalar(1.6 * Math.max(0.001, Math.min(1, (1 - away) / 0.15)));
+    }
+  });
+  return (
+    <>
+      {[0, 1, 2, 3].map((i) => (
+        <group key={i} ref={(g) => void (boats.current[i] = g)} visible={false}>
+          <mesh castShadow position={[0, 0.04, 0]} scale={[0.8, 0.5, 4.4]}>
+            <sphereGeometry args={[0.1, 10, 6]} />
+            <meshStandardMaterial color="#4a2f1b" flatShading />
+          </mesh>
+          <mesh position={[0, 0.07, 0]} scale={[0.82, 0.12, 4.2]}>
+            <sphereGeometry args={[0.1, 10, 4]} />
+            <meshStandardMaterial color="#1d4ed8" flatShading />
+          </mesh>
+          {[-0.16, 0.16].map((z) => (
+            <group key={z} position={[0, 0.1, z]}>
+              <mesh position={[0, 0.06, 0]}>
+                <boxGeometry args={[0.07, 0.12, 0.05]} />
+                <meshStandardMaterial color="#2563eb" />
+              </mesh>
+              <mesh position={[0, 0.15, 0]}>
+                <boxGeometry args={[0.05, 0.05, 0.05]} />
+                <meshStandardMaterial color="#c68642" />
+              </mesh>
+              <mesh position={[0.07, 0.05, 0]} rotation={[0, 0, 0.6]}>
+                <boxGeometry args={[0.015, 0.22, 0.015]} />
+                <meshStandardMaterial color="#5e3b1c" />
+              </mesh>
+            </group>
+          ))}
+        </group>
+      ))}
+    </>
+  );
+}
+
 // People caught by a wildfire: they stagger, fall over in the flames, and lie
 // there until that patch stops burning.
 export function FireVictims({ tiles, victims }: { tiles: Tile[]; victims: { tile: number; tick: number }[] }) {

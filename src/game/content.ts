@@ -3362,8 +3362,9 @@ export const LEFT_BEHIND_WARN = 200;
 // Leader mode: each blow in a fight adds `hit` defense (up to `maxHits`); a
 // villager sent to work helps for `helpTicks`. By hand the chief chops `wood`
 // a swing (thinning the forest by `chopThin`, never below `chopMin`) or breaks
-// `stone` off a hill.
-export const LEADER = { hit: 0.6, maxHits: 8, helpTicks: 30, wood: 1, stone: 1, chopThin: 0.03, chopMin: 0.2 };
+// `stone` off a hill. Every `fellHits`-th blow at the same tree or rock brings
+// `fellBonus` more (a log comes down; a slab breaks off).
+export const LEADER = { hit: 0.6, maxHits: 8, helpTicks: 30, wood: 1, stone: 1, chopThin: 0.03, chopMin: 0.2, fellHits: 5, fellBonus: 3 };
 export const DROP = { helpBoost: 0.5, helpTicks: 20, fogTicks: 20, fogLuck: 0.05, fogReveal: 2 };
 // Someone dropped into a fire or the open sea dies, and the tribe grieves: each
 // death costs `happiness`, taken off after the 0-100 cap so it always shows. It
@@ -3425,6 +3426,35 @@ export const RAID_KINDS: Record<
   band: { name: "A small band", size: 0.7, wants: "They are after wood.", steal: { food: 0, wood: 0.4 }, hide: { food: 0, wood: 0.25 }, burns: false },
   party: { name: "A war party", size: 1.35, wants: "They want food and wood.", steal: { food: 0.35, wood: 0.35 }, hide: { food: 0.2, wood: 0.2 }, burns: false },
   fire: { name: "A fire raid", size: 1.1, wants: "They carry torches: they will burn a building.", steal: { food: 0.15, wood: 0 }, hide: { food: 0, wood: 0 }, burns: true },
+};
+
+// Spoils: beaten raiders leave behind some of what they carried, this much for
+// each raider (a band was after wood; a war party brought food too; a fire
+// raid carries little but torches).
+export const SPOILS: Record<RaidKind, Partial<Resources>> = {
+  band: { wood: 3, currency: 1 },
+  party: { food: 2, wood: 2, currency: 2 },
+  fire: { food: 1, currency: 1 },
+};
+// Strike back (up to the Classical era, at raiders from the sea; not a
+// kingdom's army or a rival player's): for `offerTicks` after a win, send all the
+// warriors (at least `minWarriors`) to burn the raiders' camp. They are away
+// `ticks`. The camp fights at `camp` times the beaten raid's strength, with
+// luck (x0.75 to x1.25). Won: `loot` for each raider of that raid, `losses.won`
+// of those sent fall, raids keep away `peace` ticks longer and spirits lift
+// (`happiness`). Lost: `losses.lost` fall, spirits sink (`sadness`) and the
+// raiders come back `angry` ticks sooner.
+export const STRIKE = {
+  offerTicks: 45,
+  minWarriors: 3,
+  ticks: 40,
+  camp: 0.75,
+  loot: { food: 4, wood: 4, currency: 3 },
+  losses: { won: 0.15, lost: 0.5 },
+  peace: 150,
+  happiness: 8,
+  sadness: 6,
+  angry: 40,
 };
 
 // When raiders land the player picks a response before they arrive: fight (the

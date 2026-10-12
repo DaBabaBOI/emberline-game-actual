@@ -703,7 +703,9 @@ function ArmyButton() {
   const title =
     cap === 0
       ? "Build a War Camp to train warriors"
-      : full
+      : full && state.strike
+        ? "The War Camps' places are kept for the warriors away striking back."
+        : full
         ? `All War Camps are full (${WARRIORS_PER_CAMP} warriors each). Build another War Camp to train more.`
         : `Train a warrior. Defense: ${defenseStrength(state)} = ${defenseBreakdown(state)}`;
   return (

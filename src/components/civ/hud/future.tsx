@@ -37,7 +37,7 @@ export function TippingBanner() {
         </span>
       ) : (
         <>
-      <div className={cn("font-pixel flex w-[min(92vw,560px)] flex-col gap-1.5 border-[3px] border-[#140e0a] px-4 py-2 text-xs text-white md:text-sm", onTrack ? "bg-[#2f5d3a]/95" : "bg-[#5a2a4a]/95")}>
+      <div className={cn("font-pixel flex w-full max-w-[560px] flex-col gap-1.5 border-[3px] border-[#140e0a] px-4 py-2 text-xs text-white md:text-sm", onTrack ? "bg-[#2f5d3a]/95" : "bg-[#5a2a4a]/95")}>
         <span className="flex items-start gap-2 font-semibold">
           <PixelIcon name="earth" size={20} />
           <span>

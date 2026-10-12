@@ -8,7 +8,8 @@ import { useSyncExternalStore } from "react";
 // `actAt`: when they last swung at something (the view dips with the swing).
 // `walked`: they've walked in first person this game (in the base game the
 // chief only stands on the map once they have).
-export const leader = { x: 0, z: 0, y: 0, yaw: 0, pitch: -0.08, ready: false, moving: false, strikeAt: 0, hop: 0, vy: 0, actAt: 0, walked: false };
+// `aimAt`: where the crosshair meets something (chips fly from there).
+export const leader = { x: 0, z: 0, y: 0, yaw: 0, pitch: -0.08, ready: false, moving: false, strikeAt: 0, hop: 0, vy: 0, actAt: 0, walked: false, aimAt: { x: 0, y: 0, z: 0 } };
 
 export type LeaderView = "fp" | "map";
 
@@ -29,13 +30,16 @@ export type LeaderPrompt =
   | { kind: "talk"; index: number; name: string }
   | { kind: "fight" }
   | { kind: "building"; tile: number }
-  | { kind: "gather"; tile: number; what: "wood" | "stone" }
+  // `spent`: the wood here is thinned right out (it grows back).
+  | { kind: "gather"; tile: number; what: "wood" | "stone"; spent?: boolean }
   | { kind: "plant"; tile: number }
   | { kind: "build"; tile: number }
   | null;
 
-type Snapshot = { view: LeaderView; prompt: LeaderPrompt; menu: { index: number; name: string } | null; locked: boolean; build: string | null };
-let snap: Snapshot = { view: "map", prompt: null, menu: null, locked: false, build: null };
+// `pops`: what the chief just got by hand ("+1 wood"), rising by the crosshair.
+type Pop = { id: number; text: string; big: boolean };
+type Snapshot = { view: LeaderView; prompt: LeaderPrompt; menu: { index: number; name: string } | null; locked: boolean; build: string | null; pops: Pop[] };
+let snap: Snapshot = { view: "map", prompt: null, menu: null, locked: false, build: null, pops: [] };
 const listeners = new Set<() => void>();
 
 function set(next: Partial<Snapshot>) {
@@ -45,6 +49,7 @@ function set(next: Partial<Snapshot>) {
     merged.menu === snap.menu &&
     merged.locked === snap.locked &&
     merged.build === snap.build &&
+    merged.pops === snap.pops &&
     JSON.stringify(merged.prompt) === JSON.stringify(snap.prompt)
   )
     return;
@@ -65,6 +70,13 @@ export const setLeaderLocked = (locked: boolean) => set({ locked });
 // The building picked from the hotbar to build (null: hands free).
 export const setLeaderBuild = (build: string | null) => set({ build });
 export const leaderSnapshot = () => snap;
+// Show a gain by the crosshair for a moment (`big`: a bonus).
+let popId = 0;
+export function leaderPop(text: string, big = false) {
+  const pop = { id: ++popId, text, big };
+  set({ pops: [...snap.pops.slice(-3), pop] });
+  setTimeout(() => set({ pops: snap.pops.filter((p) => p.id !== pop.id) }), 900);
+}
 
 export function useLeader() {
   return useSyncExternalStore(

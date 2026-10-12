@@ -11,6 +11,8 @@ import {
   xpToReach,
   RAID_KINDS,
   RAID_RESPONSE,
+  SPOILS,
+  STRIKE,
   WATCH_FIRE,
   EVENT_GAP,
   RAID_GAP,
@@ -241,6 +243,8 @@ export type Action =
   | { type: "mpRaidIn"; warriors: number; from: string; seat: number }
   | { type: "mpLoot"; resources: Partial<Resources>; from: string }
   | { type: "raidResponse"; choice: RaidResponse }
+  // After beating raiders: burn their camp (go), or let them go.
+  | { type: "strikeBack"; go: boolean }
   | { type: "devRaidKind"; kind: RaidKind }
   | { type: "setKeeper"; tileId: number; on: boolean }
   | { type: "devMoment"; id?: string }
@@ -3651,9 +3655,10 @@ export function burnTicks(state: GameState) {
   return Math.round(CAMPFIRE_BURN_TICKS * (state.researched.includes("firekeeping") ? 1.5 : 1));
 }
 
+// Room for warriors at home (those away striking back keep their places).
 export function warriorCap(state: GameState) {
   const counts = countBuildings(state);
-  return (counts.warcamp ?? 0) * WARRIORS_PER_CAMP + (counts.castle ?? 0) * CASTLE.warriors;
+  return Math.max(0, (counts.warcamp ?? 0) * WARRIORS_PER_CAMP + (counts.castle ?? 0) * CASTLE.warriors - (state.strike?.sent ?? 0));
 }
 
 // Warriors carrying spears (older saves are converted when loaded).
@@ -4475,7 +4480,7 @@ function tickOnce(state: GameState): GameState {
   // No raids or events while a new player is still learning.
   // Build to Last keeps to its three problems: no disasters, rebellions or kingdoms.
   const last = next.mode === "last";
-  if (!inTutorial) next = last ? next : updateTipping(updateClimate(updateRebellion(updatePlague(updateDisasters(updateDrought(updateLegion(updateRaids(next))))))));
+  if (!inTutorial) next = last ? next : updateTipping(updateClimate(updateRebellion(updatePlague(updateDisasters(updateDrought(updateLegion(updateRaids(updateStrike(next)))))))));
   next = updateLast(next);
   next = updateHunters(next);
   next = updateCarbon(next);
@@ -5540,6 +5545,77 @@ export function shownBattle(state: GameState): Battle | null {
   return b && state.tick - b.tick < 4 ? b : null;
 }
 
+// What beaten raiders leave behind.
+export function raidSpoils(raid: Raid): Partial<Resources> {
+  const per = SPOILS[raid.kind ?? "party"];
+  return Object.fromEntries(Object.entries(per).map(([r, v]) => [r, Math.round((v ?? 0) * raid.strength)])) as Partial<Resources>;
+}
+
+function gain(resources: Resources, add: Partial<Resources>): Resources {
+  return Object.fromEntries(Object.entries(resources).map(([r, v]) => [r, v + (add[r as keyof Resources] ?? 0)])) as unknown as Resources;
+}
+
+// "12 food, 8 wood and 6 shells".
+export function amountText(state: GameState, amounts: Partial<Resources>) {
+  const parts = Object.entries(amounts)
+    .filter(([, v]) => v)
+    .map(([r, v]) => `${v} ${r === "currency" ? ERAS[state.era].currency.toLowerCase() : r}`);
+  return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}` : (parts[0] ?? "nothing");
+}
+
+// Striking back: every warrior goes (those with spears too), and how hard they
+// hit the raiders' camp.
+export function strikeParty(state: GameState) {
+  const sent = state.soldiers;
+  const spears = spearmenOf(state);
+  return { sent, spears, power: Math.round((sent - spears + spears * SPEARMAN_STRENGTH) * armsFactor(state)) };
+}
+
+export function strikeError(state: GameState): string | null {
+  const offer = state.strikeOffer;
+  if (!offer || state.tick > offer.until) return "The raiders are long gone.";
+  if (state.raid || state.strike) return "Not now.";
+  if (state.soldiers < STRIKE.minWarriors) return `Needs at least ${STRIKE.minWarriors} warriors.`;
+  return null;
+}
+
+// The offer runs out; and the warriors who struck back come home: how it went.
+function updateStrike(state: GameState): GameState {
+  let next = state;
+  if (next.strikeOffer && next.tick > next.strikeOffer.until) next = { ...next, strikeOffer: null };
+  const strike = next.strike;
+  if (!strike || next.tick < strike.back) return next;
+  const luck = 0.75 + mulberry32(next.seed + strike.start * 53)() * 0.5;
+  const power = (strike.sent - strike.spears + strike.spears * SPEARMAN_STRENGTH) * armsFactor(next);
+  const camp = strike.strength * STRIKE.camp;
+  const won = power * luck >= camp;
+  const fell = Math.min(strike.sent, Math.max(won ? 0 : 1, Math.round(strike.sent * (won ? STRIKE.losses.won : STRIKE.losses.lost))));
+  const home = strike.sent - fell;
+  const spearsHome = Math.min(strike.spears, home);
+  const loot: Partial<Resources> = won
+    ? Object.fromEntries(Object.entries(STRIKE.loot).map(([r, v]) => [r, Math.round(v * strike.strength)]))
+    : {};
+  const counted = bumpStats(next, (st) => {
+    if (won) st.raidsWon += 1;
+    st.deaths.battle += fell;
+  });
+  return withMeters({
+    ...counted,
+    strike: null,
+    soldiers: next.soldiers + home,
+    spearmen: spearmenOf(next) + spearsHome,
+    resources: gain(next.resources, loot),
+    nextRaidTick: next.nextRaidTick + (won ? STRIKE.peace : -STRIKE.angry),
+    modifiers: { ...next.modifiers, happiness: next.modifiers.happiness + (won ? STRIKE.happiness : -STRIKE.sadness) },
+    log: [
+      won
+        ? `Our warriors burned the raiders' camp and came home with ${amountText(next, loot)}!${fell ? ` ${fell} fell.` : " All came home."} The raiders will keep away a good while.`
+        : `The raiders' camp held: ${fell} of our ${strike.sent} warriors fell. The rest made it home, and the raiders will be back sooner, angry.`,
+      ...next.log,
+    ].slice(0, 30),
+  });
+}
+
 function updateRaids(state: GameState): GameState {
   const { raid } = state;
   if (raid?.roman) return state.tick >= raid.arriveTick ? resolveLegion(state) : state;
@@ -5558,15 +5634,21 @@ function updateRaids(state: GameState): GameState {
         st.raidsWon += 1;
         st.deaths.battle += losses;
       });
+      // What they left behind; and, raiders from the sea, a chance to strike back.
+      const spoils = raidSpoils(raid);
+      const soldiers = state.soldiers - losses;
+      const offer = !raid.kingdom && !raid.rival && state.era <= 2 && soldiers >= STRIKE.minWarriors;
       return {
         ...won,
         raid: null,
-        battle: raidBattle(state, raid),
-        soldiers: state.soldiers - losses,
+        battle: { ...raidBattle(state, raid), spoils },
+        soldiers,
+        resources: gain(state.resources, spoils),
+        strikeOffer: offer ? { until: state.tick + STRIKE.offerTicks, strength: raid.strength, fromTile: raid.fromTile } : null,
         kingdoms: raid.kingdom ? changeMood(state, { [raid.kingdom]: DIPLOMACY.raidWonMood }).kingdoms : state.kingdoms,
         modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + 6 },
         log: [
-          `Raiders driven off!${losses ? ` ${losses} warrior${losses > 1 ? "s" : ""} fell.` : ""}`,
+          `Raiders driven off!${losses ? ` ${losses} warrior${losses > 1 ? "s" : ""} fell.` : ""} They left behind ${amountText(state, spoils)}.`,
           ...state.log,
         ].slice(0, 30),
       };
@@ -5655,6 +5737,7 @@ function updateRaids(state: GameState): GameState {
       },
       raidsSeen: (state.raidsSeen ?? 0) + 1,
       devNextRaid: undefined,
+      strikeOffer: null,
       revenge: revenge ? null : state.revenge,
       nextRaidTick: state.tick + Math.round((RAID_GAP.base + Math.floor(rand() * RAID_GAP.spread)) * gapFactor(state)),
       lastBigTick: state.tick,
@@ -6810,6 +6893,20 @@ function step(state: GameState, action: Action): GameState {
     case "dismissDebrief":
       return state.debrief?.kind === "final" ? { ...state, debrief: null } : state;
 
+    case "strikeBack": {
+      if (!action.go) return state.strikeOffer ? { ...state, strikeOffer: null } : state;
+      if (strikeError(state)) return state;
+      const { sent, spears } = strikeParty(state);
+      return {
+        ...state,
+        strikeOffer: null,
+        strike: { start: state.tick, back: state.tick + STRIKE.ticks, sent, spears, strength: state.strikeOffer!.strength, fromTile: state.strikeOffer!.fromTile },
+        soldiers: state.soldiers - sent,
+        spearmen: 0,
+        log: [`${sent} warriors took to the canoes to burn the raiders' camp. Back in ${secs(STRIKE.ticks)} s.`, ...state.log].slice(0, 30),
+      };
+    }
+
     case "raidResponse": {
       const raid = state.raid;
       if (!raid || raid.roman || raid.fightStart !== undefined || raid.response) return state;
@@ -6943,15 +7040,20 @@ function step(state: GameState, action: Action): GameState {
       // (it thins it a little), or a few stones broken off a hill.
       const tile = state.tiles[action.tileId];
       if (!tile || tile.building || !tile.revealed || state.phase !== "playing") return state;
+      // Every few blows at the same tree or rock, a bonus.
+      const hits = state.leaderWork?.tile === tile.id ? state.leaderWork.hits + 1 : 1;
+      const felled = hits >= LEADER.fellHits;
+      const leaderWork = { tile: tile.id, hits: felled ? 0 : hits };
       if (tile.terrain === "forest" && tile.growth > LEADER.chopMin) {
         return withMeters({
           ...state,
-          resources: { ...state.resources, wood: state.resources.wood + LEADER.wood },
+          leaderWork,
+          resources: { ...state.resources, wood: state.resources.wood + LEADER.wood + (felled ? LEADER.fellBonus : 0) },
           tiles: state.tiles.map((t) => (t.id === tile.id ? { ...t, growth: Math.max(LEADER.chopMin, t.growth - LEADER.chopThin) } : t)),
         });
       }
       if (tile.terrain === "hills" || tile.terrain === "mountain") {
-        return withMeters({ ...state, resources: { ...state.resources, stone: state.resources.stone + LEADER.stone } });
+        return withMeters({ ...state, leaderWork, resources: { ...state.resources, stone: state.resources.stone + LEADER.stone + (felled ? LEADER.fellBonus : 0) } });
       }
       return state;
     }

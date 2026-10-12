@@ -7,7 +7,7 @@ import { playShot } from "./letterbox";
 import { playSfx } from "@/lib/audio";
 import { useCompact } from "@/lib/use-compact";
 import { setTimeOfDay } from "./time-of-day";
-import { AFTER_STEPS, DISASTERS, DISCOVERIES, DROUGHT, ERA_INTROS, ERAS, EVENTS, KINGDOMS, LESSONS, RAID_KINDS, RAID_RESPONSE, TREE_BY_ID, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
+import { AFTER_STEPS, DISASTERS, DISCOVERIES, DROUGHT, ERA_INTROS, ERAS, EVENTS, KINGDOMS, LESSONS, RAID_KINDS, RAID_RESPONSE, STRIKE, TREE_BY_ID, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
 import {
   canAfford,
   countBuildings,
@@ -18,6 +18,8 @@ import {
   MOMENT_IDS,
   rainfall,
   secs,
+  strikeError,
+  strikeParty,
   tributeCost,
   tributeCoins,
   waterSupply,
@@ -309,7 +311,7 @@ function LegionWarning() {
   const eta = state.raid ? state.raid.arriveTick - state.tick : (state.legion?.arriveTick ?? state.tick) - state.tick;
   const safe = defense >= attack;
   return (
-    <div className="pointer-events-none flex justify-center" data-testid="legion-banner">
+    <div className="pointer-events-none flex w-full justify-center" data-testid="legion-banner">
       <div
         className={
           "font-pixel flex max-w-xl items-start gap-2 border-[3px] border-[#140e0a] px-4 py-2 text-xs font-semibold text-white md:text-sm " +
@@ -339,7 +341,7 @@ function DroughtBanner() {
   const short = water < pop;
   const granaries = countBuildings(state).granary ?? 0;
   return (
-    <div className="pointer-events-none flex justify-center" data-testid="drought-banner">
+    <div className="pointer-events-none flex w-full justify-center" data-testid="drought-banner">
       <div
         className={
           "font-pixel flex max-w-xl items-start gap-2 border-[3px] border-[#140e0a] px-4 py-2 text-xs font-semibold text-[#2b2119] md:text-sm " +
@@ -382,7 +384,7 @@ function DisasterBanner() {
     landslide: "The hillside is sliding down!",
   };
   return (
-    <div className="pointer-events-none flex justify-center" data-testid="disaster-banner">
+    <div className="pointer-events-none flex w-full justify-center" data-testid="disaster-banner">
       <div
         className={
           "font-pixel flex max-w-xl items-start gap-2 border-[3px] border-[#140e0a] px-4 py-2 text-xs font-semibold text-white md:text-sm " +
@@ -408,8 +410,76 @@ function DisasterBanner() {
   );
 }
 
+// After beating raiders from the sea: strike back at their camp, or let them go.
+function StrikeCard() {
+  const { state, dispatch } = useGame();
+  const offer = state.strikeOffer!;
+  const { sent, power } = strikeParty(state);
+  const camp = Math.round(offer.strength * STRIKE.camp);
+  // Luck counts for up to a quarter either way.
+  const odds = power * 0.75 >= camp ? "They can't lose" : power >= camp ? "Good odds" : power * 1.25 >= camp ? "A gamble" : "They would lose";
+  const why = strikeError(state);
+  const loot = Object.entries(STRIKE.loot)
+    .map(([r, v]) => `${Math.round(v * offer.strength)} ${r === "currency" ? ERAS[state.era].currency.toLowerCase() : r}`)
+    .join(", ");
+  return (
+    <div className="pointer-events-none flex w-full justify-center">
+      <div className="pixel-panel-dark font-pixel w-full max-w-[560px] px-4 py-2 text-sm text-white" data-testid="strike-card">
+        <div className="flex items-center justify-between gap-2 font-semibold">
+          <span className="flex items-center gap-2">
+            <PixelIcon name="spear" size={18} />
+            The raiders fled to their camp. Strike back?
+          </span>
+          <span className="font-num text-xs text-white/70">
+            <Countdown ticks={Math.max(0, offer.until - state.tick)} />s
+          </span>
+        </div>
+        <p className="mt-1 text-xs text-white/80">
+          Send all {sent} warriors (strength {power}) to burn their camp (about {camp}). <span className={power >= camp ? "text-emerald-300" : "text-amber-300"}>{odds}.</span> Win: {loot}, and
+          raids keep away longer. Lose: half of them fall. They&apos;re away {secs(STRIKE.ticks)} s.
+        </p>
+        <div className="mt-2 flex gap-1.5">
+          <button
+            type="button"
+            disabled={!!why}
+            onClick={() => {
+              playSfx("raid");
+              dispatch({ type: "strikeBack", go: true });
+            }}
+            className="pixel-btn pointer-events-auto bg-red-800 px-3 py-1 text-xs hover:bg-red-700 disabled:opacity-40"
+            data-testid="strike-go"
+          >
+            Strike back
+          </button>
+          <button type="button" onClick={() => dispatch({ type: "strikeBack", go: false })} className="pixel-btn pointer-events-auto bg-[#4a3b2e] px-3 py-1 text-xs hover:bg-[#5a4a3a]">
+            Let them go
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Our warriors are away burning the raiders' camp.
+function StrikeAway() {
+  const { state } = useGame();
+  const strike = state.strike!;
+  return (
+    <div className="pointer-events-none flex w-full justify-center" data-testid="strike-away">
+      <div className="font-pixel flex items-center gap-2 border-[3px] border-[#140e0a] bg-red-900/85 px-4 py-1.5 text-sm font-semibold text-white">
+        <PixelIcon name="spear" size={18} />
+        <span>
+          {strike.sent} warriors are away burning the raiders&apos; camp · back in <Countdown ticks={Math.max(0, strike.back - state.tick)} />s
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function RaidBanner() {
   const { state, dispatch } = useGame();
+  if (state.strikeOffer && !state.raid && state.tick <= state.strikeOffer.until) return <StrikeCard />;
+  if (state.strike && !state.raid) return <StrikeAway />;
   if (state.climate && !state.raid) return <ClimateBanner />;
   if (state.tipping && !state.raid) return <TippingBanner />;
   if (state.rebellion && !state.raid) return <RebellionBanner />;
@@ -430,8 +500,8 @@ export function RaidBanner() {
     const left = Math.max(0, raid.fightStart + RAID_RESPONSE.fightTicks - state.tick);
     const share = Math.round((100 * defense) / Math.max(1, defense + raid.strength));
     return (
-      <div className="pointer-events-none flex justify-center">
-        <div className="pixel-panel-dark font-pixel w-[min(92vw,520px)] px-4 py-2 text-sm text-white" data-testid="raid-fight">
+      <div className="pointer-events-none flex w-full justify-center">
+        <div className="pixel-panel-dark font-pixel w-full max-w-[520px] px-4 py-2 text-sm text-white" data-testid="raid-fight">
           <div className="flex items-center justify-between">
             <span className="font-semibold">The fight is on!</span>
             <span className="font-num text-base">
@@ -483,8 +553,8 @@ export function RaidBanner() {
       },
     ];
     return (
-      <div className="pointer-events-none flex justify-center">
-        <div className="pixel-panel-dark font-pixel w-[min(92vw,560px)] px-4 py-2 text-sm text-white" data-testid="raid-card">
+      <div className="pointer-events-none flex w-full justify-center">
+        <div className="pixel-panel-dark font-pixel w-full max-w-[560px] px-4 py-2 text-sm text-white" data-testid="raid-card">
           <div className="flex items-center gap-2 font-semibold">
             <PixelIcon name="warning" size={18} />
             <span>
@@ -492,7 +562,7 @@ export function RaidBanner() {
               arrive in <Countdown ticks={eta} />s.
             </span>
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+          <div className="mt-2 grid grid-cols-2 gap-1.5 xl:grid-cols-4">
             {options.map((o) => (
               <button
                 key={o.id}
@@ -516,7 +586,7 @@ export function RaidBanner() {
   }
 
   return (
-    <div className="pointer-events-none flex justify-center">
+    <div className="pointer-events-none flex w-full justify-center">
       <div
         className={
           "font-pixel flex items-center gap-2 border-[3px] border-[#140e0a] px-4 py-2 text-sm font-semibold text-white " +

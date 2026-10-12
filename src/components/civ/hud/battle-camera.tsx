@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useGame } from "@/components/civ/game-provider";
 import { defenseStrength } from "@/game/engine";
+import { ERAS } from "@/game/content";
 import { currentShot, endShot, playShot, useShot } from "./letterbox";
 import { useLeader } from "@/components/civ/world/leader";
 
@@ -63,6 +64,15 @@ export function BattleBar() {
           <div className="mt-1 text-sm text-white md:text-lg">
             {done.warriorsLost} warrior{done.warriorsLost === 1 ? "" : "s"} fell · {done.raidersLost} raider{done.raidersLost === 1 ? "" : "s"} fell
           </div>
+          {done.won && done.spoils && (
+            <div className="mt-1 text-sm text-amber-200 md:text-base" data-testid="battle-spoils">
+              Spoils:{" "}
+              {Object.entries(done.spoils)
+                .filter(([, v]) => v)
+                .map(([r, v]) => `+${v} ${r === "currency" ? ERAS[state.era].currency.toLowerCase() : r}`)
+                .join(" · ")}
+            </div>
+          )}
         </div>
       </div>
     );

@@ -2,12 +2,15 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import type { PerspectiveCamera } from "three";
+import type { Group, PerspectiveCamera } from "three";
 import type { Battle, Tile } from "@/game/types";
 import { makeGround } from "./ground";
+import { peakHeight, treeSpots } from "./hex-terrain";
 import { grabStore } from "./villagers";
 import { Figures, type Agent } from "./figures";
+import { CHIP_COLORS, Chips, HeldTool, holdTool, spawnChips, type HeldKind } from "./held-tool";
 import { isLand } from "@/game/map";
+import { LEADER } from "@/game/content";
 import { leader, leaderButtons, leaderSnapshot, leaderStick, setLeaderBuild, setLeaderLocked, setLeaderMenu, setLeaderPrompt, setLeaderView, villagerName, type LeaderPrompt } from "./leader";
 
 // Leader mode: the chief, walked in first person. WASD or the arrows to move
@@ -37,6 +40,8 @@ export function LeaderRig({
   onStrike,
   onAct,
   coldFires = [],
+  era = 0,
+  armed = false,
 }: {
   // Leader mode (started as the chief): Tab switches views, and the chief always stands on the map.
   leaderMode?: boolean;
@@ -48,11 +53,29 @@ export function LeaderRig({
   onAct: (act: LeaderAct) => void;
   // Campfires gone cold (E relights them).
   coldFires?: number[];
+  // The era (a spear early on, a sword later), and raiders about (weapon in hand).
+  era?: number;
+  armed?: boolean;
 }) {
   const { gl } = useThree();
   // Whether the first-person lens is on, and the map's lens to put back.
   const lens = useRef<{ on: boolean; fov: number; near: number }>({ on: false, fov: 38, near: 0.5 });
   const ground = useMemo(() => makeGround(tiles), [tiles]);
+  // The trees of the woods, by half-tile cell, so the crosshair stops at a
+  // trunk or a crown (not the hill behind it).
+  const woods = useMemo(() => {
+    const cells = new Map<string, { x: number; y: number; z: number; s: number; tile: number }[]>();
+    for (const t of tiles) {
+      if (t.terrain !== "forest") continue;
+      for (const s of treeSpots(t)) {
+        const key = `${Math.floor(s.x * 2)},${Math.floor(s.z * 2)}`;
+        const list = cells.get(key) ?? [];
+        list.push({ ...s, tile: t.id });
+        cells.set(key, list);
+      }
+    }
+    return cells;
+  }, [tiles]);
   const keys = useRef(new Set<string>());
   const strike = useRef(onStrike);
   const act = useRef(onAct);
@@ -64,9 +87,14 @@ export function LeaderRig({
   });
   const fight = battle?.live ? tiles[battle.tile] : null;
   const fightRef = useRef(fight);
+  const armedRef = useRef(armed);
   useEffect(() => {
     fightRef.current = fight;
+    armedRef.current = armed;
   });
+  // What's in the chief's hand.
+  const tool = useRef<Group>(null);
+  const held = useRef<{ kind: HeldKind | null; since: number }>({ kind: null, since: 0 });
 
   // The chief starts near the fire, looking across the village: on open
   // ground (not inside the fire, a hut or the sea), the nearest free spot.
@@ -137,11 +165,14 @@ export function LeaderRig({
         if (now - leader.strikeAt > 450) {
           leader.strikeAt = now;
           strike.current();
+          // Sparks where the blow lands, just ahead.
+          spawnChips({ x: leader.x - Math.sin(leader.yaw) * 0.7, y: leader.y + EYE - 0.15, z: leader.z - Math.cos(leader.yaw) * 0.7 }, CHIP_COLORS.spark, 10, 1.6);
         }
       } else if (p?.kind === "build") act.current({ kind: "build", tile: p.tile });
-      else if (p?.kind === "gather" && now - leader.actAt > 350) {
+      else if (p?.kind === "gather" && !p.spent && now - leader.actAt > 350) {
         leader.actAt = now;
         act.current({ kind: "gather", tile: p.tile });
+        spawnChips(leader.aimAt, CHIP_COLORS[p.what], 8);
       }
     };
     const click = (e: MouseEvent) => {
@@ -244,7 +275,10 @@ export function LeaderRig({
       leader.vy -= 9 * dt;
       if (leader.hop <= 0) leader.hop = leader.vy = 0;
     }
-    if (!active) return;
+    if (!active) {
+      if (tool.current) tool.current.visible = false;
+      return;
+    }
 
     const now = performance.now();
     const bob = leader.moving ? Math.sin(now / 120) * 0.025 : 0;
@@ -252,26 +286,57 @@ export function LeaderRig({
     const swing = Math.max(0, 1 - (now - Math.max(leader.actAt, leader.strikeAt)) / 260);
     camera.position.set(leader.x, leader.y + EYE + bob + leader.hop, leader.z);
     camera.rotation.set(leader.pitch - Math.sin(swing * Math.PI) * 0.06, leader.yaw, 0, "YXZ");
+    // In hand: a weapon in a fight (or with raiders about), the right tool for
+    // what's under the crosshair, a hammer while building.
+    const was = leaderSnapshot();
+    const weapon: HeldKind = era >= 2 ? "sword" : "spear";
+    const kind: HeldKind | null =
+      was.prompt?.kind === "fight"
+        ? weapon
+        : was.prompt?.kind === "gather"
+          ? was.prompt.what === "wood"
+            ? "axe"
+            : "pick"
+          : was.build
+            ? "hammer"
+            : armedRef.current
+              ? weapon
+              : null;
+    holdTool(tool.current, camera, kind, held.current, now, Math.max(leader.actAt, leader.strikeAt), leader.moving);
 
     // Within reach: a fight, or a villager in front.
     if (fightRef.current && Math.hypot(fightRef.current.x - leader.x, fightRef.current.z - leader.z) < 3.2) {
       setLeaderPrompt({ kind: "fight" });
       return;
     }
-    // What the crosshair is on: a building (it stands about this high over the
-    // middle of its tile) or the ground.
+    // What the crosshair is on: a tree, a mountain's peak, a building (it
+    // stands about this high over the middle of its tile) or the ground.
     const lx = -Math.sin(leader.yaw) * Math.cos(leader.pitch);
     const ly = Math.sin(leader.pitch);
     const lz = -Math.cos(leader.yaw) * Math.cos(leader.pitch);
-    let aim: { tile: Tile; d: number } | null = null;
-    for (let t = 0.3; t <= SIGHT; t += 0.08) {
+    let aim: { tile: Tile; d: number; tree?: boolean } | null = null;
+    march: for (let t = 0.3; t <= SIGHT; t += 0.06) {
       const x = leader.x + lx * t;
       const y = leader.y + EYE + leader.hop + ly * t;
       const z = leader.z + lz * t;
+      const cx = Math.floor(x * 2);
+      const cz = Math.floor(z * 2);
+      for (let i = -1; i <= 1; i++)
+        for (let j = -1; j <= 1; j++)
+          for (const tree of woods.get(`${cx + i},${cz + j}`) ?? []) {
+            // A little more than the tree itself (they're about head high on
+            // the chief, so a look straight ahead skims their tops).
+            if (y < tree.y || y > tree.y + 0.68 * tree.s + 0.12 || Math.hypot(x - tree.x, z - tree.z) > 0.2 * tree.s + 0.05) continue;
+            aim = { tile: tiles[tree.tile], d: t, tree: true };
+            Object.assign(leader.aimAt, { x, y, z });
+            break march;
+          }
       const tile = ground.tileAt(x, z);
       if (!tile) continue;
-      if ((tile.building && Math.hypot(x - tile.x, z - tile.z) < 0.62 && y < tile.height + 0.8) || y <= ground.heightAt(x, z)) {
+      const peak = tile.terrain === "mountain" && !tile.building ? peakHeight(tile) * Math.max(0, 1 - Math.hypot(x - tile.x, z - tile.z) / 0.97) : 0;
+      if ((tile.building && Math.hypot(x - tile.x, z - tile.z) < 0.62 && y < tile.height + 0.8) || y <= ground.heightAt(x, z) + peak) {
         aim = { tile, d: t };
+        Object.assign(leader.aimAt, { x, y, z });
         break;
       }
     }
@@ -300,7 +365,8 @@ export function LeaderRig({
     if (aim && aim.d <= HANDS && aim.tile.revealed) {
       const t = aim.tile;
       if (t.building) prompt = { kind: "building", tile: t.id };
-      else if (t.terrain === "forest" && t.growth > 0.2) prompt = { kind: "gather", tile: t.id, what: "wood" };
+      // A tree: wood (until the wood is thinned right out, then let it grow back).
+      else if (aim.tree || t.terrain === "forest") prompt = { kind: "gather", tile: t.id, what: "wood", spent: t.growth <= LEADER.chopMin };
       else if (t.terrain === "hills" || t.terrain === "mountain") prompt = { kind: "gather", tile: t.id, what: "stone" };
       else if (isLand(t.terrain)) prompt = { kind: "plant", tile: t.id };
     }
@@ -315,5 +381,11 @@ export function LeaderRig({
       ? []
       : [{ x: leader.x, y: leader.y, z: leader.z, heading: leader.yaw + Math.PI, moving: leader.moving, scale: 1.55, tunic: "#7c3aed", skin: "#e0ac69", hair: "#2b1b10", phase: 0, crown: true }];
   });
-  return <Figures agents={body} max={1} />;
+  return (
+    <>
+      <Figures agents={body} max={1} />
+      <HeldTool toolRef={tool} />
+      <Chips />
+    </>
+  );
 }

@@ -8,7 +8,7 @@ import { MapControls, PerformanceMonitor } from "@react-three/drei";
 import { Html } from "./html";
 import type { MapControls as MapControlsImpl } from "three-stdlib";
 import { playSfx } from "@/lib/audio";
-import { BUILDINGS_BY_ID, CLEAR_LAND, ERAS, formatYear, IMPROVE, LAST_TUTORIAL, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL, WEAR, SMOG } from "@/game/content";
+import { BUILDINGS_BY_ID, CLEAR_LAND, ERAS, formatYear, IMPROVE, LAST_TUTORIAL, LEADER, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL, WEAR, SMOG } from "@/game/content";
 import { CANOE_TOOL, SCOUT_TOOL, canoeTargetError, canoeTicks, scoutTargetError, scoutTicks } from "@/game/engine";
 import {
   buildingCost,
@@ -61,7 +61,7 @@ import type { GameState, Tile } from "@/game/types";
 import { BiomeDetails, Deposits, Forests, HexTerrain, Mountains, tileTop, treeSpots } from "./hex-terrain";
 import { BUILDING_SCALE, MODELS, buildingTurn } from "./building-models";
 import { turnFor } from "./facing";
-import { BattleScene, FireVictims, RaidBoats, Raiders, Villagers, Warriors } from "./villagers";
+import { BattleScene, FireVictims, RaidBoats, Raiders, StrikeBoats, Villagers, Warriors } from "./villagers";
 import { PickUp } from "./pick-up";
 import { SeaTraffic, TradeShips, WaitingShips } from "./trade";
 import { ForeignVillages } from "./foreign";
@@ -71,7 +71,7 @@ import { Links } from "./links";
 import { RebuildDust, RebuildPop } from "./rebuild";
 import { LeaderRig } from "./leader-rig";
 import { useWorldHeld } from "@/components/civ/cutscene/active";
-import { useLeader } from "./leader";
+import { leaderPop, useLeader } from "./leader";
 import { useHoveredBuilding } from "./hovered";
 import { usePlanMode } from "./plan-mode";
 import { CampfireSmoke, ChimneySmoke, Wildfire } from "./atmosphere";
@@ -787,6 +787,7 @@ export function WorldCanvas() {
       <BattleScene tiles={state.tiles} battle={shown} homeTile={home} speed={state.speed} />
       <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} speed={state.speed} />
       <RaidBoats tiles={state.tiles} raid={state.raid} homeTile={home} speed={state.speed} />
+      <StrikeBoats tiles={state.tiles} strike={state.strike ?? null} homeTile={home} tick={state.tick} speed={state.speed} />
       <TradeShips tiles={state.tiles} home={home} caravans={state.caravans ?? []} tick={state.tick} speed={state.speed} />
       <ChimneySmoke tiles={buildings} cleanAir={state.researched.includes("cleanair")} />
       <SeaTraffic state={state} home={home} />
@@ -1004,6 +1005,8 @@ export function WorldCanvas() {
           active={fpActive}
           battle={shown}
           coldFires={outFires.map((t) => t.id)}
+          era={state.era}
+          armed={!!state.raid && state.raid.response !== "hide"}
           onStrike={() => dispatch({ type: "leaderStrike" })}
           onAct={({ kind, tile }) => {
             if (kind === "build" && leaderSnap.build) {
@@ -1012,6 +1015,14 @@ export function WorldCanvas() {
               dispatch({ type: "place", tileId: tile, buildingId: leaderSnap.build });
             } else if (kind === "gather") {
               playSfx("step");
+              // What the blow brings (the engine adds the same): every few at
+              // the same tree or rock, a log or a slab as well.
+              const t = state.tiles[tile];
+              const what = t?.terrain === "forest" ? "wood" : "stone";
+              const hits = state.leaderWork?.tile === tile ? state.leaderWork.hits + 1 : 1;
+              const bonus = hits >= LEADER.fellHits;
+              leaderPop(`+${(what === "wood" ? LEADER.wood : LEADER.stone) + (bonus ? LEADER.fellBonus : 0)} ${what}${bonus ? (what === "wood" ? " · a log!" : " · a slab!") : ""}`, bonus);
+              if (bonus) playSfx("build");
               dispatch({ type: "leaderGather", tileId: tile });
             } else if (kind === "plant") dispatch({ type: "plant", tileId: tile });
             else if (kind === "relight") dispatch({ type: "relight", tileId: tile });

@@ -90,7 +90,7 @@ const SECTIONS: Section[] = [
     title: "Dangers",
     icon: "shield",
     items: [
-      { icon: "sword", text: "Train warriors before raiders land; fight, hide or pay tribute when they arrive." },
+      { icon: "sword", text: "Train warriors before raiders land; fight, hide or pay tribute when they arrive. Beat them and they leave spoils behind, and you can strike back at their camp." },
       { icon: "storm", text: "Fires and disasters happen. Prepare where you can." },
     ],
   },

@@ -35,7 +35,7 @@ export function ClimateBanner() {
         <>
       <div
         className={cn(
-          "font-pixel flex w-[min(92vw,560px)] flex-col gap-1.5 border-[3px] border-[#140e0a] px-4 py-2 text-xs text-white md:text-sm",
+          "font-pixel flex w-full max-w-[560px] flex-col gap-1.5 border-[3px] border-[#140e0a] px-4 py-2 text-xs text-white md:text-sm",
           on ? "bg-[#7a2e1f]/95" : "bg-[#4a3b2e]/95",
         )}
       >

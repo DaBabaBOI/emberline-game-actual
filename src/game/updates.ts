@@ -7,6 +7,13 @@ export interface Update {
 
 export const UPDATES: Update[] = [
   {
+    date: "2026-10-12",
+    items: [
+      "War: beaten raiders leave spoils behind (food, wood and shells). After a win you can strike back: send your warriors in canoes to burn the raiders' camp for loot and a longer peace, or lose half of them if the camp is too strong. The card tells you the odds.",
+      "First person: chopping a tree no longer gives stone (the crosshair used to look straight through trees to the hill behind). You now hold an axe, a pick, a hammer or a spear (a sword in later eras), chips fly when you strike, every fifth blow brings a log or a slab (+3), and an arrow points the way to landing raiders.",
+    ],
+  },
+  {
     date: "2026-10-08",
     items: [
       "Discovery scenes act out what happened: logs drift in with a bird on them, get tied into a raft, two people sit on it and drift out to sea; seeds fall into the soil and sprout into wheat. Animals walk in, ideas come down in light, and each line stays up until its moment has played. Same story in 3D and pixel art.",

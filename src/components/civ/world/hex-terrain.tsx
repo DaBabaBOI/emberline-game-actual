@@ -215,6 +215,11 @@ export function Forests({ tiles }: { tiles: Tile[] }) {
   );
 }
 
+// How tall a mountain's peak stands over its tile (a quarried one loses its top).
+export function peakHeight(t: Tile) {
+  return (1.7 + jitter(t.id, 4) * 0.9) * (1 - 0.75 * (t.dug ?? 0));
+}
+
 // The mountain is the peak itself: a steep six-sided cone that fills the whole
 // hex, with a snow cap and sometimes a smaller shoulder peak beside it.
 export function Mountains({
@@ -234,7 +239,7 @@ export function Mountains({
     <group>
       {peaks.map((t) => {
         // A quarried mountain loses its peak for good.
-        const h = (1.7 + jitter(t.id, 4) * 0.9) * (1 - 0.75 * (t.dug ?? 0));
+        const h = peakHeight(t);
         const cap = h * 0.28;
         const shoulder = jitter(t.id, 5) > 0.45;
         return (
