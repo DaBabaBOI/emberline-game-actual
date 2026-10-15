@@ -144,6 +144,7 @@ import { cureHint, diseaseName, isCalm, maybeOutbreak, sickShare, stepDisease } 
 import { hexDistance } from "./hex";
 import { generateMap, ISLANDS, isLand, revealAround, riverPath, terrainHeight } from "./map";
 import { mulberry32 } from "./noise";
+import { MAX_FIGHTERS, enemyLineup, inOurZone, runBattle, type BattleSetup, type Placed, type Roster } from "./battle";
 import { sealMatches, sealOf } from "./seal";
 import { CHAPTERS, type Objective } from "./story";
 import { cameosFor, EGGS, GOLDEN_DEER_FOOD, LITERACY_BUILDINGS, NAME_EGGS, nameEggMeters, nameEggOf, nameEggRaiders, type EggId } from "./easter";
@@ -245,6 +246,10 @@ export type Action =
   | { type: "raidResponse"; choice: RaidResponse }
   // After beating raiders: burn their camp (go), or let them go.
   | { type: "strikeBack"; go: boolean }
+  // A commanded battle: where the player put the army (the fight is played
+  // out from that), or leave it to the warriors after all.
+  | { type: "commandBattle"; placements: Placed[] }
+  | { type: "autoBattle" }
   | { type: "devRaidKind"; kind: RaidKind }
   | { type: "setKeeper"; tileId: number; on: boolean }
   | { type: "devMoment"; id?: string }
@@ -5540,7 +5545,7 @@ function raidBattle(state: GameState, raid: Raid): Battle {
 // seconds after it is decided (the losers running off).
 export function shownBattle(state: GameState): Battle | null {
   const raid = state.raid;
-  if (raid && !raid.roman && raid.fightStart !== undefined) return { ...raidBattle(state, raid), live: true };
+  if (raid && !raid.roman && raid.fightStart !== undefined && raid.response !== "command") return { ...raidBattle(state, raid), live: true };
   const b = state.battle;
   return b && state.tick - b.tick < 4 ? b : null;
 }
@@ -5616,6 +5621,96 @@ function updateStrike(state: GameState): GameState {
   });
 }
 
+// The village held: `losses` warriors fell (`spears` of them spearmen).
+// What the raiders left behind, and (raiders from the sea) a chance to strike back.
+function raidWon(state: GameState, raid: Raid, losses: number, spears: number, showFight: boolean, how = ""): GameState {
+  const won = bumpStats(state, (st) => {
+    st.raidsWon += 1;
+    st.deaths.battle += losses;
+  });
+  const spoils = raidSpoils(raid);
+  const soldiers = state.soldiers - losses;
+  const offer = !raid.kingdom && !raid.rival && state.era <= 2 && soldiers >= STRIKE.minWarriors;
+  return {
+    ...won,
+    raid: null,
+    battle: showFight ? { ...raidBattle(state, raid), spoils } : null,
+    soldiers,
+    spearmen: Math.min(soldiers, Math.max(0, spearmenOf(state) - spears)),
+    resources: gain(state.resources, spoils),
+    strikeOffer: offer ? { until: state.tick + STRIKE.offerTicks, strength: raid.strength, fromTile: raid.fromTile } : null,
+    kingdoms: raid.kingdom ? changeMood(state, { [raid.kingdom]: DIPLOMACY.raidWonMood }).kingdoms : state.kingdoms,
+    modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + 6 },
+    log: [`${how}Raiders driven off!${losses ? ` ${losses} warrior${losses > 1 ? "s" : ""} fell.` : ""} They left behind ${amountText(state, spoils)}.`, ...state.log].slice(0, 30),
+  };
+}
+
+// The raiders broke through: `losses` warriors fell (`spears` of them
+// spearmen), and they take what they came for.
+function raidLost(state: GameState, raid: Raid, losses: number, spears: number, showFight: boolean, how = ""): GameState {
+  const lost = bumpStats(state, (st) => {
+    st.raidsLost += 1;
+    st.deaths.battle += losses;
+  });
+  const soldiers = Math.max(0, state.soldiers - losses);
+  return {
+    ...lost,
+    raid: null,
+    battle: showFight ? raidBattle(state, raid) : null,
+    soldiers,
+    spearmen: Math.min(soldiers, Math.max(0, spearmenOf(state) - spears)),
+    ...plunder(state, raid, RAID_KINDS[raid.kind ?? "party"].steal),
+    modifiers: { ...state.modifiers, happiness: state.modifiers.happiness - 12 },
+    log: [how + plunderText(state, raid), ...state.log].slice(0, 30),
+  };
+}
+
+// A commanded battle: who can take the field (all the warriors, the chief,
+// a palisade piece for every wall section, a tower for every watch tower and
+// castle), and how tough each figure is (arms; a big army fights as fewer,
+// tougher figures).
+export function battleRoster(state: GameState): { roster: Roster; usBoost: number; scale: number } {
+  const counts = countBuildings(state);
+  const spears = spearmenOf(state);
+  const scale = Math.max(1, state.soldiers / (MAX_FIGHTERS - 1));
+  const roster: Roster = {
+    warrior: Math.round((state.soldiers - spears) / scale),
+    spearman: Math.round(spears / scale),
+    chief: 1,
+    palisade: Math.min(12, (counts.walls ?? 0) * 3),
+    tower: Math.min(4, (counts.watchfire ?? 0) + (counts.castle ?? 0) * 2),
+  };
+  return { roster, usBoost: armsFactor(state) * scale, scale };
+}
+
+// Commanding is possible against raiders and armies (not the legion, nor a
+// rival player's raid: multiplayer keeps its own clock).
+export function canCommand(state: GameState, raid: Raid | null = state.raid) {
+  return !!raid && !raid.roman && !raid.rival && !state.mp;
+}
+
+// The battle the player commands: the army where they put it (only what they
+// have, only on our side of the field), the raiders as they line up.
+export function commandSetup(state: GameState, raid: Raid, placements: Placed[]): BattleSetup {
+  const { roster, usBoost } = battleRoster(state);
+  const left: Roster = { ...roster };
+  const ours: Placed[] = [];
+  for (const p of placements) {
+    if (!left[p.kind] || !inOurZone(p.x, p.z)) continue;
+    left[p.kind] = (left[p.kind] ?? 0) - 1;
+    ours.push({ kind: p.kind, x: p.x, z: p.z });
+  }
+  const seed = state.seed + raid.startTick * 13;
+  const kind = raid.kingdom ? "army" : (raid.kind ?? "party");
+  const { theirs, themBoost } = enemyLineup(raid.strength, kind, seed);
+  return { seed, ours, theirs, usBoost, themBoost };
+}
+
+// The game waits while the player commands a battle.
+export function commanding(state: GameState) {
+  return state.raid?.response === "command" && state.raid.fightStart !== undefined;
+}
+
 function updateRaids(state: GameState): GameState {
   const { raid } = state;
   if (raid?.roman) return state.tick >= raid.arriveTick ? resolveLegion(state) : state;
@@ -5624,49 +5719,14 @@ function updateRaids(state: GameState): GameState {
     // and the fight takes a few seconds (training a warrior can still tip it).
     if (raid.response === "hide") return raidHide(state, raid);
     if (raid.fightStart === undefined) {
-      return { ...state, raid: { ...raid, response: "fight", fightStart: state.tick } };
+      return { ...state, raid: { ...raid, response: raid.response === "command" ? "command" : "fight", fightStart: state.tick } };
     }
+    // Commanded: the battle screen is up, and plays out what the player sets.
+    if (raid.response === "command") return state;
     if (state.tick < raid.fightStart + RAID_RESPONSE.fightTicks) return state;
     const defense = defenseStrength(state);
-    if (defense >= raid.strength) {
-      const losses = Math.min(state.soldiers, Math.floor(raid.strength / 3));
-      const won = bumpStats(state, (st) => {
-        st.raidsWon += 1;
-        st.deaths.battle += losses;
-      });
-      // What they left behind; and, raiders from the sea, a chance to strike back.
-      const spoils = raidSpoils(raid);
-      const soldiers = state.soldiers - losses;
-      const offer = !raid.kingdom && !raid.rival && state.era <= 2 && soldiers >= STRIKE.minWarriors;
-      return {
-        ...won,
-        raid: null,
-        battle: { ...raidBattle(state, raid), spoils },
-        soldiers,
-        resources: gain(state.resources, spoils),
-        strikeOffer: offer ? { until: state.tick + STRIKE.offerTicks, strength: raid.strength, fromTile: raid.fromTile } : null,
-        kingdoms: raid.kingdom ? changeMood(state, { [raid.kingdom]: DIPLOMACY.raidWonMood }).kingdoms : state.kingdoms,
-        modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + 6 },
-        log: [
-          `Raiders driven off!${losses ? ` ${losses} warrior${losses > 1 ? "s" : ""} fell.` : ""} They left behind ${amountText(state, spoils)}.`,
-          ...state.log,
-        ].slice(0, 30),
-      };
-    }
-    const lost = bumpStats(state, (st) => {
-      st.raidsLost += 1;
-      st.deaths.battle += Math.min(state.soldiers, raid.strength);
-    });
-    return {
-      ...lost,
-      raid: null,
-      battle: raidBattle(state, raid),
-      soldiers: Math.max(0, state.soldiers - raid.strength),
-      spearmen: Math.min(spearmenOf(state), Math.max(0, state.soldiers - raid.strength)),
-      ...plunder(state, raid, RAID_KINDS[raid.kind ?? "party"].steal),
-      modifiers: { ...state.modifiers, happiness: state.modifiers.happiness - 12 },
-      log: [plunderText(state, raid), ...state.log].slice(0, 30),
-    };
+    if (defense >= raid.strength) return raidWon(state, raid, Math.min(state.soldiers, Math.floor(raid.strength / 3)), 0, true);
+    return raidLost(state, raid, Math.min(state.soldiers, raid.strength), 0, true);
   }
 
   if (!raid && state.tick >= state.nextRaidTick && quietEnough(state) && !firstStoneAge(state)) {
@@ -6893,6 +6953,27 @@ function step(state: GameState, action: Action): GameState {
     case "dismissDebrief":
       return state.debrief?.kind === "final" ? { ...state, debrief: null } : state;
 
+    case "commandBattle": {
+      const raid = state.raid;
+      if (!raid || !commanding(state) || !canCommand(state)) return state;
+      const setup = commandSetup(state, raid, action.placements);
+      if (!setup.ours.length) return state;
+      const result = runBattle(setup);
+      const { scale } = battleRoster(state);
+      const spears = Math.min(spearmenOf(state), Math.round((result.fell.spearman ?? 0) * scale));
+      const losses = Math.min(state.soldiers, Math.round((result.fell.warrior ?? 0) * scale) + spears);
+      const hurt = result.fell.chief ? "The chief was wounded, but will mend. " : "";
+      return withMeters(
+        result.won
+          ? raidWon(state, raid, losses, spears, false, `You led the fight. ${hurt}`)
+          : raidLost(state, raid, losses, spears, false, `You led the fight, but the line broke. ${hurt}`),
+      );
+    }
+
+    case "autoBattle":
+      // Leave it to the warriors after all: the usual fight, starting now.
+      return state.raid && commanding(state) ? { ...state, raid: { ...state.raid, response: "fight", fightStart: state.tick } } : state;
+
     case "strikeBack": {
       if (!action.go) return state.strikeOffer ? { ...state, strikeOffer: null } : state;
       if (strikeError(state)) return state;
@@ -6903,13 +6984,13 @@ function step(state: GameState, action: Action): GameState {
         strike: { start: state.tick, back: state.tick + STRIKE.ticks, sent, spears, strength: state.strikeOffer!.strength, fromTile: state.strikeOffer!.fromTile },
         soldiers: state.soldiers - sent,
         spearmen: 0,
-        log: [`${sent} warriors took to the canoes to burn the raiders' camp. Back in ${secs(STRIKE.ticks)} s.`, ...state.log].slice(0, 30),
       };
     }
 
     case "raidResponse": {
       const raid = state.raid;
       if (!raid || raid.roman || raid.fightStart !== undefined || raid.response) return state;
+      if (action.choice === "command" && !canCommand(state)) return state;
       if (action.choice === "tribute") {
         const price = tributeCost(raid);
         if (state.resources.food < price) return state;

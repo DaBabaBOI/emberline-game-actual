@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { TUTORIAL } from "@/game/content";
-import { reducer, saveGame, tickSeconds, type Action } from "@/game/engine";
+import { commanding, reducer, saveGame, tickSeconds, type Action } from "@/game/engine";
 import { guideFor } from "./guide";
 import type { GameState } from "@/game/types";
 
@@ -61,7 +61,8 @@ export function GameProvider({
   // The world waits while the debrief is on screen.
   // ...and while a discovery scene plays.
   // ...and while Elder Ama thinks about a question.
-  const paused = !!state.debrief || !!state.cutscene || asking || (!!state.nameEgg && !state.nameEgg.seen) || !!state.story?.scene;
+  // ...and while the player commands a battle.
+  const paused = !!state.debrief || !!state.cutscene || asking || (!!state.nameEgg && !state.nameEgg.seen) || !!state.story?.scene || commanding(state);
 
   // First-time mode starts with a slower clock (tickSeconds).
   const perTick = tickSeconds(state);

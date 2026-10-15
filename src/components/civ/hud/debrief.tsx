@@ -319,11 +319,12 @@ export function GoalLine() {
         onClick={() => setFull(!full)}
         aria-expanded={full}
         title={steps?.length ? "Click to see how to get there" : undefined}
-        className="pixel-panel-dark font-pixel pointer-events-auto max-w-[min(92vw,640px)] px-3 py-1 text-center text-xs hover:brightness-125"
+        className="pixel-panel-dark font-pixel pointer-events-auto flex max-w-[min(92vw,640px)] items-start gap-1.5 px-3 py-1 text-left text-xs hover:brightness-125"
         data-testid="goal-line"
       >
-        {goal}
-        {!!steps?.length && <span className="ml-1.5 text-amber-300">{full ? "▴" : "How? ▾"}</span>}
+        {/* One line until opened: the whole goal, then how to get there. */}
+        <span className={cn("flex-1", !full && "line-clamp-1")}>{goal}</span>
+        <span className="shrink-0 text-amber-300">{full ? "▴" : steps?.length ? "How? ▾" : "▾"}</span>
       </button>
       {how}
     </div>

@@ -223,3 +223,10 @@ export function nextHint(state: GameState): string | null {
   const seen = state.hintsSeen ?? [];
   return HINTS.find((h) => !seen.includes(h.id) && h.when(state))?.id ?? null;
 }
+
+// Something urgent is on screen (raiders, our warriors away, a disaster, the
+// legion, a rebellion or plague): Elder Ama's tips and her Ask button wait,
+// so the screen shows one thing at a time.
+export function urgentNow(state: GameState) {
+  return !!(state.raid || state.strikeOffer || state.strike || state.disaster || state.legion || state.rebellion || state.plague);
+}

@@ -6,6 +6,7 @@ import { PixelIcon } from "@/components/civ/pixel-icon";
 import { TUTORIAL } from "@/game/content";
 import { askAma } from "@/lib/ama";
 import { useShot } from "./letterbox";
+import { urgentNow } from "@/game/hints";
 
 // Questions to start from, for players who don't know what to ask.
 const STARTERS = ["What should I do next?", "Why are people unhappy?", "How do I get more food?"];
@@ -34,6 +35,8 @@ export function AskAma() {
     setAsking(false);
   };
 
+  // One Elder Ama at a time: no Ask button beside her tip, or while raiders are about.
+  if (!open && (state.hint || urgentNow(state))) return null;
   if (!open)
     return (
       <button

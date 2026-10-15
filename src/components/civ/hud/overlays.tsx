@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { goldenDeer, launchFireworks, useKonami } from "./eggs";
-import { HINTS } from "@/game/hints";
+import { HINTS, urgentNow } from "@/game/hints";
 import { playShot } from "./letterbox";
 import { playSfx } from "@/lib/audio";
-import { useCompact } from "@/lib/use-compact";
+import { useWide } from "@/lib/use-compact";
 import { setTimeOfDay } from "./time-of-day";
 import { AFTER_STEPS, DISASTERS, DISCOVERIES, DROUGHT, ERA_INTROS, ERAS, EVENTS, KINGDOMS, LESSONS, RAID_KINDS, RAID_RESPONSE, STRIKE, TREE_BY_ID, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
 import {
@@ -17,6 +17,7 @@ import {
   inDrought,
   MOMENT_IDS,
   rainfall,
+  canCommand,
   secs,
   strikeError,
   strikeParty,
@@ -253,7 +254,8 @@ const MAX_TOASTS = 2;
 // so the screen never fills with messages.
 export function Toasts() {
   const { state } = useGame();
-  const compact = useCompact();
+  // Below 1024 px everything shares one column: one message at a time.
+  const compact = !useWide();
   const [toasts, setToasts] = useState<{ id: number; text: string }[]>([]);
   const seen = useRef(state.log);
   const nextId = useRef(0);
@@ -287,7 +289,7 @@ export function Toasts() {
 
   return (
     <div className="pointer-events-none flex w-full flex-col items-end gap-1">
-      {/* Phones show only the newest message. */}
+      {/* Narrower screens show only the newest message. */}
       {(compact ? toasts.slice(0, 1) : toasts).map((t, i) => (
         <div
           key={t.id}
@@ -495,6 +497,9 @@ export function RaidBanner() {
   const safe = defense >= raid.strength;
   const eta = Math.max(0, raid.arriveTick - state.tick);
 
+  // Commanding the battle: its own screen is up.
+  if (raid.response === "command" && raid.fightStart !== undefined) return null;
+
   // The fight is on: a tug of war you can still tip by training warriors.
   if (raid.fightStart !== undefined) {
     const left = Math.max(0, raid.fightStart + RAID_RESPONSE.fightTicks - state.tick);
@@ -562,6 +567,20 @@ export function RaidBanner() {
               arrive in <Countdown ticks={eta} />s.
             </span>
           </div>
+          {canCommand(state) && (
+            <button
+              type="button"
+              onClick={() => dispatch({ type: "raidResponse", choice: "command" })}
+              className="pixel-btn pointer-events-auto mt-2 flex w-full items-center gap-2 bg-red-800 px-2 py-1.5 text-left text-xs hover:bg-red-700"
+              data-testid="raid-command"
+            >
+              <PixelIcon name="sword" size={18} />
+              <span>
+                <span className="text-sm font-semibold">Command the battle</span>
+                <span className="block text-[11px] text-white/75">Place your warriors, the chief, palisades and towers yourself, then watch it play out</span>
+              </span>
+            </button>
+          )}
           <div className="mt-2 grid grid-cols-2 gap-1.5 xl:grid-cols-4">
             {options.map((o) => (
               <button
@@ -599,6 +618,10 @@ export function RaidBanner() {
             <>
               Everyone is hiding in the houses. The raiders arrive in <Countdown ticks={eta} />s.
             </>
+          ) : raid.response === "command" ? (
+            <>
+              You&apos;ll command the battle when they land, in <Countdown ticks={eta} />s · {raid.strength} raiders vs defense {defense} · train warriors now!
+            </>
           ) : (
             <>
               {raid.strength} raiders arriving in <Countdown ticks={eta} />s · Defense {defense} = {defenseBreakdown(state)} ·{" "}
@@ -615,7 +638,9 @@ export function RaidBanner() {
 export function Warnings() {
   const { state, dispatch } = useGame();
   const [open, setOpen] = useState(false);
-  const list = [...warnings(state)].sort((a, b) => Number(b.severe) - Number(a.severe));
+  // With raiders (or the like) on screen, only the serious ones.
+  const urgent = urgentNow(state);
+  const list = [...warnings(state)].filter((w) => !urgent || w.severe).sort((a, b) => Number(b.severe) - Number(a.severe));
   if (list.length === 0) return null;
   const shown = open ? list : list.slice(0, 1);
   return (

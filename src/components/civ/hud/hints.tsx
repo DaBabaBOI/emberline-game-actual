@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useGame } from "@/components/civ/game-provider";
-import { HINT, HINTS_BY_ID, nextHint } from "@/game/hints";
+import { HINT, HINTS_BY_ID, nextHint, urgentNow } from "@/game/hints";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { useShot } from "./letterbox";
 
@@ -21,7 +21,7 @@ export function HintPanel() {
       if (!h || state.tick - state.hint.tick >= HINT.showTicks || h.done?.(state)) dispatch({ type: "dismissHint" });
       return;
     }
-    if (shot) return;
+    if (shot || urgentNow(state)) return;
     const id = nextHint(state);
     if (id) dispatch({ type: "showHint", id });
     // Checked each tick; the rest of the state is read when it runs.
@@ -41,7 +41,8 @@ export function HintPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shownAt]);
 
-  if (!hint) return null;
+  // Raiders (or the like) on screen: the tip waits.
+  if (!hint || urgentNow(state)) return null;
   return (
     <div className="pixel-panel pointer-events-auto relative z-[15] flex w-full items-start gap-2 p-2.5 text-sm" data-testid="hint" data-hint={hint.id}>
       <PixelIcon name="elder" size={24} />

@@ -1,5 +1,6 @@
 "use client";
 
+import { CommandBattle } from "./hud/command-battle";
 import { AskAma } from "./hud/ask-ama";
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
@@ -143,6 +144,7 @@ function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null 
         <Debrief onRestart={onRestart} />
       </div>
       <FinalEnding />
+      <CommandBattle />
       <NameEggCard />
       <LeaderHud />
       <StoryScene />

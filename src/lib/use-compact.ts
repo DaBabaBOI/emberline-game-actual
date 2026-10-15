@@ -18,3 +18,18 @@ export function useCompact() {
     () => false,
   );
 }
+
+// Wide screens (1024 px and up) lay the HUD out in three columns; narrower
+// ones stack it in one, so they show fewer things at once.
+const WIDE = "(min-width: 1024px)";
+export function useWide() {
+  return useSyncExternalStore(
+    (onChange) => {
+      const list = window.matchMedia(WIDE);
+      list.addEventListener("change", onChange);
+      return () => list.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia(WIDE).matches,
+    () => true,
+  );
+}

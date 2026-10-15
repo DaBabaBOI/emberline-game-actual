@@ -53,7 +53,8 @@ export type RaidKind = "band" | "party" | "fire";
 export type KingdomId = "steppe" | "reach";
 export type LandmarkId = "library" | "cathedral" | "harbour";
 export type DisasterKind = "storm" | "flood" | "earthquake" | "landslide";
-export type RaidResponse = "fight" | "hide" | "tribute" | "tributeCoins";
+// "command": the player places the army and the fight plays out unit by unit (battle.ts).
+export type RaidResponse = "fight" | "hide" | "tribute" | "tributeCoins" | "command";
 
 export interface Raid {
   strength: number;
