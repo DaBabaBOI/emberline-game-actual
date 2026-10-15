@@ -50,9 +50,9 @@ export function LandmarkPicker() {
   const { state, dispatch } = useGame();
   if (state.era !== 2 || !state.droughtDone || state.landmark || state.debrief || state.phase !== "playing") return null;
   return (
-    <div className="pixel-panel pointer-events-auto w-[min(92vw,640px)] p-3 text-xs md:text-sm" data-testid="landmark-picker">
+    <div className="pixel-panel pointer-events-auto w-full p-3 text-xs md:text-sm" data-testid="landmark-picker">
       <p className="font-pixel mb-2 font-semibold">Choose a great landmark. Built in three stages, it carries the town into the Middle Ages.</p>
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid gap-2">
         {(Object.keys(LANDMARKS) as LandmarkId[]).map((id) => {
           const l = LANDMARKS[id];
           return (

@@ -320,7 +320,7 @@ export function MultiplayerPanel({ match }: { match: Match }) {
   return (
     <>
       {/* A small side menu: one line until opened; a player's buttons show when you pick them. */}
-      <div className="pixel-panel-dark font-pixel pointer-events-auto w-56 text-[11px] text-white" data-testid="mp-panel">
+      <div className="pixel-panel-dark font-pixel pointer-events-auto w-full text-[11px] text-white" data-testid="mp-panel">
         <button type="button" onClick={() => setOpen(!open)} className="flex w-full items-center justify-between gap-2 px-2 py-1" aria-expanded={open}>
           <span className="flex items-center gap-1 font-semibold">
             <PixelIcon name={room.mode === "race" ? "crown" : "hand"} size={14} />

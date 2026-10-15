@@ -85,54 +85,55 @@ function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null 
             <SideMeters side="right" />
           </>
         )}
-        {/* Everything that pops up under the top bar lives in stacks, so panels
-            queue up instead of drawing over each other. Wide screens get three
-            columns (panels left, notices centre, messages right); smaller
-            screens get one column. */}
+        {/* Everything that pops up lives in one column on the left, most
+            important first, so panels queue up instead of drawing over each
+            other: what needs you now (raiders, disasters), Elder Ama's guided
+            steps, choices waiting, serious warnings, the goal, other warnings,
+            her tips, then the latest news. It starts under the top bar and
+            ends above the bottom bar (scrolling if it must). With the
+            Advancements tree open it moves aside, out of the tree's way. */}
         <div
           ref={stack}
-          // Below 1024 px the stack starts under the top bar (and the meter
-          // strip) and ends above the bottom bar, however tall they are.
           style={treeOpen ? spot : { top: "calc(var(--hud-top, 6rem) + 0.5rem)", maxHeight: "calc(100dvh - var(--hud-top, 6rem) - var(--hud-bottom, 10rem) - 1rem)" }}
           className={cn(
-            "absolute flex flex-col gap-2 overflow-y-auto md:right-auto md:w-80 lg:contents",
+            "absolute flex flex-col gap-2 overflow-y-auto md:right-auto md:w-80 xl:w-96",
             compact ? "left-2 right-2 md:left-3" : "left-11 right-11 md:left-16",
             treeOpen && "bottom-[var(--spot-bottom)] top-[var(--spot-top)] max-h-[var(--spot-max)] md:left-auto md:right-6",
           )}
+          data-testid="hud-stack"
         >
-          <div className="flex flex-col items-center gap-2 lg:absolute lg:left-[25rem] lg:right-[21rem] lg:top-20">
-            <GoalLine />
-            <NextEraPrompt />
-            <LandmarkPicker />
-            <RaidBanner />
-          </div>
-          {/* Elder Ama's panels stay above the tutorial's dimmed overlay, so what
-              she is waiting for can always be read. */}
-          <div
-            ref={elder}
-            className={cn(
-              "relative z-[26] flex flex-col gap-2 lg:absolute lg:w-80 lg:overflow-y-auto",
-              treeOpen
-                ? "lg:bottom-[var(--spot-bottom)] lg:right-8 lg:top-[var(--spot-top)] lg:max-h-[var(--spot-max)]"
-                : "lg:left-16 lg:top-20 lg:max-h-[calc(100dvh-16rem)]",
-            )}
-          >
-            <DevPanel />
-            <StoryPanel />
+          {/* 1. What needs you now. */}
+          <RaidBanner />
+          {/* 2. Elder Ama's guided steps (above the tutorial's dimmed overlay,
+              so what she is waiting for can always be read). */}
+          <div ref={elder} className="relative z-[26] flex flex-col gap-2 empty:hidden">
             <TutorialPanel />
             <LastTutorialPanel />
             <CoachPanel />
             <ElderLesson />
-            {/* A speedrun goes without Elder Ama and her hints. */}
-            {!state.speedrun && <HintPanel />}
-            {!state.speedrun && <AskAma />}
           </div>
-          <div className="flex flex-col items-end gap-2 lg:absolute lg:right-16 lg:top-20 lg:w-64">
-            {match && <MultiplayerPanel match={match} />}
-            <Toasts />
-          </div>
+          {/* 3. Choices waiting. */}
+          <NextEraPrompt />
+          <LandmarkPicker />
+          {/* 4. Serious warnings (famine, collapse...). */}
+          <Warnings only="severe" />
+          {/* 5. Where we're going. */}
+          <StoryPanel />
+          <GoalLine />
+          {/* 6. Other warnings. */}
+          <Warnings only="mild" />
+          {/* 7. Elder Ama's tips (a speedrun goes without her). */}
+          {!state.speedrun && (
+            <div className="relative z-[26] flex flex-col gap-2 empty:hidden">
+              <HintPanel />
+              <AskAma />
+            </div>
+          )}
+          {/* 8. The latest news, and the others in a match. */}
+          <Toasts />
+          {match && <MultiplayerPanel match={match} />}
+          <DevPanel />
         </div>
-        <Warnings />
         {/* Leader mode: building happens in the build view. */}
         {leaderView !== "fp" && <BottomBar />}
         {panel === "tree" && <TreeOverlay />}
@@ -328,7 +329,7 @@ function useSpotInTree(
     const place = () => {
       const area = document.querySelector("[data-tree-area]")?.getBoundingClientRect();
       const details = document.querySelector("[data-tree-details]")?.getBoundingClientRect();
-      const box = (window.innerWidth >= 1024 ? elder.current : stack.current)?.getBoundingClientRect();
+      const box = stack.current?.getBoundingClientRect();
       if (!area || !details || !box) return;
       const room = Math.max(120, details.top - area.top - 2 * gap);
       const height = Math.min(box.height, room);

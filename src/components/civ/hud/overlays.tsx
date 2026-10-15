@@ -288,7 +288,7 @@ export function Toasts() {
   }, [state.log]);
 
   return (
-    <div className="pointer-events-none flex w-full flex-col items-end gap-1">
+    <div className="pointer-events-none flex w-full flex-col items-start gap-1">
       {/* Narrower screens show only the newest message. */}
       {(compact ? toasts.slice(0, 1) : toasts).map((t, i) => (
         <div
@@ -581,7 +581,7 @@ export function RaidBanner() {
               </span>
             </button>
           )}
-          <div className="mt-2 grid grid-cols-2 gap-1.5 xl:grid-cols-4">
+          <div className="mt-2 grid grid-cols-2 gap-1.5">
             {options.map((o) => (
               <button
                 key={o.id}
@@ -635,21 +635,17 @@ export function RaidBanner() {
 }
 
 // Only the most urgent warning is shown; the rest wait behind a "+N more" button.
-export function Warnings() {
+// In the left column: the serious ones high up, the rest under the goal.
+export function Warnings({ only }: { only: "severe" | "mild" }) {
   const { state, dispatch } = useGame();
   const [open, setOpen] = useState(false);
   // With raiders (or the like) on screen, only the serious ones.
   const urgent = urgentNow(state);
-  const list = [...warnings(state)].filter((w) => !urgent || w.severe).sort((a, b) => Number(b.severe) - Number(a.severe));
+  const list = warnings(state).filter((w) => (only === "severe" ? w.severe : !w.severe && !urgent));
   if (list.length === 0) return null;
   const shown = open ? list : list.slice(0, 1);
   return (
-    // Just above the bottom bar, however tall it is (--hud-bottom: game-screen.tsx).
-    <div
-      data-testid="warnings"
-      style={{ bottom: "calc(var(--hud-bottom, 12rem) + 0.5rem)" }}
-      className="pointer-events-none absolute left-2 right-2 flex flex-col gap-1.5 md:left-3 md:right-auto md:max-w-72"
-    >
+    <div data-testid={only === "severe" ? "warnings" : "warnings-mild"} className="pointer-events-none flex flex-col gap-1.5">
       {shown.map((w) => (
         <div
           key={w.id}

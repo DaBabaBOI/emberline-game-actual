@@ -167,7 +167,7 @@ export function StoryPanel() {
   const chapter = story ? CHAPTERS[story.chapter] : null;
   if (!story || !chapter || story.scene) return null;
   return (
-    <div className="pixel-panel pointer-events-auto w-full p-3 text-sm md:w-80" data-testid="story-panel">
+    <div className="pixel-panel pointer-events-auto w-full p-3 text-sm" data-testid="story-panel">
       <div className="font-pixel text-[11px] uppercase tracking-widest text-amber-700">
         Chapter {story.chapter + 1} of {CHAPTERS.length}
       </div>

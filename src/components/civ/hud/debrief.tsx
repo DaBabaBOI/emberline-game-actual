@@ -13,7 +13,6 @@ import { LeaderboardPanel } from "./online";
 import { SpeedrunPanel } from "./speedrun";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { cn } from "@/lib/utils";
-import { useCompact } from "@/lib/use-compact";
 
 const TIERS: Record<DebriefData["tier"], { title: string; text: string; tone: string }> = {
   thriving: {
@@ -276,7 +275,6 @@ const ERA_ENDS: Record<number, string> = {
 
 export function GoalLine() {
   const { state } = useGame();
-  const compact = useCompact();
   const [full, setFull] = useState(false);
   if (state.mode === "last") return <ProblemsLine />;
   const goal = currentGoal(state);
@@ -285,7 +283,7 @@ export function GoalLine() {
   // "How to get there": every step behind the goal, ticked off when done.
   const how =
     full && steps?.length ? (
-      <ul className="pixel-panel pointer-events-auto mt-1 flex w-full max-w-[min(92vw,640px)] flex-col gap-1 px-3 py-2 text-left text-xs" data-testid="goal-steps">
+      <ul className="pixel-panel pointer-events-auto mt-1 flex w-full flex-col gap-1 px-3 py-2 text-left text-xs" data-testid="goal-steps">
         <li className="font-pixel font-semibold">How to get there</li>
         {steps.map((st) => (
           <li key={st.text} className={cn("flex gap-1.5", st.done ? "text-emerald-700" : "text-[#2b2119]")}>
@@ -295,34 +293,17 @@ export function GoalLine() {
         ))}
       </ul>
     ) : null;
-  if (compact)
-    // Phones: one line; tap to read it all, with the steps.
-    return (
-      <div className="flex w-full flex-col items-stretch">
-        <button
-          type="button"
-          onClick={() => setFull(!full)}
-          aria-expanded={full}
-          className="pixel-panel-dark font-pixel pointer-events-auto flex w-full items-start gap-1 px-2 py-1 text-left text-xs"
-          data-testid="goal-line"
-        >
-          <span className={cn("flex-1", !full && "line-clamp-1")}>{goal}</span>
-          <span className="text-amber-300">{full ? "▴" : "▾"}</span>
-        </button>
-        {how}
-      </div>
-    );
+  // One line, the width of the column; click to read it all, with the steps.
   return (
-    <div className="pointer-events-none flex flex-col items-center">
+    <div className="flex w-full flex-col items-stretch">
       <button
         type="button"
         onClick={() => setFull(!full)}
         aria-expanded={full}
         title={steps?.length ? "Click to see how to get there" : undefined}
-        className="pixel-panel-dark font-pixel pointer-events-auto flex max-w-[min(92vw,640px)] items-start gap-1.5 px-3 py-1 text-left text-xs hover:brightness-125"
+        className="pixel-panel-dark font-pixel pointer-events-auto flex w-full items-start gap-1.5 px-2.5 py-1 text-left text-xs hover:brightness-125"
         data-testid="goal-line"
       >
-        {/* One line until opened: the whole goal, then how to get there. */}
         <span className={cn("flex-1", !full && "line-clamp-1")}>{goal}</span>
         <span className="shrink-0 text-amber-300">{full ? "▴" : steps?.length ? "How? ▾" : "▾"}</span>
       </button>
@@ -506,7 +487,7 @@ export function NextEraPrompt() {
   const { state, dispatch } = useGame();
   if (!readyForNextEra(state)) return null;
   return (
-    <div className="pointer-events-none flex justify-center">
+    <div className="pointer-events-none flex justify-start">
       <button
         type="button"
         onClick={() => dispatch({ type: "advanceEra" })}

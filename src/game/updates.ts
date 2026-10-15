@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-15",
     items: [
+      "Everything that pops up now lives in one column on the left, most important first: raiders and disasters, Elder Ama's steps, choices waiting, serious warnings, the goal, other warnings, her tips, then the latest news. The middle of the screen is left for your island.",
       "Command the battle: when raiders land you can set out your army yourself (warriors, spearmen, the chief, palisades and towers) on a battlefield, then press Fight and watch it play out blow by blow. Brutes hit hard, torch-bearers run round the sides, spearmen strike over palisades. Or leave it to your warriors as before.",
       "Raids come a little more often.",
       "A calmer screen: the goal fits on one line (click it for the rest), Elder Ama's tips and her Ask button wait while raiders are about, only serious warnings show during a raid, and smaller screens show one message at a time.",
