@@ -43,6 +43,7 @@ import {
   CoachPanel,
   Warnings,
 } from "./hud/overlays";
+import { ContactModal, RuinsModal } from "./hud/contact";
 
 const WorldCanvas = dynamic(
   () => import("./world/world-canvas").then((m) => m.WorldCanvas),
@@ -146,6 +147,8 @@ function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null 
         {panel === "space" && <SpacePanel />}
         <GuideOverlay />
         <EventModal />
+        <ContactModal />
+        <RuinsModal />
         <DiscoveryScene />
         <Debrief onRestart={onRestart} />
       </div>

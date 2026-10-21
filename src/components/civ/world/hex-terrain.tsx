@@ -1,11 +1,10 @@
 "use client";
 
 import { useLayoutEffect, useMemo, useRef } from "react";
-import type { ThreeEvent } from "@react-three/fiber";
-import { Color, CylinderGeometry, InstancedMesh, Object3D } from "three";
+import { useFrame, type ThreeEvent } from "@react-three/fiber";
+import { Color, CylinderGeometry, IcosahedronGeometry, InstancedMesh, Object3D } from "three";
 import { LAND } from "@/game/content";
-import { hexDistance } from "@/game/hex";
-import { isLand } from "@/game/map";
+import { hexDistance, hexKey, NEIGHBOR_OFFSETS } from "@/game/hex";
 import type { Terrain, Tile } from "@/game/types";
 
 const TERRAIN_COLORS: Record<Terrain, string> = {
@@ -21,7 +20,11 @@ const TERRAIN_COLORS: Record<Terrain, string> = {
   river: "#5bb8e3",
 };
 
-const FOG_HEIGHT = 0.62;
+// Unexplored tiles lie flat, as low as the deep sea floor.
+const FOG_HEIGHT = 0.12;
+// The colour of the open sea floor far away (see Sea), so the unknown runs on
+// past the edge of the world without a seam.
+const UNKNOWN = new Color("#0f3f66");
 const CHARRED = new Color("#2e2620");
 // Cut-over forest shows bare earth and stumps; worn-out grass dries up.
 const BARE = new Color("#7a6443");
@@ -41,10 +44,11 @@ function jitter(id: number, salt: number) {
   return x - Math.floor(x);
 }
 
-// Unexplored sea stays blue (just a little darker); unexplored land (and any
-// river running through it) is hidden under a layer of cloud.
+// Nothing unexplored shows: land, sea and river alike lie flat and dark
+// under the water, so the shape of what is out there stays hidden until
+// someone goes and looks (a mist bank marks the edge: FogEdge).
 export function underCloud(tile: Tile) {
-  return !tile.revealed && (isLand(tile.terrain) || tile.terrain === "river");
+  return !tile.revealed;
 }
 
 export function tileTop(tile: Tile) {
@@ -112,13 +116,8 @@ export function HexTerrain({
         if (dry > 0 && (tile.terrain === "grass" || tile.terrain === "steppe" || tile.terrain === "marsh")) color.lerp(PARCHED, dry * 0.6);
         if (dry > 0 && tile.terrain === "river") color.lerp(LOW_RIVER, dry * 0.7);
       } else {
-        if (underCloud(tile)) {
-          color.set("#eef2f6");
-          color.offsetHSL(0, 0, (jitter(tile.id, 2) - 0.5) * 0.05);
-        } else {
-          color.set(TERRAIN_COLORS.deep);
-          color.offsetHSL(0, 0, -0.04 + (jitter(tile.id, 2) - 0.5) * 0.03);
-        }
+        color.copy(UNKNOWN);
+        color.offsetHSL(0, 0, (jitter(tile.id, 2) - 0.5) * 0.02);
       }
       mesh.setColorAt(tile.id, color);
     }
@@ -151,6 +150,52 @@ export function HexTerrain({
       }}
     >
       <meshStandardMaterial roughness={0.85} flatShading />
+    </instancedMesh>
+  );
+}
+
+// The edge of the known world: a low bank of mist over the unexplored tiles
+// that touch explored ones, drifting slowly. It hides what is just beyond.
+const PUFF = new IcosahedronGeometry(1, 1);
+export function FogEdge({ tiles }: { tiles: Tile[] }) {
+  const ref = useRef<InstancedMesh>(null);
+  const puffs = useMemo(() => {
+    const byKey = new Map(tiles.map((t) => [hexKey(t.q, t.r), t]));
+    const out: { x: number; z: number; s: number; h: number; phase: number }[] = [];
+    for (const t of tiles) {
+      if (t.revealed) continue;
+      const edge = NEIGHBOR_OFFSETS.some(([dq, dr]) => byKey.get(hexKey(t.q + dq, t.r + dr))?.revealed);
+      if (!edge) continue;
+      for (let k = 0; k < 2; k++) {
+        out.push({
+          x: t.x + (jitter(t.id, 3 + k) - 0.5) * 1.1,
+          z: t.z + (jitter(t.id, 5 + k) - 0.5) * 1.1,
+          s: 0.75 + jitter(t.id, 7 + k) * 0.55,
+          h: 0.42 + jitter(t.id, 9 + k) * 0.3,
+          phase: jitter(t.id, 11 + k) * Math.PI * 2,
+        });
+      }
+    }
+    return out;
+  }, [tiles]);
+  const dummy = useMemo(() => new Object3D(), []);
+  useFrame(({ clock }) => {
+    const mesh = ref.current;
+    if (!mesh) return;
+    const t = clock.elapsedTime;
+    puffs.forEach((p, i) => {
+      const breathe = 1 + Math.sin(t * 0.5 + p.phase) * 0.08;
+      dummy.position.set(p.x + Math.sin(t * 0.13 + p.phase) * 0.15, p.h + Math.sin(t * 0.4 + p.phase) * 0.04, p.z);
+      dummy.scale.set(p.s * 1.25 * breathe, p.s * 0.42, p.s * 1.1 * breathe);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+  });
+  if (!puffs.length) return null;
+  return (
+    <instancedMesh key={puffs.length} ref={ref} args={[PUFF, undefined, puffs.length]} raycast={() => null} frustumCulled={false}>
+      <meshStandardMaterial color="#e8eef2" transparent opacity={0.72} roughness={1} flatShading depthWrite={false} />
     </instancedMesh>
   );
 }

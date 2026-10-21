@@ -4,8 +4,8 @@ import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Group } from "three";
 import { Html } from "./html";
-import { CANOE, DIPLOMACY, KINGDOMS, TICK_SECONDS } from "@/game/content";
-import { moodOf, nextVoyage } from "@/game/engine";
+import { CANOE, DIPLOMACY, TICK_SECONDS } from "@/game/content";
+import { kingdomInfo, moodOf, nextVoyage } from "@/game/engine";
 import { ISLANDS, isLand } from "@/game/map";
 import type { GameState, KingdomId, Tile } from "@/game/types";
 
@@ -17,21 +17,30 @@ const coastOf = (tiles: Tile[], island: number) =>
   tiles.filter((t) => !isLand(t.terrain) && t.terrain !== "river" && tiles.some((n) => n.island === island && Math.hypot(n.x - t.x, n.z - t.z) < 1.8));
 
 // A sea route from the home island's coast to another island's, between the
-// two points of open water that face each other.
-function seaRoute(tiles: Tile[], home: Tile, island: number): Route | null {
-  const there = ISLANDS[island];
+// two points of open water that face each other. `there` is the island's middle
+// (the classic map's islands are known by number).
+function seaRoute(tiles: Tile[], home: Tile, island: number, there: Point | null = ISLANDS[island] ?? null): Route | null {
   if (!there) return null;
   const from = coastOf(tiles, home.island).sort((a, b) => Math.hypot(a.x - there.x, a.z - there.z) - Math.hypot(b.x - there.x, b.z - there.z))[0];
   const to = coastOf(tiles, island).sort((a, b) => Math.hypot(a.x - home.x, a.z - home.z) - Math.hypot(b.x - home.x, b.z - home.z))[0];
   return from && to ? { from, to } : null;
 }
 
-// The sea doesn't move, so each route is worked out once.
-const routes = new Map<string, Route | null>();
-function routeFor(tiles: Tile[], home: Tile, island = 1) {
+// The sea doesn't move, so each route is worked out once (once found: in an
+// endless world the far coast may not have been made yet).
+const routes = new Map<string, Route>();
+function routeFor(tiles: Tile[], home: Tile, island = 1, there?: Point | null) {
   const key = `${home.id}-${island}`;
-  if (!routes.has(key)) routes.set(key, seaRoute(tiles, home, island));
+  if (!routes.has(key)) {
+    const route = seaRoute(tiles, home, island, there === undefined ? ISLANDS[island] ?? null : there);
+    if (route) routes.set(key, route);
+  }
   return routes.get(key) ?? null;
+}
+// The route to a kingdom's island.
+function kingdomRoute(state: GameState, home: Tile, id: KingdomId) {
+  const info = kingdomInfo(state, id);
+  return routeFor(state.tiles, home, info.island, info.isle);
 }
 
 // From an island's coast to a point on the water (where an army lands).
@@ -147,22 +156,14 @@ function Ship({
   );
 }
 
-// Caravans out trading with the Silk Steppe, drawn as ships on the sea.
-export function TradeShips({
-  tiles,
-  home,
-  caravans,
-  tick,
-  speed,
-}: {
-  tiles: Tile[];
-  home: Tile;
-  caravans: { start: number; back: number }[];
-  tick: number;
-  speed: number;
-}) {
+// Caravans out trading with the Silk Steppe (in an endless world, the
+// friendliest people we know), drawn as ships on the sea.
+export function TradeShips({ state, home }: { state: GameState; home: Tile }) {
+  const { tick, speed } = state;
+  const caravans = state.caravans ?? [];
   if (!caravans.length) return null;
-  const route = routeFor(tiles, home);
+  const friend = state.world ? Object.entries(state.kingdoms ?? {}).sort((a, b) => b[1].mood - a[1].mood)[0]?.[0] : undefined;
+  const route = friend ? kingdomRoute(state, home, friend) : routeFor(state.tiles, home);
   if (!route) return null;
   return (
     <group>
@@ -173,11 +174,6 @@ export function TradeShips({
   );
 }
 
-// Each kingdom's island, and its colours (sails, and its soldiers' tunics).
-export const KINGDOM_LOOK: Record<KingdomId, { island: number; sail: string; stripe: string; tunic: string }> = {
-  steppe: { island: 1, sail: "#2a9d8f", stripe: "#e9c46a", tunic: "#2a7d73" },
-  reach: { island: 2, sail: "#5b2a86", stripe: "#c9a227", tunic: "#4b2470" },
-};
 
 // How long our raiding fleet is away (there and back).
 const RAID_VOYAGE = 40;
@@ -186,26 +182,37 @@ const RAID_VOYAGE = 40;
 // our raiding fleet, a kingdom's army sailing in, and a label over each
 // kingdom's island saying how it feels about us.
 export function SeaTraffic({ state, home }: { state: GameState; home: Tile }) {
-  if (state.era < 3 && !state.ships?.length && !state.canoes?.length) return null;
+  if (state.era < 3 && !state.ships?.length && !state.canoes?.length && !state.kingdoms) return null;
   const { tick, speed, tiles } = state;
-  const voyage = nextVoyage(state);
+  const voyage = state.world ? null : nextVoyage(state);
   const raided = state.revenge && state.raidedTick !== undefined && tick - state.raidedTick < RAID_VOYAGE ? state.revenge.kingdom : null;
   const army = state.raid?.kingdom ?? null;
-  const armyRoute = army && state.raid ? landingRoute(tiles, KINGDOM_LOOK[army].island, tiles[state.raid.fromTile]) : null;
+  const armyLook = army ? kingdomInfo(state, army) : null;
+  const armyRoute = armyLook && state.raid ? landingRoute(tiles, armyLook.island, tiles[state.raid.fromTile]) : null;
+  // Where a launch from a building starts: the open water beside it.
+  const launchBy = (b: Tile | undefined) => (b ? tiles.filter((t) => !isLand(t.terrain) && t.terrain !== "river" && Math.hypot(t.x - b.x, t.z - b.z) < 1.9)[0] ?? b : undefined);
+  const port = tiles.find((t) => t.building === "shipyard" || t.building === "harbour");
   return (
     <group>
       {/* Our canoes: to the Southern Isles, or out to fish. */}
       {(state.canoes ?? []).map((c, i) => {
         // Sent to a spot picked on the map: from the water by its dock to there.
         const dock = c.dock !== undefined ? tiles[c.dock] : undefined;
-        const launch = dock ? tiles.filter((t) => !isLand(t.terrain) && t.terrain !== "river" && Math.hypot(t.x - dock.x, t.z - dock.z) < 1.9)[0] : undefined;
-        const route = c.tile !== undefined && tiles[c.tile] ? { from: launch ?? dock ?? home, to: tiles[c.tile] } : routeFor(tiles, home, CANOE.island);
+        const launch = launchBy(dock);
+        const route = c.tile !== undefined && tiles[c.tile] ? { from: launch ?? home, to: tiles[c.tile] } : state.world ? null : routeFor(tiles, home, CANOE.island);
         return route ? <Ship key={`canoe-${c.start}-${i}`} route={route} start={c.start} back={c.back} tick={tick} speed={speed} canoe side={i * 0.6} /> : null;
       })}
       {/* Our ships: out to find land or a coast, or to trade with a kingdom. */}
       {(state.ships ?? []).map((ship, i) => {
         const island = voyage?.island ?? (i % 2 ? 2 : 1);
-        const route = routeFor(tiles, home, island);
+        const friend = Object.keys(state.kingdoms ?? {})[i % Math.max(1, Object.keys(state.kingdoms ?? {}).length)];
+        const route = !state.world
+          ? routeFor(tiles, home, island)
+          : ship.tile !== undefined && tiles[ship.tile]
+            ? { from: launchBy(port) ?? home, to: tiles[ship.tile] }
+            : friend
+              ? kingdomRoute(state, home, friend)
+              : null;
         return route ? (
           <Ship key={`ship-${ship.start}-${i}`} route={route} start={ship.start} back={ship.back} tick={tick} speed={speed} sail="#f1e6cf" stripe="#1e4f9c" />
         ) : null;
@@ -214,7 +221,7 @@ export function SeaTraffic({ state, home }: { state: GameState; home: Tile }) {
       {(Object.keys(state.kingdoms ?? {}) as KingdomId[]).map((id) => {
         const k = state.kingdoms![id];
         if (k.giftTick === undefined || tick - k.giftTick >= DIPLOMACY.gift.wait) return null;
-        const route = routeFor(tiles, home, KINGDOM_LOOK[id].island);
+        const route = kingdomRoute(state, home, id);
         return route ? (
           <Ship key={`envoy-${id}-${k.giftTick}`} route={route} start={k.giftTick} back={k.giftTick + DIPLOMACY.gift.wait} tick={tick} speed={speed} sail="#e9c46a" stripe="#7a2e1f" />
         ) : null;
@@ -222,7 +229,7 @@ export function SeaTraffic({ state, home }: { state: GameState; home: Tile }) {
       {/* Our raiding fleet: three red sails. */}
       {raided &&
         (() => {
-          const route = routeFor(tiles, home, KINGDOM_LOOK[raided].island);
+          const route = kingdomRoute(state, home, raided);
           return route
             ? [-0.9, 0, 0.9].map((side) => (
                 <Ship key={`raid-${side}`} route={route} start={state.raidedTick!} back={state.raidedTick! + RAID_VOYAGE} tick={tick} speed={speed} sail="#9b1c1c" stripe="#140e0a" side={side} />
@@ -240,8 +247,8 @@ export function SeaTraffic({ state, home }: { state: GameState; home: Tile }) {
               back={state.raid!.arriveTick}
               tick={tick}
               speed={speed}
-              sail={KINGDOM_LOOK[army].sail}
-              stripe={KINGDOM_LOOK[army].stripe}
+              sail={armyLook!.sail}
+              stripe={armyLook!.stripe}
               oneWay={{ arrive: 0.35 }}
               side={side}
             />
@@ -250,12 +257,14 @@ export function SeaTraffic({ state, home }: { state: GameState; home: Tile }) {
       )}
       {/* Who lives over there, and how they feel about us. */}
       {(Object.keys(state.kingdoms ?? {}) as KingdomId[]).map((id) => {
-        const isle = ISLANDS[KINGDOM_LOOK[id].island];
+        const info = kingdomInfo(state, id);
+        const isle = info.isle;
+        if (!isle) return null;
         const mood = moodOf(state.kingdoms![id].mood);
         return (
           <Html key={`label-${id}`} zIndexRange={[12, 0]} center position={[isle.x, 2.4, isle.z]} style={{ pointerEvents: "none" }}>
             <div className="pixel-panel font-pixel flex items-center gap-1 whitespace-nowrap px-1.5 py-0.5 text-[11px]" data-testid={`kingdom-label-${id}`}>
-              <span className="capitalize">{KINGDOMS[id].name.replace(/^the /, "")}</span>
+              <span className="capitalize">{info.name.replace(/^the /, "")}</span>
               <span className={state.kingdoms![id].conquered ? "text-sky-800" : mood === "friendly" ? "text-emerald-700" : mood === "hostile" ? "text-red-700" : "text-amber-700"}>
                 · {state.kingdoms![id].conquered ? "ours" : mood}
               </span>
@@ -272,7 +281,8 @@ export function SeaTraffic({ state, home }: { state: GameState; home: Tile }) {
 // allowed to land.
 export function WaitingShips({ state, home }: { state: GameState; home: Tile }) {
   if (!state.plague?.closed) return null;
-  const route = routeFor(state.tiles, home, 1);
+  const first = Object.keys(state.kingdoms ?? {})[0];
+  const route = state.world ? (first ? kingdomRoute(state, home, first) : null) : routeFor(state.tiles, home, 1);
   if (!route) return null;
   // Most of the way out from our coast, held there.
   const at = { x: route.from.x + (route.to.x - route.from.x) * 0.25, z: route.from.z + (route.to.z - route.from.z) * 0.25 };

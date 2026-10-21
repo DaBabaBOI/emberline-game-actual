@@ -7,9 +7,8 @@ import type { Group, Mesh } from "three";
 import { useGame } from "@/components/civ/game-provider";
 import { Figures, type Agent } from "@/components/civ/world/figures";
 import { useHoldWorld } from "@/components/civ/cutscene/active";
-import { KINGDOM_LOOK } from "@/components/civ/world/trade";
 import { PixelIcon } from "@/components/civ/pixel-icon";
-import { amountText, battleRoster, commandSetup, commanding, raidSpoils } from "@/game/engine";
+import { amountText, battleRoster, commandSetup, commanding, kingdomInfo, raidSpoils } from "@/game/engine";
 import {
   FIGHTERS,
   HALF_W,
@@ -134,7 +133,7 @@ function BattleScreen() {
 
   const spoils = raidSpoils(raid);
   const fell = result ? Object.entries(result.fell).reduce((n, [k, v]) => n + (k === "chief" ? 0 : (v ?? 0)), 0) : 0;
-  const theirTunic = raid.kingdom ? KINGDOM_LOOK[raid.kingdom].tunic : "#9b1c1c";
+  const theirTunic = raid.kingdom ? kingdomInfo(state, raid.kingdom).tunic : "#9b1c1c";
 
   return (
     <div className="fixed inset-0 z-[65] bg-[#1b2a17]" data-testid="command-battle">

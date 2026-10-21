@@ -73,11 +73,11 @@ export function Sea({ home }: { home: Tile }) {
     <group position={[home.x, 0, home.z]}>
       {/* The sea floor far from land, so open water reads deep blue. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} raycast={() => null}>
-        <planeGeometry args={[700, 700]} />
+        <planeGeometry args={[2400, 2400]} />
         <meshStandardMaterial color="#0f3f66" roughness={1} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, SEA_LEVEL, 0]} material={SEA} receiveShadow raycast={() => null}>
-        <planeGeometry args={[700, 700]} />
+        <planeGeometry args={[2400, 2400]} />
       </mesh>
     </group>
   );

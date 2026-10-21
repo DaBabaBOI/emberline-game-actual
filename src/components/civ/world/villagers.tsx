@@ -13,7 +13,6 @@ import { makeGround, type Ground } from "./ground";
 import { MAX_FIGURES, figureCounts } from "./crowd";
 import { tileTop } from "./hex-terrain";
 import { BUILDING_SCALE } from "./building-models";
-import { KINGDOM_LOOK } from "./trade";
 
 // Stone Age: hides and furs. Ancient era: dyed linen and wool.
 const TUNICS = ["#b5651d", "#8e5a3a", "#a0522d", "#6b8e23", "#c2956b", "#9c6b3f"];
@@ -534,10 +533,13 @@ export function Raiders({
   raid,
   tick,
   speed = 1,
+  colours,
 }: {
   tiles: Tile[];
   raid: Raid | null;
   tick: number;
+  // A kingdom's army wears its colours.
+  colours?: string;
   // Game speed (0 = paused): raiders march at a steady pace that matches it.
   speed?: number;
 }) {
@@ -620,7 +622,7 @@ export function Raiders({
         moving: q < 0.98 && speed > 0,
         scale: 1.4,
         // A kingdom's soldiers wear its colours.
-        tunic: raid.roman ? "#b3261e" : raid.kingdom ? KINGDOM_LOOK[raid.kingdom].tunic : "#9b1c1c",
+        tunic: raid.roman ? "#b3261e" : (colours ?? "#9b1c1c"),
         skin: SKINS[i % SKINS.length],
         hair: "#1a1a1a",
         phase: i * 1.7,

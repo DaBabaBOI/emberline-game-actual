@@ -13,6 +13,7 @@ import type {
   MeterKey,
   RaidKind,
   Resources,
+  Temper,
   TreeNode,
 } from "./types";
 
@@ -238,7 +239,7 @@ export const BUILDINGS: BuildingDef[] = [
     name: "Canoe Dock",
     icon: "boat",
     description: "A jetty where canoes are hollowed out of tree trunks. Each dock keeps one canoe.",
-    gain: "A canoe: find the Southern Isles and build there, or fish the open sea",
+    gain: "A canoe: find new islands and build there, or fish the open sea",
     landCost: "Every canoe is cut from one big old tree",
     landImpact: 1,
     era: 0,
@@ -514,7 +515,7 @@ export const BUILDINGS: BuildingDef[] = [
     name: "Market",
     icon: "market",
     description: "Stalls and carts in the town square. Traders pay in silver, and caravans leave from here.",
-    gain: "Coins from trade; caravans to the Silk Steppe (after Silk Road Contact)",
+    gain: "Coins from trade; caravans to a people across the sea (after Silk Road Contact)",
     landCost: "Traders from far away can bring sickness with them",
     landImpact: 0,
     era: 2,
@@ -591,7 +592,7 @@ export const BUILDINGS: BuildingDef[] = [
     icon: "castle",
     description: "A stone keep and high walls on strong ground, where the knights live.",
     gain: "+15 defense and room for 10 more warriors",
-    landCost: "Takes a hillside of stone, and the Eastern Reach sees it as a threat",
+    landCost: "Takes a hillside of stone, and the kingdoms across the sea see it as a threat",
     landImpact: 1,
     era: 3,
     cost: { stone: 60, wood: 20, currency: 40 },
@@ -1070,10 +1071,10 @@ export const TREE: TreeNode[] = [
   {
     id: "agriculture",
     name: "Agriculture",
-    description: "Settle down to farm for good. With 15 people, your tribe can enter the Ancient era.",
+    description: "Settle down to farm for good. With 12 people, your tribe can enter the Ancient era.",
     branch: "knowledge",
     era: 0,
-    cost: 30,
+    cost: 24,
     requires: ["early-farming", "toolmaking"],
   },
   // ---- Ancient era ---------------------------------------------------------
@@ -1210,7 +1211,7 @@ export const TREE: TreeNode[] = [
   {
     id: "barter-roads",
     name: "Silk Road Contact",
-    description: "Traders from the Silk Steppe arrive. Send caravans from your Market.",
+    description: "Traders from across the sea arrive. Send caravans from your Market.",
     branch: "culture",
     era: 2,
     cost: 25,
@@ -1778,11 +1779,10 @@ export const ADVANCEMENT_GOALS: Record<string, Goal[]> = {
   // Fewer Knowledge to save up (30, not 80), more things to do instead: settle
   // down in houses and have elders teaching.
   agriculture: [
-    { label: "Have Farmland", kind: "have", building: "farm", amount: 3 },
+    { label: "Have Farmland", kind: "have", building: "farm", amount: 2 },
     { label: "Have Wooden Houses", kind: "have", building: "hut", amount: 2 },
     { label: "Have an Elder's Hut", kind: "have", building: "elder", amount: 1 },
-    { label: "Grow your tribe", kind: "population", amount: 12 },
-    { label: "Store food at once", kind: "stored", resource: "food", amount: 50 },
+    { label: "Grow your tribe", kind: "population", amount: 10 },
   ],
   writing: [{ label: "Save up coins", kind: "stored", resource: "currency", amount: 60 }],
   pottery: [{ label: "Lose food to rot", kind: "tally", key: "rotted", amount: 20 }],
@@ -1860,7 +1860,7 @@ export const AFTER_STEPS: Record<string, AfterStep> = {
   herbalism: { build: "healer", text: "We know which plants heal. Build a Healer's Hut: the sick get better faster, and sickness spreads less." },
   herding: { build: "pen", text: "We can keep goats and sheep. Place a Livestock Pen: steady food, but grazing wears down the grass." },
   "hide-clothing": { text: "Warm clothes from hides and wool: each Livestock Pen now keeps 10 people warm, and families cook at small hearths in their homes. With enough pens you need no campfires at all: less wood, less smoke." },
-  agriculture: { text: "We are farmers now. Grow the tribe to 15 people and we can enter the Ancient era. Watch the goal at the top of the screen." },
+  agriculture: { text: "We are farmers now. Grow the tribe to 12 people and we can enter the Ancient era. Watch the goal at the top of the screen." },
   writing: { build: "school", text: "Marks on clay that everyone can read! Build a Scribe School: more literacy, and Knowledge every day." },
   pottery: { build: "granary", text: "Jars that keep grain dry. Build a Granary so less of our food rots away." },
   bronze: { build: "smithy", text: "Bronze! Build a Bronze Smithy: better tools for everyone, but it burns wood for charcoal all the time." },
@@ -1874,14 +1874,14 @@ export const AFTER_STEPS: Record<string, AfterStep> = {
   planning: { build: "townhouse", text: "Straight streets and tall houses. Build a Town House: room for 24 people on one tile. A packed town spreads sickness, so plan for latrines too." },
   sanitation: { build: "latrine", text: "Build Public Latrines: drains carry the waste away, and sickness spreads far less in town. The waste still ends up downstream." },
   wheel: { build: "market", text: "Wheels and carts! Build a Market: traders bring coins into town, and now and then sickness from far away." },
-  "barter-roads": { text: "Traders from the Silk Steppe want to deal with us. Press Caravan below to send one from the Market: it comes back with coins and new ideas. Sickness travels the same roads." },
+  "barter-roads": { text: "Traders from across the sea want to deal with us. Press Caravan below to send one from the Market: it comes back with coins and new ideas. Sickness travels the same roads." },
   roads: { text: "Stone roads link the town. Trade brings 25% more coins, and caravans and scouts cost less." },
   philosophy: { build: "academy", text: "Build an Academy: teachers and students ask questions nobody asked before, and Knowledge grows." },
   legions: { text: "Iron swords and armour: every warrior now fights three times as hard. Iron needs even more charcoal, so every smithy burns more wood." },
   "heavy-plough": { build: "farm", text: "The heavy plough turns even wet, heavy soil. Fields give 25% more, and Farmland can now go on forest, clearing it. More bread, fewer trees: choose where carefully." },
   "three-field": { text: "Grain, then beans, then a year of rest: every field gets its turn to recover. Fields give 10% more and wear out the land half as much." },
   windmills: { build: "windmill", text: "Build a Windmill near the fields: the wind grinds the grain, and fields within 2 tiles give 20% more. No river, no wood to burn." },
-  castles: { build: "castle", text: "Build a Castle on strong ground: +15 defense and room for 10 more warriors. The Eastern Reach will not like it." },
+  castles: { build: "castle", text: "Build a Castle on strong ground: +15 defense and room for 10 more warriors. The kingdoms across the sea will not like it." },
   knights: { text: "Knights on war horses: every warrior now fights four times as hard. But horses eat, so every warrior needs half as much food again." },
   guilds: { build: "guildhall", text: "Build a Guild Hall: the crafts organise, make better tools and bring in coins. But the guilds keep newcomers out, and people grumble." },
   diplomacy: { text: "We can sign treaties now. Open Kingdoms below: when a kingdom is friendly, a treaty means trade every day and no war." },
@@ -2522,7 +2522,7 @@ export const ERA_INTROS: Record<number, { id: string; title: string; text: strin
   3: {
     id: "era-3",
     title: "Welcome to the Middle Ages",
-    text: "Our great landmark stands, and our town is known across the sea. Two kingdoms watch us: the Silk Steppe and the Eastern Reach. Keep them friendly with gifts and treaties, or build castles to hold them off. New ploughs can feed more of us, but only by clearing the forest. And sailors tell of a terrible sickness spreading from port to port. When it comes, it will come by ship.",
+    text: "Our great landmark stands, and our town is known across the sea. The kingdoms across the sea watch us. Keep them friendly with gifts and treaties, or build castles to hold them off. New ploughs can feed more of us, but only by clearing the forest. And sailors tell of a terrible sickness spreading from port to port. When it comes, it will come by ship.",
     sdg: "SDG 16: peace, and SDG 3: health for everyone",
   },
 };
@@ -3349,7 +3349,7 @@ export const QUIET_GAP = 40;
 // the game is lost. Faster on harder difficulties. A warning shows for the last
 // `LEFT_BEHIND_WARN` ticks. Only the Stone Age for now: the Ancient era already
 // ends with the Roman legion.
-export const ERA_DEADLINE: Record<string, number> = { first: 75 * 40, easy: 60 * 40, normal: 45 * 40, hard: 30 * 40 };
+export const ERA_DEADLINE: Record<string, number> = { first: 80 * 40, easy: 65 * 40, normal: 55 * 40, hard: 38 * 40 };
 export const LEFT_BEHIND_WARN = 200;
 
 // Picking people up and dropping them somewhere (just for fun, with consequences).
@@ -3520,7 +3520,7 @@ export const FAMINE = {
 export const COLLAPSE = { level: 20, ticks: 80 };
 
 // Leaving the Stone Age: research Agriculture and grow to this many people.
-export const NEXT_ERA_POPULATION = 15;
+export const NEXT_ERA_POPULATION = 12;
 // Improving buildings with stone and new ores: each level makes `boost` more
 // (output, or room in a home) from the same land. Level 2 needs Toolmaking,
 // 3 Bronze, 4 Iron Tools, 5 Steelmaking, 6 Aetherite (from the Moon). `stone` and `currency` are what each
@@ -3813,6 +3813,47 @@ export const KINGDOMS: Record<KingdomId, { name: string; start: number; blurb: s
   steppe: { name: "the Silk Steppe", start: 25, blurb: "Traders and horse herders. They like silver and fair deals." },
   reach: { name: "the Eastern Reach", start: -10, blurb: "A proud kingdom with a big army. They watch our walls." },
 };
+// The peoples of an endless world, by temper: how they first feel about us,
+// how big an army they keep (x KINGDOM_ARMY), what a raid on them brings home
+// (shares of the loot) and what they are like.
+export const TEMPERS: Record<Temper, { start: number; army: number; loot: Partial<Record<keyof Resources, number>>; blurb: string }> = {
+  traders: { start: 25, army: 0.85, loot: { currency: 0.5, food: 0.25, knowledge: 0.25 }, blurb: "Traders and sailors. They like fair deals and shiny things." },
+  peaceful: { start: 15, army: 0.7, loot: { food: 0.55, wood: 0.3, knowledge: 0.15 }, blurb: "Fishers and farmers who want to be left in peace." },
+  proud: { start: -10, army: 1.2, loot: { currency: 0.4, stone: 0.3, food: 0.3 }, blurb: "A proud people with a strong army. They watch us closely." },
+  warlike: { start: -45, army: 1.4, loot: { food: 0.4, wood: 0.3, currency: 0.3 }, blurb: "Fierce warriors who live by raiding their neighbours." },
+};
+// A kingdom's army: `base` + `perEra` warriors (x its temper's army, x `ring`
+// more for each ring of islands further out), growing by up to `grow` over
+// `growTicks` after we meet them, and armed as well as we could be in the era
+// (`arms`). Our raids cost them `hurt` of it (healing by `heal` a tick). A
+// raid meets `raidShare` of it. A won raid brings `lootBase` + `lootPerEra`
+// worth of goods (x their temper's shares, x `ring` further out).
+export const KINGDOM_ARMY = {
+  base: 14,
+  perEra: 7,
+  ring: 0.25,
+  grow: 0.6,
+  growTicks: 1500,
+  arms: [1, 2, 3, 4, 5, 5],
+  hurt: 0.25,
+  heal: 0.0004,
+  raidShare: 0.4,
+  lootBase: 90,
+  lootPerEra: 80,
+};
+// First contact with a people: how much each greeting moves their mood.
+export const CONTACT = { gifts: 25, stories: 6, storiesWarm: 12, knowledge: 8, respect: 12, laughed: -20 };
+// Digging deep under ruins: `luck` chance of twice the find, else the walls
+// come down (one person lost, -`mood`). Leaving them be: +`honour` happiness.
+export const RUINS_DIG = { luck: 0.6, mood: 6, honour: 6 };
+// Ruins on far islands: the first canoe or ship to land there finds one of these.
+export const RUINS_FINDS: { text: string; gain: Partial<Resources>; reveal?: number }[] = [
+  { text: "carved tablets from an older people", gain: { knowledge: 25 } },
+  { text: "a buried hoard of old coins", gain: { currency: 120 } },
+  { text: "a cache of well-made tools and dried food", gain: { food: 60, wood: 40 } },
+  { text: "an old map scratched on bone", gain: { knowledge: 8 }, reveal: 9 },
+  { text: "a stone store full of cut blocks", gain: { stone: 50 } },
+];
 export const DIPLOMACY = {
   friendly: 30,
   hostile: -30,

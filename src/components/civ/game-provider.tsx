@@ -62,7 +62,8 @@ export function GameProvider({
   // ...and while a discovery scene plays.
   // ...and while Elder Ama thinks about a question.
   // ...and while the player commands a battle.
-  const paused = !!state.debrief || !!state.cutscene || asking || (!!state.nameEgg && !state.nameEgg.seen) || !!state.story?.scene || commanding(state);
+  // ...and while we decide how to greet a new people, or what to do at old ruins.
+  const paused = !!state.debrief || !!state.cutscene || asking || (!!state.nameEgg && !state.nameEgg.seen) || !!state.story?.scene || commanding(state) || !!state.contact || !!state.ruinsSearch;
 
   // First-time mode starts with a slower clock (tickSeconds).
   const perTick = tickSeconds(state);

@@ -2,22 +2,26 @@
 
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { ISLANDS, isLand } from "@/game/map";
-import type { GameState, Tile } from "@/game/types";
+import { kingdomInfo } from "@/game/engine";
+import { isLand } from "@/game/map";
+import type { GameState, Temper, Tile } from "@/game/types";
 import { BUILDING_SCALE, MODELS, buildingTurn } from "./building-models";
 import { Figures, HAIRS, SKINS, type Agent } from "./figures";
 import { makeGround } from "./ground";
 import { tileTop } from "./hex-terrain";
 
-// The kingdoms across the sea have villages of their own: a few homes near the
+// The peoples across the sea have villages of their own: a few homes near the
 // middle of their island and people in their colours going about their day.
-// Only drawn once part of their island can be seen.
-const NEIGHBOURS = [
-  // The Silk Steppe: herders with tents and pens.
-  { island: 1, tunics: ["#2a7d73", "#e9c46a", "#3f9e8f"], homes: (era: number) => (era >= 3 ? ["house", "pen", "house", "market"] : ["hut", "pen", "hut", "pen"]) },
-  // The Eastern Reach: timber houses, and a castle once there are castles.
-  { island: 2, tunics: ["#4b2470", "#c9a227", "#6a3a96"], homes: (era: number) => (era >= 3 ? ["castle", "house", "house", "house"] : ["house", "hut", "house", "hut"]) },
-];
+// Only what has been explored is drawn: homes and people on land we can see.
+// What they build follows their temper and the era.
+const HOMES: Record<Temper, (era: number) => string[]> = {
+  // Traders: markets once there are coins.
+  traders: (era) => (era >= 1 ? ["house", "market", "house", "pen"] : ["hut", "pen", "hut", "gatherer"]),
+  peaceful: (era) => (era >= 1 ? ["house", "farm", "house", "farm"] : ["hut", "gatherer", "hut", "pen"]),
+  // Proud and warlike peoples keep a war camp, and a castle once there are castles.
+  proud: (era) => (era >= 3 ? ["castle", "house", "house", "house"] : era >= 1 ? ["house", "warcamp", "house", "hut"] : ["hut", "warcamp", "hut", "hut"]),
+  warlike: (era) => (era >= 3 ? ["castle", "warcamp", "house", "warcamp"] : ["warcamp", "hut", "warcamp", "hut"]),
+};
 const PEOPLE = 7;
 
 interface Walker extends Agent {
@@ -26,16 +30,16 @@ interface Walker extends Agent {
   wait: number;
 }
 
-function Village({ tiles, island, tunics, homes }: { tiles: Tile[]; island: number; tunics: string[]; homes: string[] }) {
+function Village({ tiles, island, centre, tunics, homes }: { tiles: Tile[]; island: number; centre: { x: number; z: number }; tunics: string[]; homes: string[] }) {
   const ground = useMemo(() => makeGround(tiles), [tiles]);
-  // The tiles nearest the middle of the island: where the village stands.
+  // The tiles nearest the middle of the island: where the village stands
+  // (those we have seen).
   const spots = useMemo(() => {
-    const centre = ISLANDS[island];
     return tiles
-      .filter((t) => t.island === island && isLand(t.terrain) && t.terrain !== "mountain" && !t.building)
+      .filter((t) => t.island === island && t.revealed && isLand(t.terrain) && t.terrain !== "mountain" && !t.building)
       .sort((a, b) => Math.hypot(a.x - centre.x, a.z - centre.z) - Math.hypot(b.x - centre.x, b.z - centre.z))
       .slice(0, 10);
-  }, [tiles, island]);
+  }, [tiles, island, centre.x, centre.z]);
   const walkers = useRef<Walker[]>([]);
 
   useFrame((_, delta) => {
@@ -93,13 +97,28 @@ function Village({ tiles, island, tunics, homes }: { tiles: Tile[]; island: numb
 // Our own people's clothes, for a kingdom we have conquered.
 const OUR_TUNICS = ["#5b6f8a", "#c58b3a", "#3f5d8a"];
 
+// A people's clothes: their colour, a lighter one and their stripe.
+function tunicsOf(tunic: string, stripe: string) {
+  return [tunic, stripe, tunic];
+}
+
 export function ForeignVillages({ state }: { state: GameState }) {
   return (
     <>
-      {NEIGHBOURS.map((n) => {
-        if (!state.tiles.some((t) => t.island === n.island && t.revealed)) return null;
-        const conquered = !!state.kingdoms?.[n.island === 1 ? "steppe" : "reach"]?.conquered;
-        return <Village key={n.island} tiles={state.tiles} island={n.island} tunics={conquered ? OUR_TUNICS : n.tunics} homes={n.homes(state.era)} />;
+      {Object.keys(state.kingdoms ?? {}).map((id) => {
+        const info = kingdomInfo(state, id);
+        if (!info.isle || !state.tiles.some((t) => t.island === info.island && t.revealed)) return null;
+        const conquered = !!state.kingdoms?.[id]?.conquered;
+        return (
+          <Village
+            key={id}
+            tiles={state.tiles}
+            island={info.island}
+            centre={info.isle}
+            tunics={conquered ? OUR_TUNICS : tunicsOf(info.tunic, info.stripe)}
+            homes={HOMES[info.temper](state.era)}
+          />
+        );
       })}
     </>
   );

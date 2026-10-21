@@ -3,7 +3,7 @@
 // The Medieval era's screens: choosing the landmark that carries the town into
 // the Middle Ages, the two kingdoms, ships, and the Black Death.
 
-import { CONQUEST, KINGDOMS, KINGDOM_RAID, LANDMARKS, PLAGUE, DIPLOMACY, REBELLION, TICK_SECONDS } from "@/game/content";
+import { CONQUEST, LANDMARKS, PLAGUE, DIPLOMACY, REBELLION, TICK_SECONDS } from "@/game/content";
 import {
   canAfford,
   crushOdds,
@@ -11,6 +11,9 @@ import {
   giftCost,
   giftError,
   inPlague,
+  kingdomArmy,
+  kingdomInfo,
+  kingdomLoot,
   kingdomRaidError,
   moodOf,
   plagueProtection,
@@ -162,11 +165,11 @@ export function KingdomsPanel() {
   return (
     // Above Elder Ama's panels (z-26): the game waits while it is open.
     <div className="pointer-events-auto absolute inset-0 z-[27] flex items-center justify-center bg-black/30" data-testid="kingdoms-panel">
-      <div className="pixel-panel w-[min(94vw,640px)] p-4 text-xs md:text-sm">
+      <div className="pixel-panel max-h-[88vh] w-[min(94vw,640px)] overflow-y-auto p-4 text-xs md:text-sm">
         <div className="mb-2 flex items-center justify-between">
           <h3 className="font-pixel flex items-center gap-2 text-lg font-bold">
             <PixelIcon name="crown" size={22} />
-            {state.era >= 4 ? "The nations" : "The kingdoms"}
+            {state.era >= 4 ? "The nations" : state.world ? "Peoples we know" : "The kingdoms"}
           </h3>
           <button type="button" onClick={() => setPanel(null)} className="font-pixel text-sm underline">
             Close
@@ -174,7 +177,7 @@ export function KingdomsPanel() {
         </div>
         <p className="mb-3 text-[11px] text-stone-600">
           {state.era >= 4 ? "They are nations now. " : ""}Friendly ones trade with us; hostile ones send armies. Moods slowly drift back toward wary. Ships that reach their coasts, caravans and
-          gifts please them; castles worry them.
+          gifts please them; castles worry them.{state.world ? " Their armies grow after we meet them, and our raids weaken them for a while: raid first, then conquer." : ""}
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           {(Object.keys(state.kingdoms) as KingdomId[]).map((id) => {
@@ -186,16 +189,29 @@ export function KingdomsPanel() {
             const odds = Math.round(raidOdds(state, id) * 100);
             const conquest = conquestError(state, id);
             const conquestChance = Math.round(conquestOdds(state, id) * 100);
+            const info = kingdomInfo(state, id);
+            const loot = kingdomLoot(state, id);
             return (
               <div key={id} className="border-2 border-[#140e0a] bg-white/60 p-2" data-testid={`kingdom-${id}`}>
                 <div className="font-pixel flex items-center justify-between font-semibold">
-                  <span className="capitalize">{KINGDOMS[id].name.replace(/^the /, "")}</span>
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="inline-block h-3 w-3 shrink-0 border border-[#140e0a]" style={{ background: info.sail }} />
+                    <span className="truncate capitalize">{info.name.replace(/^the /, "")}</span>
+                  </span>
                   <span className={cn("px-1.5 text-[11px] text-white", k.conquered ? "bg-[#5b6f8a]" : MOOD_STYLE[mood])}>
                     {k.conquered ? "ours" : mood}
                     {k.treaty ? " · treaty" : ""}
                   </span>
                 </div>
-                <p className="mb-1 text-[11px] text-stone-600">{KINGDOMS[id].blurb}</p>
+                <p className="mb-1 text-[11px] text-stone-600">
+                  {info.isle ? `${info.isle.name}. ` : ""}
+                  {info.blurb}
+                </p>
+                {!k.conquered && (
+                  <p className="mb-1 text-[11px] text-stone-700" data-testid={`army-${id}`}>
+                    Army: about {kingdomArmy(state, id)} warriors{k.hurt ? ` (weakened by our raids)` : ""}.
+                  </p>
+                )}
                 {/* -100 .. 100, with the wary band in the middle. */}
                 <div className="relative mb-2 h-2 border border-[#140e0a] bg-stone-200">
                   <div className={cn("absolute inset-y-0 left-1/2", MOOD_STYLE[mood])} style={k.mood >= 0 ? { width: `${k.mood / 2}%` } : { width: `${-k.mood / 2}%`, transform: "translateX(-100%)" }} />
@@ -251,14 +267,14 @@ export function KingdomsPanel() {
                   ) : (
                     !conquest && (
                       <span className="text-[10px] text-red-900">
-                        Conquest: about {Math.round(CONQUEST.losses.won * 100)}% of the army falls even if we win, our people mourn (−{-CONQUEST.happiness} happiness), and the other kingdom will fear and hate us.
+                        Conquest: about {Math.round(CONQUEST.losses.won * 100)}% of the army falls even if we win, our people mourn (−{-CONQUEST.happiness} happiness), and the other {state.world ? "peoples" : "kingdom"} will fear and hate us.
                       </span>
                     )
                   )}
                   <span className="text-[10px] text-stone-500">
-                    {gift && gift !== "Not enough coins" ? `Gifts: ${gift}. ` : ""}
+                    {gift && !gift.startsWith("Not enough") ? `Gifts: ${gift}. ` : ""}
                     {treaty ? `Treaty: ${treaty}. ` : ""}
-                    {raid ? `Raid: ${raid}.` : `A raid brings back ${Object.entries(KINGDOM_RAID.loot[id]).map(([r, v]) => `${v} ${r === "currency" ? "coins" : r}`).join(" and ")} if it wins, and makes them hostile either way.`}
+                    {raid ? `Raid: ${raid}.` : `A raid brings back ${Object.entries(loot).map(([r, v]) => `${v} ${r === "currency" ? "coins" : r}`).join(", ")} if it wins (and weakens their army), but makes them hostile either way.`}
                   </span>
                 </div>
               </div>

@@ -9,6 +9,13 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-21",
     items: [
+      "A new world every game: your home island, the islands around it and the peoples on them are different each time, and the sea goes on forever, made as you explore.",
+      "The fog hides everything now: no island shapes, no foreign villages, nobody, until a scout, canoe or ship has been there. A bank of mist marks the edge of what you know.",
+      "Rumours of land: your fishers, scouts and sailors come home talking of smoke on the horizon (a people) or seabirds circling (an empty island), and a marker shows roughly where. Send a canoe there to find out.",
+      "Find a people and they become a kingdom you can deal with at once, in any era: a first-contact card asks how to greet them (gifts, stories round a fire, or showing your spears), then Peoples (later Kingdoms) lets you trade, send gifts, raid or conquer. Each people has its own name, colours and temper: traders, peaceful farmers, proud warriors or warlike raiders.",
+      "Canoes and ships go where you point (ships much further). Landing on a wild island makes it yours to build on; landing among old ruins lets you search them carefully, dig deep (twice the find, or the walls come down) or leave them in peace.",
+      "War is fairer: a kingdom's army grows after you meet it and fights with the weapons of the era, so a few war camps no longer take a whole kingdom. Raids pay much more (goods to match their wealth) and weaken their army for a while, so raid first, then conquer.",
+      "Reaching the Ancient era is easier: Agriculture costs 24 Knowledge and asks for 2 fields, 2 huts, an Elder's Hut and 10 people; then 12 people (not 15) take you into the new era, with more time before you fall behind.",
       "Villagers talk back: walk up to someone (Walk or V, then E) and they greet you in their own words, about their day and how the village is doing. Ask how they are, what the news is, say anything you like, or send them to work, and they answer in character.",
       "Leader mode is gone from the title screen: every game can already walk the island as the chief (Walk or V). Old Leader mode saves still load.",
       "With the Advancements tree open, the goal, warnings and messages step aside; only Elder Ama stays.",

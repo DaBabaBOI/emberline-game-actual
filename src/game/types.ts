@@ -48,9 +48,12 @@ export interface Tile {
 }
 
 export type RaidKind = "band" | "party" | "fire";
-// The two neighbouring kingdoms of the Medieval era, and the landmark that
-// takes a town into it.
-export type KingdomId = "steppe" | "reach";
+// A neighbouring people: on the classic map the Medieval era's two kingdoms
+// ("steppe" and "reach"); in an endless world, any tribe we have found
+// ("isle<island id>"). And the landmark that takes a town into the Middle Ages.
+export type KingdomId = string;
+// How a tribe of the endless world is towards others.
+export type Temper = "traders" | "peaceful" | "proud" | "warlike";
 export type LandmarkId = "library" | "cathedral" | "harbour";
 export type DisasterKind = "storm" | "flood" | "earthquake" | "landslide";
 // "command": the player places the army and the fight plays out unit by unit (battle.ts).
@@ -366,10 +369,25 @@ export interface GameState {
   // Medieval era: how each neighbouring kingdom feels about us (-100 to 100),
   // whether we have a treaty, and when we last sent a gift.
   // `conquered`: we took it; its island is ours and it pays tribute.
-  kingdoms?: Record<KingdomId, { mood: number; treaty: boolean; giftTick?: number; conquered?: boolean }>;
+  // `met`: the tick we found them (their army grows from then); `hurt`: the
+  // share of their army our raids have cost them (it heals over time).
+  kingdoms?: Record<KingdomId, { mood: number; treaty: boolean; giftTick?: number; conquered?: boolean; met?: number; hurt?: number }>;
+  // An endless world (world.ts): its seed and the chunks made so far. Missing
+  // on the classic map (the story, multiplayer and Build to Last).
+  world?: { seed: number; chunks: string[] };
+  // Islands with ruins whose secrets we have already found.
+  ruinsFound?: number[];
+  // A people met for the first time: how will we greet them? (a choice card)
+  contact?: { kingdom: KingdomId; tick: number } | null;
+  // Our boat landed among old ruins: how do we search them? (a choice card)
+  ruinsSearch?: { island: number; tick: number } | null;
+  // Rumours of land nobody has seen yet: smoke from a people's fires, or birds
+  // over an empty island, marked roughly where they were seen.
+  rumours?: { island: number; x: number; z: number; what: "smoke" | "birds" }[];
   // Ships out exploring or trading (from a Shipyard), and the islands found
   // overseas where we may build a few things.
-  ships?: { start: number; back: number }[];
+  // `tile`: where it was sent (endless world: picked on the map).
+  ships?: { start: number; back: number; tile?: number }[];
   // Canoes out: exploring for the Southern Isles, or fishing the open sea.
   // `tile`: where it was sent (picked on the map); `dock`: the dock it left from.
   canoes?: { start: number; back: number; kind: "explore" | "fish"; tile?: number; dock?: number }[];

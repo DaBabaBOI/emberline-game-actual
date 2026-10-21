@@ -7,7 +7,7 @@ import { playShot } from "./letterbox";
 import { playSfx } from "@/lib/audio";
 import { useWide } from "@/lib/use-compact";
 import { setTimeOfDay } from "./time-of-day";
-import { AFTER_STEPS, DISASTERS, DISCOVERIES, DROUGHT, ERA_INTROS, ERAS, EVENTS, KINGDOMS, LESSONS, RAID_KINDS, RAID_RESPONSE, STRIKE, TREE_BY_ID, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
+import { AFTER_STEPS, DISASTERS, DISCOVERIES, DROUGHT, ERA_INTROS, ERAS, EVENTS, LESSONS, RAID_KINDS, RAID_RESPONSE, STRIKE, TREE_BY_ID, TUTORIAL, TUTORIAL_FAREWELL } from "@/game/content";
 import {
   canAfford,
   countBuildings,
@@ -15,6 +15,7 @@ import {
   defenseStrength,
   famineOptions,
   inDrought,
+  kingdomName,
   MOMENT_IDS,
   rainfall,
   canCommand,
@@ -563,7 +564,7 @@ export function RaidBanner() {
           <div className="flex items-center gap-2 font-semibold">
             <PixelIcon name="warning" size={18} />
             <span>
-              {raid.kingdom ? `An army of ${KINGDOMS[raid.kingdom].name} (${raid.strength})!` : `${kind.name} of ${raid.strength} raiders! ${kind.wants}`} They
+              {raid.kingdom ? `An army of ${kingdomName(state, raid.kingdom)} (${raid.strength})!` : `${kind.name} of ${raid.strength} raiders! ${kind.wants}`} They
               arrive in <Countdown ticks={eta} />s.
             </span>
           </div>
@@ -919,7 +920,7 @@ export function DevPanel() {
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devShipBack" })}>
           Ship back
         </button>
-        {(["steppe", "reach"] as const).flatMap((kingdom) =>
+        {Object.keys(state.kingdoms ?? { steppe: 0, reach: 0 }).flatMap((kingdom) =>
           [-40, 40].map((by) => (
             <button key={kingdom + by} type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devMood", kingdom, by })}>
               {kingdom} {by > 0 ? "+" : ""}

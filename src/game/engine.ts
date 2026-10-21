@@ -139,6 +139,11 @@ import {
   ERA_MAKEOVER,
   UPGRADES,
   LEADER,
+  TEMPERS,
+  KINGDOM_ARMY,
+  RUINS_FINDS,
+  CONTACT,
+  RUINS_DIG,
 } from "./content";
 import { cureHint, diseaseName, isCalm, maybeOutbreak, sickShare, stepDisease } from "./disease";
 import { hexDistance } from "./hex";
@@ -146,6 +151,7 @@ import { generateMap, ISLANDS, isLand, revealAround, riverPath, terrainHeight } 
 import { mulberry32 } from "./noise";
 import { MAX_FIGHTERS, enemyLineup, inOurZone, runBattle, type BattleSetup, type Placed, type Roster } from "./battle";
 import { sealMatches, sealOf } from "./seal";
+import { generateWorld, growWorld, homeName, isleById, islandOfKingdom, islesNear, kingdomIdOf } from "./world";
 import { CHAPTERS, type Objective } from "./story";
 import { cameosFor, EGGS, GOLDEN_DEER_FOOD, LITERACY_BUILDINGS, NAME_EGGS, nameEggMeters, nameEggOf, nameEggRaiders, type EggId } from "./easter";
 import type { IconId } from "./sprites";
@@ -170,6 +176,7 @@ import type {
   RaidKind,
   RaidResponse,
   Resources,
+  Temper,
   Tile,
 } from "./types";
 
@@ -269,7 +276,10 @@ export type Action =
   | { type: "raidKingdom"; kingdom: KingdomId }
   | { type: "conquer"; kingdom: KingdomId }
   | { type: "clearArea"; tileId: number }
-  | { type: "ship" }
+  | { type: "ship"; tileId?: number }
+  // First contact with a people (an endless world), and searching old ruins.
+  | { type: "contact"; choice: "gifts" | "stories" | "spears" | "ignore" }
+  | { type: "ruins"; choice: "careful" | "dig" | "honour" }
   | { type: "harbour"; closed: boolean }
   | { type: "canoe"; tileId?: number }
   | { type: "crushRebels" }
@@ -345,7 +355,11 @@ export function newGame(
   options: NewGameOptions = {},
 ): GameState {
   const seed = options.seed ?? Math.floor(Math.random() * 1e9);
-  const { tiles, startTile } = generateMap(seed);
+  // A new endless world every game; the story, multiplayer and Build to Last
+  // keep the classic map, where everyone needs the same geography.
+  const classic = !!(options.story || options.mp || options.mode === "last");
+  const made: { tiles: Tile[]; startTile: number; world?: GameState["world"] } = classic ? generateMap(seed) : generateWorld(seed);
+  const { tiles, startTile, world } = made;
   // A name egg (not in multiplayer): blessed, or cursed if it was used last time too.
   const eggId = options.mp || options.speedrun ? null : nameEggOf(options.nation);
   const nameEgg = eggId ? { id: eggId, cursed: options.lastNameEgg === eggId } : undefined;
@@ -359,6 +373,7 @@ export function newGame(
     nation: cleanNation(options.nation),
     tiles,
     startTile,
+    ...(world ? { world } : {}),
     era: 0,
     year: ERAS[0].startYear,
     tick: 0,
@@ -390,7 +405,7 @@ export function newGame(
     log: [
       ...(nameEgg ? [nameEgg.cursed ? NAME_EGGS[nameEgg.id].curse : NAME_EGGS[nameEgg.id].blessing] : []),
       ...cameosFor(options.nation).map((m) => m.joke).reverse(),
-      `${cleanNation(options.nation)} gather on the shores of Westmarch.`,
+      `${cleanNation(options.nation)} gather on the shores of ${world ? homeName(world.seed) : "Westmarch"}.`,
     ],
     ...(nameEgg ? { nameEgg } : {}),
     ...(options.speedrun && !options.dev && !options.story ? { speedrun: { start: Date.now(), splits: [] } } : {}),
@@ -647,7 +662,8 @@ function devJumpToEra(state: GameState, era: number): GameState {
 
 // The Medieval era's two kingdoms, as they first feel about us.
 function withKingdoms(state: GameState): GameState {
-  if (state.era < 3 || state.kingdoms) return state;
+  // In an endless world, peoples become kingdoms when we find them (explored).
+  if (state.world || state.era < 3 || state.kingdoms) return state;
   return {
     ...state,
     kingdoms: {
@@ -815,6 +831,7 @@ export function clearAreaError(state: GameState, tile: Tile): string | null {
 // Picking where to send scouts or a canoe.
 export const SCOUT_TOOL = "__scout";
 export const CANOE_TOOL = "__canoe";
+export const SHIP_TOOL = "__ship";
 
 // How far into the fog a tile is: hexes to the nearest known land.
 function fogDepth(state: GameState, tile: Tile) {
@@ -847,8 +864,14 @@ export function canoeTargetError(state: GameState, tile: Tile): string | null {
   if (!dock) return "Build a Canoe Dock first";
   const home = state.tiles[state.startTile].island;
   if (isLand(tile.terrain) && tile.island === home) return "Canoes go by sea: pick open water or another island";
-  if (hexDistance(dock, tile) > CANOE.reach) return `Too far to paddle: at most ${CANOE.reach} tiles from a dock`;
+  if (hexDistance(dock, tile) > canoeReach(state)) return `Too far to paddle: at most ${canoeReach(state)} tiles from a dock`;
   return null;
+}
+
+// How far a canoe paddles from its dock (further in an endless world, where
+// the next island is further off; a dock on an island we hold goes on from there).
+export function canoeReach(state: GameState) {
+  return state.world ? 22 : CANOE.reach;
 }
 
 export function canoeTicks(state: GameState, tile: Tile) {
@@ -957,8 +980,9 @@ function pickEvent(roll: number, state: GameState) {
     (e.era ?? 0) > state.era ||
     (e.id === "sacred-grove" && !grovePossible) ||
     (e.id === "river-spirits" && !riverChoicePossible(state)) ||
-    // A kingdom we conquered sends no more envoys, demands or pleas.
-    e.choices.some((c) => Object.keys(c.effect.mood ?? {}).some((k) => state.kingdoms?.[k as KingdomId]?.conquered))
+    // A kingdom we conquered sends no more envoys, demands or pleas (and, in an
+    // endless world, the classic kingdoms' cards never come: they are not there).
+    e.choices.some((c) => Object.keys(c.effect.mood ?? {}).some((k) => state.world || state.kingdoms?.[k as KingdomId]?.conquered))
       ? 0
       : e.id === "wildfire"
         ? wildfire
@@ -1033,8 +1057,8 @@ export function placementError(state: GameState, tile: Tile, def: BuildingDef): 
   if (state.protectedTiles?.includes(tile.id)) return "The old grove is protected";
   const home = state.tiles[state.startTile].island;
   if (tile.island >= 0 && tile.island !== home) {
-    const kingdom = kingdomOfIsland(tile.island);
-    if (kingdom && !state.kingdoms?.[kingdom]?.conquered) return `This land belongs to ${KINGDOMS[kingdom].name}`;
+    const kingdom = kingdomOfIsland(state, tile.island);
+    if (kingdom && !state.kingdoms?.[kingdom]?.conquered) return `This land belongs to ${kingdomName(state, kingdom)}`;
     if (!kingdom && !(state.outposts ?? []).includes(tile.island)) return "Our canoes and ships haven't reached this island";
   } else if (def.id === "tradingpost") return "Only on an island our ships have found";
   if (def.unique && (countBuildings(state)[def.id] ?? 0) >= 1) return "There is only one";
@@ -1543,10 +1567,88 @@ function wearBuildings(state: GameState): GameState {
 // Caravans can leave from each Market once Silk Road Contact is known.
 // ---- Medieval era: landmark, kingdoms, ships and outposts, the Black Death ---
 
-export function kingdomOfIsland(island: number): KingdomId | null {
-  return island === 1 ? "steppe" : island === 2 ? "reach" : null;
+// The classic map's two kingdoms: their island, temper and colours.
+const CLASSIC_KINGDOMS: Record<string, { island: number; temper: Temper; sail: string; stripe: string; tunic: string }> = {
+  steppe: { island: 1, temper: "traders", sail: "#2a9d8f", stripe: "#e9c46a", tunic: "#2a7d73" },
+  reach: { island: 2, temper: "proud", sail: "#5b2a86", stripe: "#c9a227", tunic: "#4b2470" },
+};
+
+export interface KingdomInfo {
+  id: KingdomId;
+  // "the Silk Steppe", "the Velmari".
+  name: string;
+  blurb: string;
+  island: number;
+  // Where their island is (its middle) and what it is called.
+  isle: { name: string; x: number; z: number } | null;
+  temper: Temper;
+  // Rings of islands out from home (further peoples are stronger and richer).
+  ring: number;
+  start: number;
+  sail: string;
+  stripe: string;
+  tunic: string;
 }
-const KINGDOM_ISLAND: Record<KingdomId, number> = { steppe: 1, reach: 2 };
+
+// Who a kingdom is: the classic map's two, or a people of the endless world.
+export function kingdomInfo(state: GameState, id: KingdomId): KingdomInfo {
+  const classic = CLASSIC_KINGDOMS[id];
+  if (classic) {
+    const isle = ISLANDS[classic.island];
+    return { id, name: KINGDOMS[id].name, blurb: KINGDOMS[id].blurb, isle: { name: isle.name, x: isle.x, z: isle.z }, ring: 1, start: KINGDOMS[id].start, ...classic };
+  }
+  const island = islandOfKingdom(id) ?? -1;
+  const isle = state.world ? isleById(state.world.seed, island) : null;
+  const people = isle?.people;
+  const temper = people?.temper ?? "proud";
+  return {
+    id,
+    name: people?.name ?? "a people from far away",
+    blurb: TEMPERS[temper].blurb,
+    island,
+    isle: isle ? { name: isle.name, x: isle.x, z: isle.z } : null,
+    temper,
+    ring: isle?.ring ?? 1,
+    start: TEMPERS[temper].start,
+    sail: people?.sail ?? "#8a8a8a",
+    stripe: people?.stripe ?? "#3d3d3d",
+    tunic: people?.tunic ?? "#5a5a5a",
+  };
+}
+
+export const kingdomName = (state: GameState, id: KingdomId) => kingdomInfo(state, id).name;
+const capital = (s: string) => s[0].toUpperCase() + s.slice(1);
+
+// Whose island this is (null: nobody's, or ours).
+export function kingdomOfIsland(state: GameState, island: number): KingdomId | null {
+  if (!state.world) return island === 1 ? "steppe" : island === 2 ? "reach" : null;
+  return island > 0 && isleById(state.world.seed, island)?.kind === "tribe" ? kingdomIdOf(island) : null;
+}
+
+// A kingdom's army: how many warriors it keeps (growing for a while after we
+// meet them, smaller after our raids), and how hard they fight all together
+// (armed as well as anyone could be in this era).
+export function kingdomArmy(state: GameState, id: KingdomId) {
+  const info = kingdomInfo(state, id);
+  const k = state.kingdoms?.[id];
+  const A = KINGDOM_ARMY;
+  const since = state.tick - (k?.met ?? state.eraStartTick ?? 0);
+  const grown = Math.max(0, Math.min(1, since / A.growTicks));
+  return Math.max(3, Math.round((A.base + A.perEra * state.era) * TEMPERS[info.temper].army * (1 + A.ring * (info.ring - 1)) * (1 + A.grow * grown) * (1 - (k?.hurt ?? 0))));
+}
+export function kingdomDefense(state: GameState, id: KingdomId) {
+  return Math.round(kingdomArmy(state, id) * KINGDOM_ARMY.arms[Math.min(state.era, KINGDOM_ARMY.arms.length - 1)]);
+}
+// What a raid party meets: the warriors guarding their stores.
+export function kingdomRaidDefense(state: GameState, id: KingdomId) {
+  return Math.max(2, Math.round(kingdomDefense(state, id) * KINGDOM_ARMY.raidShare));
+}
+// What a won raid brings home: more in later eras and from further away.
+export function kingdomLoot(state: GameState, id: KingdomId): Partial<Resources> {
+  const info = kingdomInfo(state, id);
+  const worth = (KINGDOM_ARMY.lootBase + KINGDOM_ARMY.lootPerEra * state.era) * (1 + KINGDOM_ARMY.ring * (info.ring - 1));
+  return Object.fromEntries(Object.entries(TEMPERS[info.temper].loot).map(([r, share]) => [r, Math.round(worth * (share ?? 0))]));
+}
 
 // Our landmark: every stage paid for and the masons done.
 export function landmarkDone(state: GameState) {
@@ -1582,11 +1684,23 @@ export function moodOf(mood: number): Mood {
   return mood >= DIPLOMACY.friendly ? "friendly" : mood <= DIPLOMACY.hostile ? "hostile" : "wary";
 }
 
+// The classic kingdoms' parts, played in an endless world by the peoples we
+// know: "steppe" by the friendliest, "reach" by the one that likes us least.
+function standIn(state: GameState, role: KingdomId): KingdomId | null {
+  if (!state.world || state.kingdoms?.[role]) return state.kingdoms?.[role] ? role : null;
+  const known = Object.entries(state.kingdoms ?? {}).filter(([, k]) => !k.conquered);
+  if (!known.length) return null;
+  const sorted = known.sort((a, b) => b[1].mood - a[1].mood);
+  return role === "steppe" ? sorted[0][0] : role === "reach" ? sorted[sorted.length - 1][0] : null;
+}
+
 function changeMood(state: GameState, change: Partial<Record<KingdomId, number>>): GameState {
   if (!state.kingdoms) return state;
   const kingdoms = { ...state.kingdoms };
-  for (const [id, by] of Object.entries(change) as [KingdomId, number][]) {
-    const k = kingdoms[id];
+  for (const [role, by] of Object.entries(change) as [KingdomId, number][]) {
+    const id = standIn(state, role);
+    const k = id ? kingdoms[id] : undefined;
+    if (!id || !k || by === undefined) continue;
     const mood = Math.max(-100, Math.min(100, k.mood + by));
     // A treaty breaks if relations turn sour.
     kingdoms[id] = { ...k, mood, treaty: k.treaty && mood >= 0 };
@@ -1596,7 +1710,10 @@ function changeMood(state: GameState, change: Partial<Record<KingdomId, number>>
 
 export function giftCost(state: GameState, kingdom: KingdomId): Partial<Resources> {
   const sent = tallyOf(state, "gifts");
-  return { currency: DIPLOMACY.gift.coins + Math.min(4, sent) * DIPLOMACY.gift.more + (kingdom === "reach" ? 10 : 0) };
+  const proud = kingdomInfo(state, kingdom).temper === "proud" || kingdomInfo(state, kingdom).temper === "warlike";
+  // Before coins, gifts are food and furs (well, wood).
+  if (state.era === 0) return { food: 20 + Math.min(4, sent) * 8 + (proud ? 6 : 0), wood: 10 };
+  return { currency: DIPLOMACY.gift.coins + Math.min(4, sent) * DIPLOMACY.gift.more + (proud ? 10 : 0) };
 }
 
 export function giftError(state: GameState, kingdom: KingdomId): string | null {
@@ -1604,7 +1721,7 @@ export function giftError(state: GameState, kingdom: KingdomId): string | null {
   if (!k) return "Not yet";
   if (k.conquered) return "It is ours now";
   if (state.tick < (k.giftTick ?? -Infinity) + DIPLOMACY.gift.wait) return "Our envoy is still on the way";
-  if (!canAfford(state, giftCost(state, kingdom))) return "Not enough coins";
+  if (!canAfford(state, giftCost(state, kingdom))) return state.era === 0 ? "Not enough food and wood" : "Not enough coins";
   return null;
 }
 
@@ -1634,7 +1751,7 @@ export function raidParty(state: GameState) {
 export function raidOdds(state: GameState, kingdom: KingdomId) {
   const { strength } = raidParty(state);
   if (!strength) return 0;
-  const need = (KINGDOM_RAID.defense[kingdom] * DIFFICULTIES[state.difficulty].raiders) / strength;
+  const need = (kingdomRaidDefense(state, kingdom) * DIFFICULTIES[state.difficulty].raiders) / strength;
   return Math.max(0, Math.min(1, (1.25 - need) / 0.5));
 }
 
@@ -1649,7 +1766,7 @@ function conquestStrength(state: GameState) {
 export function conquestOdds(state: GameState, kingdom: KingdomId) {
   const strength = conquestStrength(state);
   if (!strength) return 0;
-  const need = (CONQUEST.defense[kingdom] * DIFFICULTIES[state.difficulty].raiders) / strength;
+  const need = (kingdomDefense(state, kingdom) * DIFFICULTIES[state.difficulty].raiders) / strength;
   return Math.max(0, Math.min(1, (1.25 - need) / 0.5));
 }
 
@@ -1668,9 +1785,9 @@ export function conquestError(state: GameState, kingdom: KingdomId): string | nu
 function conquer(state: GameState, kingdom: KingdomId): GameState {
   const strength = conquestStrength(state);
   const luck = 0.75 + mulberry32(state.seed + state.tick * 73)() * 0.5;
-  const won = strength * luck >= CONQUEST.defense[kingdom] * DIFFICULTIES[state.difficulty].raiders;
+  const won = strength * luck >= kingdomDefense(state, kingdom) * DIFFICULTIES[state.difficulty].raiders;
   const fell = Math.min(state.soldiers, Math.max(1, Math.round(state.soldiers * (won ? CONQUEST.losses.won : CONQUEST.losses.lost))));
-  const name = KINGDOMS[kingdom].name;
+  const name = kingdomName(state, kingdom);
   const counted = bumpStats(state, (st) => {
     st.deaths.battle += fell;
   });
@@ -1681,8 +1798,8 @@ function conquer(state: GameState, kingdom: KingdomId): GameState {
     // The other kingdom fears we are next.
     for (const id of Object.keys(kingdoms) as KingdomId[])
       if (id !== kingdom && !kingdoms[id].conquered) kingdoms[id] = { ...kingdoms[id], treaty: false, mood: Math.max(-100, kingdoms[id].mood + CONQUEST.fear) };
-  } else kingdoms[kingdom] = { ...kingdoms[kingdom], treaty: false, mood: Math.max(-100, Math.min(DIPLOMACY.hostile - 10, kingdoms[kingdom].mood + KINGDOM_RAID.mood)) };
-  const island = KINGDOM_ISLAND[kingdom];
+  } else kingdoms[kingdom] = { ...kingdoms[kingdom], treaty: false, mood: Math.max(-100, Math.min(DIPLOMACY.hostile - 10, kingdoms[kingdom].mood + KINGDOM_RAID.mood)), hurt: Math.min(0.6, (kingdoms[kingdom].hurt ?? 0) + KINGDOM_ARMY.hurt / 2) };
+  const island = kingdomInfo(state, kingdom).island;
   return withMeters({
     ...counted,
     soldiers,
@@ -1698,7 +1815,7 @@ function conquer(state: GameState, kingdom: KingdomId): GameState {
     log: [
       won
         ? `We conquered ${name}! Their island is ours to build on and they pay tribute every day. ${fell} of our warriors fell, and our people mourn them. The other kingdom fears we are next.`
-        : `Our army could not take ${name}: ${fell} warriors fell. Now they are coming for revenge.`,
+        : `Our army could not take ${name}: ${fell} warriors fell, though they hurt the defenders too. Now they are coming for revenge.`,
       ...state.log,
     ].slice(0, 30),
   });
@@ -1719,10 +1836,10 @@ export function kingdomRaidError(state: GameState, kingdom: KingdomId): string |
 function raidKingdom(state: GameState, kingdom: KingdomId): GameState {
   const { sent, strength } = raidParty(state);
   const luck = 0.75 + mulberry32(state.seed + state.tick * 71)() * 0.5;
-  const won = strength * luck >= KINGDOM_RAID.defense[kingdom] * DIFFICULTIES[state.difficulty].raiders;
+  const won = strength * luck >= kingdomRaidDefense(state, kingdom) * DIFFICULTIES[state.difficulty].raiders;
   const fell = Math.min(state.soldiers, Math.max(1, Math.round(sent * (won ? KINGDOM_RAID.losses.won : KINGDOM_RAID.losses.lost))));
-  const loot = won ? KINGDOM_RAID.loot[kingdom] : {};
-  const name = KINGDOMS[kingdom].name;
+  const loot = won ? kingdomLoot(state, kingdom) : {};
+  const name = kingdomName(state, kingdom);
   const counted = bumpStats(state, (st) => {
     st.deaths.battle += fell;
   });
@@ -1737,17 +1854,18 @@ function raidKingdom(state: GameState, kingdom: KingdomId): GameState {
     ) as unknown as Resources,
     kingdoms: {
       ...state.kingdoms!,
-      [kingdom]: { ...k, treaty: false, mood: Math.max(-100, Math.min(DIPLOMACY.hostile - 10, k.mood + KINGDOM_RAID.mood)) },
+      // A won raid costs them warriors too: easier to raid or conquer for a while.
+      [kingdom]: { ...k, treaty: false, mood: Math.max(-100, Math.min(DIPLOMACY.hostile - 10, k.mood + KINGDOM_RAID.mood)), hurt: won ? Math.min(0.6, (k.hurt ?? 0) + KINGDOM_ARMY.hurt) : k.hurt },
     },
     revenge: { kingdom, tick: state.tick + KINGDOM_RAID.revengeTicks },
     nextRaidTick: Math.min(state.nextRaidTick, state.tick + KINGDOM_RAID.revengeTicks),
     raidedTick: state.tick,
-    modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + (won ? 4 : -8) },
+    modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + (won ? 6 : -8) },
     log: [
       won
         ? `Our warriors raided ${name} and came back with ${Object.entries(loot)
             .map(([r, v]) => `${v} ${r === "currency" ? "coins" : r}`)
-            .join(" and ")}. ${fell} fell. ${name[0].toUpperCase() + name.slice(1)} will want revenge.`
+            .join(", ")}, and their army is weaker for a while. ${fell} fell. ${capital(name)} will want revenge.`
         : `Our raid on ${name} failed: ${fell} of ${sent} warriors fell. Now their army is coming for revenge.`,
       ...state.log,
     ].slice(0, 30),
@@ -1801,6 +1919,7 @@ export function canoeError(state: GameState): string | null {
 
 // What the next canoe will do: find the Southern Isles, then fish the open sea.
 export function canoeTrip(state: GameState): "explore" | "fish" {
+  if (state.world) return "fish";
   const isles = state.tiles.some((t) => t.island === CANOE.island);
   return isles && !(state.outposts ?? []).includes(CANOE.island) && !(state.canoes ?? []).some((c) => c.kind === "explore") ? "explore" : "fish";
 }
@@ -1818,7 +1937,10 @@ function returnCanoes(state: GameState): GameState {
       const mapped = tiles.filter((t) => t.revealed).length - before;
       next = { ...next, tiles, log: mapped ? [`The canoe mapped ${mapped} new tiles around where it went.`, ...next.log].slice(0, 30) : next.log };
     }
-    if (c.kind === "explore" && !(next.outposts ?? []).includes(CANOE.island)) {
+    if (next.world && c.tile !== undefined) next = hearRumours(next, next.tiles[c.tile], 32, "Our canoe");
+    if (next.world && c.tile !== undefined && landNear(next, next.tiles[c.tile])) {
+      next = landfall(next, next.tiles[c.tile], "canoe");
+    } else if (c.kind === "explore" && !next.world && !(next.outposts ?? []).includes(CANOE.island)) {
       const tiles = next.tiles.map((t) => (t.island === CANOE.island ? { ...t, revealed: true } : t));
       next = {
         ...next,
@@ -1860,6 +1982,10 @@ function returnShips(state: GameState): GameState {
   if (!due.length) return state;
   let next: GameState = { ...state, ships: (state.ships ?? []).filter((s) => state.tick < s.back) };
   for (let n = 0; n < due.length; n++) {
+    if (next.world) {
+      next = shipBack(next, due[n], n);
+      continue;
+    }
     const voyage = nextVoyage(next);
     const say = (line: string) => ({ ...next, log: [line, ...next.log].slice(0, 30) });
     if (voyage) {
@@ -1874,15 +2000,15 @@ function returnShips(state: GameState): GameState {
       if (voyage.kind === "outpost") {
         next = { ...say(`Our ship found ${name}! It is home now: we can build anything there, a Trading Post too.`), outposts: [...(next.outposts ?? []), voyage.island] };
       } else {
-        const kingdom = kingdomOfIsland(voyage.island)!;
-        next = changeMood(say(`Our ship reached the coast of ${KINGDOMS[kingdom].name}. They welcomed our sailors.`), { [kingdom]: SHIP.meetMood });
+        const kingdom = kingdomOfIsland(next, voyage.island)!;
+        next = changeMood(say(`Our ship reached the coast of ${kingdomName(next, kingdom)}. They welcomed our sailors.`), { [kingdom]: SHIP.meetMood });
       }
     } else {
       // Trade: silver, and a little goodwill with the kingdom they traded with.
       const kingdom: KingdomId = (next.tick + n) % 2 ? "steppe" : "reach";
       next = changeMood(
         {
-          ...say(`A ship came back from ${KINGDOMS[kingdom].name} with silver and cloth (+${SHIP.coins} coins).`),
+          ...say(`A ship came back from ${kingdomName(next, kingdom)} with silver and cloth (+${SHIP.coins} coins).`),
           resources: { ...next.resources, currency: next.resources.currency + SHIP.coins },
         },
         { [kingdom]: SHIP.mood },
@@ -1894,6 +2020,162 @@ function returnShips(state: GameState): GameState {
   return maybeOutbreak(next, isCalm(next) ? 0 : CARAVAN.sickness * (state.researched.includes("quarantine") ? 0.4 : 1), roll, "A ship brought it from overseas.");
 }
 
+// ---- Exploring an endless world ----
+
+// How far ships sail from a port (canoes: CANOE.reach from a dock), and how
+// much of the sea around where they went they map.
+export const SHIP_REACH = 34;
+const SHIP_SEES = 6;
+
+// The nearest land (not our home island) within two tiles of a spot: where a
+// boat sent there comes ashore.
+export function landNear(state: GameState, at: Tile | undefined): Tile | null {
+  if (!at) return null;
+  const home = state.tiles[state.startTile].island;
+  let best: Tile | null = null;
+  for (const t of state.tiles) {
+    if (!isLand(t.terrain) || t.island < 0 || t.island === home) continue;
+    const d = hexDistance(t, at);
+    if (d <= 2 && (!best || d < hexDistance(best, at))) best = t;
+  }
+  return best;
+}
+
+// What kind of island this is, in an endless world.
+export function isleKind(state: GameState, island: number) {
+  return state.world ? (isleById(state.world.seed, island)?.kind ?? null) : null;
+}
+
+// A boat comes ashore by `at`: a wild island becomes ours to build on, the
+// first to land among old ruins finds what was left there, and a people's
+// coast is a friendly visit.
+function landfall(state: GameState, at: Tile, by: "canoe" | "ship"): GameState {
+  const land = landNear(state, at);
+  if (!land || !state.world) return state;
+  const isle = isleById(state.world.seed, land.island);
+  if (!isle) return state;
+  const say = (s: GameState, line: string) => ({ ...s, log: [line, ...s.log].slice(0, 30) });
+  const kingdom = kingdomOfIsland(state, land.island);
+  if (kingdom) {
+    if (!state.kingdoms?.[kingdom] || state.kingdoms[kingdom].conquered) return state;
+    const fed = { ...state, resources: { ...state.resources, food: state.resources.food + 10 } };
+    return changeMood(say(fed, `Our ${by} landed on the coast of ${kingdomName(state, kingdom)}. They traded a little and sent our sailors home with food (+10 food).`), { [kingdom]: SHIP.meetMood / 2 });
+  }
+  let next = state;
+  if (!(next.outposts ?? []).includes(isle.id)) {
+    const tiles = next.tiles.map((t) => (t.island === isle.id && !t.revealed ? { ...t, revealed: true } : t));
+    next = say(
+      { ...next, tiles, outposts: [...(next.outposts ?? []), isle.id] },
+      `Our ${by} reached ${isle.name}! It is ours now: we can build anything there${by === "canoe" ? ", but small islands are fragile" : ""}.`,
+    );
+  }
+  if (isle.kind === "ruins" && !(next.ruinsFound ?? []).includes(isle.id)) next = { ...next, ruinsSearch: { island: isle.id, tick: next.tick } };
+  return next;
+}
+
+// What the old ruins on an island hold (the same for the same island).
+export function ruinsFind(state: GameState, island: number) {
+  return RUINS_FINDS[Math.floor(mulberry32((state.world?.seed ?? state.seed) + island * 31)() * RUINS_FINDS.length)];
+}
+
+// A ship sent somewhere in an endless world: it maps the sea around the spot,
+// and lands if there is land. One sent nowhere in particular trades with a
+// people that likes us (coins and goodwill), or fishes.
+function shipBack(state: GameState, ship: { tile?: number }, n: number): GameState {
+  const say = (s: GameState, line: string) => ({ ...s, log: [line, ...s.log].slice(0, 30) });
+  const at = ship.tile !== undefined ? state.tiles[ship.tile] : undefined;
+  if (at) {
+    const tiles = state.tiles.map((t) => ({ ...t }));
+    const before = tiles.filter((t) => t.revealed).length;
+    revealAround(tiles, tiles[at.id], SHIP_SEES + (state.researched.includes("starcharts") ? 1 : 0));
+    const mapped = tiles.filter((t) => t.revealed).length - before;
+    let next: GameState = say({ ...state, tiles }, mapped ? `Our ship came back and mapped ${mapped} new tiles of the sea.` : "Our ship came back: nothing new out there.");
+    if (landNear(next, next.tiles[at.id])) next = landfall(next, next.tiles[at.id], "ship");
+    return hearRumours(next, next.tiles[at.id], 48, "Our ship");
+  }
+  const friends = Object.entries(state.kingdoms ?? {}).filter(([, k]) => !k.conquered && moodOf(k.mood) !== "hostile");
+  if (!friends.length) return say({ ...state, resources: { ...state.resources, food: state.resources.food + CANOE.fish } }, `A ship came back with a hold full of fish (+${CANOE.fish} food).`);
+  const [kingdom] = friends[(state.tick + n) % friends.length];
+  return changeMood(
+    say({ ...state, resources: { ...state.resources, currency: state.resources.currency + SHIP.coins } }, `A ship came back from ${kingdomName(state, kingdom)} with silver and cloth (+${SHIP.coins} coins).`),
+    { [kingdom]: SHIP.mood },
+  );
+}
+
+// Why a ship can't sail there (null: it can).
+export function shipTargetError(state: GameState, tile: Tile): string | null {
+  if (!state.world) return null;
+  const ports = state.tiles.filter((t) => t.building === "shipyard" || t.building === "harbour");
+  if (!ports.length) return "Build a Shipyard first";
+  if (isLand(tile.terrain) && tile.island === state.tiles[state.startTile].island) return "Ships sail the sea: pick open water or another island";
+  if (Math.min(...ports.map((p) => hexDistance(p, tile))) > SHIP_REACH) return `Too far: at most ${SHIP_REACH} tiles from a port`;
+  return null;
+}
+
+// Rumours of land: a boat or scouts back from near an island nobody has seen
+// yet tell of it (smoke from a people's fires, or birds over an empty island),
+// and a marker in the fog shows roughly where. One at a time, nearest first.
+function hearRumours(state: GameState, at: { x: number; z: number }, range: number, who: string): GameState {
+  if (!state.world) return state;
+  const seen = new Set<number>();
+  for (const t of state.tiles) if (t.revealed && t.island > 0) seen.add(t.island);
+  const heard = new Set((state.rumours ?? []).map((r) => r.island));
+  const isle = islesNear(state.world.seed, at.x, at.z, range).find((i) => i.id !== 0 && !seen.has(i.id) && !heard.has(i.id));
+  if (!isle) return state;
+  const r = mulberry32(state.world.seed + isle.id * 7)();
+  const what = isle.kind === "tribe" ? "smoke" : "birds";
+  const dir = compass(isle.x - at.x, isle.z - at.z);
+  return {
+    ...state,
+    rumours: [...(state.rumours ?? []), { island: isle.id, x: isle.x + (r - 0.5) * 8, z: isle.z + (((r * 7) % 1) - 0.5) * 8, what }],
+    log: [`${who} saw ${what === "smoke" ? "smoke rising" : "seabirds circling"} far to the ${dir}: there must be land there${what === "smoke" ? ", and people" : ""}. It is marked on the map.`, ...state.log].slice(0, 30),
+  };
+}
+
+// "north-east": which way a step of (dx, dz) points on the map (north is -z).
+function compass(dx: number, dz: number) {
+  const names = ["east", "south-east", "south", "south-west", "west", "north-west", "north", "north-east"];
+  return names[(Math.round(Math.atan2(dz, dx) / (Math.PI / 4)) + 8) % 8];
+}
+
+// Something new was seen (an endless world): the world grows past it, the
+// land of islands that are ours is known, and any people we see for the first
+// time becomes a kingdom we can deal with (and asks how we come: contact).
+function explored(prev: GameState, next: GameState): GameState {
+  let fresh = false;
+  for (let i = 0; i < next.tiles.length; i++)
+    if (next.tiles[i].revealed && !prev.tiles[i]?.revealed) {
+      fresh = true;
+      break;
+    }
+  if (!fresh || !next.world) return next;
+  let state = next;
+  const ours = new Set(state.outposts ?? []);
+  for (let round = 0; round < 4; round++) {
+    const grown = growWorld(state.tiles, state.world!);
+    if (!grown) break;
+    for (const t of grown.tiles) if (ours.has(t.island)) t.revealed = true;
+    state = { ...state, tiles: [...state.tiles, ...grown.tiles], world: { ...state.world!, chunks: [...state.world!.chunks, ...grown.chunks] } };
+    if (!grown.tiles.some((t) => t.revealed)) break;
+  }
+  const seen = new Set<number>();
+  for (const t of state.tiles) if (t.revealed && t.island > 0) seen.add(t.island);
+  if (state.rumours?.some((r) => seen.has(r.island))) state = { ...state, rumours: state.rumours.filter((r) => !seen.has(r.island)) };
+  for (const island of seen) {
+    const id = kingdomOfIsland(state, island);
+    if (!id || state.kingdoms?.[id]) continue;
+    const info = kingdomInfo(state, id);
+    state = {
+      ...state,
+      kingdoms: { ...(state.kingdoms ?? {}), [id]: { mood: info.start, treaty: false, met: state.tick } },
+      // Only one first meeting at a time; any other waits in the log.
+      contact: state.contact ?? { kingdom: id, tick: state.tick },
+      log: [`We have found ${info.name} of ${info.isle?.name ?? "a far island"}! ${info.blurb}`, ...state.log].slice(0, 30),
+    };
+  }
+  return state;
+}
+
 // Moods drift back toward neutral; a treaty holds a kingdom friendly.
 function updateKingdoms(state: GameState): GameState {
   if (!state.kingdoms) return state;
@@ -1901,7 +2183,7 @@ function updateKingdoms(state: GameState): GameState {
   for (const id of Object.keys(kingdoms) as KingdomId[]) {
     const k = kingdoms[id];
     const drift = Math.sign(k.mood) * Math.min(Math.abs(k.mood), DIPLOMACY.drift);
-    kingdoms[id] = { ...k, mood: k.treaty ? Math.max(DIPLOMACY.treatyFloor, k.mood - drift) : k.mood - drift };
+    kingdoms[id] = { ...k, mood: k.treaty ? Math.max(DIPLOMACY.treatyFloor, k.mood - drift) : k.mood - drift, ...(k.hurt ? { hurt: Math.max(0, k.hurt - KINGDOM_ARMY.heal) } : {}) };
   }
   return { ...state, kingdoms };
 }
@@ -2400,8 +2682,17 @@ export function caravanError(state: GameState): string | null {
   if (!markets) return "Build a Market first";
   if ((state.caravans ?? []).length >= markets) return "Every Market's caravan is already out";
   if (state.plague?.closed) return "The harbour and the roads are closed";
+  if (state.world && !caravanPartner(state)) return "Find a people to trade with first (explore by canoe or ship)";
   if (!canAfford(state, caravanCost(state))) return "Not enough food and wood";
   return null;
+}
+
+// Who our caravans trade with: the Silk Steppe, or in an endless world the
+// friendliest people we know who aren't at war with us.
+export function caravanPartner(state: GameState): KingdomId | null {
+  if (!state.world) return "steppe";
+  const id = standIn(state, "steppe");
+  return id && moodOf(state.kingdoms![id].mood) !== "hostile" ? id : null;
 }
 
 // The forest a new field would clear: the nearest unbuilt, unprotected forest tile in reach.
@@ -2720,7 +3011,7 @@ function gapFactor(state: GameState) {
 }
 
 export interface Warning {
-  id: "fire" | "food" | "wood" | "famine" | "tired" | "unrest" | "collapse" | "behind" | "land" | "sick" | "rain" | "wear" | "roof" | "hostile-steppe" | "hostile-reach" | "soil" | "deadline" | "water";
+  id: "fire" | "food" | "wood" | "famine" | "tired" | "unrest" | "collapse" | "behind" | "land" | "sick" | "rain" | "wear" | "roof" | `hostile-${string}` | "soil" | "deadline" | "water";
   icon: IconId;
   text: string;
   // Ticks left on the countdown in the text; "{secs}" in the text is where it goes.
@@ -2882,7 +3173,7 @@ export function warnings(state: GameState): Warning[] {
     out.push({
       id: `hostile-${id}`,
       icon: "crown",
-      text: `${KINGDOMS[id].name[0].toUpperCase()}${KINGDOMS[id].name.slice(1)} is hostile: its armies will attack. Send gifts from Kingdoms, or build up our defense.`,
+      text: `${capital(kingdomName(state, id))} is hostile: its armies will attack. Send them gifts, or build up our defense.`,
       severe: false,
     });
   }
@@ -4203,7 +4494,7 @@ function bumpStats(state: GameState, change: (st: Stats) => void): GameState {
   return { ...state, stats: st };
 }
 
-// Ready to leave this era. Stone Age: Agriculture and 15 people. Ancient era:
+// Ready to leave this era. Stone Age: Agriculture and 12 people. Ancient era:
 // the Roman legion beaten, Coinage and 40 people.
 // Population control: is there room under the chief's limit?
 export function belowLimit(state: GameState, population: number) {
@@ -5181,13 +5472,14 @@ function returnCaravans(state: GameState): GameState {
     ...state,
     caravans: (state.caravans ?? []).filter((c) => state.tick < c.back),
     kingdoms: changeMood(state, { steppe: DIPLOMACY.caravanMood * due.length }).kingdoms,
+    // (In an endless world, the friendliest people we know.)
     resources: {
       ...state.resources,
       currency: state.resources.currency + due.length * CARAVAN.coins,
       knowledge: state.resources.knowledge + due.length * CARAVAN.knowledge,
     },
     log: [
-      `A caravan came back from the Silk Steppe with silver and new ideas (+${CARAVAN.coins} coins, +${CARAVAN.knowledge} Knowledge).`,
+      `A caravan came back from ${kingdomName(state, caravanPartner(state) ?? "steppe")} with silver and new ideas (+${CARAVAN.coins} coins, +${CARAVAN.knowledge} Knowledge).`,
       ...state.log,
     ].slice(0, 30),
   };
@@ -5342,14 +5634,16 @@ function scoutsReturn(state: GameState, tileId: number): GameState {
   const newLand = tiles.filter((t, i) => t.revealed && !state.tiles[i].revealed && isLand(t.terrain)).length;
   // Only the first few trips teach much: after that the land nearby is known.
   const learned = state.scoutsSent >= SCOUT_KNOWLEDGE.trips ? 0 : newLand >= SCOUT_KNOWLEDGE.bigTrip ? 2 : 1;
-  return {
+  // From the far shore, scouts may spot land across the water.
+  const back = (s: GameState) => hearRumours(s, tiles[tileId], 40, "The scouts");
+  return back({
     ...state,
     tiles,
     scouting: undefined,
     scoutsSent: state.scoutsSent + 1,
     resources: { ...state.resources, knowledge: state.resources.knowledge + learned },
     log: [`The scouts are back: they mapped ${newLand} tiles of new land${learned ? ` (+${learned} Knowledge)` : ""}.`, ...state.log].slice(0, 30),
-  };
+  });
 }
 const returnScouts = (state: GameState) => (state.scouting && state.tick >= state.scouting.back ? scoutsReturn(state, state.scouting.tile) : state);
 
@@ -5734,7 +6028,10 @@ function updateRaids(state: GameState): GameState {
     // In the Middle Ages, only a hostile kingdom sends an army; at peace, nobody
     // comes. A kingdom we raided comes for revenge, hostile or not by now.
     const revenge = state.revenge && state.tick >= state.revenge.tick && !state.kingdoms?.[state.revenge.kingdom]?.conquered ? state.revenge.kingdom : undefined;
-    const enemies = revenge ? [revenge] : state.era >= 3 ? hostileKingdoms(state) : [];
+    // In an endless world, a hostile people we know may come in any era (about
+    // half the raids, before the Middle Ages; the rest are raiders from the fog).
+    const known = state.world && state.era < 3 && rand() < 0.5 ? hostileKingdoms(state) : [];
+    const enemies = revenge ? [revenge] : state.era >= 3 ? hostileKingdoms(state) : known;
     if (state.era >= 3 && !enemies.length) return { ...state, nextRaidTick: state.tick + 60 };
     const from_ = enemies.length ? enemies[Math.floor(rand() * enemies.length)] : undefined;
     const home = state.tiles[state.startTile];
@@ -5745,7 +6042,7 @@ function updateRaids(state: GameState): GameState {
     });
     if (shores.length === 0) return { ...state, nextRaidTick: state.tick + 60 };
     // A kingdom's army lands on the shore that faces its island.
-    const isle = from_ ? ISLANDS[from_ === "steppe" ? 1 : 2] : null;
+    const isle = from_ ? kingdomInfo(state, from_).isle : null;
     const landing = isle
       ? [...shores].sort((a, b) => Math.hypot(a.x - isle.x, a.z - isle.z) - Math.hypot(b.x - isle.x, b.z - isle.z)).slice(0, 4)
       : shores;
@@ -5778,7 +6075,9 @@ function updateRaids(state: GameState): GameState {
           (2 + state.tick / RAID_GROWTH_TICKS + state.population / GROWTH_PRESSURE.raidersPerPeople) *
             DIFFICULTIES[state.difficulty].raiders *
             RAID_KINDS[kind].size *
-            (revenge ? KINGDOM_RAID.revengeSize : 1),
+            (revenge ? KINGDOM_RAID.revengeSize : 1) *
+            // A kingdom's army is as big as it keeps (a warlike people's is bigger).
+            (from_ ? TEMPERS[kingdomInfo(state, from_).temper].army : 1),
         ),
       ),
     );
@@ -5803,7 +6102,7 @@ function updateRaids(state: GameState): GameState {
       lastBigTick: state.tick,
       log: [
         from_
-          ? `An army of ${KINGDOMS[from_].name} (${strength}) is landing on the shore! ${revenge ? "They have come for revenge." : "They are at war with us."}${early ? " The lookouts in the watch tower saw them early." : ""}`
+          ? `An army of ${kingdomName(state, from_)} (${strength}) is landing on the shore! ${revenge ? "They have come for revenge." : "They are at war with us."}${early ? " The lookouts in the watch tower saw them early." : ""}`
           : `${RAID_KINDS[kind].name} of ${strength} raiders is landing on the shore!${early ? " The lookouts in the watch tower saw them early." : ""}`,
         ...state.log,
       ].slice(0, 30),
@@ -5834,6 +6133,7 @@ function withMeters(state: GameState): GameState {
 // Every action, then check whether the guided after-step has been done.
 export function reducer(state: GameState, action: Action): GameState {
   let next = reduce(state, action);
+  if (next.world && next.tiles !== state.tiles) next = explored(state, next);
   // Build to Last's guide moves on the moment its building is placed (not at
   // the next tick), so the hand never points at a spot for a second one.
   const guideBuild = next.mode === "last" ? LAST_TUTORIAL[next.lastStep ?? LAST_TUTORIAL.length]?.build : undefined;
@@ -6095,7 +6395,7 @@ export function currentGoal(state: GameState): string | null {
     const shield = Math.round(plagueShield(state) * 100);
     if (!state.plague) {
       const hostile = hostileKingdoms(state);
-      return `Goal: build a strong, healthy town before the great sickness comes (around ${formatYear(PLAGUE.arriveYear)}). Readiness ${shield}%.${hostile.length ? ` ${KINGDOMS[hostile[0]].name[0].toUpperCase()}${KINGDOMS[hostile[0]].name.slice(1)} is hostile!` : ""}`;
+      return `Goal: build a strong, healthy town before the great sickness comes (around ${formatYear(PLAGUE.arriveYear)}). Readiness ${shield}%.${hostile.length ? ` ${capital(kingdomName(state, hostile[0]))} is hostile!` : ""}`;
     }
     if (!inPlague(state)) return `Goal: the Black Death is coming by ship! Readiness ${shield}%. Close the harbour? Learn Quarantine, build healers and latrines.`;
     return `Goal: hold on until the sickness passes. Readiness ${shield}%. Lives lost: ${Math.round(state.plague.deaths)}.`;
@@ -6201,7 +6501,9 @@ function step(state: GameState, action: Action): GameState {
       const worried = def.id === "castle" ? changeMood(state, { reach: DIPLOMACY.castleMood }) : state;
       // A new field starts with fresh soil.
       const sown = def.id === "farm" ? { ...state.sown, [tile.id]: state.tick } : state.sown;
-      return withMeters({
+      // The first canoe dock: the fishers already tell of land across the water.
+      const told = def.id === "dock" && !(countBuildings(state).dock ?? 0) ? (s: GameState) => hearRumours(s, tile, 70, "Our fishers") : (s: GameState) => s;
+      return withMeters(told({
         ...worried,
         landmark,
         sown,
@@ -6224,7 +6526,7 @@ function step(state: GameState, action: Action): GameState {
           ...state.log,
         ].slice(0, 30),
         stats: { ...(state.stats ?? emptyStats()), built: (state.stats?.built ?? 0) + 1 },
-      });
+      }));
     }
 
     case "scout": {
@@ -6594,7 +6896,7 @@ function step(state: GameState, action: Action): GameState {
     }
 
     case "devFinishEra": {
-      // Stone Age: Agriculture and 15 people. Ancient: the legion beaten, Coinage
+      // Stone Age: Agriculture and 12 people. Ancient: the legion beaten, Coinage
       // and 40 people. Classical: the drought over and the landmark finished.
       if (!state.dev || state.era > 4) return state;
       if (state.era === 3 || state.era === 4) {
@@ -6634,7 +6936,7 @@ function step(state: GameState, action: Action): GameState {
         ...addTally(state, "caravans", 1),
         caravans: [...(state.caravans ?? []), { start: state.tick, back: state.tick + CARAVAN.ticks }],
         resources: spend(state.resources, caravanCost(state)),
-        log: [`A caravan set off for the Silk Steppe. It will be back in ${secs(CARAVAN.ticks)} s.`, ...state.log].slice(0, 30),
+        log: [`A caravan set off for ${kingdomName(state, caravanPartner(state) ?? "steppe")}. It will be back in ${secs(CARAVAN.ticks)} s.`, ...state.log].slice(0, 30),
       });
     }
 
@@ -6667,7 +6969,7 @@ function step(state: GameState, action: Action): GameState {
         ...sent,
         kingdoms: { ...sent.kingdoms!, [action.kingdom]: { ...sent.kingdoms![action.kingdom], giftTick: state.tick } },
         resources: spend(state.resources, cost),
-        log: [`We sent gifts to ${KINGDOMS[action.kingdom].name}. They were pleased.`, ...state.log].slice(0, 30),
+        log: [`We sent gifts to ${kingdomName(state, action.kingdom)}. They were pleased.`, ...state.log].slice(0, 30),
       });
     }
 
@@ -6678,7 +6980,7 @@ function step(state: GameState, action: Action): GameState {
         ...state,
         kingdoms: { ...state.kingdoms!, [action.kingdom]: { ...k, treaty: true } },
         resources: spend(state.resources, { currency: DIPLOMACY.treaty.coins }),
-        log: [`A treaty with ${KINGDOMS[action.kingdom].name}! Trade every day, and no war while it holds.`, ...state.log].slice(0, 30),
+        log: [`A treaty with ${kingdomName(state, action.kingdom)}! Trade every day, and no war while it holds.`, ...state.log].slice(0, 30),
       });
     }
 
@@ -6704,6 +7006,88 @@ function step(state: GameState, action: Action): GameState {
     case "conquer":
       return conquestError(state, action.kingdom) ? state : conquer(state, action.kingdom);
 
+    case "contact": {
+      const c = state.contact;
+      if (!c) return state;
+      const id = c.kingdom;
+      const info = kingdomInfo(state, id);
+      const done = { ...state, contact: null };
+      const say = (s: GameState, line: string) => ({ ...s, log: [line, ...s.log].slice(0, 30) });
+      if (action.choice === "gifts") {
+        const cost = giftCost(state, id);
+        if (!canAfford(state, cost)) return state;
+        return withMeters(changeMood(say({ ...done, resources: spend(state.resources, cost) }, `We greeted ${info.name} with gifts. They were delighted.`), { [id]: CONTACT.gifts }));
+      }
+      if (action.choice === "stories") {
+        const warm = info.temper === "traders" || info.temper === "peaceful";
+        return withMeters(
+          changeMood(
+            say({ ...done, resources: { ...state.resources, knowledge: state.resources.knowledge + CONTACT.knowledge } }, `Around a shared fire we swapped stories with ${info.name} (+${CONTACT.knowledge} Knowledge).`),
+            { [id]: warm ? CONTACT.storiesWarm : CONTACT.stories },
+          ),
+        );
+      }
+      if (action.choice === "spears") {
+        // Proud and warlike peoples respect strength; the others are scared off.
+        const strong = defenseStrength(state) >= kingdomRaidDefense(state, id);
+        const respect = info.temper === "proud" || info.temper === "warlike";
+        const by = strong ? (respect ? CONTACT.respect : -CONTACT.respect) : CONTACT.laughed;
+        return withMeters(
+          changeMood(
+            say(
+              { ...done, modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + (strong ? 3 : -3) } },
+              strong
+                ? respect
+                  ? `We showed ${info.name} our spears. They nodded: they respect strength.`
+                  : `We showed ${info.name} our spears. They backed away, frightened.`
+                : `We showed ${info.name} our spears. They laughed at how few we are.`,
+            ),
+            { [id]: by },
+          ),
+        );
+      }
+      return done;
+    }
+
+    case "ruins": {
+      const r = state.ruinsSearch;
+      if (!r) return state;
+      const find = ruinsFind(state, r.island);
+      const name = (state.world && isleById(state.world.seed, r.island)?.name) || "the island";
+      const done: GameState = { ...state, ruinsSearch: null, ruinsFound: [...(state.ruinsFound ?? []), r.island] };
+      const gain = (s: GameState, times: number) => {
+        let next: GameState = { ...s, resources: { ...s.resources } };
+        for (const [k, v] of Object.entries(find.gain)) next.resources[k as keyof Resources] += (v ?? 0) * times;
+        if (find.reveal) {
+          // An old map: it shows the sea around the next island out.
+          const isle = state.world ? isleById(state.world.seed, r.island) : null;
+          const far = isle ? state.tiles.filter((t) => !t.revealed && Math.hypot(t.x - isle.x, t.z - isle.z) > 20).sort((a, b) => Math.hypot(a.x - isle.x, a.z - isle.z) - Math.hypot(b.x - isle.x, b.z - isle.z))[0] : undefined;
+          if (far) {
+            const tiles = next.tiles.map((t) => ({ ...t }));
+            revealAround(tiles, tiles[far.id], find.reveal);
+            next = { ...next, tiles };
+          }
+        }
+        return next;
+      };
+      const say = (s: GameState, line: string) => ({ ...s, log: [line, ...s.log].slice(0, 30) });
+      const what = Object.entries(find.gain).map(([k, v]) => `${v} ${k === "currency" ? "coins" : k}`).join(", ");
+      if (action.choice === "careful") return withMeters(say(gain(done, 1), `Searching the ruins on ${name} with care, we found ${find.text} (${what}).`));
+      if (action.choice === "dig") {
+        const lucky = mulberry32(state.seed + state.tick * 43 + r.island)() < RUINS_DIG.luck;
+        if (lucky) return withMeters(say(gain(done, 2), `We dug deep under the ruins on ${name} and found twice as much: ${find.text}!`));
+        return withMeters(
+          say(
+            bumpStats({ ...done, population: Math.max(1, state.population - 1), modifiers: { ...state.modifiers, happiness: state.modifiers.happiness - RUINS_DIG.mood } }, (st) => {
+              st.deaths.accident = (st.deaths.accident ?? 0) + 1;
+            }),
+            `We dug too deep: the old walls on ${name} came down. One of the diggers didn't get out, and whatever was there is buried for good.`,
+          ),
+        );
+      }
+      return withMeters(say({ ...done, modifiers: { ...state.modifiers, happiness: state.modifiers.happiness + RUINS_DIG.honour } }, `We left the ruins on ${name} in peace. Our people tell stories of the old ones there (+${RUINS_DIG.honour} happiness).`));
+    }
+
     case "canoe": {
       if (canoeError(state)) return state;
       const picked = action.tileId !== undefined ? state.tiles[action.tileId] : undefined;
@@ -6711,8 +7095,8 @@ function step(state: GameState, action: Action): GameState {
       const tree = bigTree(state)!;
       // Sent to a spot near the Southern Isles (or with no spot, while they are
       // still unfound): it finds them. Anywhere else: fish and map the sea.
-      const isles = !(state.outposts ?? []).includes(CANOE.island) && state.tiles.some((t) => t.island === CANOE.island);
-      const nearIsles = picked ? isles && state.tiles.some((t) => t.island === CANOE.island && hexDistance(t, picked) <= 2) : false;
+      const isles = !state.world && !(state.outposts ?? []).includes(CANOE.island) && state.tiles.some((t) => t.island === CANOE.island);
+      const nearIsles = picked ? (state.world ? !!landNear(state, picked) : isles && state.tiles.some((t) => t.island === CANOE.island && hexDistance(t, picked) <= 2)) : false;
       const kind = picked ? (nearIsles ? "explore" : "fish") : canoeTrip(state);
       const trip = picked ? canoeTicks(state, picked) : CANOE.ticks;
       const tiles = state.tiles.map((t) => (t.id === tree.id ? { ...t, growth: Math.max(0.02, t.growth - CANOE.tree) } : t));
@@ -6722,7 +7106,7 @@ function step(state: GameState, action: Action): GameState {
         canoes: [...(state.canoes ?? []), { start: state.tick, back: state.tick + trip, kind, tile: picked?.id, dock: picked ? nearestDock(state, picked)?.id : undefined }],
         resources: spend(state.resources, CANOE.cost),
         log: [
-          `A big tree was felled for a canoe, and it set off ${kind === "explore" ? "to look for the islands to the south" : picked ? "to fish and explore where you pointed" : "to fish the open sea"}. Back in ${secs(trip)} s.`,
+          `A big tree was felled for a canoe, and it set off ${kind === "explore" ? (state.world ? "to land on the island you pointed at" : "to look for the islands to the south") : picked ? "to fish and explore where you pointed" : "to fish the open sea"}. Back in ${secs(trip)} s.`,
           ...state.log,
         ].slice(0, 30),
       });
@@ -6730,6 +7114,16 @@ function step(state: GameState, action: Action): GameState {
 
     case "ship": {
       if (shipError(state)) return state;
+      if (state.world) {
+        const picked = action.tileId !== undefined ? state.tiles[action.tileId] : undefined;
+        if (action.tileId !== undefined && (!picked || shipTargetError(state, picked))) return state;
+        return withMeters({
+          ...addTally(state, "ships", 1),
+          ships: [...(state.ships ?? []), { start: state.tick, back: state.tick + shipTicks(state), tile: picked?.id }],
+          resources: spend(state.resources, shipCost(state)),
+          log: [`A ship set sail ${picked ? "for where you pointed" : "to trade"}. It will be back in ${secs(shipTicks(state))} s.`, ...state.log].slice(0, 30),
+        });
+      }
       const voyage = nextVoyage(state);
       const where = voyage ? (voyage.kind === "outpost" ? "to look for new land" : "to find the kingdoms' coasts") : "to trade";
       return withMeters({
@@ -6803,7 +7197,7 @@ function step(state: GameState, action: Action): GameState {
       const p = state.plague;
       if (!p || p.closed === action.closed) return state;
       const first = action.closed && p.closedTick === undefined;
-      const next = first ? changeMood(state, { steppe: DIPLOMACY.closeHarbourMood, reach: DIPLOMACY.closeHarbourMood }) : state;
+      const next = first ? changeMood(state, Object.fromEntries(Object.keys(state.kingdoms ?? { steppe: 0, reach: 0 }).map((id) => [id, DIPLOMACY.closeHarbourMood]))) : state;
       return withMeters({
         ...next,
         plague: { ...p, closed: action.closed, closedTick: action.closed ? p.closedTick ?? state.tick : p.closedTick },

@@ -9,7 +9,7 @@ import { Html } from "./html";
 import type { MapControls as MapControlsImpl } from "three-stdlib";
 import { playSfx } from "@/lib/audio";
 import { BUILDINGS_BY_ID, CLEAR_LAND, ERAS, formatYear, IMPROVE, LAST_TUTORIAL, LEADER, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL, WEAR, SMOG } from "@/game/content";
-import { CANOE_TOOL, SCOUT_TOOL, canoeTargetError, canoeTicks, isUnlocked, scoutTargetError, scoutTicks } from "@/game/engine";
+import { CANOE_TOOL, SCOUT_TOOL, SHIP_TOOL, kingdomInfo, canoeTargetError, canoeTicks, isUnlocked, scoutTargetError, scoutTicks, shipTargetError, shipTicks } from "@/game/engine";
 import {
   buildingCost,
   DEMOLISH_TOOL,
@@ -58,13 +58,14 @@ import { Rebels } from "./rebels";
 import { goodSpots, tileAnchor } from "@/components/civ/guide";
 import { useGuide } from "@/components/civ/hud/guide-overlay";
 import type { GameState, Tile } from "@/game/types";
-import { BiomeDetails, Deposits, Forests, HexTerrain, Mountains, tileTop, treeSpots } from "./hex-terrain";
+import { BiomeDetails, Deposits, FogEdge, Forests, HexTerrain, Mountains, tileTop, treeSpots } from "./hex-terrain";
 import { BUILDING_SCALE, MODELS, buildingTurn } from "./building-models";
 import { turnFor } from "./facing";
 import { BattleScene, FireVictims, RaidBoats, Raiders, StrikeBoats, Villagers, Warriors } from "./villagers";
 import { PickUp } from "./pick-up";
 import { SeaTraffic, TradeShips, WaitingShips } from "./trade";
 import { ForeignVillages } from "./foreign";
+import { RumourMarkers } from "./rumours";
 import { Cracks, disasterView, FloodWater, GroundDust, QuakeShake, QuakeSway, QuakeWaves, Rubble, Ruins, StormRain } from "./disasters";
 import { Wildlife } from "./wildlife";
 import { Links } from "./links";
@@ -461,14 +462,15 @@ export function WorldCanvas() {
   const clearing = selected === CLEAR_TOOL;
   const scoutPick = selected === SCOUT_TOOL;
   const canoePick = selected === CANOE_TOOL;
+  const shipPick = selected === SHIP_TOOL;
   const def = selected && !demolishing && !planting && !clearing ? BUILDINGS_BY_ID[selected] : null;
   // Picking where to send scouts or a canoe: can they go there, and how long.
   const tripNote = (() => {
-    if (!hoverTile || !(scoutPick || canoePick)) return null;
-    const problem = scoutPick ? scoutTargetError(state, hoverTile) : canoeTargetError(state, hoverTile);
+    if (!hoverTile || !(scoutPick || canoePick || shipPick)) return null;
+    const problem = scoutPick ? scoutTargetError(state, hoverTile) : shipPick ? shipTargetError(state, hoverTile) : canoeTargetError(state, hoverTile);
     if (problem) return { ok: false, text: problem };
-    const ticks = scoutPick ? scoutTicks(state, hoverTile) : canoeTicks(state, hoverTile);
-    return { ok: true, text: `${scoutPick ? "Send the scouts here" : "Paddle here"}: back in ${Math.round(ticks * 1.5)} s` };
+    const ticks = scoutPick ? scoutTicks(state, hoverTile) : shipPick ? shipTicks(state) : canoeTicks(state, hoverTile);
+    return { ok: true, text: `${scoutPick ? "Send the scouts here" : shipPick ? "Sail here" : "Paddle here"}: back in ${Math.round(ticks * 1.5)} s` };
   })();
   const plantNote = planting && hoverTile ? plantError(state, hoverTile) ?? null : null;
   const clearNote = clearing && hoverTile ? clearAreaError(state, hoverTile) : null;
@@ -603,10 +605,10 @@ export function WorldCanvas() {
       dispatch({ type: "demolish", tileId: id });
       return;
     }
-    if (scoutPick || canoePick) {
-      const problem = scoutPick ? scoutTargetError(state, tile) : canoeTargetError(state, tile);
+    if (scoutPick || canoePick || shipPick) {
+      const problem = scoutPick ? scoutTargetError(state, tile) : shipPick ? shipTargetError(state, tile) : canoeTargetError(state, tile);
       if (problem) return;
-      dispatch(scoutPick ? { type: "scout", tileId: id } : { type: "canoe", tileId: id });
+      dispatch(scoutPick ? { type: "scout", tileId: id } : shipPick ? { type: "ship", tileId: id } : { type: "canoe", tileId: id });
       setSelected(null);
       if (touch) setHovered(null);
       return;
@@ -688,6 +690,7 @@ export function WorldCanvas() {
         onHover={setHovered}
         onPick={pick}
       />
+      <FogEdge tiles={state.tiles} />
       <Forests tiles={state.tiles} />
       <OldGrove tiles={state.tiles} ids={state.protectedTiles ?? []} />
       <Mountains tiles={state.tiles} onHover={setHovered} onPick={pick} />
@@ -785,13 +788,14 @@ export function WorldCanvas() {
         gameSpeed={state.speed}
       />
       <BattleScene tiles={state.tiles} battle={shown} homeTile={home} speed={state.speed} />
-      <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} speed={state.speed} />
+      <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} speed={state.speed} colours={state.raid?.kingdom ? kingdomInfo(state, state.raid.kingdom).tunic : undefined} />
       <RaidBoats tiles={state.tiles} raid={state.raid} homeTile={home} speed={state.speed} />
       <StrikeBoats tiles={state.tiles} strike={state.strike ?? null} homeTile={home} tick={state.tick} speed={state.speed} />
-      <TradeShips tiles={state.tiles} home={home} caravans={state.caravans ?? []} tick={state.tick} speed={state.speed} />
+      <TradeShips state={state} home={home} />
       <ChimneySmoke tiles={buildings} cleanAir={state.researched.includes("cleanair")} />
       <SeaTraffic state={state} home={home} />
       <ForeignVillages state={state} />
+      <RumourMarkers state={state} />
       <WaitingShips state={state} home={home} />
       {/* The plague: rats scurrying round a few homes. */}
       {plagueOn &&

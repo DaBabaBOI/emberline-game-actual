@@ -155,12 +155,12 @@ export function generateMap(seed: number): { tiles: Tile[]; startTile: number } 
 // downhill (toward the coast) to the sea. The geography is fixed, so this is the
 // same river every game. Returns the tile ids that become river, source first.
 // Older saves get it added when they load (see loadGame).
-export function riverPath(tiles: Tile[], startTile: number): number[] {
+// `height` is how high the land rises at a tile (the classic map's by default).
+export function riverPath(tiles: Tile[], startTile: number, height: (t: Tile) => number = (t) => landValue(t.x, t.z).value): number[] {
   const start = tiles[startTile];
   const byKey = new Map(tiles.map((t) => [hexKey(t.q, t.r), t]));
   const neighbors = (t: Tile) =>
     NEIGHBOR_OFFSETS.map(([dq, dr]) => byKey.get(hexKey(t.q + dq, t.r + dr))).filter((n): n is Tile => Boolean(n));
-  const height = (t: Tile) => landValue(t.x, t.z).value;
   let best: Tile[] = [];
   let bestNear = Infinity;
   const sources = tiles.filter((t) => t.island === HOME_ISLAND && (t.terrain === "hills" || t.terrain === "mountain"));

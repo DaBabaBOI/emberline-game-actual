@@ -28,6 +28,7 @@ import {
   CLEAR_TOOL,
   SCOUT_TOOL,
   CANOE_TOOL,
+  SHIP_TOOL,
   foodKeeps,
   foodSpoiling,
   housingCapacity,
@@ -568,10 +569,10 @@ export function BottomBar() {
             <ToolButton
               guide="tool-kingdoms"
               icon="crown"
-              label={state.era >= 4 ? "Nations" : "Kingdoms"}
+              label={state.era >= 4 ? "Nations" : state.world && state.era < 3 ? "Peoples" : "Kingdoms"}
               onClick={() => setPanel("kingdoms")}
               badge={hostileKingdoms(state).length ? "!" : undefined}
-              title={hostileKingdoms(state).length ? "A kingdom is hostile: its armies will raid us" : "Gifts, treaties and raids with the two kingdoms"}
+              title={hostileKingdoms(state).length ? "A kingdom is hostile: its armies will raid us" : state.world ? "Gifts, treaties, raids and conquest with the peoples we have found" : "Gifts, treaties and raids with the two kingdoms"}
               tone="bg-purple-800 hover:bg-purple-700"
             />
           )}
@@ -635,6 +636,9 @@ function CanoeButton() {
   const out = (state.canoes ?? []).length;
   const problem = canoeError(state);
   const goal = canoeTrip(state) === "explore" ? "to find the islands to the south (then you can build there)" : `to fish the open sea (+${CANOE.fish} food)`;
+  const tip = state.world
+    ? `Press, then click where on the sea to go: it maps the sea around there. Next to an island it lands: a wild island becomes ours, old ruins can be searched, and a people's coast is a visit. Each canoe is cut from one big tree.`
+    : `Press, then click where on the sea to go: near the Southern Isles ${goal.startsWith("to find") ? "to find them" : "or"} anywhere else to fish (+${CANOE.fish} food) and map the sea. Each canoe is cut from one big tree.`;
   return (
     <ToolButton
       guide="tool-canoe"
@@ -643,7 +647,7 @@ function CanoeButton() {
       // Pick where on the sea (or which island) to paddle to.
       onClick={() => setSelected(selected === CANOE_TOOL ? null : CANOE_TOOL)}
       disabled={!!problem}
-      title={problem ?? `Press, then click where on the sea to go: near the Southern Isles ${goal.startsWith("to find") ? "to find them" : "or"} anywhere else to fish (+${CANOE.fish} food) and map the sea. Each canoe is cut from one big tree.`}
+      title={problem ?? tip}
       tone={selected === CANOE_TOOL ? "bg-amber-400 text-[#2b2119]" : "bg-sky-900 hover:bg-sky-800"}
     >
       <Cost cost={CANOE.cost} bad={!canAfford(state, CANOE.cost)} />
@@ -654,20 +658,27 @@ function CanoeButton() {
 // Send a ship from a Shipyard (or the Grand Harbour): first to find islands and
 // the kingdoms' coasts, then to trade.
 function ShipButton() {
-  const { state, dispatch } = useGame();
+  const { state, dispatch, selected, setSelected } = useGame();
   const out = (state.ships ?? []).length;
   const problem = shipError(state);
   const voyage = nextVoyage(state);
   const goal = !voyage ? "to trade (coins and goodwill)" : voyage.kind === "outpost" ? "to find new land for an outpost" : "to find a kingdom's coast";
+  // In an endless world, ships go where they are sent (far further than canoes).
+  const pick = !!state.world;
   return (
     <ToolButton
       guide="tool-ship"
       icon="boat"
       label={`Ship ${out} at sea`}
-      onClick={() => dispatch({ type: "ship" })}
+      onClick={() => (pick ? setSelected(selected === SHIP_TOOL ? null : SHIP_TOOL) : dispatch({ type: "ship" }))}
       disabled={!!problem}
-      title={problem ?? `Send a ship ${goal}. Ships can also bring sickness home.`}
-      tone="bg-sky-800 hover:bg-sky-700"
+      title={
+        problem ??
+        (pick
+          ? "Press, then click where on the sea to sail: a ship maps a wide stretch of sea and lands on any island there. Ships can also bring sickness home."
+          : `Send a ship ${goal}. Ships can also bring sickness home.`)
+      }
+      tone={selected === SHIP_TOOL ? "bg-amber-400 text-[#2b2119]" : "bg-sky-800 hover:bg-sky-700"}
     >
       <Cost cost={shipCost(state)} bad={!canAfford(state, shipCost(state))} />
     </ToolButton>
@@ -687,7 +698,7 @@ function CaravanButton() {
       label={`Caravan ${out}/${markets}`}
       onClick={() => dispatch({ type: "caravan" })}
       disabled={!!problem}
-      title={problem ?? "Send a caravan to the Silk Steppe: it comes back with coins and new ideas, and sometimes sickness."}
+      title={problem ?? `Send a caravan to ${state.world ? "the friendliest people we know" : "the Silk Steppe"}: it comes back with coins and new ideas, and sometimes sickness.`}
       tone="bg-teal-800 hover:bg-teal-700"
     >
       <Cost cost={caravanCost(state)} bad={!canAfford(state, caravanCost(state))} />
