@@ -1,22 +1,67 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { TUTORIAL } from "@/game/content";
 import { askAma } from "@/lib/ama";
+import { currentGoal } from "@/game/engine";
 import { useShot } from "./letterbox";
-import { urgentNow } from "@/game/hints";
 
 // Questions to start from, for players who don't know what to ask.
 const STARTERS = ["What should I do next?", "Why are people unhappy?", "How do I get more food?"];
 
+// Whether the Ask panel is open (its button sits on the goal line).
+let amaOpen = false;
+const amaListeners = new Set<() => void>();
+export function setAmaOpen(open: boolean) {
+  amaOpen = open;
+  for (const l of amaListeners) l();
+}
+export function useAmaOpen() {
+  return useSyncExternalStore(
+    (l) => {
+      amaListeners.add(l);
+      return () => void amaListeners.delete(l);
+    },
+    () => amaOpen,
+    () => false,
+  );
+}
+
+// The small button that opens it (on the goal line; on its own when there's
+// no goal to show).
+export function AskAmaButton({ inline = false }: { inline?: boolean }) {
+  const { state } = useGame();
+  if (state.tutorialStep < TUTORIAL.length || state.phase !== "playing") return null;
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        setAmaOpen(true);
+      }}
+      title="Ask Elder Ama anything about your town"
+      className={
+        inline
+          ? "pixel-btn font-pixel pointer-events-auto flex shrink-0 items-center gap-1 bg-[#fdf6e3] px-1.5 py-0.5 text-[11px] text-[#2b2119]"
+          : "pixel-btn font-pixel pointer-events-auto flex items-center gap-1.5 self-start bg-[#fdf6e3] px-2 py-1 text-xs text-[#2b2119]"
+      }
+      data-testid="ask-ama-open"
+    >
+      <PixelIcon name="elder" size={inline ? 14 : 16} />
+      {inline ? "Ask" : "Ask Elder Ama"}
+    </button>
+  );
+}
+
 // Ask Elder Ama anything about your town (src/lib/ama.ts). Folded away to a
-// small button until opened.
+// small button (on the goal line) until opened.
 export function AskAma() {
   const { state, setAsking } = useGame();
   const shot = useShot();
-  const [open, setOpen] = useState(false);
+  const open = useAmaOpen();
+  const setOpen = setAmaOpen;
   const [question, setQuestion] = useState("");
   const [busy, setBusy] = useState(false);
   const [reply, setReply] = useState<{ q: string; answer: string; offline: boolean } | null>(null);
@@ -35,20 +80,8 @@ export function AskAma() {
     setAsking(false);
   };
 
-  // One Elder Ama at a time: no Ask button beside her tip, or while raiders are about.
-  if (!open && (state.hint || urgentNow(state))) return null;
-  if (!open)
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="pixel-btn font-pixel pointer-events-auto flex items-center gap-1.5 self-start bg-[#fdf6e3] px-2 py-1 text-xs text-[#2b2119]"
-        data-testid="ask-ama-open"
-      >
-        <PixelIcon name="elder" size={16} />
-        Ask Elder Ama
-      </button>
-    );
+  // Closed: its button is on the goal line (or here, with no goal showing).
+  if (!open) return state.mode === "last" || !currentGoal(state) ? <AskAmaButton /> : null;
 
   return (
     <div className="pixel-panel pointer-events-auto relative z-[15] flex w-full flex-col gap-1.5 p-2.5 text-sm" data-testid="ask-ama">

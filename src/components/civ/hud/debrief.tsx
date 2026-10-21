@@ -1,5 +1,6 @@
 "use client";
 
+import { AskAmaButton } from "./ask-ama";
 import { useShot } from "./letterbox";
 
 import { HOME } from "@/lib/home";
@@ -296,17 +297,20 @@ export function GoalLine() {
   // One line, the width of the column; click to read it all, with the steps.
   return (
     <div className="flex w-full flex-col items-stretch">
-      <button
-        type="button"
-        onClick={() => setFull(!full)}
-        aria-expanded={full}
-        title={steps?.length ? "Click to see how to get there" : undefined}
-        className="pixel-panel-dark font-pixel pointer-events-auto flex w-full items-start gap-1.5 px-2.5 py-1 text-left text-xs hover:brightness-125"
-        data-testid="goal-line"
-      >
-        <span className={cn("flex-1", !full && "line-clamp-1")}>{goal}</span>
-        <span className="shrink-0 text-amber-300">{full ? "▴" : steps?.length ? "How? ▾" : "▾"}</span>
-      </button>
+      <div className="flex w-full items-stretch gap-1">
+        <button
+          type="button"
+          onClick={() => setFull(!full)}
+          aria-expanded={full}
+          title={steps?.length ? "Click to see how to get there" : undefined}
+          className="pixel-panel-dark font-pixel pointer-events-auto flex min-w-0 flex-1 items-start gap-1.5 px-2.5 py-1 text-left text-xs hover:brightness-125"
+          data-testid="goal-line"
+        >
+          <span className={cn("flex-1", !full && "line-clamp-1")}>{goal}</span>
+          <span className="shrink-0 text-amber-300">{full ? "▴" : steps?.length ? "How? ▾" : "▾"}</span>
+        </button>
+        <AskAmaButton inline />
+      </div>
       {how}
     </div>
   );

@@ -408,6 +408,16 @@ function eraTitle(name: string) {
   return name.endsWith("Age") ? `The ${name}` : `The ${name} Era`;
 }
 
+// The first frames are drawn: the loading campfire can go (fire-loader.tsx).
+function FirstFrame() {
+  const frames = useRef(0);
+  useFrame(() => {
+    if (frames.current > 3) return;
+    if (++frames.current === 3) window.dispatchEvent(new Event("emberline-world-ready"));
+  });
+  return null;
+}
+
 export function WorldCanvas() {
   const { state, dispatch, selected, setSelected, panel, clock } = useGame();
   const graphics = useGraphics();
@@ -652,6 +662,7 @@ export function WorldCanvas() {
       }}
     >
       <color attach="background" args={["#a8dcf5"]} />
+      <FirstFrame />
       {/* The sky, the sun and moon, the fog: the time of day, with wood smoke,
           the drought's dust, storms and the plague's gloom on top. */}
       <DaySky

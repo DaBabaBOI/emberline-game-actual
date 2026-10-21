@@ -44,10 +44,11 @@ import {
   Warnings,
 } from "./hud/overlays";
 import { ContactModal, RuinsModal } from "./hud/contact";
+import { WorldLoader } from "./fire-loader";
 
 const WorldCanvas = dynamic(
   () => import("./world/world-canvas").then((m) => m.WorldCanvas),
-  { ssr: false, loading: () => <div className="absolute inset-0 bg-sky-300" /> },
+  { ssr: false, loading: () => <div className="absolute inset-0 bg-[#070506]" /> },
 );
 
 function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null }) {
@@ -119,13 +120,11 @@ function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null 
               {/* 3. Choices waiting. */}
               <NextEraPrompt />
               <LandmarkPicker />
-              {/* 4. Serious warnings (famine, collapse...). */}
-              <Warnings only="severe" />
-              {/* 5. Where we're going. */}
+              {/* 4. The worst warning (others behind a +N chip). */}
+              <Warnings />
+              {/* 5. Where we're going (with the Ask Elder Ama button). */}
               <StoryPanel />
               <GoalLine />
-              {/* 6. Other warnings. */}
-              <Warnings only="mild" />
             </>
           )}
           {/* 7. Elder Ama's tips (a speedrun goes without her). */}
@@ -282,6 +281,8 @@ export function GameScreen() {
         <div className="absolute inset-0">
           <WorldCanvas />
         </div>
+        {/* A campfire while the island wakes up (until its first frame). */}
+        <WorldLoader key={game.seed} />
         <Hud
           match={match}
           onRestart={() => {

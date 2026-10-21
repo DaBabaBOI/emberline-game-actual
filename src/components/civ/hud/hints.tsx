@@ -18,7 +18,9 @@ export function HintPanel() {
   useEffect(() => {
     if (state.hint) {
       const h = HINTS_BY_ID[state.hint.id];
-      if (!h || state.tick - state.hint.tick >= HINT.showTicks || h.done?.(state)) dispatch({ type: "dismissHint" });
+      // Raiders (or the like) interrupt a tip: it goes for good, rather than
+      // coming back later out of the blue.
+      if (!h || state.tick - state.hint.tick >= HINT.showTicks || h.done?.(state) || urgentNow(state)) dispatch({ type: "dismissHint" });
       return;
     }
     if (shot || urgentNow(state)) return;

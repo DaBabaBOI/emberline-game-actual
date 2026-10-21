@@ -9,6 +9,8 @@ export const UPDATES: Update[] = [
   {
     date: "2026-10-21",
     items: [
+      "A calmer left side: one warning card at a time (the worst one; the rest wait behind a +N you can open), one message at a time, and the Ask Elder Ama button now sits on the goal line. A tip that raiders interrupt is gone for good instead of popping back up later out of nowhere.",
+      "While the game loads, a campfire crackles in the dark, embers drifting up, until your island is ready.",
       "Walk with your people: in first person, a band of villagers comes along with you. They follow the way you walk two by two, run to catch up, gather round in front when you stop, and grab their own axe or pick to help when you chop or break stone. Everyone you pass turns to look and waves, and people talk as you go (shown as subtitles). G calls them, or sends them back to work.",
       "First person feels more alive: footsteps, a sway as you walk, and the view widens when you run.",
       "A new world every game: your home island, the islands around it and the peoples on them are different each time, and the sea goes on forever, made as you explore.",

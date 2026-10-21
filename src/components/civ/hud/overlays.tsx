@@ -249,10 +249,10 @@ export function EventModal() {
 
 
 const TOAST_MS = 5000;
-const MAX_TOASTS = 2;
+const MAX_TOASTS = 1;
 
-// New log lines pop up briefly (at most two at a time) and then fade away,
-// so the screen never fills with messages.
+// New log lines pop up briefly (one at a time) and then fade away, so the
+// screen never fills with messages.
 export function Toasts() {
   const { state } = useGame();
   // Below 1024 px everything shares one column: one message at a time.
@@ -637,16 +637,19 @@ export function RaidBanner() {
 
 // Only the most urgent warning is shown; the rest wait behind a "+N more" button.
 // In the left column: the serious ones high up, the rest under the goal.
-export function Warnings({ only }: { only: "severe" | "mild" }) {
+// One warning card at a time (the worst: serious ones first); any others wait
+// behind a "+N" chip, there to open whenever you like. With raiders (or the
+// like) on screen, only the serious ones count.
+export function Warnings() {
   const { state, dispatch } = useGame();
   const [open, setOpen] = useState(false);
-  // With raiders (or the like) on screen, only the serious ones.
   const urgent = urgentNow(state);
-  const list = warnings(state).filter((w) => (only === "severe" ? w.severe : !w.severe && !urgent));
+  const all = warnings(state);
+  const list = [...all.filter((w) => w.severe), ...all.filter((w) => !w.severe && !urgent)];
   if (list.length === 0) return null;
   const shown = open ? list : list.slice(0, 1);
   return (
-    <div data-testid={only === "severe" ? "warnings" : "warnings-mild"} className="pointer-events-none flex flex-col gap-1.5">
+    <div data-testid="warnings" className="pointer-events-none flex flex-col gap-1.5">
       {shown.map((w) => (
         <div
           key={w.id}
