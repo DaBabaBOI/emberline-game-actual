@@ -53,6 +53,8 @@ export interface Walker extends Agent {
   // Out hunting: the hunter (wildlife.tsx) walks in their place and hands them
   // back where the hunt ends, so nobody appears or vanishes.
   hunting?: boolean;
+  // A team cameo: the name on their tag (they answer to it when spoken to).
+  cameo?: string;
 }
 
 // Shared with the pick-up tool: the villagers on the map, and who is being carried.
@@ -405,7 +407,9 @@ export function Villagers({
     grabStore.walkers = shown.current;
     // The cameos' crowns and name tags (hidden while they're away).
     list.forEach((w, i) => {
-      w.crown = cameoAt.includes(i);
+      const k = cameoAt.indexOf(i);
+      w.crown = k >= 0;
+      w.cameo = k >= 0 ? cameos[k] : undefined;
     });
     cameoAt.forEach((i, k) => {
       const tag = tags.current[k];

@@ -7133,7 +7133,8 @@ function step(state: GameState, action: Action): GameState {
           tiles: state.tiles.map((t) => (t.id === tile.id ? { ...t, growth: Math.max(LEADER.chopMin, t.growth - LEADER.chopThin) } : t)),
         });
       }
-      if (tile.terrain === "hills" || tile.terrain === "mountain") {
+      // Stone only with the know-how of the Stone Quarry.
+      if ((tile.terrain === "hills" || tile.terrain === "mountain") && isUnlocked(state, BUILDINGS_BY_ID.quarry)) {
         return withMeters({ ...state, leaderWork, resources: { ...state.resources, stone: state.resources.stone + LEADER.stone + (felled ? LEADER.fellBonus : 0) } });
       }
       return state;

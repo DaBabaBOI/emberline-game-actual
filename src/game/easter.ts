@@ -12,7 +12,6 @@
 //   NAME_EGGS). The same name twice in a row and the second game is cursed.
 
 export const TEAM = [
-  { name: "Prithu", joke: "Prithu has joined the tribe and is already asking for more features." },
   { name: "Aarav", joke: "Aarav has joined the tribe and is rebuilding the village gate in plain HTML." },
   { name: "Vagisha", joke: "Vagisha has joined the tribe and is checking every fact the elders tell." },
   { name: "Aaradhya", joke: "Aaradhya has joined the tribe and is painting the cave walls." },

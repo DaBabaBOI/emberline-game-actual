@@ -42,6 +42,7 @@ export function LeaderRig({
   coldFires = [],
   era = 0,
   armed = false,
+  quarry = false,
 }: {
   // Leader mode (started as the chief): Tab switches views, and the chief always stands on the map.
   leaderMode?: boolean;
@@ -56,6 +57,8 @@ export function LeaderRig({
   // The era (a spear early on, a sword later), and raiders about (weapon in hand).
   era?: number;
   armed?: boolean;
+  // The Stone Quarry is known: stone can be broken off by hand.
+  quarry?: boolean;
 }) {
   const { gl } = useThree();
   // Whether the first-person lens is on, and the map's lens to put back.
@@ -88,9 +91,11 @@ export function LeaderRig({
   const fight = battle?.live ? tiles[battle.tile] : null;
   const fightRef = useRef(fight);
   const armedRef = useRef(armed);
+  const canQuarry = useRef(quarry);
   useEffect(() => {
     fightRef.current = fight;
     armedRef.current = armed;
+    canQuarry.current = quarry;
   });
   // What's in the chief's hand.
   const tool = useRef<Group>(null);
@@ -358,7 +363,8 @@ export function LeaderRig({
     });
     const found = best as { index: number; d: number } | null;
     if (found) {
-      setLeaderPrompt({ kind: "talk", index: found.index, name: villagerName(found.index) });
+      // A cameo answers to the name on their tag.
+      setLeaderPrompt({ kind: "talk", index: found.index, name: grabStore.walkers[found.index]?.cameo ?? villagerName(found.index) });
       return;
     }
     let prompt: LeaderPrompt = null;
@@ -367,7 +373,8 @@ export function LeaderRig({
       if (t.building) prompt = { kind: "building", tile: t.id };
       // A tree: wood (until the wood is thinned right out, then let it grow back).
       else if (aim.tree || t.terrain === "forest") prompt = { kind: "gather", tile: t.id, what: "wood", spent: t.growth <= LEADER.chopMin };
-      else if (t.terrain === "hills" || t.terrain === "mountain") prompt = { kind: "gather", tile: t.id, what: "stone" };
+      // Stone by hand only once the Stone Quarry is known (the tools for it).
+      else if ((t.terrain === "hills" || t.terrain === "mountain") && canQuarry.current) prompt = { kind: "gather", tile: t.id, what: "stone" };
       else if (isLand(t.terrain)) prompt = { kind: "plant", tile: t.id };
     }
     setLeaderPrompt(prompt);

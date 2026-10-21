@@ -304,12 +304,25 @@ function useHudEdges(root: RefObject<HTMLDivElement | null>) {
       if (top) el.style.setProperty("--hud-top", `${Math.round(top.bottom)}px`);
       if (bottom) el.style.setProperty("--hud-bottom", `${Math.round(window.innerHeight - bottom.top)}px`);
     };
+    // Watch the bars' sizes, including bars that come back later (the
+    // bottom bar is rebuilt after walking in first person, say).
     const watch = new ResizeObserver(measure);
-    el.querySelectorAll("[data-hud]").forEach((n) => watch.observe(n));
+    const seen = new Set<Element>();
+    const follow = () => {
+      el.querySelectorAll("[data-hud]").forEach((n) => {
+        if (seen.has(n)) return;
+        seen.add(n);
+        watch.observe(n);
+      });
+      measure();
+    };
+    const added = new MutationObserver(follow);
+    added.observe(el, { childList: true, subtree: true });
     window.addEventListener("resize", measure);
-    measure();
+    follow();
     return () => {
       watch.disconnect();
+      added.disconnect();
       window.removeEventListener("resize", measure);
     };
   }, [root]);

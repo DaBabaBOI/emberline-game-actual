@@ -9,7 +9,7 @@ import { Html } from "./html";
 import type { MapControls as MapControlsImpl } from "three-stdlib";
 import { playSfx } from "@/lib/audio";
 import { BUILDINGS_BY_ID, CLEAR_LAND, ERAS, formatYear, IMPROVE, LAST_TUTORIAL, LEADER, LOW_WOOD_AFTER_BUY, RELIGHT_WOOD, TUTORIAL, WEAR, SMOG } from "@/game/content";
-import { CANOE_TOOL, SCOUT_TOOL, canoeTargetError, canoeTicks, scoutTargetError, scoutTicks } from "@/game/engine";
+import { CANOE_TOOL, SCOUT_TOOL, canoeTargetError, canoeTicks, isUnlocked, scoutTargetError, scoutTicks } from "@/game/engine";
 import {
   buildingCost,
   DEMOLISH_TOOL,
@@ -1007,6 +1007,7 @@ export function WorldCanvas() {
           coldFires={outFires.map((t) => t.id)}
           era={state.era}
           armed={!!state.raid && state.raid.response !== "hide"}
+          quarry={isUnlocked(state, BUILDINGS_BY_ID.quarry)}
           onStrike={() => dispatch({ type: "leaderStrike" })}
           onAct={({ kind, tile }) => {
             if (kind === "build" && leaderSnap.build) {
