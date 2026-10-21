@@ -1012,6 +1012,8 @@ export function WorldCanvas() {
           era={state.era}
           armed={!!state.raid && state.raid.response !== "hide"}
           quarry={isUnlocked(state, BUILDINGS_BY_ID.quarry)}
+          hungry={state.famineTicks > 0 || state.resources.food < 20}
+          rumour={(state.rumours ?? []).length > 0}
           onStrike={() => dispatch({ type: "leaderStrike" })}
           onAct={({ kind, tile }) => {
             if (kind === "build" && leaderSnap.build) {

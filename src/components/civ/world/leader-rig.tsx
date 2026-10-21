@@ -12,6 +12,8 @@ import { CHIP_COLORS, Chips, HeldTool, holdTool, spawnChips, type HeldKind } fro
 import { isLand } from "@/game/map";
 import { LEADER } from "@/game/content";
 import { leader, leaderButtons, leaderSnapshot, leaderStick, setLeaderBuild, setLeaderLocked, setLeaderMenu, setLeaderPrompt, setLeaderView, villagerName, type LeaderPrompt } from "./leader";
+import { band, bandSay, trackChief } from "./band";
+import { playSfx } from "@/lib/audio";
 
 // Leader mode: the chief, walked in first person. WASD or the arrows to move
 // (Shift to run, Space to jump), the mouse to look (click the view to take the
@@ -19,7 +21,8 @@ import { leader, leaderButtons, leaderSnapshot, leaderStick, setLeaderBuild, set
 // do: E to talk to a villager, step into a building or relight a cold fire; a
 // click to strike in a fight, chop wood or break stone; P to plant a tree.
 // Pick a building from the hotbar (1-9 or the wheel) and a click builds it
-// where you look (Q puts it away). Tab for the build view (and back).
+// where you look (Q puts it away). Tab for the build view (and back). Your
+// people walk with you (band.ts): G calls them, or sends them back.
 
 const EYE = 0.62;
 const WALK = 2.2;
@@ -43,6 +46,8 @@ export function LeaderRig({
   era = 0,
   armed = false,
   quarry = false,
+  hungry = false,
+  rumour = false,
 }: {
   // Leader mode (started as the chief): Tab switches views, and the chief always stands on the map.
   leaderMode?: boolean;
@@ -59,6 +64,9 @@ export function LeaderRig({
   armed?: boolean;
   // The Stone Quarry is known: stone can be broken off by hand.
   quarry?: boolean;
+  // What the band talks about: hunger, rumours of land.
+  hungry?: boolean;
+  rumour?: boolean;
 }) {
   const { gl } = useThree();
   // Whether the first-person lens is on, and the map's lens to put back.
@@ -96,7 +104,10 @@ export function LeaderRig({
     fightRef.current = fight;
     armedRef.current = armed;
     canQuarry.current = quarry;
+    Object.assign(band.context, { raid: armed, hungry, rumour, era });
   });
+  // Footsteps: how far the chief has walked since the last one.
+  const stride = useRef(0);
   // What's in the chief's hand.
   const tool = useRef<Group>(null);
   const held = useRef<{ kind: HeldKind | null; since: number }>({ kind: null, since: 0 });
@@ -147,6 +158,11 @@ export function LeaderRig({
       if (key === "e") interact();
       if (key === "p") plant();
       if (key === "q") setLeaderBuild(null);
+      // G: call your people to walk with you, or send them back to their day.
+      if (key === "g") {
+        band.want = !band.want;
+        bandSay("You", band.want ? "Come with me, everyone!" : "Go back to your work. I'll be fine.");
+      }
       if (key === " ") {
         e.preventDefault();
         jump();
@@ -178,6 +194,8 @@ export function LeaderRig({
         leader.actAt = now;
         act.current({ kind: "gather", tile: p.tile });
         spawnChips(leader.aimAt, CHIP_COLORS[p.what], 8);
+        // The band pitches in beside you.
+        band.helping = { until: now + 2200, tool: p.what === "wood" ? "axe" : "pick", at: { x: leader.aimAt.x, z: leader.aimAt.z } };
       }
     };
     const click = (e: MouseEvent) => {
@@ -260,9 +278,17 @@ export function LeaderRig({
     const fx = -Math.sin(leader.yaw);
     const fz = -Math.cos(leader.yaw);
     leader.moving = active && (ahead !== 0 || side !== 0);
+    band.active = active;
+    const running = k.has("shift");
     if (leader.moving) {
       const len = Math.max(1, Math.hypot(ahead, side));
-      const step = ((k.has("shift") ? RUN : WALK) * dt) / len;
+      const step = ((running ? RUN : WALK) * dt) / len;
+      // A footstep every stride (quicker running), unless in mid-air.
+      stride.current += step * len;
+      if (stride.current > (running ? 0.95 : 0.7) && leader.hop === 0) {
+        stride.current = 0;
+        playSfx("footstep");
+      }
       const dx = (fx * ahead - fz * side) * step;
       const dz = (fz * ahead + fx * side) * step;
       // Slide along whatever is in the way (water, a building, a mountain);
@@ -284,13 +310,23 @@ export function LeaderRig({
       if (tool.current) tool.current.visible = false;
       return;
     }
+    trackChief(dt);
 
     const now = performance.now();
-    const bob = leader.moving ? Math.sin(now / 120) * 0.025 : 0;
+    // Walking: the head bobs and sways a little (more when running), and the
+    // view widens at a run.
+    const pace = running && leader.moving ? 1.6 : 1;
+    const bob = leader.moving ? Math.sin(now / (120 / pace)) * 0.025 * pace : 0;
+    const sway = leader.moving ? Math.sin(now / (240 / pace)) * 0.012 * pace : 0;
+    const fov = running && leader.moving ? 80 : 72;
+    if (Math.abs(camera.fov - fov) > 0.05) {
+      camera.fov += (fov - camera.fov) * Math.min(1, dt * 6);
+      camera.updateProjectionMatrix();
+    }
     // The view dips with a swing of the axe (or a blow).
     const swing = Math.max(0, 1 - (now - Math.max(leader.actAt, leader.strikeAt)) / 260);
     camera.position.set(leader.x, leader.y + EYE + bob + leader.hop, leader.z);
-    camera.rotation.set(leader.pitch - Math.sin(swing * Math.PI) * 0.06, leader.yaw, 0, "YXZ");
+    camera.rotation.set(leader.pitch - Math.sin(swing * Math.PI) * 0.06, leader.yaw, sway, "YXZ");
     // In hand: a weapon in a fight (or with raiders about), the right tool for
     // what's under the crosshair, a hammer while building.
     const was = leaderSnapshot();

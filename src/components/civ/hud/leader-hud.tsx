@@ -6,6 +6,7 @@ import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { VillagerTalk } from "./villager-talk";
 import { leader, leaderButtons, leaderStick, setLeaderBuild, setLeaderMenu, setLeaderView, useLeader } from "@/components/civ/world/leader";
+import { band, bandLine, onBandLine } from "@/components/civ/world/band";
 import { hexDistance, worldToAxial } from "@/game/hex";
 import { buildingCost, canAfford, isLit, isUnlocked, placementError, plantError } from "@/game/engine";
 import type { IconId } from "@/game/sprites";
@@ -134,10 +135,12 @@ export function LeaderHud() {
         </div>
       )}
 
+      {/* What your people say as you walk (subtitles), and who walks with you. */}
+      <BandSubtitle />
       {/* The controls, and the way to the build view. */}
       <div className="pointer-events-none fixed bottom-1 left-1/2 z-[15] flex -translate-x-1/2 items-center justify-center gap-2 whitespace-nowrap px-3" data-testid="leader-controls">
         <span className={"pixel-panel-dark font-pixel hidden px-2 py-1 text-[11px] text-white/85" + (touch ? "" : " md:inline")}>
-          WASD walk · Shift run · Space jump · E talk / go in · Click act · P plant · 1-9 build · Q put away · {switchKey} map · Esc mouse
+          WASD walk · Shift run · Space jump · E talk / go in · Click act · P plant · 1-9 build · Q put away · G your people · {switchKey} map · Esc mouse
         </span>
         <button type="button" onClick={() => setLeaderView("map")} className="pixel-btn font-pixel pointer-events-auto bg-amber-400 px-3 py-1 text-sm text-[#2b2119]" data-testid="leader-to-map">
           {state.leader ? "Build view" : "Back to the map"} ({switchKey})
@@ -268,6 +271,27 @@ function RaidCompass() {
         </span>
         {fighting ? "The fight is on" : raid.roman ? "The legion is coming" : "Raiders are landing"}: <span ref={far} />
       </span>
+    </div>
+  );
+}
+
+// What someone in the band (or a villager you pass) just said, like a film's
+// subtitle, and how many walk with you.
+function BandSubtitle() {
+  const line = useSyncExternalStore(onBandLine, bandLine, bandLine);
+  const size = useSyncExternalStore(onBandLine, () => band.size, () => 0);
+  return (
+    <div className="pointer-events-none fixed inset-x-0 bottom-[8rem] z-[15] flex flex-col items-center gap-1 px-3" data-testid="band-subtitle">
+      {line && (
+        <p key={line.id} className="font-pixel max-w-[min(92vw,520px)] animate-[fadein_0.25s_ease-out] bg-black/55 px-3 py-1 text-center text-sm text-white">
+          <span className="text-amber-300">{line.who}:</span> {line.text}
+        </p>
+      )}
+      {size > 0 && (
+        <span className="font-pixel bg-black/35 px-2 py-0.5 text-[11px] text-white/80" data-testid="band-size">
+          {size} of your people walk with you
+        </span>
+      )}
     </div>
   );
 }

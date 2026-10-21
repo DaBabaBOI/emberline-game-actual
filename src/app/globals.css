@@ -734,3 +734,15 @@ button {
   50% { content: ".."; }
   75% { content: "..."; }
 }
+
+/* A subtitle (first person: what your people say) fades in. */
+@keyframes fadein {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

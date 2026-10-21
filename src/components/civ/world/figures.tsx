@@ -33,6 +33,8 @@ export interface Agent {
   strike?: number;
   // Weapon raised high in triumph.
   cheer?: boolean;
+  // Waving hello (the right arm up, hand going side to side).
+  wave?: boolean;
 }
 
 export type WorkTool = "hoe" | "axe" | "pick" | "hammer" | "shovel" | "book" | "carry" | "pray";
@@ -273,6 +275,7 @@ export function Figures({
         local.position.set(0.035 * side, 0.19 - 0.09 * Math.cos(legAngle), -0.09 * Math.sin(legAngle));
         put(legs.current, i * 2 + k);
 
+        const waving = side > 0 && a.wave && work === null && hold === null && !praying && !a.sitting && weaponArm === null;
         const armSwing =
           work !== null
             ? work
@@ -282,11 +285,14 @@ export function Figures({
                 ? -2.75 + Math.sin(t * 0.9 + a.phase) * 0.08
                 : a.sitting
                   ? -0.75
-                  : side > 0 && weaponArm !== null
-                    ? weaponArm
-                    : -swing * side * 0.8;
-        // Both hands meet on the tool's handle (or the book, or the load).
-        const tilt = work !== null ? -side * 0.4 : hold !== null ? -side * 0.3 : praying ? -side * 0.15 : side * 0.12;
+                  : waving
+                    ? -2.75
+                    : side > 0 && weaponArm !== null
+                      ? weaponArm
+                      : -swing * side * 0.8;
+        // Both hands meet on the tool's handle (or the book, or the load); a
+        // waving hand goes side to side.
+        const tilt = work !== null ? -side * 0.4 : hold !== null ? -side * 0.3 : praying ? -side * 0.15 : waving ? 0.35 + Math.sin(t * 11 + a.phase) * 0.35 : side * 0.12;
         const mid = handAt(side, armSwing, tilt, ARM / 2);
         local.rotation.set(armSwing, 0, tilt);
         local.position.set(mid.x, mid.y, mid.z);

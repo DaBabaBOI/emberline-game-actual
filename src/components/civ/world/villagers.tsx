@@ -10,6 +10,7 @@ import { isLand } from "@/game/map";
 import type { Battle, Raid, Tile } from "@/game/types";
 import { Figures, HAIRS, SKINS, WORK_TOOLS, type Agent } from "./figures";
 import { makeGround, type Ground } from "./ground";
+import { stepBand } from "./band";
 import { MAX_FIGURES, figureCounts } from "./crowd";
 import { tileTop } from "./hex-terrain";
 import { BUILDING_SCALE } from "./building-models";
@@ -54,6 +55,11 @@ export interface Walker extends Agent {
   hunting?: boolean;
   // A team cameo: the name on their tag (they answer to it when spoken to).
   cameo?: string;
+  // Walking with the chief (first person): their place in the band (band.ts),
+  // and when they last greeted the chief / wave until (performance.now ms).
+  follow?: number;
+  greetAt?: number;
+  waveUntil?: number;
 }
 
 // Shared with the pick-up tool: the villagers on the map, and who is being carried.
@@ -386,6 +392,8 @@ export function Villagers({
           Object.assign(w, { tx: spot.x, tz: spot.z, wait: 0, fleeing: true, working: false, workAt: null, goWork: null, sitting: false, sitAt: null, seat: undefined });
         }
       } else if (!danger && w.fleeing) w.fleeing = false;
+      // Walking with the chief: the band moves them (below).
+      if (w.follow !== undefined && !w.fleeing) continue;
       stepWalker(w, dt, ground, () => {
         const choose = () => {
           if (spots.fires.length && Math.random() < 0.45) return pick(spots.fires);
@@ -402,6 +410,8 @@ export function Villagers({
         return pick(spots.wander.filter((t) => !near(t))) ?? homeTile;
       }, true);
     }
+    // The chief's band (first person), and everyone turning to look.
+    stepBand(list, ground, Math.min(delta, 0.1), now, (w) => !!(w.held || w.goneUntil || w.hunting || w.fleeing));
     shown.current = list.filter((w) => !w.goneUntil && !w.hunting);
     grabStore.walkers = shown.current;
     // The cameos' crowns and name tags (hidden while they're away).

@@ -398,7 +398,7 @@ function crickets(at: number) {
 }
 
 // ---- Sound effects --------------------------------------------------------------------
-export type Sfx = "build" | "discover" | "era" | "raid" | "battle" | "event" | "click" | "step" | "win" | "lose" | "sell" | "firework" | "ama";
+export type Sfx = "build" | "discover" | "era" | "raid" | "battle" | "event" | "click" | "step" | "footstep" | "win" | "lose" | "sell" | "firework" | "ama";
 
 export function playSfx(kind: Sfx) {
   if (!engine) return;
@@ -422,6 +422,27 @@ export function playSfx(kind: Sfx) {
     case "step":
       tone(out, midi(79), at, 0.05, { type: "sine", attack: 0.004, release: 0.6, gain: 0.05, harmonic: 0.4, reverb: 0.4 });
       break;
+    case "footstep": {
+      // A soft footfall on earth: a short, low thump of noise, a little
+      // different each time (and the band's steps just behind it).
+      for (const [delay, gain] of [[0, 0.09], [0.11 + Math.random() * 0.08, 0.035]] as const) {
+        const src = ctx.createBufferSource();
+        src.buffer = engine.noise;
+        const lp = ctx.createBiquadFilter();
+        lp.type = "lowpass";
+        lp.frequency.value = 380 + Math.random() * 260;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0, at + delay);
+        g.gain.linearRampToValueAtTime(gain, at + delay + 0.008);
+        g.gain.exponentialRampToValueAtTime(0.001, at + delay + 0.11);
+        src.connect(lp);
+        lp.connect(g);
+        g.connect(out);
+        src.start(at + delay, Math.random());
+        src.stop(at + delay + 0.13);
+      }
+      break;
+    }
     case "era":
       // A fanfare: a rising fourth and fifth, then the chord.
       [60, 65, 67].forEach((n, i) => tone(out, midi(n), at + i * 0.22, 0.18, { type: "sawtooth", attack: 0.02, release: 0.5, gain: 0.035, reverb: 0.5 }));
