@@ -102,8 +102,9 @@ function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null 
           )}
           data-testid="hud-stack"
         >
+          {/* With the Advancements tree open, only Elder Ama's panels stay. */}
           {/* 1. What needs you now. */}
-          <RaidBanner />
+          {!treeOpen && <RaidBanner />}
           {/* 2. Elder Ama's guided steps (above the tutorial's dimmed overlay,
               so what she is waiting for can always be read). */}
           <div ref={elder} className="relative z-[26] flex flex-col gap-2 empty:hidden">
@@ -112,16 +113,20 @@ function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null 
             <CoachPanel />
             <ElderLesson />
           </div>
-          {/* 3. Choices waiting. */}
-          <NextEraPrompt />
-          <LandmarkPicker />
-          {/* 4. Serious warnings (famine, collapse...). */}
-          <Warnings only="severe" />
-          {/* 5. Where we're going. */}
-          <StoryPanel />
-          <GoalLine />
-          {/* 6. Other warnings. */}
-          <Warnings only="mild" />
+          {!treeOpen && (
+            <>
+              {/* 3. Choices waiting. */}
+              <NextEraPrompt />
+              <LandmarkPicker />
+              {/* 4. Serious warnings (famine, collapse...). */}
+              <Warnings only="severe" />
+              {/* 5. Where we're going. */}
+              <StoryPanel />
+              <GoalLine />
+              {/* 6. Other warnings. */}
+              <Warnings only="mild" />
+            </>
+          )}
           {/* 7. Elder Ama's tips (a speedrun goes without her). */}
           {!state.speedrun && (
             <div className="relative z-[26] flex flex-col gap-2 empty:hidden">
@@ -130,8 +135,8 @@ function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null 
             </div>
           )}
           {/* 8. The latest news, and the others in a match. */}
-          <Toasts />
-          {match && <MultiplayerPanel match={match} />}
+          {!treeOpen && <Toasts />}
+          {!treeOpen && match && <MultiplayerPanel match={match} />}
           <DevPanel />
         </div>
         {/* Leader mode: building happens in the build view. */}

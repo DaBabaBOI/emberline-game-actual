@@ -722,3 +722,15 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .leader-pop { animation: none; }
 }
+
+/* A villager thinking of what to say: the dots come and go. */
+.talk-dots::after {
+  content: "";
+  animation: talk-dots 1.2s steps(4) infinite;
+}
+@keyframes talk-dots {
+  0% { content: ""; }
+  25% { content: "."; }
+  50% { content: ".."; }
+  75% { content: "..."; }
+}

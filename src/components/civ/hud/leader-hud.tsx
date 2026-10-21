@@ -4,18 +4,17 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 import { BUILDINGS, BUILDINGS_BY_ID, LEADER, PLANT_COST, RELIGHT_WOOD } from "@/game/content";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
-import { WORK_TOOLS } from "@/components/civ/world/figures";
+import { VillagerTalk } from "./villager-talk";
 import { leader, leaderButtons, leaderStick, setLeaderBuild, setLeaderMenu, setLeaderView, useLeader } from "@/components/civ/world/leader";
-import { grabStore } from "@/components/civ/world/villagers";
 import { hexDistance, worldToAxial } from "@/game/hex";
-import { buildingCost, canAfford, isLit, isUnlocked, placementError, plantError, soilOf } from "@/game/engine";
+import { buildingCost, canAfford, isLit, isUnlocked, placementError, plantError } from "@/game/engine";
 import type { IconId } from "@/game/sprites";
 
 // Leader mode on screen: in first person, a crosshair, what you can do right
 // now (talk to a villager, strike a raider), the controls, and the job menu;
 // in the build view, a way back to the chief.
 export function LeaderHud() {
-  const { state, dispatch } = useGame();
+  const { state } = useGame();
   const { view, prompt, menu, locked, build, pops } = useLeader();
   // What the chief can build now, for the hotbar.
   const hotbar = BUILDINGS.filter((b) => b.era <= state.era && isUnlocked(state, b));
@@ -62,16 +61,6 @@ export function LeaderHud() {
       </div>
     );
 
-  // The workplaces the chief could send someone to, nearest first.
-  const here = worldToAxial(leader.x, leader.z);
-  const jobs = menu
-    ? state.tiles
-        // Not a field lying fallow: there's nothing to do there till it's back.
-        .filter((t) => t.building && WORK_TOOLS[t.building] && soilOf(state, t) !== "resting")
-        .map((t) => ({ tile: t, d: hexDistance(t, { q: here.q, r: here.r }) }))
-        .sort((a, b) => a.d - b.d)
-        .slice(0, 8)
-    : [];
   const hits = state.raid?.leaderHits ?? 0;
 
   return (
@@ -155,57 +144,8 @@ export function LeaderHud() {
         </button>
       </div>
 
-      {/* Telling a villager what to do. */}
-      {menu && (
-        <div className="pointer-events-auto fixed inset-0 z-[40] flex items-center justify-center bg-black/40 p-3" data-testid="leader-menu">
-          <div className="pixel-panel w-[min(92vw,420px)] p-4">
-            <div className="flex items-center gap-2">
-              <PixelIcon name="person" size={36} />
-              <div>
-                <div className="font-pixel text-lg font-semibold">{menu.name}</div>
-                <div className="text-sm italic text-stone-600">&quot;What should I do, Chief?&quot;</div>
-              </div>
-            </div>
-            {jobs.length === 0 ? (
-              <p className="mt-3 text-sm text-stone-600">There is nowhere to work yet. Build a farm, a woodcutter or a quarry first (Tab for the build view).</p>
-            ) : (
-              <div className="mt-3 grid gap-1.5">
-                {jobs.map(({ tile, d }) => {
-                  const def = BUILDINGS_BY_ID[tile.building!];
-                  return (
-                    <button
-                      key={tile.id}
-                      type="button"
-                      onClick={() => {
-                        dispatch({ type: "leaderAssign", tileId: tile.id, who: menu.name });
-                        // Off they go: they walk there and get to work on arrival.
-                        const w = grabStore.walkers[menu.index];
-                        if (w) {
-                          const a = Math.atan2(w.z - tile.z, w.x - tile.x);
-                          Object.assign(w, { goWork: tile, tx: tile.x + Math.cos(a) * 0.72, tz: tile.z + Math.sin(a) * 0.72, wait: 0, sitAt: null, seat: undefined, sitting: false, working: false, workAt: null });
-                        }
-                        setLeaderMenu(null);
-                      }}
-                      className="pixel-btn flex items-center justify-between gap-2 bg-white px-3 py-1.5 text-left text-sm hover:bg-amber-50"
-                      data-testid={`leader-job-${tile.building}`}
-                    >
-                      <span className="flex items-center gap-2">
-                        <PixelIcon name={def.icon as IconId} size={20} />
-                        Work at the {def.name}
-                      </span>
-                      <span className="text-xs text-stone-500">{d === 0 ? "here" : `${d} tile${d === 1 ? "" : "s"}`}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-            <p className="mt-2 text-xs text-stone-500">Whoever you send works faster there for a while.</p>
-            <button type="button" onClick={() => setLeaderMenu(null)} className="font-pixel mt-2 text-sm underline">
-              Never mind
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Talking with a villager (and sending them to work). */}
+      {menu && <VillagerTalk key={menu.index} index={menu.index} name={menu.name} onClose={() => setLeaderMenu(null)} />}
     </>
   );
 }

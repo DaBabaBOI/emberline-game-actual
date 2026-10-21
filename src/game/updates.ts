@@ -7,6 +7,14 @@ export interface Update {
 
 export const UPDATES: Update[] = [
   {
+    date: "2026-10-21",
+    items: [
+      "Villagers talk back: walk up to someone (Walk or V, then E) and they greet you in their own words, about their day and how the village is doing. Ask how they are, what the news is, say anything you like, or send them to work, and they answer in character.",
+      "Leader mode is gone from the title screen: every game can already walk the island as the chief (Walk or V). Old Leader mode saves still load.",
+      "With the Advancements tree open, the goal, warnings and messages step aside; only Elder Ama stays.",
+    ],
+  },
+  {
     date: "2026-10-15",
     items: [
       "Everything that pops up now lives in one column on the left, most important first: raiders and disasters, Elder Ama's steps, choices waiting, serious warnings, the goal, other warnings, her tips, then the latest news. The middle of the screen is left for your island.",
