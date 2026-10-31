@@ -35,6 +35,7 @@ import { PlagueBanner, RebellionBanner } from "./medieval";
 import { ClimateBanner } from "./industrial";
 import { TippingBanner } from "./future";
 import { workDemo } from "@/components/civ/world/villagers";
+import { useLeader, villagerName } from "@/components/civ/world/leader";
 
 // An easter egg: poke Elder Ama's picture and she gets grumpier; the tenth poke
 // earns a secret.
@@ -216,8 +217,52 @@ export function ElderLesson() {
 
 export function EventModal() {
   const { state, dispatch } = useGame();
-  if (!state.event) return null;
-  const { event } = state;
+  const fp = useLeader().view === "fp";
+  const event = state.event;
+  // Walking in first person: the mouse is set free to answer, and 1, 2, 3
+  // answer from the keyboard too.
+  useEffect(() => {
+    if (!event) return;
+    if (fp && document.pointerLockElement) document.exitPointerLock();
+    const key = (e: KeyboardEvent) => {
+      const i = Number(e.key) - 1;
+      if (i >= 0 && i < event.choices.length) dispatch({ type: "resolveEvent", choice: i });
+    };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [event, fp, dispatch]);
+  if (!event) return null;
+  // In first person the news comes the way it would in the village: someone
+  // runs up and tells the chief, face to face.
+  if (fp)
+    return (
+      <div className="pointer-events-auto absolute inset-x-0 bottom-[7.5rem] z-30 flex justify-center px-3" data-testid="event-fp">
+        <div className="pixel-panel w-[min(94vw,520px)] p-4">
+          <div className="flex items-start gap-3">
+            <PixelIcon name={event.icon} size={40} className="shrink-0" />
+            <div className="min-w-0">
+              <p className="font-pixel text-xs text-stone-600">{villagerName(state.tick % 16)} runs up to you, out of breath:</p>
+              <h3 className="font-pixel text-lg font-bold">{event.title}</h3>
+              <p className="mt-1 text-sm text-stone-700">{event.body}</p>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-col gap-1.5">
+            {event.choices.map((c, i) => (
+              <button
+                key={c.label}
+                type="button"
+                onClick={() => dispatch({ type: "resolveEvent", choice: i })}
+                className="pixel-btn bg-[#8a6a3d] px-3 py-1.5 text-left text-sm font-medium text-white hover:bg-[#735630]"
+              >
+                <span className="font-pixel mr-2 text-amber-200">{i + 1}</span>
+                {c.label}
+              </button>
+            ))}
+          </div>
+          <p className="font-pixel mt-2 text-[11px] text-stone-500">Click the world again afterwards to look around.</p>
+        </div>
+      </div>
+    );
   return (
     <div className="pointer-events-auto absolute inset-0 z-30 flex items-center justify-center bg-black/30">
       <div className="pixel-panel w-[min(92vw,380px)] p-5">

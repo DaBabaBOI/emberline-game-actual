@@ -22,6 +22,21 @@ const TERRAIN_COLORS: Record<Terrain, string> = {
 
 // Unexplored tiles lie flat, as low as the deep sea floor.
 const FOG_HEIGHT = 0.12;
+// Finding new land: it rises out of the fog over `rise` seconds (each tile a
+// little after the last, up to `stagger`), as the mist over it billows up and
+// melts away over `mist` seconds. A huge reveal (a new game, a map) just shows.
+const REVEAL = { rise: 0.7, stagger: 0.45, mist: 1.9, most: 90 };
+
+// The tiles revealed since last time (none the first time, or too many).
+function newlyFound(known: { current: Set<number> | null }, tiles: Tile[]) {
+  const now = new Set<number>();
+  for (const t of tiles) if (t.revealed) now.add(t.id);
+  const before = known.current;
+  known.current = now;
+  if (!before) return [];
+  const fresh = [...now].filter((id) => !before.has(id));
+  return fresh.length > REVEAL.most ? [] : fresh;
+}
 // The colour of the open sea floor far away (see Sea), so the unknown runs on
 // past the edge of the world without a seam.
 const UNKNOWN = new Color("#0f3f66");
@@ -81,12 +96,18 @@ export function HexTerrain({
   const ref = useRef<InstancedMesh>(null);
   const lastPointer = useRef("mouse");
   const geometry = useMemo(() => new CylinderGeometry(1.0, 1.0, 1, 6, 1), []);
+  // Land just found rises out of the fog (tile id → when it starts, seconds).
+  const known = useRef<Set<number> | null>(null);
+  const rising = useRef(new Map<number, number>());
 
   useLayoutEffect(() => {
     const mesh = ref.current;
     if (!mesh) return;
     const dummy = new Object3D();
     const color = new Color();
+    const fresh = newlyFound(known, tiles);
+    const now = performance.now() / 1000;
+    for (const id of fresh) rising.current.set(id, now + jitter(id, 13) * REVEAL.stagger);
     // Paths become sparser in later eras so dense cities stay readable.
     const paths = new Set<number>();
     if (era >= 1) {
@@ -98,7 +119,7 @@ export function HexTerrain({
       }
     }
     for (const tile of tiles) {
-      const h = tileTop(tile);
+      const h = rising.current.has(tile.id) ? FOG_HEIGHT : tileTop(tile);
       dummy.position.set(tile.x, h / 2, tile.z);
       dummy.scale.set(1, h, 1);
       dummy.updateMatrix();
@@ -126,6 +147,30 @@ export function HexTerrain({
     mesh.computeBoundingSphere();
   }, [tiles, wear, home, era, roads, dry]);
 
+  useFrame(() => {
+    const mesh = ref.current;
+    if (!mesh || !rising.current.size) return;
+    const now = performance.now() / 1000;
+    const dummy = new Object3D();
+    for (const [id, start] of rising.current) {
+      const tile = tiles[id];
+      if (!tile) {
+        rising.current.delete(id);
+        continue;
+      }
+      const k = Math.min(1, Math.max(0, (now - start) / REVEAL.rise));
+      // Up out of the water, a touch past, and settle.
+      const ease = 1 - Math.pow(1 - k, 3) + Math.sin(k * Math.PI) * 0.08;
+      const h = FOG_HEIGHT + (tile.height - FOG_HEIGHT) * ease;
+      dummy.position.set(tile.x, h / 2, tile.z);
+      dummy.scale.set(1, h, 1);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(id, dummy.matrix);
+      if (k >= 1) rising.current.delete(id);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+  });
+
   return (
     <instancedMesh
       ref={ref}
@@ -150,6 +195,59 @@ export function HexTerrain({
       }}
     >
       <meshStandardMaterial roughness={0.85} flatShading />
+    </instancedMesh>
+  );
+}
+
+// The mist lifting off land just found: a few puffs on each new tile billow
+// up and melt away (see REVEAL).
+const MIST_MAX = 220;
+export function RevealMist({ tiles }: { tiles: Tile[] }) {
+  const ref = useRef<InstancedMesh>(null);
+  const known = useRef<Set<number> | null>(null);
+  const puffs = useRef<{ x: number; z: number; y: number; s: number; at: number; dx: number; dz: number }[]>([]);
+  useLayoutEffect(() => {
+    const fresh = newlyFound(known, tiles);
+    if (!fresh.length) return;
+    const now = performance.now() / 1000;
+    for (const id of fresh) {
+      const t = tiles[id];
+      for (let k = 0; k < 2; k++)
+        puffs.current.push({
+          x: t.x + (jitter(id, 21 + k) - 0.5) * 0.9,
+          z: t.z + (jitter(id, 23 + k) - 0.5) * 0.9,
+          y: 0.35 + jitter(id, 25 + k) * 0.2,
+          s: 0.85 + jitter(id, 27 + k) * 0.5,
+          at: now + jitter(id, 13) * REVEAL.stagger * 0.6,
+          dx: (jitter(id, 29 + k) - 0.5) * 0.6,
+          dz: (jitter(id, 31 + k) - 0.5) * 0.6,
+        });
+    }
+    if (puffs.current.length > MIST_MAX) puffs.current.splice(0, puffs.current.length - MIST_MAX);
+  }, [tiles]);
+  const dummy = useMemo(() => new Object3D(), []);
+  useFrame(() => {
+    const mesh = ref.current;
+    if (!mesh) return;
+    const now = performance.now() / 1000;
+    puffs.current = puffs.current.filter((p) => now - p.at < REVEAL.mist);
+    mesh.visible = puffs.current.length > 0;
+    if (!mesh.visible) return;
+    for (let i = 0; i < MIST_MAX; i++) {
+      const p = puffs.current[i];
+      const k = p ? Math.max(0, (now - p.at) / REVEAL.mist) : 1;
+      // Swells a little at first, then thins away as it rises and drifts.
+      const size = p ? p.s * (k < 0.2 ? 1 + k : 1.2 * (1 - (k - 0.2) / 0.8)) : 0;
+      if (p) dummy.position.set(p.x + p.dx * k, p.y + k * 1.1, p.z + p.dz * k);
+      dummy.scale.set(size * 1.2, size * 0.6, size * 1.1);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+  });
+  return (
+    <instancedMesh ref={ref} args={[PUFF, undefined, MIST_MAX]} raycast={() => null} frustumCulled={false} visible={false}>
+      <meshStandardMaterial color="#f1f5f8" transparent opacity={0.8} roughness={1} flatShading depthWrite={false} />
     </instancedMesh>
   );
 }

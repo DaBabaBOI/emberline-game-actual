@@ -18,9 +18,15 @@ export function BattleCamera() {
   const walking = useLeader().view === "fp";
 
   useEffect(() => {
-    // Walking in first person: you're there in person, no need to fly the camera in.
-    if (walking) return;
     if (!fighting || started.current === fighting.fightStart) return;
+    // Walking in first person: you're there in person, no need to fly the
+    // camera in. Commanding the fight: the battle screen is the shot. Either
+    // way this fight is seen, so it never plays later (after it's decided).
+    const stale = state.tick - fighting.fightStart! > 1;
+    if (walking || fighting.response === "command" || stale) {
+      started.current = fighting.fightStart!;
+      return;
+    }
     started.current = fighting.fightStart!;
     const tile = state.tiles[fighting.meetTile ?? fighting.targetTile];
     if (!tile) return;
@@ -32,7 +38,7 @@ export function BattleCamera() {
           ? "An army is attacking"
           : "Raiders are attacking";
     playShot({ kind: "battle", title: who, subtitle: "Click to leave the fight (train warriors to tip it)", seconds: 600, at: { x: tile.x, z: tile.z, y: tile.height } });
-  }, [fighting, state.tiles, walking]);
+  }, [fighting, state.tiles, state.tick, walking]);
 
   // The fight is over (the raid is gone): back to the village after a moment.
   useEffect(() => {

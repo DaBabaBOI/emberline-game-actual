@@ -11,6 +11,11 @@
 // call that name), with JWT verification off:
 //   supabase functions deploy clever-endpoint --no-verify-jwt
 // Secret: supabase secrets set GEMINI_API_KEY=... (or Dashboard > Edge Functions > Secrets)
+//
+// Both learn from practice: the trainer (supabase/functions/agent-trainer)
+// practises on random questions around the clock and keeps a few short,
+// general lessons in ai_lessons, each live only after it beat the answers
+// without it in a blind test; they are added to the rules here.
 
 const KEY = Deno.env.get("GEMINI_API_KEY");
 // Fast, lightly used models first (Flash-Lite answers in a second or two and is
@@ -69,6 +74,33 @@ const SAFETY = ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_C
 
 const clip = (v: unknown, n: number) => String(v ?? "").slice(0, n).trim();
 
+// What the trainer has learned (ai_lessons: short, general rules that each
+// passed a blind test against the answers without them), read at most every
+// 10 minutes. If the database is slow or down, the characters answer without.
+const SB = Deno.env.get("SUPABASE_URL");
+const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+let lessons: { agent: string; text: string }[] = [];
+let lessonsAt = 0;
+async function loadLessons() {
+  if (!SB || !SERVICE || Date.now() - lessonsAt < 10 * 60 * 1000) return lessons;
+  lessonsAt = Date.now();
+  try {
+    const res = await fetch(`${SB}/rest/v1/ai_lessons?active=eq.true&select=agent,text&order=id.asc&limit=12`, {
+      headers: { apikey: SERVICE, Authorization: `Bearer ${SERVICE}` },
+      signal: AbortSignal.timeout(1500),
+    });
+    if (res.ok) lessons = await res.json();
+  } catch {
+    // Keep the ones we had.
+  }
+  return lessons;
+}
+function lessonsBlock(agent: "ama" | "villager", rows: { agent: string; text: string }[]) {
+  const mine = rows.filter((r) => r.agent === agent).slice(0, 6);
+  if (!mine.length) return "";
+  return `\n\nLESSONS FROM PRACTICE (follow them too):\n${mine.map((r) => `- ${r.text}`).join("\n")}`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -107,6 +139,8 @@ Deno.serve(async (req) => {
     if (!question) return json({ error: "empty" }, 400);
     prompt = `TOWN FACTS:\n${town}\n\nTHE PLAYER ASKS: ${question}`;
   }
+
+  system += lessonsBlock(villager ? "villager" : "ama", await loadLessons());
 
   const request = JSON.stringify({
     systemInstruction: { parts: [{ text: system }] },

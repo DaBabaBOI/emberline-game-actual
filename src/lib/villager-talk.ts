@@ -86,7 +86,7 @@ export function villageNow(state: GameState): string {
   if (built.length) lines.push(`The village has: ${built.join(", ")}.`);
   const w = warnings(state)
     .slice(0, 2)
-    .map((x) => x.text.replace("{secs}", "a few"));
+    .map((x) => x.text.replace("{secs}s", "a few seconds").replace("{secs}", "a few"));
   if (w.length) lines.push(`Worries: ${w.join(" | ")}`);
   if (state.log.length) lines.push(`Lately: ${state.log.slice(0, 3).join(" | ")}`);
   const goal = currentGoal(state);

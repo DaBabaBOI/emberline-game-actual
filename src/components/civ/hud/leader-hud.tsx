@@ -23,6 +23,9 @@ export function LeaderHud() {
   const fp = view === "fp";
   const switchKey = state.leader ? "Tab" : "V";
   const touch = useTouchScreen();
+  // Someone has run up with news (an event card): the walking hints step
+  // aside, and 1, 2, 3 answer them rather than pick a building.
+  const news = !!state.event;
 
   // 1-9 pick a building (again: put it away); the wheel runs through them all.
   useEffect(() => {
@@ -30,6 +33,7 @@ export function LeaderHud() {
     const key = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+      if (news) return;
       const n = Number(e.key);
       if (Number.isInteger(n) && n >= 1 && n <= 9 && hotbar[n - 1]) setLeaderBuild(build === hotbar[n - 1].id ? null : hotbar[n - 1].id);
     };
@@ -84,7 +88,7 @@ export function LeaderHud() {
       {state.raid && state.raid.response !== "hide" && <RaidCompass />}
 
       {/* What you can do right now. */}
-      {prompt && !menu && (
+      {prompt && !menu && !news && (
         <div className="pointer-events-none fixed inset-x-0 top-[58%] z-[15] flex justify-center" data-testid="leader-prompt">
           <span className="pixel-panel-dark font-pixel px-3 py-1 text-sm text-white">
             <PromptText prompt={prompt} hits={hits} />
@@ -96,14 +100,14 @@ export function LeaderHud() {
       {touch && !menu && <TouchControls />}
 
       {/* Take the mouse to look around. */}
-      {!locked && !menu && !touch && (
+      {!locked && !menu && !touch && !news && (
         <div className="pointer-events-none fixed inset-x-0 top-[40%] z-[15] flex justify-center">
           <span className="pixel-panel-dark font-pixel px-3 py-1.5 text-sm text-white">Click the view to look around</span>
         </div>
       )}
 
       {/* The hotbar: what the chief can build, right here. */}
-      {hotbar.length > 0 && (
+      {hotbar.length > 0 && !news && (
         <div className="pointer-events-none fixed inset-x-0 bottom-[3.6rem] z-[15] flex justify-center px-3" data-testid="leader-hotbar">
           <div className="pixel-panel-dark pointer-events-auto flex max-w-[94vw] gap-1 overflow-x-auto p-1">
             {hotbar.map((b, i) => {
@@ -136,7 +140,7 @@ export function LeaderHud() {
       )}
 
       {/* What your people say as you walk (subtitles), and who walks with you. */}
-      <BandSubtitle />
+      {!news && <BandSubtitle />}
       {/* The controls, and the way to the build view. */}
       <div className="pointer-events-none fixed bottom-1 left-1/2 z-[15] flex -translate-x-1/2 items-center justify-center gap-2 whitespace-nowrap px-3" data-testid="leader-controls">
         <span className={"pixel-panel-dark font-pixel hidden px-2 py-1 text-[11px] text-white/85" + (touch ? "" : " md:inline")}>

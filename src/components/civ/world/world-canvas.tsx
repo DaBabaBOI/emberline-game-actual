@@ -58,7 +58,7 @@ import { Rebels } from "./rebels";
 import { goodSpots, tileAnchor } from "@/components/civ/guide";
 import { useGuide } from "@/components/civ/hud/guide-overlay";
 import type { GameState, Tile } from "@/game/types";
-import { BiomeDetails, Deposits, FogEdge, Forests, HexTerrain, Mountains, tileTop, treeSpots } from "./hex-terrain";
+import { BiomeDetails, Deposits, FogEdge, Forests, HexTerrain, Mountains, RevealMist, tileTop, treeSpots } from "./hex-terrain";
 import { BUILDING_SCALE, MODELS, buildingTurn } from "./building-models";
 import { turnFor } from "./facing";
 import { BattleScene, FireVictims, RaidBoats, Raiders, StrikeBoats, Villagers, Warriors } from "./villagers";
@@ -511,6 +511,9 @@ export function WorldCanvas() {
   const leaderSnap = useLeader();
   const leaderView = leaderSnap.view;
   const fpActive = leaderView === "fp" && !shot;
+  // Up close, people never hurry along faster than real life: fast-forward
+  // still runs the clock, but villagers, warriors and animals walk at 1x.
+  const figureSpeed = fpActive ? Math.min(state.speed, 1) : state.speed;
   const worldHeld = useWorldHeld();
   const planning = usePlanMode();
   const Ghost = def ? MODELS[def.id] : null;
@@ -702,6 +705,7 @@ export function WorldCanvas() {
         onPick={pick}
       />
       <FogEdge tiles={state.tiles} />
+      <RevealMist tiles={state.tiles} />
       <Forests tiles={state.tiles} />
       <OldGrove tiles={state.tiles} ids={state.protectedTiles ?? []} />
       <Mountains tiles={state.tiles} onHover={setHovered} onPick={pick} />
@@ -781,7 +785,7 @@ export function WorldCanvas() {
         tired={(state.fatigue ?? 0) / 100}
         era={state.era}
         cameos={cameos}
-        gameSpeed={state.speed}
+        gameSpeed={figureSpeed}
         danger={fightAt}
         resting={state.tiles.filter((t) => soilOf(state, t) === "resting").map((t) => t.id)}
       />
@@ -796,7 +800,7 @@ export function WorldCanvas() {
         homeTile={home}
         rally={state.raid && state.raid.response !== "hide" ? state.tiles[state.raid.meetTile ?? state.raid.targetTile] : null}
         hidden={battleShowing}
-        gameSpeed={state.speed}
+        gameSpeed={figureSpeed}
       />
       <BattleScene tiles={state.tiles} battle={shown} homeTile={home} speed={state.speed} />
       <Raiders tiles={state.tiles} raid={state.raid} tick={state.tick} speed={state.speed} colours={state.raid?.kingdom ? kingdomInfo(state, state.raid.kingdom).tunic : undefined} />
@@ -837,7 +841,7 @@ export function WorldCanvas() {
         homeTile={home}
         onHunt={(animal) => dispatch({ type: "hunt", animal })}
         resting={state.huntersHelping ?? false}
-        gameSpeed={state.speed}
+        gameSpeed={figureSpeed}
       />
       <Fireworks home={home} startedAt={fireworksAt} />
       <Islet
@@ -870,8 +874,9 @@ export function WorldCanvas() {
       <Wildfire tiles={state.tiles} />
       <FireVictims tiles={state.tiles} victims={state.fireVictims ?? []} />
 
-      {hoverTile && (selected || (hoverTile.terrain !== "deep" && hoverTile.terrain !== "shallow")) && (
-        // With no tool picked, open water isn't worth outlining.
+      {hoverTile && (selected || (hoverTile.revealed && hoverTile.terrain !== "deep" && hoverTile.terrain !== "shallow")) && (
+        // With no tool picked, open water (and the fog: it hides land and sea
+        // alike) isn't worth outlining.
         <HexOutline
           x={hoverTile.x}
           y={tileTop(hoverTile)}

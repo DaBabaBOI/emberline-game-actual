@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useGame } from "@/components/civ/game-provider";
 import { guideFor, tileAnchor, type GuideTarget } from "@/components/civ/guide";
 import { PixelIcon } from "@/components/civ/pixel-icon";
+import { setGuideLost } from "@/components/civ/guide-lost";
 
 type Hole = { x: number; y: number; w: number; h: number };
 
@@ -71,7 +72,10 @@ export function GuideOverlay() {
   const [hole, setHole] = useState<Hole | null>(null);
 
   useEffect(() => {
-    if (!key) return;
+    if (!key) {
+      setGuideLost(false);
+      return;
+    }
     const t = JSON.parse(key) as GuideTarget;
     // On narrow screens the button may be scrolled out of sight in its bar.
     if (t.kind === "ui") {
@@ -84,13 +88,22 @@ export function GuideOverlay() {
       }
     }
     let raf = 0;
+    // Nothing to point at for a moment and a half: let the clock run (the
+    // hand comes back, and the clock waits again, once the target is in view).
+    let missingSince = performance.now();
     const loop = () => {
       const next = findHole(t);
       setHole((prev) => (same(prev, next) ? prev : next));
+      const now = performance.now();
+      if (next) missingSince = now;
+      setGuideLost(!next && now - missingSince > 1500);
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      setGuideLost(false);
+    };
   }, [key]);
 
   if (!target || !hole) return null;

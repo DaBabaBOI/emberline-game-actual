@@ -40,7 +40,7 @@ export function townSummary(state: GameState): string {
   lines.push(`Food: ${Math.round(state.resources.food)} stored, ${round(prod.food - consumption(state))}/s after eating. Wood ${Math.round(state.resources.wood)}, stone ${Math.round(state.resources.stone)}, knowledge ${Math.round(state.resources.knowledge)}, coins ${Math.round(state.resources.currency)}.`);
   lines.push(`Meters (0-100): ${Object.entries(state.meters).map(([k, v]) => `${k} ${Math.round(v as number)}`).join(", ")}.`);
   if (powerSupply(state) || powerDemand(state)) lines.push(`Power: ${round(powerSupply(state))} made, ${round(powerDemand(state))} needed.`);
-  const problems = warnings(state).map((w) => w.text.replace("{secs}", "a few"));
+  const problems = warnings(state).map((w) => w.text.replace("{secs}s", "a few seconds").replace("{secs}", "a few"));
   if (problems.length) lines.push(`Warnings on screen: ${problems.join(" | ")}`);
   const built = Object.entries(countBuildings(state)).filter(([, n]) => n);
   lines.push(`Buildings: ${built.length ? built.map(([id, n]) => `${name(id)} x${n}`).join(", ") : "none yet"}.`);
@@ -82,7 +82,7 @@ export function townSummary(state: GameState): string {
 function fallback(state: GameState) {
   const w = warnings(state)[0];
   const goal = currentGoal(state);
-  return w ? w.text.replace("{secs}", "a few") : goal ?? "Keep everyone fed and housed, and grow without harming the land.";
+  return w ? w.text.replace("{secs}s", "a few seconds").replace("{secs}", "a few") : goal ?? "Keep everyone fed and housed, and grow without harming the land.";
 }
 
 export async function askAma(question: string, state: GameState): Promise<{ answer: string; offline: boolean }> {

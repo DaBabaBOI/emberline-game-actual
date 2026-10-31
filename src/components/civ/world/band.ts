@@ -11,15 +11,16 @@ import { daySky } from "./sky";
 import type { Walker } from "./villagers";
 
 export const BAND = {
-  // How many walk with the chief, at most.
-  size: 6,
+  // How many walk with the chief, at most (a few, so it never feels crowded).
+  size: 4,
   // How far away someone can be and still be called over.
   call: 14,
   // Seconds standing still before the band gathers round.
-  gather: 1.2,
-  // Walking and running pace (the chief's is 2.2 and 4).
-  walk: 2.3,
-  run: 4.4,
+  gather: 2.5,
+  // Walking and running pace (the chief's is 2.2 and 4): never faster than
+  // the chief, so nobody darts past.
+  walk: 2.0,
+  run: 3.4,
 };
 
 // `want`: the band is called (G toggles it). `active`: the chief is walking in
@@ -117,12 +118,13 @@ function alongTrail(back: number) {
 
 // Where follower `slot` wants to be now.
 function placeFor(slot: number, ground: Ground) {
-  // Standing still a moment: gather round in front of the chief, in an arc.
-  // (If that's in a fire or a hut, a little further out, or further round.)
+  // Standing still a moment: gather round beside and a little behind the
+  // chief, never in the way of what the chief is looking at. (If that's in a
+  // fire or a hut, a little further out, or further round.)
   if (band.still > BAND.gather) {
-    const spread = (slot % 2 ? 1 : -1) * (0.4 + Math.floor(slot / 2) * 0.45);
-    for (const turn of [0, 0.5, -0.5, 1.1, -1.1])
-      for (const r of [1.6 + (slot % 3) * 0.2, 2.4, 3.1]) {
+    const spread = (slot % 2 ? 1 : -1) * (1.5 + Math.floor(slot / 2) * 0.5);
+    for (const turn of [0, 0.35, -0.35, 0.7])
+      for (const r of [2.2 + (slot % 3) * 0.25, 3, 3.8]) {
         const a = leader.yaw + spread + turn * Math.sign(spread);
         const p = { x: leader.x - Math.sin(a) * r, z: leader.z - Math.cos(a) * r };
         if (ground.walkable(p.x, p.z)) return { ...p, face: true };
@@ -130,9 +132,9 @@ function placeFor(slot: number, ground: Ground) {
   }
   // Walking: two by two along the way the chief came.
   const row = Math.floor(slot / 2);
-  const t = alongTrail(1.35 + row * 0.7);
+  const t = alongTrail(2.4 + row * 1.0);
   const len = Math.hypot(t.dx, t.dz) || 1;
-  const side = (slot % 2 ? 1 : -1) * 0.45;
+  const side = (slot % 2 ? 1 : -1) * 0.55;
   const p = { x: t.x + (-t.dz / len) * side, z: t.z + (t.dx / len) * side };
   return ground.walkable(p.x, p.z) ? { ...p, face: false } : { x: t.x, z: t.z, face: false };
 }
@@ -222,7 +224,7 @@ export function stepBand(list: Walker[], ground: Ground, dt: number, now: number
       if ((w.greetAt ?? 0) < now - 25000 && d < 3.2) {
         w.greetAt = now;
         w.waveUntil = now + 1800;
-        if (Math.random() < 0.35) bandSay(nameOf(list, w), pick(["Hello, Chief!", "Good day, Chief!", "Chief! Over here!", "Safe travels, Chief."]));
+        if (Math.random() < 0.15) bandSay(nameOf(list, w), pick(["Hello, Chief!", "Good day, Chief!", "Chief! Over here!", "Safe travels, Chief."]));
       }
     }
     w.wave = (w.waveUntil ?? 0) > now;
@@ -233,7 +235,7 @@ export function stepBand(list: Walker[], ground: Ground, dt: number, now: number
       const who = team[Math.floor(Math.random() * team.length)];
       bandSay(nameOf(list, who), chatter());
     }
-    nextChatter = now + 9000 + Math.random() * 9000;
+    nextChatter = now + 25000 + Math.random() * 20000;
   }
 }
 

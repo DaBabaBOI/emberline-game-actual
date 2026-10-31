@@ -822,7 +822,7 @@ export function clearArea(state: GameState, tile: Tile): Tile[] {
 
 export function clearAreaError(state: GameState, tile: Tile): string | null {
   if (state.tutorialStep < TUTORIAL.length) return "Not during the tutorial";
-  if (!tile.revealed) return "Unexplored land";
+  if (!tile.revealed) return "Unexplored";
   if (tile.terrain !== "forest") return "Click a forest";
   if (tile.building) return "Something is built here";
   if ((state.protectedTiles ?? []).includes(tile.id)) return "This old grove is protected";
@@ -842,8 +842,9 @@ function fogDepth(state: GameState, tile: Tile) {
 
 // Why scouts can't go there (null: they can).
 export function scoutTargetError(state: GameState, tile: Tile): string | null {
-  if (tile.revealed) return "We know this land already: pick a spot in the fog";
-  if (!isLand(tile.terrain) && tile.terrain !== "river") return "Scouts walk: pick fog over land (canoes go by sea)";
+  // Anywhere in the fog (scouts walk the land and look out over the water;
+  // whether it is land or sea isn't known until they're back).
+  if (tile.revealed) return "We know this place already: pick a spot in the fog";
   if (fogDepth(state, tile) > SCOUT_TRIP.reach) return `Too far into the unknown: at most ${SCOUT_TRIP.reach} tiles from known land`;
   return null;
 }
@@ -863,7 +864,8 @@ export function canoeTargetError(state: GameState, tile: Tile): string | null {
   const dock = nearestDock(state, tile);
   if (!dock) return "Build a Canoe Dock first";
   const home = state.tiles[state.startTile].island;
-  if (isLand(tile.terrain) && tile.island === home) return "Canoes go by sea: pick open water or another island";
+  // (Only land we can see: what lies under the fog stays unknown.)
+  if (tile.revealed && isLand(tile.terrain) && tile.island === home) return "Canoes go by sea: pick open water or another island";
   if (hexDistance(dock, tile) > canoeReach(state)) return `Too far to paddle: at most ${canoeReach(state)} tiles from a dock`;
   return null;
 }
@@ -942,7 +944,7 @@ function eraMakeover(state: GameState, era: number): { tiles: Tile[]; changed: n
 export function plantError(state: GameState, tile: Tile): string | null {
   if (tutorialLocked(state, "plant")) return "Unlocks after the tutorial";
   if (!state.researched.includes("early-farming")) return "Learn Early Farming first";
-  if (!tile.revealed) return "Unexplored land";
+  if (!tile.revealed) return "Unexplored";
   if (tile.building) return "Something is built here";
   if (tile.terrain === "forest" && tile.growth >= 0.6) return "The forest here is already healthy";
   if (tile.terrain !== "grass" && tile.terrain !== "steppe" && tile.terrain !== "forest") return "Trees won't grow here";
@@ -1052,7 +1054,7 @@ export function placementError(state: GameState, tile: Tile, def: BuildingDef): 
   if (state.tutorialStep < TUTORIAL.length && (countBuildings(state)[def.id] ?? 0) >= 1) {
     return "Only one of each during the tutorial";
   }
-  if (!tile.revealed) return "Unexplored land";
+  if (!tile.revealed) return "Unexplored";
   if (tile.building) return "Already built here";
   if (state.protectedTiles?.includes(tile.id)) return "The old grove is protected";
   const home = state.tiles[state.startTile].island;
@@ -2107,7 +2109,7 @@ export function shipTargetError(state: GameState, tile: Tile): string | null {
   if (!state.world) return null;
   const ports = state.tiles.filter((t) => t.building === "shipyard" || t.building === "harbour");
   if (!ports.length) return "Build a Shipyard first";
-  if (isLand(tile.terrain) && tile.island === state.tiles[state.startTile].island) return "Ships sail the sea: pick open water or another island";
+  if (tile.revealed && isLand(tile.terrain) && tile.island === state.tiles[state.startTile].island) return "Ships sail the sea: pick open water or another island";
   if (Math.min(...ports.map((p) => hexDistance(p, tile))) > SHIP_REACH) return `Too far: at most ${SHIP_REACH} tiles from a port`;
   return null;
 }

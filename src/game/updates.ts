@@ -7,6 +7,19 @@ export interface Update {
 
 export const UPDATES: Update[] = [
   {
+    date: "2026-10-31",
+    items: [
+      "Fixed: the game could freeze (time stopped passing) when Elder Ama's guide pointed at something you couldn't see, like a button while walking in first person. The clock now runs on whenever her hand can't find its target.",
+      "Fixed: the fog gave things away. Pointing scouts, canoes or ships at the fog no longer tells you whether there is land or sea there, and the hover outline no longer traces hidden coasts.",
+      "Scouting looks better: newly found land rises out of the water as the mist over it billows up and melts away.",
+      "Walking with your people is calmer: fewer of them (4), a little further back, they gather beside and behind you (not in front of your view) and chat much less often.",
+      "In first person, people no longer rush about when the game is fast-forwarded: everyone you can see up close walks at a normal pace (the clock still runs fast).",
+      "Fixed: the \"Raiders are attacking\" scene no longer pops up after you've already fought and lost the battle.",
+      "Events make sense in first person: a villager runs up and tells you the news face to face, the mouse is freed so you can answer, and 1, 2, 3 answer from the keyboard.",
+      "Elder Ama and the villagers are back to their best: the practice that was making their answers samey has been replaced by a stricter one, where a new lesson only goes live after it beats the old answers in a blind test.",
+    ],
+  },
+  {
     date: "2026-10-21",
     items: [
       "A calmer left side: one warning card at a time (the worst one; the rest wait behind a +N you can open), one message at a time, and the Ask Elder Ama button now sits on the goal line. A tip that raiders interrupt is gone for good instead of popping back up later out of nowhere.",

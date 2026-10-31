@@ -13,6 +13,8 @@ import {
 import { TUTORIAL } from "@/game/content";
 import { commanding, reducer, saveGame, tickSeconds, type Action } from "@/game/engine";
 import { guideFor } from "./guide";
+import { useGuideLost } from "./guide-lost";
+import { useLeader } from "./world/leader";
 import type { GameState } from "@/game/types";
 
 // A screen that covers the map (the game waits while it is open).
@@ -56,8 +58,12 @@ export function GameProvider({
   // It only runs if the player is somehow short and has to wait.
   const inTutorial = state.tutorialStep < TUTORIAL.length;
   // The same goes for Elder Ama's guided step after an advancement.
+  // ...but only while the hand can show where to click: not in first person
+  // (the build bar isn't there), and not when what it points at is out of view.
+  const fp = useLeader().view === "fp";
+  const guideLost = useGuideLost();
   const held =
-    ((inTutorial && !state.dev) || (!inTutorial && !!state.coach)) && guideFor(state, selected, panel).waiting === null;
+    ((inTutorial && !state.dev) || (!inTutorial && !!state.coach)) && guideFor(state, selected, panel).waiting === null && !fp && !guideLost;
   // The world waits while the debrief is on screen.
   // ...and while a discovery scene plays.
   // ...and while Elder Ama thinks about a question.
