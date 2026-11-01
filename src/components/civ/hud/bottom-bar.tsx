@@ -2,6 +2,7 @@
 
 import { setHoveredBuilding } from "@/components/civ/world/hovered";
 import { setPlanMode, usePlanMode } from "@/components/civ/world/plan-mode";
+import { LEVELS, hasEconomy } from "@/game/economy";
 import { setLeaderView } from "@/components/civ/world/leader";
 import { useRef, useState, type ReactNode } from "react";
 import { BUILDINGS, CANOE, ERAS, LAST, MERCS, SPACE, TRADE, LOW_WOOD_AFTER_BUY, PLANT_COST, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL, WARFARE_LEVELS, WARRIORS_PER_CAMP } from "@/game/content";
@@ -574,6 +575,36 @@ export function BottomBar() {
           {!last && state.researched.includes("barter-roads") && <CaravanButton />}
           {!last && (countBuildings(state).dock ?? 0) > 0 && <CanoeButton />}
           {!last && state.researched.includes("navigation") && <ShipButton />}
+          {hasEconomy(state) && state.income && (
+            <ToolButton
+              guide="tool-economy"
+              icon="scales"
+              label="Economy"
+              onClick={() => setPanel("economy")}
+              badge={!state.economy || state.economy.unpaid ? "!" : undefined}
+              title={
+                !state.economy
+                  ? "Choose how work is organised and paid: a free market, shared work, or a mix"
+                  : `A ${LEVELS[state.income.level].name.toLowerCase()} nation: ${state.income.perPerson} a person a day. Wages, fairness, and how to grow richer.`
+              }
+              tone="bg-yellow-800 hover:bg-yellow-700"
+            >
+              <span className="text-[10px] font-semibold leading-tight" style={{ color: LEVELS[state.income.level].colour === "#2563eb" ? "#93c5fd" : LEVELS[state.income.level].colour === "#059669" ? "#6ee7b7" : "#fcd34d" }}>
+                {LEVELS[state.income.level].short}
+              </span>
+            </ToolButton>
+          )}
+          {state.council && (
+            <ToolButton
+              guide="tool-council"
+              icon="dove"
+              label="Council"
+              onClick={() => setPanel("council")}
+              badge={!state.council.joined ? "!" : state.council.laws.some((l) => l.broken) ? "!" : undefined}
+              title={state.council.joined ? `The Council of Islands: our standing ${Math.round(state.council.standing)}, ${state.council.laws.length} resolution${state.council.laws.length === 1 ? "" : "s"} in force` : "The Council of Islands has formed: join it?"}
+              tone="bg-sky-800 hover:bg-sky-700"
+            />
+          )}
           {!last && state.kingdoms && (
             <ToolButton
               guide="tool-kingdoms"

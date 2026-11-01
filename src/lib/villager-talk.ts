@@ -6,6 +6,7 @@
 import { BUILDINGS_BY_ID, ERAS, formatYear } from "@/game/content";
 import { consumption, countBuildings, currentGoal, housingCapacity, production, warnings } from "@/game/engine";
 import type { GameState, Tile } from "@/game/types";
+import { ECONOMY, LEVELS, hasEconomy } from "@/game/economy";
 import { isOffensive } from "./names";
 import { PUBLISHABLE_KEY, SUPABASE_URL } from "./online";
 
@@ -88,6 +89,13 @@ export function villageNow(state: GameState): string {
     .slice(0, 2)
     .map((x) => x.text.replace("{secs}s", "a few seconds").replace("{secs}", "a few"));
   if (w.length) lines.push(`Worries: ${w.join(" | ")}`);
+  // Money and pay, in a villager's words.
+  if (hasEconomy(state) && state.income) {
+    const eco = state.economy;
+    lines.push(
+      `Money: we are a ${LEVELS[state.income.level].name.toLowerCase()} people.${eco ? ` Work is organised as ${ECONOMY.systems[eco.system].name.toLowerCase()}; wages are ${eco.unpaid ? "not being paid (no money)" : ECONOMY.wages[eco.wage].name.toLowerCase()}; incomes are ${eco.inequality > 60 ? "very unequal" : eco.inequality > 30 ? "somewhat unequal" : "fair"}.` : ""}`,
+    );
+  }
   if (state.log.length) lines.push(`Lately: ${state.log.slice(0, 3).join(" | ")}`);
   const goal = currentGoal(state);
   if (goal) lines.push(`What the Chief is working towards: ${goal}`);

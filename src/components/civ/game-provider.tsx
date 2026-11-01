@@ -18,7 +18,7 @@ import { useLeader } from "./world/leader";
 import type { GameState } from "@/game/types";
 
 // A screen that covers the map (the game waits while it is open).
-export type Panel = "tree" | "kingdoms" | "space" | null;
+export type Panel = "tree" | "kingdoms" | "space" | "economy" | "council" | null;
 
 interface GameContextValue {
   state: GameState;

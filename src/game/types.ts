@@ -52,6 +52,12 @@ export type RaidKind = "band" | "party" | "fire";
 // ("steppe" and "reach"); in an endless world, any tribe we have found
 // ("isle<island id>"). And the landmark that takes a town into the Middle Ages.
 export type KingdomId = string;
+// The economy (from the Ancient era): see economy.ts.
+export type EconomySystem = "free" | "shared" | "mixed";
+export type Wage = "low" | "fair" | "high";
+export type IncomeLevel = "low" | "middle" | "high";
+// The Council of Islands' resolutions (see council.ts).
+export type LawId = "peace" | "forests" | "aid" | "trade" | "schools" | "wages";
 // How a tribe of the endless world is towards others.
 export type Temper = "traders" | "peaceful" | "proud" | "warlike";
 export type LandmarkId = "library" | "cathedral" | "harbour";
@@ -555,6 +561,34 @@ export interface GameState {
   riders?: number;
   // Hired mercenaries: how many, and the tick they leave.
   mercs?: { count: number; until: number } | null;
+  // How work is organised and paid (chosen from the Ancient era), how
+  // unequal incomes are (0-100), when it last changed, and free markets'
+  // booms and busts.
+  economy?: {
+    system: EconomySystem;
+    wage: Wage;
+    inequality: number;
+    changed: number;
+    cycle: { kind: "boom" | "bust"; until: number } | null;
+    nextCycle: number;
+    unpaid?: boolean;
+  };
+  // How rich each person is (from the Ancient era): the level, the island's
+  // luck, checks in a row past a line, levels reached so far, and the latest
+  // income per person a day.
+  income?: { level: IncomeLevel; luck: number; since: number; streak: number; reached: IncomeLevel[]; nextLuck: number; perPerson: number };
+  // The Council of Islands (from the Ancient era, once we know two peoples):
+  // whether we joined, the next session, the resolutions in force (until
+  // when, and whether we broke one), our standing (-100..100), a vote
+  // waiting for us (the members' votes already cast), and the last result.
+  council?: {
+    joined: boolean;
+    next: number;
+    laws: { id: LawId; until: number; broken?: boolean }[];
+    standing: number;
+    vote: { law: LawId; votes: Record<KingdomId, boolean> } | null;
+    last?: { law: LawId; passed: boolean; yes: number; no: number; ours?: boolean };
+  };
   // Dev mode: advancement goals count as met.
   devGoals?: boolean;
   // When the last big moment (event, raid, lesson, outbreak) began, for QUIET_GAP.

@@ -9,6 +9,7 @@ import {
   currentGoal,
   goalProgress,
   housingCapacity,
+  incomeNow,
   isUnlocked,
   lastProblems,
   powerDemand,
@@ -18,6 +19,8 @@ import {
   warnings,
 } from "@/game/engine";
 import type { GameState } from "@/game/types";
+import { ECONOMY, LEVELS, hasEconomy, incomeLines } from "@/game/economy";
+import { LAWS } from "@/game/council";
 import { isOffensive } from "./names";
 import { PUBLISHABLE_KEY, SUPABASE_URL } from "./online";
 
@@ -26,6 +29,21 @@ const FUNCTION = "clever-endpoint";
 
 const name = (id: string) => BUILDINGS.find((b) => b.id === id)?.name ?? id;
 const round = (n: number) => Math.round(n * 10) / 10;
+
+// The economy in a line or two (for Ama and the villagers): the income
+// level and why, how work is organised, wages, fairness.
+export function economyFacts(state: GameState): string {
+  if (!hasEconomy(state) || !state.income) return "";
+  const inc = incomeNow(state);
+  const [mid, high] = incomeLines(state);
+  const eco = state.economy;
+  const parts = inc.parts.map((p) => `${p.label} ${p.value}`).join(", ");
+  return `Economy: a ${LEVELS[state.income.level].name.toLowerCase()} nation, ${inc.perPerson} a person a day (middle income from ${mid}, high from ${high}); it comes from ${parts}. ${
+    eco
+      ? `Work is organised as ${ECONOMY.systems[eco.system].name} (${ECONOMY.systems[eco.system].real}); wages are ${ECONOMY.wages[eco.wage].name.toLowerCase()}${eco.unpaid ? " but there is no money to pay them" : ""}; inequality ${Math.round(eco.inequality)}/100.`
+      : "The Chief has not yet chosen how work is organised (Economy button: free market, shared work or mixed)."
+  } Challenges now: ${LEVELS[state.income.level].challenges.join(" ")} Goal: ${LEVELS[state.income.level].goal}`;
+}
 
 // What Ama knows about the town: numbers, problems, what can be built and
 // researched, and the rules about neighbours.
@@ -40,6 +58,15 @@ export function townSummary(state: GameState): string {
   lines.push(`Food: ${Math.round(state.resources.food)} stored, ${round(prod.food - consumption(state))}/s after eating. Wood ${Math.round(state.resources.wood)}, stone ${Math.round(state.resources.stone)}, knowledge ${Math.round(state.resources.knowledge)}, coins ${Math.round(state.resources.currency)}.`);
   lines.push(`Meters (0-100): ${Object.entries(state.meters).map(([k, v]) => `${k} ${Math.round(v as number)}`).join(", ")}.`);
   if (powerSupply(state) || powerDemand(state)) lines.push(`Power: ${round(powerSupply(state))} made, ${round(powerDemand(state))} needed.`);
+  const econ = economyFacts(state);
+  if (econ) lines.push(econ);
+  const council = state.council;
+  if (council)
+    lines.push(
+      `Council of Islands (like the United Nations): ${council.joined ? `we are a member, standing ${Math.round(council.standing)} (-100..100)` : "it has formed; we have not joined (Council button)"}. In force: ${
+        council.laws.length ? council.laws.map((l) => `${LAWS[l.id].name} (${LAWS[l.id].keep}${l.broken ? "; we broke it" : ""})`).join("; ") : "nothing"
+      }.`,
+    );
   const problems = warnings(state).map((w) => w.text.replace("{secs}s", "a few seconds").replace("{secs}", "a few"));
   if (problems.length) lines.push(`Warnings on screen: ${problems.join(" | ")}`);
   const built = Object.entries(countBuildings(state)).filter(([, n]) => n);

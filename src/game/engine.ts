@@ -152,6 +152,8 @@ import { cureHint, diseaseName, isCalm, maybeOutbreak, sickShare, stepDisease } 
 import { hexDistance } from "./hex";
 import { generateMap, ISLANDS, isLand, revealAround, riverPath, terrainHeight } from "./map";
 import { mulberry32 } from "./noise";
+import { COUNCIL, LAWS, leanOn } from "./council";
+import { ECONOMY, FORTUNES, INCOME, LEVELS, economyEffects, economyMood, hasEconomy, incomeOf, levelFor, startingLuck, unpaid, wageBill } from "./economy";
 import { MAX_FIGHTERS, enemyLineup, fieldOf, inOurZone, runBattle, type BattleSetup, type Biome, type Order, type Placed, type Roster } from "./battle";
 import { sealMatches, sealOf } from "./seal";
 import { generateWorld, growWorld, homeName, isleById, islandOfKingdom, islesNear, kingdomIdOf } from "./world";
@@ -160,6 +162,10 @@ import { cameosFor, EGGS, GOLDEN_DEER_FOOD, LITERACY_BUILDINGS, NAME_EGGS, nameE
 import type { IconId } from "./sprites";
 import type {
   BoostKey,
+  EconomySystem,
+  IncomeLevel,
+  LawId,
+  Wage,
   Goal,
   TallyKey,
   TreeNode,
@@ -210,6 +216,11 @@ export type Action =
   | { type: "skipTutorial" }
   | { type: "train"; kind?: "warrior" | "archer" | "rider" }
   | { type: "hireMercs" }
+  | { type: "setEconomy"; system: EconomySystem }
+  | { type: "setWage"; wage: Wage }
+  | { type: "joinCouncil" }
+  | { type: "leaveCouncil" }
+  | { type: "councilVote"; yes: boolean }
   | { type: "hunt"; animal: string }
   | { type: "easterEgg"; id: EggId }
   | { type: "setPopLimit"; limit: number | null }
@@ -2851,7 +2862,9 @@ export function production(state: GameState): Resources {
   if (state.culture === "scholars") out.knowledge *= 1.5;
   if (state.culture === "traders") out.currency *= 1.5;
   // Treaties: trade every day with a friendly kingdom (not while the harbour is closed).
-  if (!closed) for (const k of Object.values(state.kingdoms ?? {})) if (k.treaty) out.currency += DIPLOMACY.treaty.trade;
+  // (More under the Council's Open Trade; less under its sanctions.)
+  const treatyTrade = DIPLOMACY.treaty.trade * (councilBound(state) && lawInForce(state, "trade") ? COUNCIL.trade : 1) * (sanctioned(state) ? COUNCIL.sanction : 1);
+  if (!closed) for (const k of Object.values(state.kingdoms ?? {})) if (k.treaty) out.currency += treatyTrade;
   // Conquered kingdoms pay tribute.
   for (const k of Object.values(state.kingdoms ?? {}))
     if (k.conquered) {
@@ -2876,14 +2889,34 @@ export function production(state: GameState): Resources {
   // The many smaller Industrial advancements.
   const more: [keyof Resources, BoostKey][] = [["food", "food"], ["wood", "wood"], ["stone", "stone"], ["knowledge", "knowledge"], ["currency", "coins"]];
   for (const [r, key] of more) if (out[r] > 0) out[r] *= 1 + boostOf(state, key);
+  // The economy: how work is organised and paid (see economy.ts), and the
+  // day's wages, paid from the day's money.
+  const eco = economyEffects(state);
+  if (out.food > 0) out.food *= eco.food;
+  if (out.wood > 0) out.wood *= eco.goods;
+  if (out.stone > 0) out.stone *= eco.goods;
+  if (out.knowledge > 0) out.knowledge *= eco.knowledge;
+  if (out.currency > 0) out.currency *= eco.coins;
+  out.currency -= eco.bill;
   return out;
 }
+
+// The day's production before wages (what income per person counts).
+export function grossProduction(state: GameState): Resources {
+  const prod = production(state);
+  return { ...prod, currency: prod.currency + economyEffects(state).bill };
+}
+
+// Income per person a day, and what goes into it (see economy.ts).
+export const incomeNow = (state: GameState) => incomeOf(state, grossProduction(state));
 
 export function consumption(state: GameState) {
   return (
     (state.population * FOOD_PER_PERSON + state.soldiers * FOOD_PER_WARRIOR * (state.researched.includes("knights") ? KNIGHTS.food : 1)) *
     DIFFICULTIES[state.difficulty].consumption *
-    (eatingRaw(state) ? RAW_FOOD : 1)
+    (eatingRaw(state) ? RAW_FOOD : 1) *
+    // A high-income town eats (and uses) more.
+    (state.income?.level === "high" && hasEconomy(state) ? INCOME.high.eat : 1)
   );
 }
 
@@ -3498,6 +3531,12 @@ export function sustainabilityBreakdown(state: GameState): SustainPart[] {
       label: "The climate tipped",
       value: state.tipped ? -TIPPING.sustain : 0,
       hint: "The frozen north thawed and keeps warming the world on its own. This can't be undone.",
+    },
+    {
+      label: "A rich town's footprint",
+      value: state.income?.level === "high" && hasEconomy(state) ? -INCOME.high.footprint : 0,
+      hint: "High-income towns use more of everything, and the land feels it.",
+      fix: "Plant trees, use clean energy, and waste less.",
     },
     {
       label: "Recent events",
@@ -4192,6 +4231,7 @@ export function computeMeters(state: GameState): Meters {
     (counts.apartments ? POWER.darkFlatsMood * (1 - powerCover(state)) : 0) -
     automationMood(state) -
     fatigueMood(state) +
+    economyMood(state) +
     state.modifiers.happiness;
 
   // Name eggs (blessings and curses) last the whole game.
@@ -4702,7 +4742,8 @@ function startGrace(state: GameState): GameState {
 }
 
 function tick(state: GameState): GameState {
-  if (state.phase !== "playing" || state.event) return state;
+  // An event card, or a Council vote, waits for the player.
+  if (state.phase !== "playing" || state.event || state.council?.vote) return state;
   return noteLostHomes(state, tickOnce(state));
 }
 
@@ -4846,6 +4887,8 @@ function tickOnce(state: GameState): GameState {
   next = returnScouts(next);
   next = returnCanoes(next);
   next = last ? next : returnShips(updateKingdoms(next));
+  next = updateEconomy(next);
+  next = updateCouncil(next);
   next = finishStage(next);
   // The final battle ends the story (won or lost): nothing else happens today.
   if (next.phase !== "playing" || next.debrief) return { ...next, meters: computeMeters(next) };
@@ -6111,7 +6154,9 @@ function updateRaids(state: GameState): GameState {
     // In an endless world, a hostile people we know may come in any era (about
     // half the raids, before the Middle Ages; the rest are raiders from the fog).
     const known = state.world && state.era < 3 && rand() < 0.5 ? hostileKingdoms(state) : [];
-    const enemies = revenge ? [revenge] : state.era >= 3 ? hostileKingdoms(state) : known;
+    // Under the Council's Peace at Sea, members don't raid us.
+    const shielded = (k: KingdomId) => councilBound(state) && lawInForce(state, "peace") && councilMembers(state).includes(k);
+    const enemies = (revenge ? [revenge] : state.era >= 3 ? hostileKingdoms(state) : known).filter((k) => !shielded(k));
     if (state.era >= 3 && !enemies.length) return { ...state, nextRaidTick: state.tick + 60 };
     const from_ = enemies.length ? enemies[Math.floor(rand() * enemies.length)] : undefined;
     const home = state.tiles[state.startTile];
@@ -6221,6 +6266,200 @@ export function reducer(state: GameState, action: Action): GameState {
   if (next.speedrun && !next.speedrun.end) next = speedrunStep(state, next);
   if (next.story && !next.story.scene) next = storyStep(next);
   return awardXp(state, next.coach ? advanceCoach(next) : next);
+}
+
+// The economy, each tick (from the Ancient era): when money first comes in,
+// how rich we are and how lucky the island is; inequality drifting where the
+// system and wages pull it; free markets booming and busting; wages going
+// unpaid when the money runs out; every so often, the income level checked
+// (and a reward the first time a level is reached); the island's luck
+// turning; and, when poor and unhappy, families leaving.
+const LEVEL_RANK: Record<IncomeLevel, number> = { low: 0, middle: 1, high: 2 };
+function luckWords(luck: number) {
+  return luck >= 1.12 ? "Our island is rich: good soil, ores and fish." : luck <= 0.9 ? "Our island is poor in the things others want to buy." : "Our island has its fair share of good things.";
+}
+function updateEconomy(state: GameState): GameState {
+  if (!hasEconomy(state) || state.tutorialStep < TUTORIAL.length) return state;
+  let next = state;
+  const log: string[] = [];
+  if (!next.income) {
+    const home = next.tiles[next.startTile];
+    const deposits = next.tiles.filter((t) => t.deposit && t.revealed && hexDistance(t, home) <= 5).length;
+    const luck = startingLuck(next.seed, deposits);
+    const first: GameState = { ...next, income: { level: "low", luck, since: next.tick, streak: 0, reached: [], nextLuck: next.tick + INCOME.luck.every, perPerson: 0 } };
+    const { perPerson } = incomeNow(first);
+    const level = levelFor(first, perPerson);
+    next = { ...first, income: { ...first.income!, level, perPerson, reached: [level] } };
+    log.push(`Money has come to the island. ${luckWords(luck)} We are a ${LEVELS[level].name.toLowerCase()} people (${perPerson} a person a day). Open Economy to choose how work is organised and paid.`);
+  }
+  const eco = next.economy;
+  if (eco) {
+    const target = Math.max(0, Math.min(100, ECONOMY.systems[eco.system].pull + ECONOMY.wages[eco.wage].pull));
+    const inequality = Math.round((eco.inequality + (target - eco.inequality) * ECONOMY.inequality.pace) * 100) / 100;
+    let cycle = eco.cycle && next.tick < eco.cycle.until ? eco.cycle : null;
+    let nextCycle = eco.nextCycle;
+    if (eco.system === "free" && next.tick >= nextCycle) {
+      const boom = mulberry32(next.seed + next.tick * 17)() < 0.55;
+      cycle = { kind: boom ? "boom" : "bust", until: next.tick + ECONOMY.cycle.length };
+      nextCycle = next.tick + ECONOMY.cycle.every;
+      log.push(boom ? "A boom! Trade is roaring: much more money for a while." : "A bust: the markets crashed. Less money and hard times for a while.");
+    }
+    const owed = unpaid(next);
+    if (owed && !eco.unpaid) log.push(`We can't pay the wages (${Math.ceil(wageBill(next) * 10)} a day)! People are angry and work badly until there's money again: lower the wages, or earn more.`);
+    if (!owed && eco.unpaid) log.push("Wages are being paid again.");
+    next = { ...next, economy: { ...eco, inequality, cycle, nextCycle, unpaid: owed } };
+  }
+  let inc = next.income!;
+  if (next.tick % INCOME.check === 0) {
+    const { perPerson } = incomeNow(next);
+    const want = levelFor(next, perPerson);
+    let { level, streak, reached } = inc;
+    let resources = next.resources;
+    streak = want === level ? 0 : streak + 1;
+    if (streak >= INCOME.hold) {
+      const up = LEVEL_RANK[want] > LEVEL_RANK[level];
+      const reward = !reached.includes(want) ? INCOME.rewards[want] : undefined;
+      if (reward) resources = gain(resources, reward);
+      if (!reached.includes(want)) reached = [...reached, want];
+      log.push(
+        up
+          ? `We are now a ${LEVELS[want].name.toLowerCase()} people (${perPerson} a person a day)!${reward ? ` +${amountText(next, reward)}.` : ""} New challenges and a new goal: see Economy.`
+          : `Hard times: we have slipped back to ${LEVELS[want].name.toLowerCase()} (${perPerson} a person a day).`,
+      );
+      level = want;
+      streak = 0;
+    }
+    inc = { ...inc, level, streak, reached, perPerson, since: level !== inc.level ? next.tick : inc.since };
+    next = { ...next, resources, income: inc };
+  }
+  if (next.tick >= inc.nextLuck) {
+    const rand = mulberry32(next.seed + next.tick * 23);
+    if (rand() < 0.45) {
+      const good = rand() < 0.5;
+      const list = good ? FORTUNES.good : FORTUNES.bad;
+      const luck = Math.round(Math.max(INCOME.luck.min, Math.min(INCOME.luck.max, inc.luck + (good ? 1 : -1) * INCOME.luck.shift)) * 100) / 100;
+      log.push(`${list[Math.floor(rand() * list.length)]} (The island's luck: ${good ? "better" : "worse"}.)`);
+      inc = { ...inc, luck };
+    }
+    next = { ...next, income: { ...inc, nextLuck: next.tick + INCOME.luck.every } };
+  }
+  if (inc.level === "low" && next.meters.happiness < INCOME.low.leaveBelow && next.tick % INCOME.low.leaveEvery === 0 && next.population > 8) {
+    next = { ...next, population: next.population - 1 };
+    log.push("A family left the island to look for work: we are poor, and people are unhappy.");
+  }
+  return log.length ? { ...next, log: [...log.reverse(), ...next.log].slice(0, 30) } : next;
+}
+
+// ---- The Council of Islands (council.ts) ----
+
+// Who sits on the council: every people we know that we haven't conquered.
+export function councilMembers(state: GameState): KingdomId[] {
+  return Object.entries(state.kingdoms ?? {})
+    .filter(([, k]) => !k.conquered)
+    .map(([id]) => id);
+}
+// Whether a resolution is in force now, and whether its laws bind us.
+export const lawInForce = (state: GameState, id: LawId) => !!state.council?.laws.some((l) => l.id === id && state.tick < l.until);
+export const councilBound = (state: GameState) => !!state.council?.joined;
+// So low a standing that members cut their trade with us.
+export const sanctioned = (state: GameState) => councilBound(state) && (state.council?.standing ?? 0) <= COUNCIL.shunned;
+
+// Raiding or conquering a member under Peace at Sea breaks it.
+function breakPeace(state: GameState, kingdom: KingdomId): GameState {
+  const c = state.council;
+  if (!c?.joined || !lawInForce(state, "peace") || !councilMembers(state).includes(kingdom)) return state;
+  return {
+    ...state,
+    council: { ...c, laws: c.laws.map((l) => (l.id === "peace" ? { ...l, broken: true } : l)) },
+    log: ["We broke the Council's Peace at Sea! Every member will remember it.", ...state.log].slice(0, 30),
+  };
+}
+
+// Whether we kept a resolution, judged when it ends.
+function lawKept(state: GameState, id: LawId) {
+  if (id === "forests") return state.meters.sustainability >= 50;
+  if (id === "schools") return state.meters.literacy >= 40;
+  if (id === "wages") return !hasEconomy(state) || (!!state.economy && state.economy.wage !== "low" && !state.economy.unpaid);
+  return true;
+}
+
+// A resolution passed: in force from now; the Aid Fund pays out (or asks).
+function passLaw(state: GameState, law: LawId): GameState {
+  const c = state.council!;
+  let next: GameState = { ...state, council: { ...c, laws: [...c.laws.filter((l) => l.id !== law), { id: law, until: state.tick + LAWS[law].ticks }] } };
+  if (law === "aid" && c.joined && hasEconomy(state)) {
+    const level = state.income?.level;
+    const k = 1 + state.era * 0.5;
+    if (level === "low") {
+      const aid = { currency: Math.round(COUNCIL.aid.coins * k), food: Math.round(COUNCIL.aid.food * k) };
+      next = { ...next, resources: gain(next.resources, aid), log: [`The Aid Fund helps us: +${amountText(next, aid)}.`, ...next.log].slice(0, 30) };
+    } else if (level === "high") {
+      const give = { currency: Math.round(COUNCIL.give * k) };
+      if (canAfford(next, give)) next = { ...next, resources: spend(next.resources, give), log: [`We gave ${amountText(next, give)} to the Aid Fund, to help poorer peoples.`, ...next.log].slice(0, 30) };
+      else
+        next = {
+          ...next,
+          council: { ...next.council!, laws: next.council!.laws.map((l) => (l.id === "aid" ? { ...l, broken: true } : l)) },
+          log: ["We couldn't pay our share into the Aid Fund.", ...next.log].slice(0, 30),
+        };
+    }
+  }
+  return next;
+}
+
+// The council each tick: it forms once we know enough peoples; resolutions
+// that end are judged (kept or broken); and each session, members vote on a
+// new one (we vote too, if we joined: the game waits for us). Standing warms
+// or cools every member, and a low-income member gets a little aid.
+function updateCouncil(state: GameState): GameState {
+  if (!state.kingdoms || state.era < COUNCIL.era || state.mp || state.story || state.mode === "last" || state.tutorialStep < TUTORIAL.length) return state;
+  let next = state;
+  const log: string[] = [];
+  if (!next.council) {
+    if (councilMembers(next).length < COUNCIL.peoples) return state;
+    next = { ...next, council: { joined: false, next: next.tick + COUNCIL.first, laws: [], standing: 0, vote: null } };
+    log.push("The peoples of the sea have formed a Council of Islands, to keep the peace and work together, a little like the United Nations. Open Council to join them.");
+  }
+  let c = next.council!;
+  for (const law of c.laws.filter((l) => next.tick >= l.until)) {
+    if (!c.joined) continue;
+    const kept = !law.broken && lawKept(next, law.id);
+    const all = Object.fromEntries(councilMembers(next).map((id) => [id, kept ? COUNCIL.mood.kept : COUNCIL.mood.broken]));
+    next = changeMood(next, all);
+    c = { ...c, standing: Math.max(-100, Math.min(100, c.standing + (kept ? COUNCIL.kept : COUNCIL.broken))) };
+    log.push(kept ? `${LAWS[law.id].name} has ended, and we kept it. Our standing on the Council rises.` : `${LAWS[law.id].name} has ended, and we broke it. Our standing on the Council falls.`);
+  }
+  c = { ...c, laws: c.laws.filter((l) => next.tick < l.until) };
+  if (next.tick >= c.next && !c.vote) {
+    const rand = mulberry32(next.seed + next.tick * 41);
+    const members = councilMembers(next);
+    // A resolution not already in force (one for this era).
+    const open = (Object.keys(LAWS) as LawId[]).filter((id) => LAWS[id].era <= next.era && !c.laws.some((l) => l.id === id) && (id !== "wages" || hasEconomy(next)));
+    if (open.length && members.length) {
+      const law = open[Math.floor(rand() * open.length)];
+      const votes = Object.fromEntries(members.map((id) => [id, rand() < 0.56 + leanOn(law, kingdomInfo(next, id).temper, next.kingdoms![id].mood)]));
+      if (c.joined) c = { ...c, vote: { law, votes } };
+      else {
+        const yes = Object.values(votes).filter(Boolean).length;
+        const passed = yes > members.length - yes;
+        log.push(`The Council of Islands voted on ${LAWS[law].name} without us: ${passed ? "it passed" : "it failed"}.`);
+        if (passed) c = { ...c, laws: [...c.laws, { id: law, until: next.tick + LAWS[law].ticks }] };
+      }
+    }
+    if (c.joined) {
+      const drift = c.standing >= COUNCIL.respected ? COUNCIL.mood.respected : c.standing <= COUNCIL.shunned ? COUNCIL.mood.shunned : 0;
+      if (drift) next = changeMood(next, Object.fromEntries(members.map((id) => [id, drift])));
+      if (drift < 0) log.push("Our standing on the Council is so low that its members cut their trade with us.");
+      if (next.income?.level === "low" && hasEconomy(next)) {
+        const aid = { food: Math.round(COUNCIL.aid.session * (1 + next.era * 0.5)) };
+        next = { ...next, resources: gain(next.resources, aid) };
+        log.push(`The Council sends aid to poorer members: +${amountText(next, aid)}.`);
+      }
+    }
+    c = { ...c, next: next.tick + COUNCIL.every };
+  }
+  next = { ...next, council: c };
+  return log.length ? { ...next, log: [...log.reverse(), ...next.log].slice(0, 30) } : next;
 }
 
 // Fewer warriors than archers, riders and spearmen together (some fell, or
@@ -6819,6 +7058,34 @@ function step(state: GameState, action: Action): GameState {
       });
     }
 
+    case "setEconomy": {
+      if (!hasEconomy(state) || state.economy?.system === action.system) return state;
+      const prev = state.economy;
+      const sys = ECONOMY.systems[action.system];
+      return withMeters({
+        ...state,
+        economy: {
+          system: action.system,
+          wage: prev?.wage ?? "fair",
+          inequality: prev?.inequality ?? 25,
+          // The first choice is just how things are; a change takes getting used to.
+          changed: prev ? state.tick : -1e6,
+          cycle: null,
+          nextCycle: state.tick + ECONOMY.cycle.every,
+        },
+        log: [`${prev ? "We changed how we work" : "We chose how we work"}: ${sys.name} (${sys.real.toLowerCase()}).`, ...state.log].slice(0, 30),
+      });
+    }
+
+    case "setWage": {
+      if (!state.economy || !hasEconomy(state) || state.economy.wage === action.wage) return state;
+      return withMeters({
+        ...state,
+        economy: { ...state.economy, wage: action.wage },
+        log: [`Wages are now ${ECONOMY.wages[action.wage].name.toLowerCase()}.`, ...state.log].slice(0, 30),
+      });
+    }
+
     case "hireMercs": {
       if (mercError(state)) return state;
       const count = mercsOf(state) + MERCS.band;
@@ -7100,7 +7367,7 @@ function step(state: GameState, action: Action): GameState {
     }
 
     case "raidKingdom":
-      return kingdomRaidError(state, action.kingdom) ? state : raidKingdom(state, action.kingdom);
+      return kingdomRaidError(state, action.kingdom) ? state : breakPeace(raidKingdom(state, action.kingdom), action.kingdom);
 
     case "clearArea": {
       const tile = state.tiles[action.tileId];
@@ -7119,7 +7386,45 @@ function step(state: GameState, action: Action): GameState {
     }
 
     case "conquer":
-      return conquestError(state, action.kingdom) ? state : conquer(state, action.kingdom);
+      return conquestError(state, action.kingdom) ? state : breakPeace(conquer(state, action.kingdom), action.kingdom);
+
+    case "joinCouncil": {
+      const c = state.council;
+      if (!c || c.joined) return state;
+      const all = Object.fromEntries(councilMembers(state).map((id) => [id, COUNCIL.mood.join]));
+      return withMeters({
+        ...changeMood(state, all),
+        council: { ...c, joined: true, standing: Math.max(c.standing, 0) + COUNCIL.join },
+        log: ["We joined the Council of Islands. Its resolutions bind us now, and the other peoples are glad.", ...state.log].slice(0, 30),
+      });
+    }
+
+    case "leaveCouncil": {
+      const c = state.council;
+      if (!c?.joined || c.vote) return state;
+      return withMeters({
+        ...state,
+        council: { ...c, joined: false, standing: Math.max(-100, c.standing + COUNCIL.leave) },
+        log: ["We left the Council of Islands. The other peoples are not pleased.", ...state.log].slice(0, 30),
+      });
+    }
+
+    case "councilVote": {
+      const c = state.council;
+      if (!c?.vote) return state;
+      const { law, votes } = c.vote;
+      const yes = Object.values(votes).filter(Boolean).length + (action.yes ? 1 : 0);
+      const no = Object.keys(votes).length + 1 - yes;
+      const passed = yes > no;
+      // Members who voted as we did are pleased; the others a little put out.
+      const moods = Object.fromEntries(Object.entries(votes).map(([id, v]) => [id, v === action.yes ? COUNCIL.mood.agree : COUNCIL.mood.disagree]));
+      let next: GameState = changeMood(state, moods);
+      const standing = Math.max(-100, Math.min(100, c.standing + (action.yes === passed ? COUNCIL.majority : 0)));
+      next = { ...next, council: { ...c, vote: null, standing, last: { law, passed, yes, no, ours: action.yes } } };
+      const line = `The Council voted on ${LAWS[law].name}: ${yes} for, ${no} against. ${passed ? "It passed" : "It failed"}${passed ? `: ${LAWS[law].keep}` : "."}`;
+      next = { ...next, log: [line, ...next.log].slice(0, 30) };
+      return withMeters(passed ? passLaw(next, law) : next);
+    }
 
     case "contact": {
       const c = state.contact;

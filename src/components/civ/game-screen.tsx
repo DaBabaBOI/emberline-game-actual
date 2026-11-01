@@ -31,6 +31,8 @@ import { GameAudio } from "./hud/game-audio";
 import { setMusicScene, unlockAudio } from "@/lib/audio";
 import { KingdomsPanel, LandmarkPicker } from "./hud/medieval";
 import { SpacePanel } from "./hud/future";
+import { EconomyPanel } from "./hud/economy";
+import { CouncilPanel, CouncilVote } from "./hud/council";
 import { BattleBar, BattleCamera } from "./hud/battle-camera";
 import {
   DevPanel,
@@ -144,8 +146,11 @@ function Hud({ onRestart, match }: { onRestart: () => void; match: Match | null 
         {panel === "tree" && <TreeOverlay />}
         {panel === "kingdoms" && <KingdomsPanel />}
         {panel === "space" && <SpacePanel />}
+        {panel === "economy" && <EconomyPanel />}
+        {panel === "council" && <CouncilPanel />}
         <GuideOverlay />
         <EventModal />
+        <CouncilVote />
         <ContactModal />
         <RuinsModal />
         <DiscoveryScene />
