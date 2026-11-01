@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Color, DoubleSide, InstancedMesh, Matrix4, Object3D } from "three";
+import { Color, DoubleSide, InstancedMesh, Matrix4, Object3D, TorusGeometry } from "three";
 import { highlight } from "./crowd";
 
 export interface Agent {
@@ -35,6 +35,8 @@ export interface Agent {
   cheer?: boolean;
   // Waving hello (the right arm up, hand going side to side).
   wave?: boolean;
+  // On horseback: legs astride (the horse is drawn by whoever draws them).
+  riding?: boolean;
 }
 
 export type WorkTool = "hoe" | "axe" | "pick" | "hammer" | "shovel" | "book" | "carry" | "pray";
@@ -123,13 +125,29 @@ function workStroke(t: number, phase: number) {
   return { swing: LOW, hit: 1 - (p - 0.68) / 0.32 };
 }
 
+export type Weapon = "spear" | "club" | "sword" | "bow";
+// A bow: half a hoop, its ends up and down and its belly forward.
+const BOW = (() => {
+  const g = new TorusGeometry(0.12, 0.009, 4, 12, Math.PI);
+  g.rotateZ(-Math.PI / 2);
+  g.rotateY(-Math.PI / 2);
+  return g;
+})();
+
 // One blow in a fight, 0–1 through it: where the weapon arm is, and the angle
 // the weapon points (same convention as the arms). A spear is drawn back,
 // lowered and thrust forward; a club or sword goes up over the head and comes
 // down hard. Either way it lands at 0.6 and comes back to the ready.
 const smooth = (k: number) => k * k * (3 - 2 * k);
-function blow(u: number, weapon: "spear" | "club" | "sword") {
+function blow(u: number, weapon: Weapon) {
   const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
+  // A bow: raised straight out in front, held while the arrow is drawn and
+  // loosed, then lowered.
+  if (weapon === "bow") {
+    if (u < 0.3) return { arm: lerp(-0.7, -1.55, smooth(u / 0.3)), angle: 0 };
+    if (u < 0.75) return { arm: -1.55, angle: 0 };
+    return { arm: lerp(-1.55, -0.7, smooth((u - 0.75) / 0.25)), angle: 0 };
+  }
   if (weapon === "spear") {
     if (u < 0.45) return { arm: lerp(-0.7, -0.3, smooth(u / 0.45)), angle: lerp(-2.75, -1.75, smooth(u / 0.45)) };
     if (u < 0.6) return { arm: lerp(-0.3, -1.6, (u - 0.45) / 0.15), angle: lerp(-1.75, -1.6, (u - 0.45) / 0.15) };
@@ -170,7 +188,7 @@ export function Figures({
 }: {
   agents: React.RefObject<Agent[]>;
   max: number;
-  weapon?: "spear" | "club" | "sword";
+  weapon?: Weapon;
   // "roman": crested bronze helmet and a big curved red shield.
   gear?: "roman";
   // Change this when agents' colours change so they get repainted.
@@ -270,9 +288,9 @@ export function Figures({
       const weaponArm = weapon && work === null && !a.sitting ? (pose ? pose.arm : -0.7 + swing * 0.15) : null;
       for (const side of [-1, 1]) {
         const k = side < 0 ? 0 : 1;
-        const legAngle = praying ? -Math.PI / 2 + 0.15 : a.sitting ? -0.85 : (holding ? swing * 0.6 : swing) * side;
-        local.rotation.set(legAngle, 0, 0);
-        local.position.set(0.035 * side, 0.19 - 0.09 * Math.cos(legAngle), -0.09 * Math.sin(legAngle));
+        const legAngle = praying ? -Math.PI / 2 + 0.15 : a.sitting ? -0.85 : a.riding ? -0.5 : (holding ? swing * 0.6 : swing) * side;
+        local.rotation.set(legAngle, 0, a.riding ? side * 0.5 : 0);
+        local.position.set((a.riding ? 0.075 : 0.035) * side, 0.19 - 0.09 * Math.cos(legAngle), -0.09 * Math.sin(legAngle));
         put(legs.current, i * 2 + k);
 
         const waving = side > 0 && a.wave && work === null && hold === null && !praying && !a.sitting && weaponArm === null;
@@ -313,6 +331,11 @@ export function Figures({
           put(tip.current, i);
         } else if (weapon === "sword") {
           holdStick(local, hand, pose?.angle ?? -2.55, 0.2, 0.0);
+          put(tool.current, i);
+        } else if (weapon === "bow") {
+          // Upright in the fist, its belly away from the archer.
+          local.rotation.set(0, 0, 0);
+          local.position.set(hand.x, hand.y, hand.z + 0.015);
           put(tool.current, i);
         } else {
           holdStick(local, hand, pose?.angle ?? -2.6, 0.2, 0.02);
@@ -465,7 +488,9 @@ export function Figures({
       </instancedMesh>
       {weapon && (
         <instancedMesh ref={tool} args={[undefined, undefined, max]} {...common}>
-          {weapon === "spear" ? (
+          {weapon === "bow" ? (
+            <primitive object={BOW} attach="geometry" />
+          ) : weapon === "spear" ? (
             <cylinderGeometry args={[0.008, 0.008, 0.6, 5]} />
           ) : weapon === "sword" ? (
             <boxGeometry args={[0.015, 0.2, 0.03]} />
@@ -473,7 +498,7 @@ export function Figures({
             <cylinderGeometry args={[0.026, 0.012, 0.2, 6]} />
           )}
           <meshStandardMaterial
-            color={weapon === "spear" ? "#8a6a45" : weapon === "sword" ? "#c9ccd1" : "#7a5230"}
+            color={weapon === "spear" ? "#8a6a45" : weapon === "sword" ? "#c9ccd1" : weapon === "bow" ? "#6b3f1d" : "#7a5230"}
             metalness={weapon === "sword" ? 0.7 : 0.1}
           />
         </instancedMesh>

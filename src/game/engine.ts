@@ -124,6 +124,9 @@ import {
   TREE_BY_ID,
   SPEAR_COST,
   SPEARMAN_STRENGTH,
+  ARCHER,
+  RIDER,
+  MERCS,
   ADVANCEMENT_GOALS,
   AFTER_STEPS,
   KNOWLEDGE_MILESTONES,
@@ -149,7 +152,7 @@ import { cureHint, diseaseName, isCalm, maybeOutbreak, sickShare, stepDisease } 
 import { hexDistance } from "./hex";
 import { generateMap, ISLANDS, isLand, revealAround, riverPath, terrainHeight } from "./map";
 import { mulberry32 } from "./noise";
-import { MAX_FIGHTERS, enemyLineup, inOurZone, runBattle, type BattleSetup, type Placed, type Roster } from "./battle";
+import { MAX_FIGHTERS, enemyLineup, fieldOf, inOurZone, runBattle, type BattleSetup, type Biome, type Order, type Placed, type Roster } from "./battle";
 import { sealMatches, sealOf } from "./seal";
 import { generateWorld, growWorld, homeName, isleById, islandOfKingdom, islesNear, kingdomIdOf } from "./world";
 import { CHAPTERS, type Objective } from "./story";
@@ -205,7 +208,8 @@ export type Action =
   | { type: "research"; nodeId: string }
   | { type: "resolveEvent"; choice: number }
   | { type: "skipTutorial" }
-  | { type: "train" }
+  | { type: "train"; kind?: "warrior" | "archer" | "rider" }
+  | { type: "hireMercs" }
   | { type: "hunt"; animal: string }
   | { type: "easterEgg"; id: EggId }
   | { type: "setPopLimit"; limit: number | null }
@@ -255,7 +259,7 @@ export type Action =
   | { type: "strikeBack"; go: boolean }
   // A commanded battle: where the player put the army (the fight is played
   // out from that), or leave it to the warriors after all.
-  | { type: "commandBattle"; placements: Placed[] }
+  | { type: "commandBattle"; placements: Placed[]; orders?: Order[] }
   | { type: "autoBattle" }
   | { type: "devRaidKind"; kind: RaidKind }
   | { type: "setKeeper"; tileId: number; on: boolean }
@@ -1743,9 +1747,7 @@ export function treatyError(state: GameState, kingdom: KingdomId): string | null
 // How many warriors a raid sends, and how hard they fight together.
 export function raidParty(state: GameState) {
   const sent = Math.floor(state.soldiers * KINGDOM_RAID.share);
-  const perWarrior = state.soldiers
-    ? (((state.soldiers - spearmenOf(state)) + spearmenOf(state) * SPEARMAN_STRENGTH) * armsFactor(state)) / state.soldiers
-    : 0;
+  const perWarrior = state.soldiers ? armyPower(state) / state.soldiers : 0;
   return { sent, strength: sent * perWarrior };
 }
 
@@ -1759,10 +1761,7 @@ export function raidOdds(state: GameState, kingdom: KingdomId) {
 
 // Conquest: the whole army against the kingdom (CONQUEST).
 function conquestStrength(state: GameState) {
-  const perWarrior = state.soldiers
-    ? (((state.soldiers - spearmenOf(state)) + spearmenOf(state) * SPEARMAN_STRENGTH) * armsFactor(state)) / state.soldiers
-    : 0;
-  return state.soldiers * perWarrior;
+  return armyPower(state) + mercPower(state);
 }
 
 export function conquestOdds(state: GameState, kingdom: KingdomId) {
@@ -3953,6 +3952,20 @@ export function burnTicks(state: GameState) {
   return Math.round(CAMPFIRE_BURN_TICKS * (state.researched.includes("firekeeping") ? 1.5 : 1));
 }
 
+// What training each kind of fighter costs, and why it can't be trained now.
+export type TrainKind = "warrior" | "archer" | "rider";
+export function trainCost(kind: TrainKind) {
+  return kind === "archer" ? ARCHER.cost : kind === "rider" ? RIDER.cost : TRAIN_COST;
+}
+export function trainError(state: GameState, kind: TrainKind) {
+  if (kind === "archer" && !state.researched.includes("archery")) return "Learn Archery first";
+  if (kind === "rider" && !state.researched.includes("horseback")) return "Learn Horse Riding first";
+  if (warriorCap(state) === 0) return "Build a War Camp first";
+  if (state.soldiers >= warriorCap(state)) return "The War Camps are full";
+  if (!canAfford(state, trainCost(kind))) return "Not enough to pay for it";
+  return null;
+}
+
 // Room for warriors at home (those away striking back keep their places).
 export function warriorCap(state: GameState) {
   const counts = countBuildings(state);
@@ -3964,6 +3977,44 @@ export function spearmenOf(state: GameState): number {
   const n = state.spearmen ?? 0;
   return Math.max(0, Math.min(state.soldiers, n));
 }
+// Archers and riders: their own shares of the warriors.
+export function archersOf(state: GameState): number {
+  return Math.max(0, Math.min(state.soldiers - spearmenOf(state), state.archers ?? 0));
+}
+export function ridersOf(state: GameState): number {
+  return Math.max(0, Math.min(state.soldiers - spearmenOf(state) - archersOf(state), state.riders ?? 0));
+}
+// Warriors with nothing but a club (or whatever the era's plain weapon is).
+export function plainWarriors(state: GameState) {
+  return state.soldiers - spearmenOf(state) - archersOf(state) - ridersOf(state);
+}
+// Mercenaries still with us.
+export function mercsOf(state: GameState): number {
+  return state.mercs && state.tick < state.mercs.until ? state.mercs.count : 0;
+}
+// The price of a band of mercenaries (coin, dearer each era).
+export function mercCost(state: GameState) {
+  return { currency: Math.round(MERCS.band * MERCS.cost * (1 + state.era * 0.75)) };
+}
+export function mercError(state: GameState) {
+  if (state.mode === "last" || state.mp) return "Not in this game";
+  if (mercsOf(state) + MERCS.band > MERCS.most) return `At most ${MERCS.most} mercenaries at once`;
+  if (!canAfford(state, mercCost(state))) return `Costs ${mercCost(state).currency} ${ERAS[state.era].currency.toLowerCase()}`;
+  return null;
+}
+
+// What the warriors are worth together (arms included; `walled`: archers
+// shoot from behind walls), not counting mercenaries.
+export function armyPower(state: GameState, walled = false) {
+  const archers = archersOf(state);
+  return (
+    (plainWarriors(state) + spearmenOf(state) * SPEARMAN_STRENGTH + archers * (walled ? ARCHER.walled : ARCHER.strength) + ridersOf(state) * RIDER.strength) *
+    armsFactor(state)
+  );
+}
+export function mercPower(state: GameState) {
+  return mercsOf(state) * MERCS.strength * armsFactor(state);
+}
 
 // How hard each warrior fights: bronze doubles it, iron triples it.
 function armsFactor(state: GameState) {
@@ -3973,11 +4024,10 @@ function armsFactor(state: GameState) {
 }
 
 export function defenseStrength(state: GameState) {
-  const bronze = armsFactor(state);
-  const spears = spearmenOf(state);
   const counts = countBuildings(state);
+  const walled = (counts.walls ?? 0) > 0 || (counts.castle ?? 0) > 0;
   return (
-    ((state.soldiers - spears) + spears * SPEARMAN_STRENGTH) * bronze +
+    Math.round((armyPower(state, walled) + mercPower(state)) * 10) / 10 +
     ((counts.warcamp ?? 0) > 0 ? 1 : 0) +
     (counts.walls ?? 0) * WALL_DEFENSE +
     (counts.castle ?? 0) * CASTLE.defense +
@@ -3996,11 +4046,17 @@ export function watchDefense(state: GameState) {
 export function defenseBreakdown(state: GameState): string {
   const arms = armsFactor(state);
   const spears = spearmenOf(state);
-  const plain = state.soldiers - spears;
+  const archers = archersOf(state);
+  const riders = ridersOf(state);
+  const plain = plainWarriors(state);
   const counts = countBuildings(state);
+  const walled = (counts.walls ?? 0) > 0 || (counts.castle ?? 0) > 0;
   const parts: string[] = [];
-  if (plain || !spears) parts.push(`${plain} warrior${plain === 1 ? "" : "s"}`);
+  if (plain || (!spears && !archers && !riders)) parts.push(`${plain} warrior${plain === 1 ? "" : "s"}`);
   if (spears) parts.push(`${spears} spear${spears === 1 ? "man" : "men"} × ${SPEARMAN_STRENGTH}`);
+  if (archers) parts.push(`${archers} archer${archers === 1 ? "" : "s"} × ${walled ? ARCHER.walled : ARCHER.strength}${walled ? " (behind walls)" : ""}`);
+  if (riders) parts.push(`${riders} rider${riders === 1 ? "" : "s"} × ${RIDER.strength}`);
+  if (mercsOf(state)) parts.push(`${mercsOf(state)} mercenar${mercsOf(state) === 1 ? "y" : "ies"} × ${MERCS.strength}`);
   let text = parts.join(" + ");
   if (arms > 1) text = `(${text}) × ${arms} ${arms === KNIGHTS.strength ? "knights" : arms === IRON_STRENGTH ? "iron" : "bronze"}`;
   if ((counts.warcamp ?? 0) > 0) text += " + 1 war camp";
@@ -5968,10 +6024,13 @@ function raidLost(state: GameState, raid: Raid, losses: number, spears: number, 
 export function battleRoster(state: GameState): { roster: Roster; usBoost: number; scale: number } {
   const counts = countBuildings(state);
   const spears = spearmenOf(state);
-  const scale = Math.max(1, state.soldiers / (MAX_FIGHTERS - 1));
+  const scale = Math.max(1, (state.soldiers + mercsOf(state)) / (MAX_FIGHTERS - 1));
   const roster: Roster = {
-    warrior: Math.round((state.soldiers - spears) / scale),
+    warrior: Math.round(plainWarriors(state) / scale),
     spearman: Math.round(spears / scale),
+    archer: Math.round(archersOf(state) / scale),
+    rider: Math.round(ridersOf(state) / scale),
+    merc: Math.round(mercsOf(state) / scale),
     chief: 1,
     palisade: Math.min(12, (counts.walls ?? 0) * 3),
     tower: Math.min(4, (counts.watchfire ?? 0) + (counts.castle ?? 0) * 2),
@@ -5991,15 +6050,33 @@ export function commandSetup(state: GameState, raid: Raid, placements: Placed[])
   const { roster, usBoost } = battleRoster(state);
   const left: Roster = { ...roster };
   const ours: Placed[] = [];
+  const seed = state.seed + raid.startTick * 13;
+  const biome = battleBiome(state, raid);
+  const field = fieldOf(seed, biome);
   for (const p of placements) {
-    if (!left[p.kind] || !inOurZone(p.x, p.z)) continue;
+    if (!left[p.kind] || !inOurZone(p.x, p.z, field)) continue;
     left[p.kind] = (left[p.kind] ?? 0) - 1;
     ours.push({ kind: p.kind, x: p.x, z: p.z });
   }
-  const seed = state.seed + raid.startTick * 13;
   const kind = raid.kingdom ? "army" : (raid.kind ?? "party");
-  const { theirs, themBoost } = enemyLineup(raid.strength, kind, seed);
-  return { seed, ours, theirs, usBoost, themBoost };
+  const { theirs, themBoost, tactic } = enemyLineup(raid.strength, kind, seed, state.era, biome);
+  return { seed, ours, theirs, usBoost, themBoost, tactic, biome };
+}
+
+// The ground a battle is fought on: what the land is like where our warriors
+// meet the raiders (a river nearby, forest, hills, marsh, open shore...).
+export function battleBiome(state: GameState, raid: Raid): Biome {
+  const at = state.tiles[raid.meetTile ?? raid.targetTile];
+  if (!at) return "grass";
+  const near = state.tiles.filter((t) => hexDistance(t, at) <= 2);
+  const count = (...terrains: string[]) => near.filter((t) => terrains.includes(t.terrain)).length;
+  if (at.terrain === "river" || count("river") >= 2) return "river";
+  if (at.terrain === "marsh" || count("marsh") >= 3) return "marsh";
+  if (at.terrain === "forest" || count("forest") >= 5) return "forest";
+  if (count("mountain") >= 2) return "rocky";
+  if (at.terrain === "hills" || count("hills", "mountain") >= 3) return "hills";
+  if (at.terrain === "beach" || at.terrain === "steppe" || count("beach", "shallow", "deep") >= 6) return "open";
+  return "grass";
 }
 
 // The game waits while the player commands a battle.
@@ -6022,7 +6099,8 @@ function updateRaids(state: GameState): GameState {
     if (state.tick < raid.fightStart + RAID_RESPONSE.fightTicks) return state;
     const defense = defenseStrength(state);
     if (defense >= raid.strength) return raidWon(state, raid, Math.min(state.soldiers, Math.floor(raid.strength / 3)), 0, true);
-    return raidLost(state, raid, Math.min(state.soldiers, raid.strength), 0, true);
+    // The line broke: the mercenaries run for it too.
+    return raidLost({ ...state, mercs: null }, raid, Math.min(state.soldiers, raid.strength), 0, true);
   }
 
   if (!raid && state.tick >= state.nextRaidTick && quietEnough(state) && !firstStoneAge(state)) {
@@ -6134,7 +6212,7 @@ function withMeters(state: GameState): GameState {
 
 // Every action, then check whether the guided after-step has been done.
 export function reducer(state: GameState, action: Action): GameState {
-  let next = reduce(state, action);
+  let next = fitTroops(reduce(state, action));
   if (next.world && next.tiles !== state.tiles) next = explored(state, next);
   // Build to Last's guide moves on the moment its building is placed (not at
   // the next tick), so the hand never points at a spot for a second one.
@@ -6143,6 +6221,27 @@ export function reducer(state: GameState, action: Action): GameState {
   if (next.speedrun && !next.speedrun.end) next = speedrunStep(state, next);
   if (next.story && !next.story.scene) next = storyStep(next);
   return awardXp(state, next.coach ? advanceCoach(next) : next);
+}
+
+// Fewer warriors than archers, riders and spearmen together (some fell, or
+// sailed off to fight): the riders go first, then the archers, then spears.
+// Mercenaries whose time is up go home.
+function fitTroops(state: GameState): GameState {
+  let next = state;
+  const typed = (next.spearmen ?? 0) + (next.archers ?? 0) + (next.riders ?? 0);
+  if (typed > next.soldiers) {
+    let over = typed - next.soldiers;
+    const riders = Math.max(0, (next.riders ?? 0) - over);
+    over -= (next.riders ?? 0) - riders;
+    const archers = Math.max(0, (next.archers ?? 0) - over);
+    over -= (next.archers ?? 0) - archers;
+    next = { ...next, riders, archers, spearmen: Math.max(0, (next.spearmen ?? 0) - over) };
+  }
+  if (next.mercs && next.tick >= next.mercs.until && next.raid?.fightStart === undefined) {
+    next = { ...next, mercs: null, log: [`The mercenaries' time is up: they take their pay and go.`, ...next.log].slice(0, 30) };
+  }
+  if (next.mercs && next.mercs.count <= 0) next = { ...next, mercs: null };
+  return next;
 }
 
 // A speedrun: a split each time an era starts, the clock stops when the story
@@ -6706,14 +6805,28 @@ function step(state: GameState, action: Action): GameState {
     }
 
     case "train": {
-      if (tutorialLocked(state, "train") || state.soldiers >= warriorCap(state) || !canAfford(state, TRAIN_COST))
-        return state;
+      const kind = action.kind ?? "warrior";
+      if (tutorialLocked(state, "train") || state.soldiers >= warriorCap(state) || trainError(state, kind)) return state;
+      const cost = trainCost(kind);
       return withMeters({
         ...addTally(state, "trained", 1),
         soldiers: state.soldiers + 1,
         // After Hunting Spears, new warriors carry spears.
-        spearmen: spearmenOf(state) + (state.researched.includes("spears") ? 1 : 0),
-        resources: spend(state.resources, TRAIN_COST),
+        spearmen: spearmenOf(state) + (kind === "warrior" && state.researched.includes("spears") ? 1 : 0),
+        archers: archersOf(state) + (kind === "archer" ? 1 : 0),
+        riders: ridersOf(state) + (kind === "rider" ? 1 : 0),
+        resources: spend(state.resources, cost),
+      });
+    }
+
+    case "hireMercs": {
+      if (mercError(state)) return state;
+      const count = mercsOf(state) + MERCS.band;
+      return withMeters({
+        ...state,
+        resources: spend(state.resources, mercCost(state)),
+        mercs: { count, until: state.tick + MERCS.ticks },
+        log: [`${MERCS.band} mercenaries take your coin: they will stand with you for ${secs(MERCS.ticks)} s.`, ...state.log].slice(0, 30),
       });
     }
 
@@ -7354,15 +7467,26 @@ function step(state: GameState, action: Action): GameState {
       if (!raid || !commanding(state) || !canCommand(state)) return state;
       const setup = commandSetup(state, raid, action.placements);
       if (!setup.ours.length) return state;
-      const result = runBattle(setup);
+      const result = runBattle(setup, (action.orders ?? []).slice(0, 4000));
       const { scale } = battleRoster(state);
-      const spears = Math.min(spearmenOf(state), Math.round((result.fell.spearman ?? 0) * scale));
-      const losses = Math.min(state.soldiers, Math.round((result.fell.warrior ?? 0) * scale) + spears);
+      const lost = (k: "spearman" | "archer" | "rider" | "merc" | "warrior", have: number) => Math.min(have, Math.round((result.fell[k] ?? 0) * scale));
+      const spears = lost("spearman", spearmenOf(state));
+      const archers = lost("archer", archersOf(state));
+      const riders = lost("rider", ridersOf(state));
+      const mercs = lost("merc", mercsOf(state));
+      const losses = Math.min(state.soldiers, lost("warrior", plainWarriors(state)) + spears + archers + riders);
       const hurt = result.fell.chief ? "The chief was wounded, but will mend. " : "";
+      // The archers and riders who fell, and the mercenaries (who leave if the line broke).
+      const after = {
+        ...state,
+        archers: archersOf(state) - archers,
+        riders: ridersOf(state) - riders,
+        mercs: state.mercs && result.won ? { ...state.mercs, count: Math.max(0, mercsOf(state) - mercs) } : null,
+      };
       return withMeters(
         result.won
-          ? raidWon(state, raid, losses, spears, false, `You led the fight. ${hurt}`)
-          : raidLost(state, raid, losses, spears, false, `You led the fight, but the line broke. ${hurt}`),
+          ? raidWon(after, raid, losses, spears, false, `You led the fight. ${hurt}`)
+          : raidLost(after, raid, losses, spears, false, `You led the fight, but the line broke. ${hurt}`),
       );
     }
 

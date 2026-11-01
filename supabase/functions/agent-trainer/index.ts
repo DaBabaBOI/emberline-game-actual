@@ -104,8 +104,9 @@ async function rows<T>(path: string): Promise<T[]> {
 }
 
 let calls = 0;
-// Thinking up prompts 1, practice 2 x 2, the lesson 1, the exam 3 x 3.
-const CALLS = 16;
+// Thinking up prompts 1, practice 2 x 2, the lesson 1, the exam 3 x 3, and
+// room for a few retries on the second model when the first is busy.
+const CALLS = 22;
 // A pause before each call: practice never bursts into the free tier's
 // per-minute limit, which the players share (unless it has its own key).
 const GAP_MS = Deno.env.get("GEMINI_TRAINING_KEY") ? 500 : 3500;

@@ -911,6 +911,21 @@ export const SPRITES = {
     "dddddddddddd",
     "dmdmdmdmdmdm",
   ],
+  // A bow with an arrow nocked: archers.
+  bow: [
+    "......b.....",
+    ".....bk.....",
+    "....b.k.....",
+    "...b..k.....",
+    "..b...k.....",
+    "S.b...k.....",
+    "SSsssssrr...",
+    "S.b...k.....",
+    "..b...k.....",
+    "...b..k.....",
+    "....b.k.....",
+    ".....bk.....",
+  ],
   horse: [
     "............",
     ".........kk.",

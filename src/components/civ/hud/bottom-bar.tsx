@@ -3,9 +3,18 @@
 import { setHoveredBuilding } from "@/components/civ/world/hovered";
 import { setPlanMode, usePlanMode } from "@/components/civ/world/plan-mode";
 import { setLeaderView } from "@/components/civ/world/leader";
-import { useState, type ReactNode } from "react";
-import { BUILDINGS, CANOE, ERAS, LAST, SPACE, TRADE, LOW_WOOD_AFTER_BUY, PLANT_COST, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL, WARRIORS_PER_CAMP } from "@/game/content";
+import { useRef, useState, type ReactNode } from "react";
+import { BUILDINGS, CANOE, ERAS, LAST, MERCS, SPACE, TRADE, LOW_WOOD_AFTER_BUY, PLANT_COST, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL, WARFARE_LEVELS, WARRIORS_PER_CAMP } from "@/game/content";
 import {
+  archersOf,
+  mercCost,
+  mercError,
+  mercsOf,
+  ridersOf,
+  secs,
+  trainCost,
+  trainError,
+  type TrainKind,
   affordableResearch,
   buildingCost,
   canAfford,
@@ -708,33 +717,135 @@ function CaravanButton() {
 
 function ArmyButton() {
   const { state, dispatch } = useGame();
+  const [open, setOpen] = useState<{ left: number; bottom: number } | null>(null);
+  const button = useRef<HTMLDivElement>(null);
   const cap = warriorCap(state);
   const full = state.soldiers >= cap;
   const affordable = canAfford(state, TRAIN_COST);
+  // After the tutorial, with a War Camp: a menu (what to train, mercenaries,
+  // how far warfare has come). Before that, one click trains a warrior.
+  const menu = state.tutorialStep >= TUTORIAL.length && cap > 0;
   const title =
     cap === 0
       ? "Build a War Camp to train warriors"
-      : full && state.strike
-        ? "The War Camps' places are kept for the warriors away striking back."
-        : full
-        ? `All War Camps are full (${WARRIORS_PER_CAMP} warriors each). Build another War Camp to train more.`
-        : `Train a warrior. Defense: ${defenseStrength(state)} = ${defenseBreakdown(state)}`;
+      : menu
+        ? `Your army: train warriors, archers or riders, or hire mercenaries. Defense: ${defenseStrength(state)} = ${defenseBreakdown(state)}`
+        : full && state.strike
+          ? "The War Camps' places are kept for the warriors away striking back."
+          : full
+            ? `All War Camps are full (${WARRIORS_PER_CAMP} warriors each). Build another War Camp to train more.`
+            : `Train a warrior. Defense: ${defenseStrength(state)} = ${defenseBreakdown(state)}`;
+  const toggle = () => {
+    if (open) return setOpen(null);
+    const r = button.current?.getBoundingClientRect();
+    if (r) setOpen({ left: Math.max(150, Math.min(window.innerWidth - 150, r.left + r.width / 2)), bottom: window.innerHeight - r.top + 8 });
+  };
+  const mercs = mercsOf(state);
   return (
-    <ToolButton
-      guide="tool-train"
-      locked={tutorialLocked(state, "train")}
-      icon="sword"
-      label={`Train ${state.soldiers}/${cap}`}
-      onClick={() => dispatch({ type: "train" })}
-      disabled={cap === 0 || full || !affordable}
-      title={title}
-      tone="bg-red-800 hover:bg-red-700"
-    >
-      {full && cap > 0 ? (
-        <span className="text-[10px] leading-tight text-white/80">+1 camp = +{WARRIORS_PER_CAMP}</span>
-      ) : (
-        <Cost cost={TRAIN_COST} />
-      )}
-    </ToolButton>
+    <div ref={button}>
+      <ToolButton
+        guide="tool-train"
+        locked={tutorialLocked(state, "train")}
+        icon="sword"
+        label={`Train ${state.soldiers}/${cap}`}
+        onClick={menu ? toggle : () => dispatch({ type: "train" })}
+        disabled={menu ? false : cap === 0 || full || !affordable}
+        title={title}
+        tone="bg-red-800 hover:bg-red-700"
+        badge={mercs ? `+${mercs}` : undefined}
+      >
+        {menu ? (
+          <span className="text-[10px] leading-tight text-white/80">Army ▴</span>
+        ) : full && cap > 0 ? (
+          <span className="text-[10px] leading-tight text-white/80">+1 camp = +{WARRIORS_PER_CAMP}</span>
+        ) : (
+          <Cost cost={TRAIN_COST} />
+        )}
+      </ToolButton>
+      {open && menu && <ArmyMenu at={open} onClose={() => setOpen(null)} />}
+    </div>
+  );
+}
+
+// The army menu: how far warfare has come, who to train, and mercenaries.
+function ArmyMenu({ at, onClose }: { at: { left: number; bottom: number }; onClose: () => void }) {
+  const { state, dispatch } = useGame();
+  const has = (id: string | null) => id === null || state.researched.includes(id);
+  const level = WARFARE_LEVELS.reduce((n, l, i) => (has(l.needs) ? i : n), 0);
+  const next = WARFARE_LEVELS.find((l) => !has(l.needs));
+  const kinds: { kind: TrainKind; name: string; icon: IconId; note: string; have: number }[] = [
+    { kind: "warrior", name: state.researched.includes("spears") ? "Spearman" : "Warrior", icon: state.researched.includes("spears") ? "spear" : "sword", note: "Holds the line", have: state.soldiers - archersOf(state) - ridersOf(state) },
+    { kind: "archer", name: "Archer", icon: "bow", note: "Shoots from behind the line", have: archersOf(state) },
+    { kind: "rider", name: "Rider", icon: "horse", note: "Fast; charges, wheels away, charges again", have: ridersOf(state) },
+  ];
+  const mercErr = mercError(state);
+  const mercs = mercsOf(state);
+  return (
+    <>
+      <div className="fixed inset-0 z-[39]" onClick={onClose} aria-hidden="true" />
+      <div
+        className="pixel-panel-dark font-pixel fixed z-40 w-[290px] -translate-x-1/2 p-2.5 text-xs text-white"
+        style={{ left: at.left, bottom: at.bottom }}
+        data-testid="army-menu"
+      >
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-sm font-semibold">Your army</span>
+          <span className="text-white/70">
+            {state.soldiers}/{warriorCap(state)} · defense {defenseStrength(state)}
+          </span>
+        </div>
+        <p className="mt-0.5 text-amber-200">
+          Warfare level {level + 1}: {WARFARE_LEVELS[level].name}
+        </p>
+        {next && (
+          <p className="text-[11px] text-white/60">
+            Next: {next.name} ({next.what}). Learn {TREE_BY_ID[next.needs!]?.name ?? next.name} in Advancements.
+          </p>
+        )}
+        <div className="mt-2 flex flex-col gap-1">
+          {kinds.map((k) => {
+            const err = trainError(state, k.kind);
+            const locked = (k.kind === "archer" && !state.researched.includes("archery")) || (k.kind === "rider" && !state.researched.includes("horseback"));
+            return (
+              <button
+                key={k.kind}
+                type="button"
+                disabled={!!err}
+                onClick={() => dispatch({ type: "train", kind: k.kind })}
+                title={err ?? `Train a${k.kind === "archer" ? "n" : ""} ${k.name.toLowerCase()}`}
+                className="pixel-btn flex items-center gap-2 bg-[#4a3b2e] px-2 py-1 text-left hover:bg-[#5a4838] disabled:opacity-45"
+                data-testid={`train-${k.kind}`}
+              >
+                <PixelIcon name={locked ? "lock" : k.icon} size={20} />
+                <span className="flex-1">
+                  <span className="block">
+                    {k.name} <span className="font-num text-white/60">×{k.have}</span>
+                  </span>
+                  <span className="block text-[10px] text-white/60">{locked ? err : k.note}</span>
+                </span>
+                {!locked && <Cost cost={trainCost(k.kind)} bad={!canAfford(state, trainCost(k.kind))} />}
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            disabled={!!mercErr}
+            onClick={() => dispatch({ type: "hireMercs" })}
+            title={mercErr ?? `Hire ${MERCS.band} mercenaries: they fight for you for ${secs(MERCS.ticks)} s, and need no room in a War Camp.`}
+            className="pixel-btn flex items-center gap-2 bg-[#5c4a1e] px-2 py-1 text-left hover:bg-[#6b5724] disabled:opacity-45"
+            data-testid="hire-mercs"
+          >
+            <PixelIcon name="coin" size={20} />
+            <span className="flex-1">
+              <span className="block">Hire {MERCS.band} mercenaries</span>
+              <span className="block text-[10px] text-white/60">
+                {mercs ? `${mercs} with you, ${secs(Math.max(0, (state.mercs?.until ?? 0) - state.tick))} s left` : `Tough, for ${secs(MERCS.ticks)} s; they run if the line breaks`}
+              </span>
+            </span>
+            <Cost cost={mercCost(state)} bad={!canAfford(state, mercCost(state))} />
+          </button>
+        </div>
+      </div>
+    </>
   );
 }

@@ -80,6 +80,28 @@ export const TRAIN_COST = { food: 8, wood: 4 };
 // After Hunting Spears: give a warrior a spear. Spearmen fight 1.5x as hard.
 export const SPEAR_COST = { wood: 4 };
 export const SPEARMAN_STRENGTH = 1.5;
+// Other kinds of fighter, each trained at a War Camp like a warrior (they take
+// a warrior's place there): archers after Archery (they shoot from behind the
+// line, and count for more behind walls), riders after Horse Riding (fast,
+// and they charge). `strength`: how many warriors each is worth in a fight
+// left to the warriors.
+export const ARCHER = { strength: 1.3, walled: 1.6, cost: { food: 8, wood: 10 } };
+export const RIDER = { strength: 2, cost: { food: 18, wood: 4, currency: 12 } };
+// Mercenaries: a band of `band` hired fighters, paid in coin (more each era),
+// who stand with you for `ticks` and then go. Each is worth `strength`
+// warriors, and they don't need room in a War Camp.
+export const MERCS = { band: 4, strength: 1.5, cost: 8, ticks: 300, most: 12 };
+// How warfare grows: each step a new way of fighting (shown in the army menu).
+export const WARFARE_LEVELS: { name: string; needs: string | null; what: string }[] = [
+  { name: "Clubs and fists", needs: null, what: "Warriors" },
+  { name: "Spears", needs: "spears", what: "Spearmen: longer reach, and they stop a charge" },
+  { name: "Archery", needs: "archery", what: "Archers: shoot from behind the line" },
+  { name: "Bronze", needs: "bronze-arms", what: "Every fighter twice as strong" },
+  { name: "Horse riding", needs: "horseback", what: "Riders: fast, and they charge" },
+  { name: "Iron", needs: "legions", what: "Every fighter three times as strong" },
+  { name: "Knights", needs: "knights", what: "Armoured knights" },
+  { name: "Machines", needs: "tanks", what: "Tanks" },
+];
 
 // The landmark that takes a town into the Medieval era: chosen after the great
 // drought, built in three stages (each paid for, then `stageTicks` of work).
@@ -1030,6 +1052,15 @@ export const TREE: TreeNode[] = [
     requires: ["toolmaking"],
   },
   {
+    id: "archery",
+    name: "Archery",
+    description: "Bows and arrows. Train archers at the War Camp: they shoot from behind your line, further from high ground, and hit hardest behind walls.",
+    branch: "military",
+    era: 0,
+    cost: 9,
+    requires: ["spears"],
+  },
+  {
     id: "herbalism",
     name: "Herbalism",
     description: "Healing plants. Unlocks the Healer's Hut.",
@@ -1235,6 +1266,15 @@ export const TREE: TreeNode[] = [
     cost: 30,
     requires: ["writing"],
     unlocks: ["academy"],
+  },
+  {
+    id: "horseback",
+    name: "Horse Riding",
+    description: "Tame horses to ride. Train riders at the War Camp: fast, they charge for double the blow, wheel away and charge again.",
+    branch: "military",
+    era: 2,
+    cost: 30,
+    requires: ["bronze-arms"],
   },
   {
     id: "legions",
@@ -1789,6 +1829,8 @@ export const ADVANCEMENT_GOALS: Record<string, Goal[]> = {
   bronze: [{ label: "Quarry stone", kind: "tally", key: "stone", amount: 60 }],
   irrigation: [{ label: "Have Farmland", kind: "have", building: "farm", amount: 5 }],
   forestry: [{ label: "Plant saplings", kind: "tally", key: "planted", amount: 3 }],
+  archery: [{ label: "Have a War Camp", kind: "have", building: "warcamp", amount: 1 }],
+  horseback: [{ label: "Have a Livestock Pen", kind: "have", building: "pen", amount: 1 }],
   "bronze-arms": [
     { label: "Have a Bronze Smithy", kind: "have", building: "smithy", amount: 1 },
     { label: "Beat a raid", kind: "tally", key: "raidsWon", amount: 1 },

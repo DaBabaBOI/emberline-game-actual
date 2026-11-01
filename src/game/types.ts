@@ -549,6 +549,12 @@ export interface GameState {
   coach?: { node: string; from: number } | null;
   // How many warriors carry spears (fight 1.5x). Missing in older saves.
   spearmen?: number;
+  // How many of the warriors are archers, and how many ride (each its own
+  // share of `soldiers`, apart from the spearmen).
+  archers?: number;
+  riders?: number;
+  // Hired mercenaries: how many, and the tick they leave.
+  mercs?: { count: number; until: number } | null;
   // Dev mode: advancement goals count as met.
   devGoals?: boolean;
   // When the last big moment (event, raid, lesson, outbreak) began, for QUIET_GAP.

@@ -7,6 +7,20 @@ export interface Update {
 
 export const UPDATES: Update[] = [
   {
+    date: "2026-11-01",
+    items: [
+      "Battles are much more like a real battlefield: the ground is wherever the raiders land. Woods slow everyone down but hide you from arrows; a river can only be crossed quickly at its fords; hills give height (archers shoot further, fighters hit harder); rocks block the way and the arrows; mud bogs you down.",
+      "Tell your army where to go: click one of your fighters (shift-click for more) or pick a whole group (archers, riders...), then click the ground to send them there. They march in formation and hold that spot. Hold (H) and Charge (C) work on whoever is picked, and you can start a battle with everyone holding the line.",
+      "Fight as anyone: pick one fighter and press Fight as (or F), then move them with WASD. Esc lets go.",
+      "Fights feel livelier: a big blow sends the fallen flying, every hit throws a spark, and the last blows play out in slow motion.",
+      "Archers: learn Archery (Stone Age) to train them at the War Camp. They shoot from behind your line, and you can see every arrow fly.",
+      "Riders: learn Horse Riding (Classical era) to train them. They charge for a double blow, wheel away and charge again.",
+      "Hire mercenaries for coin: a band of 4 tough fighters who stand with you for a while (and run if the line breaks).",
+      "The Train button is now an army menu: what to train, mercenaries, and your warfare level (clubs, spears, archery, bronze, horses, iron, knights, machines).",
+      "Positioning matters: hits from the side or behind hurt more, a tight line holds better, spearmen stop a charge, and palisades catch arrows. Raiders bring bowmen and (in armies) horsemen, and come with a plan: a rush, a flanking move, a volley first, or a wedge.",
+    ],
+  },
+  {
     date: "2026-10-31",
     items: [
       "Fixed: the game could freeze (time stopped passing) when Elder Ama's guide pointed at something you couldn't see, like a button while walking in first person. The clock now runs on whenever her hand can't find its target.",
