@@ -970,3 +970,62 @@ button {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* The Advancements tree: a card that can be researched now glows and
+   breathes; a card just discovered flashes, with a word that rises away. */
+@keyframes tree-ready {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.35), 0 0 10px rgba(52, 211, 153, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.7), 0 0 18px rgba(52, 211, 153, 0.55);
+  }
+}
+.tree-ready {
+  animation: tree-ready 1.6s ease-in-out infinite;
+}
+@keyframes tree-burst {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  25% {
+    transform: scale(1.08);
+    filter: brightness(1.8);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+.tree-burst {
+  animation: tree-burst 0.9s ease-out;
+  z-index: 2;
+}
+@keyframes tree-burst-text {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.8);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-26px) scale(1);
+  }
+}
+.tree-burst-text {
+  animation: tree-burst-text 1.3s ease-out forwards;
+  text-shadow: 0 2px 0 #2b2119, 0 0 12px #fbbf24;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tree-ready,
+  .tree-burst,
+  .tree-burst-text {
+    animation: none;
+  }
+}

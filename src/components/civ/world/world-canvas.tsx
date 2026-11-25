@@ -64,7 +64,7 @@ import { turnFor } from "./facing";
 import { BattleScene, FireVictims, RaidBoats, Raiders, StrikeBoats, Villagers, Warriors } from "./villagers";
 import { PickUp } from "./pick-up";
 import { PortShips, SeaTraffic, TradeShips, WaitingShips } from "./trade";
-import { Fleet, Traffic } from "./transport";
+import { BigMoments, Fleet, Traffic } from "./transport";
 import { ForeignVillages } from "./foreign";
 import { RumourMarkers } from "./rumours";
 import { Cracks, disasterView, FloodWater, GroundDust, QuakeShake, QuakeSway, QuakeWaves, Rubble, Ruins, StormRain } from "./disasters";
@@ -816,6 +816,7 @@ export function WorldCanvas() {
       <PortShips state={state} home={home} />
       <Fleet state={state} home={home} speed={figureSpeed} />
       <Traffic state={state} speed={figureSpeed} />
+      <BigMoments state={state} home={home} firstPerson={fpActive} />
       {/* The plague: rats scurrying round a few homes. */}
       {plagueOn &&
         buildings

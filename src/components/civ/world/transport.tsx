@@ -388,3 +388,38 @@ function Ironclad({ modern }: { modern: boolean }) {
     </group>
   );
 }
+
+// ---- Big moments, filmed ----
+// The camera flies over for a few seconds when something big happens: we
+// reach a new income level, our first warship is launched, a new way of getting
+// around comes to the island, or we join the Council of Islands.
+const LEVEL_RANK = { low: 0, middle: 1, high: 2 } as const;
+export function BigMoments({ state, home, firstPerson }: { state: GameState; home: Tile; firstPerson: boolean }) {
+  const seen = useRef<{ level?: string; ships: number; ways: number; joined: boolean } | null>(null);
+  const level = state.income?.level;
+  const ships = warshipsOf(state);
+  const ways = transportNow(state).have.length;
+  const joined = !!state.council?.joined;
+  useEffect(() => {
+    const before = seen.current;
+    seen.current = { level, ships, ways, joined };
+    // The first look just notes how things are; first person films nothing.
+    if (!before || firstPerson) return;
+    const look = (title: string, subtitle: string, at: Tile | undefined = home) =>
+      playShot({ kind: "look", title, subtitle, seconds: 6, at: { x: at.x, z: at.z, y: tileTop(at) } });
+    if (level && before.level && LEVEL_RANK[level] > LEVEL_RANK[before.level as keyof typeof LEVEL_RANK]) {
+      look(level === "high" ? "A high-income nation!" : "A middle-income nation!", `${state.income!.perPerson} a person a day`);
+    } else if (ships > before.ships && before.ships === 0) {
+      // Our first warship (the rest just join the fleet).
+      const yard = state.tiles.find((t) => t.building === "shipyard") ?? state.tiles.find((t) => t.building === "dock");
+      look("Our first warship is launched", "It will meet raiders at sea", yard);
+    } else if (ways > before.ways) {
+      const way = transportNow(state).have[ways - 1];
+      const busy = state.tiles.filter((t) => t.building && !HOMES.has(t.building) && t.island === home.island).sort((a, b) => hexDistance(b, home) - hexDistance(a, home))[0];
+      look(`${way.name} on the island`, "People get to work faster", busy);
+    } else if (joined && !before.joined) {
+      look("We join the Council of Islands", "Its resolutions bind us now");
+    }
+  }, [level, ships, ways, joined, firstPerson, state, home]);
+  return null;
+}

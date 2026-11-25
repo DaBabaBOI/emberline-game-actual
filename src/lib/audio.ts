@@ -3,12 +3,13 @@
 import { useSyncExternalStore } from "react";
 
 // Music, ambience and sound effects, all made live with the browser's Web Audio
-// (no sound files, no library). Browsers only allow sound after the player has
+// (no sound files needed, no library). Browsers only allow sound after the player has
 // clicked or pressed a key, so nothing plays until then (`unlockAudio`).
 //
-// Music: a slow piece in each era's own scale and instruments, a few chords
-// that turn over every two bars, a melody that wanders over them, and (in some
-// eras) a soft drum. Quieter and slower at night; tense drums during a raid.
+// Music: the Emberline theme in each era's own scale and instruments, over
+// the era's chords and accompaniment, with a free part between; quieter and
+// slower at night; a battle arrangement during a raid. Your own tracks (in
+// public/music/) play instead where there are any.
 // Ambience: wind, the sea, birds by day and crickets at night.
 
 // ---- Settings (Menu > Sound and Accessibility) ---------------------------------
@@ -266,31 +267,164 @@ function drum(dest: AudioNode, at: number, loud: number, low = 1) {
   slap.stop(at + 0.08);
 }
 
+// ---- Instruments for the music ----------------------------------------------------
+// Each makes one note: a breathy flute, plucked strings (lyre, lute, harp:
+// a bright attack that dulls as it rings), a piano, bells, brass, a bass.
+type Instrument = "flute" | "lyre" | "lute" | "harp" | "piano" | "bell" | "brass" | "bass";
+function play(kind: Instrument, freq: number, at: number, dur: number, gain: number) {
+  if (!engine) return;
+  const { ctx } = engine;
+  const out = ctx.createGain();
+  out.connect(engine.music);
+  const wet = ctx.createGain();
+  wet.gain.value = kind === "bell" ? 0.7 : kind === "flute" || kind === "harp" ? 0.5 : kind === "bass" ? 0.1 : 0.35;
+  out.connect(wet);
+  wet.connect(engine.reverb);
+  const env = out.gain;
+  const oscs: OscillatorNode[] = [];
+  const osc = (type: OscillatorType, f: number, level: number, to: AudioNode = out, detune = 0) => {
+    const o = ctx.createOscillator();
+    o.type = type;
+    o.frequency.value = f;
+    o.detune.value = detune;
+    const g = ctx.createGain();
+    g.gain.value = level;
+    o.connect(g);
+    g.connect(to);
+    oscs.push(o);
+    return o;
+  };
+  let end = at + dur + 0.2;
+  if (kind === "flute") {
+    env.setValueAtTime(0, at);
+    env.linearRampToValueAtTime(gain, at + 0.07);
+    env.setTargetAtTime(0, at + dur, 0.12);
+    const main = osc("sine", freq, 1);
+    osc("sine", freq * 2, 0.12);
+    // A gentle vibrato that comes in as the note is held.
+    const lfo = ctx.createOscillator();
+    const depth = ctx.createGain();
+    lfo.frequency.value = 5;
+    depth.gain.setValueAtTime(0, at);
+    depth.gain.linearRampToValueAtTime(freq * 0.006, at + Math.min(0.5, dur));
+    lfo.connect(depth);
+    depth.connect(main.frequency);
+    oscs.push(lfo);
+    // Breath at the start.
+    const breath = ctx.createBufferSource();
+    breath.buffer = engine.noise;
+    const band = ctx.createBiquadFilter();
+    band.type = "bandpass";
+    band.frequency.value = freq * 2;
+    const bg = ctx.createGain();
+    bg.gain.setValueAtTime(gain * 0.35, at);
+    bg.gain.exponentialRampToValueAtTime(0.0005, at + 0.12);
+    breath.connect(band);
+    band.connect(bg);
+    bg.connect(out);
+    breath.start(at, Math.random());
+    breath.stop(at + 0.15);
+    end = at + dur + 0.6;
+  } else if (kind === "lyre" || kind === "lute" || kind === "harp") {
+    const ring = kind === "harp" ? 2.2 : kind === "lyre" ? 1.5 : 0.9;
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(Math.min(12000, freq * (kind === "lute" ? 6 : 9)), at);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(200, freq * 1.3), at + ring);
+    filter.connect(out);
+    env.setValueAtTime(0, at);
+    env.linearRampToValueAtTime(gain, at + 0.004);
+    env.exponentialRampToValueAtTime(0.0005, at + ring);
+    osc("triangle", freq, 1, filter);
+    osc("sawtooth", freq, kind === "lute" ? 0.35 : 0.18, filter, 4);
+    end = at + ring + 0.1;
+  } else if (kind === "piano") {
+    env.setValueAtTime(0, at);
+    env.linearRampToValueAtTime(gain, at + 0.006);
+    env.exponentialRampToValueAtTime(gain * 0.3, at + 0.4);
+    env.setTargetAtTime(0, at + Math.max(0.4, dur), 0.25);
+    osc("triangle", freq, 0.8, out, -3);
+    osc("sine", freq, 0.6, out, 3);
+    osc("sine", freq * 2, 0.18);
+    end = at + Math.max(0.4, dur) + 1.2;
+  } else if (kind === "bell") {
+    env.setValueAtTime(0, at);
+    env.linearRampToValueAtTime(gain, at + 0.003);
+    env.exponentialRampToValueAtTime(0.0005, at + 2.8);
+    osc("sine", freq, 1);
+    osc("sine", freq * 2.76, 0.25);
+    osc("sine", freq * 5.4, 0.08);
+    end = at + 2.9;
+  } else if (kind === "brass") {
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(freq * 1.5, at);
+    filter.frequency.linearRampToValueAtTime(freq * 6, at + 0.08);
+    filter.frequency.setTargetAtTime(freq * 3, at + 0.1, 0.2);
+    filter.connect(out);
+    env.setValueAtTime(0, at);
+    env.linearRampToValueAtTime(gain, at + 0.06);
+    env.setTargetAtTime(0, at + dur, 0.1);
+    osc("sawtooth", freq, 0.6, filter, -5);
+    osc("sawtooth", freq, 0.6, filter, 5);
+    end = at + dur + 0.6;
+  } else {
+    env.setValueAtTime(0, at);
+    env.linearRampToValueAtTime(gain, at + 0.01);
+    env.setTargetAtTime(0, at + dur, 0.15);
+    osc("sine", freq, 1);
+    osc("triangle", freq * 2, 0.15);
+    end = at + dur + 0.8;
+  }
+  for (const o of oscs) {
+    o.start(at);
+    o.stop(end);
+  }
+}
+
 // ---- Each era's music --------------------------------------------------------------
+// One theme for the whole game (the Emberline theme), played in each era's
+// own key, scale and instruments, over that era's chords and accompaniment:
+// a drone and flute round the fire; a lyre; a harp; a lute strummed over a
+// drone; a piano; shimmering bells. The tune comes round as A A' B A, then a
+// free part where the lead wanders over the chords, then again.
 interface EraMusic {
   root: number; // MIDI note of the key
   scale: number[];
-  chords: number[]; // scale steps the chords are built on, in turn
+  chords: number[]; // scale steps the chords are built on, a bar each, in turn
   bpm: number;
-  pad: Voice;
-  lead: Voice;
+  lead: Instrument;
+  accomp: "drone" | "lyre" | "harp" | "strum" | "piano" | "shimmer";
   drums: number[]; // beats (of 8) with a drum, empty for none
 }
-const PAD: Voice = { type: "triangle", attack: 1.6, release: 2.5, gain: 0.085, reverb: 0.6 };
+const PAD: Voice = { type: "triangle", attack: 1.6, release: 2.5, gain: 0.07, reverb: 0.6 };
 const ERA_MUSIC: EraMusic[] = [
   // Stone Age: a breathy flute over a low drone, a hand drum.
-  { root: 45, scale: [0, 3, 5, 7, 10], chords: [0, 3, 2, 0], bpm: 72, pad: PAD, lead: { type: "sine", attack: 0.08, release: 1.2, gain: 0.126, vibrato: 3, reverb: 0.5 }, drums: [0, 3, 6] },
-  // Ancient: a plucked lyre in an old eastern mode, a frame drum.
-  { root: 50, scale: [0, 1, 4, 5, 7, 8, 10], chords: [0, 3, 5, 0], bpm: 80, pad: PAD, lead: { type: "triangle", attack: 0.005, release: 1.4, gain: 0.126, harmonic: 0.3, reverb: 0.45 }, drums: [0, 4, 6] },
-  // Classical: bright harp-like arpeggios, no drum.
-  { root: 48, scale: [0, 2, 3, 5, 7, 9, 10], chords: [0, 3, 4, 0], bpm: 84, pad: PAD, lead: { type: "triangle", attack: 0.004, release: 1.8, gain: 0.117, harmonic: 0.45, reverb: 0.55 }, drums: [] },
-  // Medieval: a lute over a drone fifth, a tabor.
-  { root: 50, scale: [0, 2, 3, 5, 7, 9, 10], chords: [0, 6, 3, 4], bpm: 88, pad: { ...PAD, type: "sawtooth", gain: 0.04 }, lead: { type: "triangle", attack: 0.004, release: 1.0, gain: 0.126, harmonic: 0.5, reverb: 0.35 }, drums: [0, 2, 4, 6] },
-  // Industrial & Modern: a steady piano-like pulse.
-  { root: 52, scale: [0, 2, 3, 5, 7, 8, 10], chords: [0, 5, 2, 6], bpm: 96, pad: PAD, lead: { type: "sine", attack: 0.004, release: 1.2, gain: 0.144, harmonic: 0.6, reverb: 0.3 }, drums: [0, 4] },
-  // Future & Space: shimmering bells in a floating mode.
-  { root: 53, scale: [0, 2, 4, 6, 7, 9, 11], chords: [0, 4, 1, 5], bpm: 70, pad: { ...PAD, gain: 0.1 }, lead: { type: "sine", attack: 0.003, release: 2.4, gain: 0.108, harmonic: 0.8, reverb: 0.7 }, drums: [] },
+  { root: 45, scale: [0, 3, 5, 7, 10], chords: [0, 0, 3, 2], bpm: 76, lead: "flute", accomp: "drone", drums: [0, 3, 6] },
+  // Ancient: a lyre in an old eastern mode, a frame drum.
+  { root: 50, scale: [0, 1, 4, 5, 7, 8, 10], chords: [0, 3, 5, 0], bpm: 82, lead: "lyre", accomp: "lyre", drums: [0, 4, 6] },
+  // Classical: a harp, bright and flowing, no drum.
+  { root: 48, scale: [0, 2, 3, 5, 7, 9, 10], chords: [0, 3, 4, 0], bpm: 86, lead: "flute", accomp: "harp", drums: [] },
+  // Medieval: a lute strummed over a drone fifth, a tabor.
+  { root: 50, scale: [0, 2, 3, 5, 7, 9, 10], chords: [0, 6, 3, 4], bpm: 92, lead: "lute", accomp: "strum", drums: [0, 2, 4, 6] },
+  // Industrial & Modern: a piano.
+  { root: 52, scale: [0, 2, 3, 5, 7, 8, 10], chords: [0, 5, 2, 6], bpm: 96, lead: "piano", accomp: "piano", drums: [0, 4] },
+  // Future & Space: bells in a floating mode.
+  { root: 53, scale: [0, 2, 4, 6, 7, 9, 11], chords: [0, 4, 1, 5], bpm: 72, lead: "bell", accomp: "shimmer", drums: [] },
 ];
+
+// The theme: scale steps (null: a rest) and how many beats each lasts. Each
+// part is two bars of eight beats.
+type Phrase = [number | null, number][];
+const THEME: Record<"A" | "A2" | "B", Phrase> = {
+  A: [[4, 2], [3, 1], [2, 1], [0, 2], [1, 1], [2, 1], [4, 1], [5, 1], [4, 1], [2, 1], [3, 3], [null, 1]],
+  A2: [[4, 2], [3, 1], [2, 1], [0, 2], [1, 1], [2, 1], [4, 1], [5, 1], [6, 1], [7, 1], [4, 3], [null, 1]],
+  B: [[2, 1], [4, 1], [7, 2], [6, 1], [5, 1], [4, 2], [3, 1], [2, 1], [1, 1], [2, 1], [0, 3], [null, 1]],
+};
+// The tune, then a free part (twice as long), round and round.
+const FORM: ("A" | "A2" | "B" | "free")[] = ["A", "A2", "B", "A", "free", "free"];
+// A raid: the minor chords, a driving bass, war drums and brass.
+const BATTLE_CHORDS = [0, 5, 3, 4];
 
 function note(m: EraMusic, step: number, octave = 0) {
   const n = m.scale.length;
@@ -299,17 +433,77 @@ function note(m: EraMusic, step: number, octave = 0) {
   return midi(m.root + m.scale[i] + 12 * (o + octave));
 }
 
+// ---- Your own music ----------------------------------------------------------------
+// Put music files in public/music/ and list them in public/music/tracks.json,
+// by when they play: title, era-0 to era-5 (Stone Age to Future), battle
+// (raids) or night, e.g. { "era-0": "campfire.mp3" }. Where there is one, it
+// plays (looping, crossfading as the scene changes) instead of the music made
+// here. (One small list, read once: no guessing at files that aren't there.)
+const BASE = process.env.BASE_PATH ?? "";
+let tracks: Record<string, string> | null = null;
+let asked = false;
+function trackFor(name: string): string | null {
+  if (!asked) {
+    asked = true;
+    void fetch(`${BASE}/music/tracks.json`)
+      .then((res) => (res.ok ? res.json() : {}))
+      .then((list: Record<string, unknown>) => {
+        tracks = Object.fromEntries(
+          Object.entries(list ?? {})
+            .filter(([, file]) => typeof file === "string" && /^[\w .-]+\.(mp3|ogg|m4a|wav)$/i.test(file as string))
+            .map(([key, file]) => [key, `${BASE}/music/${file}`]),
+        );
+      })
+      .catch(() => (tracks = {}));
+  }
+  return tracks?.[name] ?? null;
+}
+let playing: { name: string; el: HTMLAudioElement; gain: GainNode } | null = null;
+// Starts (or crossfades to) a track; with none, fades the last one out.
+function playTrack(name: string | null, url: string | null) {
+  if (!engine) return;
+  const now = engine.ctx.currentTime;
+  if (playing && playing.name === name) return;
+  if (playing) {
+    const old = playing;
+    old.gain.gain.setTargetAtTime(0, now, 0.8);
+    setTimeout(() => old.el.pause(), 4000);
+    playing = null;
+  }
+  if (!name || !url) return;
+  const el = new Audio(url);
+  el.loop = true;
+  el.crossOrigin = "anonymous";
+  const gain = engine.ctx.createGain();
+  gain.gain.value = 0;
+  engine.ctx.createMediaElementSource(el).connect(gain);
+  gain.connect(engine.music);
+  gain.gain.setTargetAtTime(0.9, now, 0.8);
+  void el.play().catch(() => undefined);
+  playing = { name, el, gain };
+}
+
 // ---- The scheduler: plans the next half-second of music, four times a second.
 let timer: ReturnType<typeof setInterval> | null = null;
 let nextBeat = 0;
 let beat = 0;
-let melodyStep = 4;
+let wander = 4;
 let nextChirp = 0;
 
 function startScheduler() {
   if (timer || !engine) return;
   nextBeat = engine.ctx.currentTime + 0.2;
   timer = setInterval(plan, 250);
+}
+
+// Which note of the theme starts on this beat of a part (and how long it is).
+function themeNoteAt(part: Phrase, beatInPart: number): [number | null, number] | null {
+  let t = 0;
+  for (const [step, len] of part) {
+    if (t === beatInPart) return [step, len];
+    t += len;
+  }
+  return null;
 }
 
 function plan() {
@@ -326,34 +520,78 @@ function plan() {
     else crickets(now + 0.05);
     nextChirp = now + (day > 0.5 ? 3 + Math.random() * 6 : 1.5 + Math.random() * 2);
   }
-  if (!s.playing) {
+  // A track of your own for this scene plays instead.
+  const name = !s.playing ? "title" : s.tension ? "battle" : s.night > 0.7 && trackFor("night") ? "night" : `era-${s.era}`;
+  const url = trackFor(name);
+  playTrack(url ? name : null, url);
+  if (!s.playing || url) {
     nextBeat = now + 0.2;
     return;
   }
   const m = ERA_MUSIC[s.era] ?? ERA_MUSIC[0];
+  const battle = s.tension;
   // Calmer at night; a raid quickens the beat.
-  const bpm = m.bpm * (s.tension ? 1.25 : 1) * (1 - s.night * 0.12);
+  const bpm = m.bpm * (battle ? 1.3 : 1) * (1 - s.night * 0.12);
   const spb = 60 / bpm;
+  const quiet = 1 - s.night * 0.35;
   while (nextBeat < now + 0.5) {
     const at = nextBeat;
     const bar = Math.floor(beat / 8);
     const inBar = beat % 8;
-    const chord = m.chords[Math.floor(bar / 2) % m.chords.length];
-    // A new chord every two bars: root, third and fifth of the scale, held.
-    if (inBar === 0 && bar % 2 === 0) {
-      for (const k of [0, 2, 4]) tone(engine.music, note(m, chord + k, -1), at, spb * 15, m.pad);
-      tone(engine.music, note(m, chord, -2), at, spb * 15, { ...m.pad, gain: m.pad.gain * 0.9 });
+    const partIndex = Math.floor(bar / 2) % FORM.length;
+    const part = FORM[partIndex];
+    const beatInPart = (bar % 2) * 8 + inBar;
+    const chords = battle ? BATTLE_CHORDS : m.chords;
+    const chord = chords[bar % chords.length];
+    const tones = [0, 2, 4].map((k) => chord + k);
+
+    if (battle) {
+      // A driving bass on every beat, brass on the chord, war drums.
+      play("bass", note(m, chord, -2), at, spb * 0.8, 0.16);
+      if (inBar === 0) for (const t of tones) play("brass", note(m, t, -1), at, spb * 3, 0.045);
+      if (inBar % 2 === 0) drum(engine.music, at, 0.5, inBar % 4 === 0 ? 0.7 : 1);
+      // The theme's opening, in fragments, on the brass.
+      if (bar % 2 === 0) {
+        const n = themeNoteAt(THEME.A, inBar);
+        if (n && n[0] !== null) play("brass", note(m, n[0], 0), at, spb * n[1] * 0.9, 0.06);
+      }
+    } else {
+      // Accompaniment, in the era's style.
+      if (m.accomp === "drone") {
+        if (inBar === 0) {
+          tone(engine.music, note(m, chord, -1), at, spb * 7.5, PAD);
+          tone(engine.music, note(m, chord + 2, -1), at, spb * 7.5, PAD);
+        }
+      } else if (m.accomp === "lyre") {
+        if (inBar % 2 === 0) play("lyre", note(m, tones[[0, 1, 2, 1][inBar / 2]], -1), at, spb, 0.1 * quiet);
+      } else if (m.accomp === "harp") {
+        play("harp", note(m, [tones[0], tones[1], tones[2], chord + 7][inBar % 4], inBar < 4 ? -1 : 0), at, spb, 0.075 * quiet);
+      } else if (m.accomp === "strum") {
+        if ([0, 3, 4, 6].includes(inBar)) tones.forEach((t, k) => play("lute", note(m, t, -1), at + k * 0.025, spb, 0.07 * quiet));
+        if (inBar === 0) tone(engine.music, note(m, 0, -2), at, spb * 7.5, { ...PAD, type: "sawtooth", gain: 0.03 });
+      } else if (m.accomp === "piano") {
+        if (inBar === 0 || inBar === 4) play("piano", note(m, inBar === 0 ? chord : chord + 4, -2), at, spb * 2, 0.11 * quiet);
+        if (inBar === 2 || inBar === 6) tones.forEach((t) => play("piano", note(m, t, -1), at, spb, 0.05 * quiet));
+      } else {
+        if (inBar === 0) for (const t of tones) tone(engine.music, note(m, t, -1), at, spb * 7.5, { ...PAD, gain: 0.06 });
+        if (inBar % 2 === 1 && Math.random() < 0.6) play("bell", note(m, tones[Math.floor(Math.random() * 3)], 1), at, spb, 0.04 * quiet);
+      }
+      // A bass under it all (not round the fire).
+      if (m.accomp !== "drone" && (inBar === 0 || inBar === 4)) play("bass", note(m, inBar === 0 ? chord : chord + 4, -2), at, spb * 3, 0.13 * quiet);
+      // The lead: the theme, or (in the free part) wandering over the chord.
+      // At night it rests more.
+      if (part !== "free") {
+        const n = themeNoteAt(THEME[part], beatInPart);
+        if (n && n[0] !== null && (s.night < 0.6 || Math.random() < 0.6)) play(m.lead, note(m, n[0], m.lead === "bell" ? 1 : 0), at, spb * n[1] * 0.95, (m.lead === "piano" ? 0.12 : 0.1) * quiet);
+      } else if (Math.random() < (s.night > 0.6 ? 0.3 : 0.55) && (inBar % 2 === 0 || Math.random() < 0.3)) {
+        // Mostly to a note of the chord, sometimes a step either side.
+        wander += [-2, -1, -1, 1, 1, 2, 0][Math.floor(Math.random() * 7)];
+        wander = Math.max(chord, Math.min(chord + 9, wander));
+        const target = inBar % 4 === 0 ? tones.reduce((best, t) => (Math.abs(t - wander) < Math.abs(best - wander) ? t : best), tones[0]) : wander;
+        play(m.lead, note(m, target, m.lead === "bell" ? 1 : 0), at, spb * (inBar % 4 === 0 ? 1.5 : 0.8), 0.085 * quiet);
+      }
+      if (m.drums.includes(inBar) && s.night < 0.8) drum(engine.music, at, 0.32 * (1 - s.night * 0.5));
     }
-    // The melody: wanders a step or two from where it was, often resting.
-    const rest = s.night > 0.6 ? 0.6 : 0.45;
-    if (Math.random() > rest && (inBar % 2 === 0 || Math.random() < 0.3)) {
-      melodyStep += [-2, -1, -1, 1, 1, 2, 0][Math.floor(Math.random() * 7)];
-      melodyStep = Math.max(chord, Math.min(chord + 9, melodyStep));
-      tone(engine.music, note(m, melodyStep, 1), at, spb * (inBar % 4 === 0 ? 1.5 : 0.7), m.lead);
-    }
-    // Drums; a raid adds a heavy beat on every other count.
-    if (m.drums.includes(inBar) && s.night < 0.8) drum(engine.music, at, 0.38 * (1 - s.night * 0.5));
-    if (s.tension && inBar % 2 === 0) drum(engine.music, at, 0.55, 0.7);
     nextBeat += spb;
     beat++;
   }
