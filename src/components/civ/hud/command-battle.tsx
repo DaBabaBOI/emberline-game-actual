@@ -8,7 +8,7 @@ import { useGame } from "@/components/civ/game-provider";
 import { Figures, type Agent } from "@/components/civ/world/figures";
 import { useHoldWorld } from "@/components/civ/cutscene/active";
 import { PixelIcon } from "@/components/civ/pixel-icon";
-import { amountText, battleRoster, commandSetup, commanding, kingdomInfo, raidSpoils } from "@/game/engine";
+import { amountText, assaultRoster, assaultSetup, battleRoster, commandSetup, commanding, kingdomInfo, kingdomLoot, kingdomName, raidSpoils } from "@/game/engine";
 import {
   BIOMES,
   FIGHTERS,
@@ -82,8 +82,10 @@ type Given = Bare<Order>;
 // The last blows play out slowly, like a film.
 const SLOW_MO = 0.35;
 
+// A raid on us, or our army attacking a people on their island.
 export function CommandBattle() {
   const { state } = useGame();
+  if (state.assault) return <BattleScreen key={`assault-${state.assault.tick}`} />;
   if (!commanding(state) || !state.raid) return null;
   return <BattleScreen key={state.raid.startTick} />;
 }
@@ -93,10 +95,13 @@ type Phase = "deploy" | "fight" | "done";
 function BattleScreen() {
   useHoldWorld();
   const { state, dispatch } = useGame();
-  const raid = state.raid!;
-  const { roster } = battleRoster(state);
-  // How the raiders stand (the same lineup the fight will use), and the ground.
-  const preview = useMemo(() => commandSetup(state, raid, []), [state, raid]);
+  // Defending (raiders landed) or attacking (our army on their island).
+  const assault = state.assault ?? null;
+  const raid = state.raid;
+  const setupFor = (placed: Placed[]) => (assault ? assaultSetup(state, assault, placed) : commandSetup(state, raid!, placed));
+  const { roster } = assault ? assaultRoster(state, assault.mode) : battleRoster(state);
+  // How they stand (the same lineup the fight will use), and the ground.
+  const preview = useMemo(() => (assault ? assaultSetup(state, assault, []) : commandSetup(state, raid!, [])), [state, raid, assault]);
   const field = useMemo(() => fieldOf(preview.seed, preview.biome), [preview.seed, preview.biome]);
   const [placed, setPlaced] = useState<Placed[]>(() => autoLineup(roster, preview.seed, preview.biome));
   const [tool, setTool] = useState<FighterKind | "erase">("warrior");
@@ -280,7 +285,7 @@ function BattleScreen() {
   };
 
   const fight = () => {
-    sim.current = startBattle(commandSetup(state, raid, placed));
+    sim.current = startBattle(setupFor(placed));
     orders.current = [];
     setPhase("fight");
     if (stance === "hold") give({ kind: "hold", ids: ours() });
@@ -300,9 +305,26 @@ function BattleScreen() {
     finish(s);
   };
 
-  const spoils = raidSpoils(raid);
+  const spoils = assault ? kingdomLoot(state, assault.kingdom) : raidSpoils(raid!);
   const fell = result ? Object.entries(result.fell).reduce((n, [k, v]) => n + (k === "chief" ? 0 : (v ?? 0)), 0) : 0;
-  const theirTunic = raid.kingdom ? kingdomInfo(state, raid.kingdom).tunic : "#9b1c1c";
+  const enemy = assault ? assault.kingdom : raid?.kingdom;
+  const theirTunic = enemy ? kingdomInfo(state, enemy).tunic : "#9b1c1c";
+  const title = assault
+    ? `${assault.mode === "raid" ? "Raiding" : "Conquering"} ${kingdomName(state, assault.kingdom)}`
+    : raid?.kingdom
+      ? "An army has landed!"
+      : "The raiders have landed!";
+  const outcome = !result
+    ? ""
+    : assault
+      ? result.won
+        ? assault.mode === "raid"
+          ? `We plunder their stores: ${amountText(state, spoils)}.`
+          : "Their island is ours, and they will pay tribute."
+        : "We are driven back to the boats."
+      : result.won
+        ? `They left behind ${amountText(state, spoils)}.`
+        : "They will take what they came for.";
   const plan = TACTICS[preview.tactic ?? "rush"];
   const sel = phase === "fight" ? picked : [];
   const heroKind = hero?.kind;
@@ -333,7 +355,7 @@ function BattleScreen() {
       <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center px-3">
         <div className="pixel-panel-dark font-pixel w-full max-w-[700px] px-4 py-2 text-white">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-base font-semibold md:text-lg">{raid.kingdom ? "An army has landed!" : "The raiders have landed!"}</span>
+            <span className="text-base font-semibold md:text-lg">{title}</span>
             {count && (
               <span className="font-num text-sm">
                 <span className="text-sky-300">Ours {count.us}</span> · <span className="text-red-300">Theirs {count.them}</span>
@@ -414,7 +436,17 @@ function BattleScreen() {
             <button type="button" onClick={() => setPlaced([])} className="pixel-btn bg-[#4a3b2e] px-2 py-1 text-xs">
               Clear
             </button>
-            <button type="button" onClick={() => dispatch({ type: "autoBattle" })} className="pixel-btn bg-[#4a3b2e] px-2 py-1 text-xs" title="Leave it to your warriors: the usual fight">
+            {assault && (
+              <button type="button" onClick={() => dispatch({ type: "assaultCancel" })} className="pixel-btn bg-[#4a3b2e] px-2 py-1 text-xs" data-testid="assault-cancel">
+                Call it off
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => dispatch({ type: assault ? "assaultAuto" : "autoBattle" })}
+              className="pixel-btn bg-[#4a3b2e] px-2 py-1 text-xs"
+              title={assault ? "Leave it to your warriors: the odds decide" : "Leave it to your warriors: the usual fight"}
+            >
               Let them fight it out
             </button>
             <button
@@ -480,11 +512,11 @@ function BattleScreen() {
             <p className="mt-1 text-sm">
               {fell} of ours fell · {result.theirsFell} of theirs fell{result.fell.chief ? " · the chief was wounded" : ""}
             </p>
-            <p className="mt-1 text-sm">{result.won ? `They left behind ${amountText(state, spoils)}.` : "They will take what they came for."}</p>
+            <p className="mt-1 text-sm">{outcome}</p>
             <button
               type="button"
               autoFocus
-              onClick={() => dispatch({ type: "commandBattle", placements: placed, orders: orders.current })}
+              onClick={() => dispatch(assault ? { type: "assaultBattle", placements: placed, orders: orders.current } : { type: "commandBattle", placements: placed, orders: orders.current })}
               className="pixel-btn font-pixel mt-3 bg-amber-400 px-4 py-1.5 text-sm font-semibold text-[#2b2119]"
               data-testid="battle-continue"
             >

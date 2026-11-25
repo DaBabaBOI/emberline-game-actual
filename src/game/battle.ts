@@ -93,6 +93,10 @@ export const BRACE = 1.6;
 export const CHARGE = { run: 1.0, dmg: 2, away: 0.6 };
 // Our riders hold back (at most this many seconds) while the lines close.
 export const RIDERS_WAIT = 3;
+// Defenders holding their walls come out only for anyone this close, until
+// one of them falls or `sally` seconds pass: then they all charge out.
+export const HOLD_RANGE = 1.7;
+export const SALLY = 15;
 // The figure you fight as hits a little harder.
 export const HERO = 1.2;
 // Fighters sent somewhere fight anyone who comes this close on the way, and
@@ -111,12 +115,13 @@ export const TIME_LIMIT = 75;
 
 // How the raiders fight: all at once; out round the sides; arrows first, the
 // rest waiting; or the brutes leading a wedge.
-export type Tactic = "rush" | "flank" | "volley" | "wedge";
+export type Tactic = "rush" | "flank" | "volley" | "wedge" | "hold";
 export const TACTICS: Record<Tactic, { name: string; hint: string }> = {
   rush: { name: "All-out rush", hint: "They will charge straight at you. A solid line holds them." },
   flank: { name: "Flanking", hint: "Their fast ones will swing round your sides. Guard the edges." },
   volley: { name: "Volley first", hint: "Their bowmen will shoot first while the rest wait. Rush them, or stand behind palisades or in the trees." },
   wedge: { name: "Wedge", hint: "Their brutes lead a wedge at your middle. Spearmen stop it." },
+  hold: { name: "Hold the walls", hint: "They wait behind their palisades, towers shooting. Break through, go round, or draw them out." },
 };
 
 // ---- The ground ------------------------------------------------------------------
@@ -360,6 +365,8 @@ export function startBattle(setup: BattleSetup): BattleSim {
   };
 }
 
+// Defenders come out once one of them has fallen, or they've waited long enough.
+const sallied = (sim: BattleSim) => sim.t > SALLY || sim.fighters.some((f) => f.side === "them" && !f.alive && !FIGHTERS[f.kind].still);
 const mobileAlive = (sim: BattleSim, side: Side) => sim.fighters.some((f) => f.alive && f.side === side && !FIGHTERS[f.kind].still);
 const isOurs = (sim: BattleSim, id: number) => {
   const f = sim.fighters[id];
@@ -409,8 +416,9 @@ function pickTarget(sim: BattleSim, f: Fighter) {
   const riding = FIGHTERS[f.kind].charge;
   for (const o of sim.fighters) {
     if (!o.alive || o.side === f.side) continue;
-    if (f.side === "us" && FIGHTERS[o.kind].still) continue;
     let d = Math.hypot(o.x - f.x, o.z - f.z);
+    // Our people leave walls and towers alone, unless one is right in their way.
+    if (f.side === "us" && FIGHTERS[o.kind].still && d > 0.6) continue;
     if (riding && shoots(o.kind)) d *= 0.7;
     if (d < bestD) {
       bestD = d;
@@ -650,6 +658,8 @@ export function stepBattle(sim: BattleSim) {
         }
       }
       if (volley()) continue;
+      // Holding the walls: bowmen stay where they are (until the sally).
+      if (f.side === "them" && tactic === "hold" && !sallied(sim)) continue;
       const far = nearestWithin(sim, f, 99);
       if (far) walkTo(far.x, far.z, spec.speed);
       continue;
@@ -657,6 +667,8 @@ export function stepBattle(sim: BattleSim) {
     // The raiders' plan: in a volley, the rest wait while the bowmen shoot
     // (unless someone comes at them).
     if (f.side === "them" && tactic === "volley" && sim.t < 6 && !nearestWithin(sim, f, 1.3)) continue;
+    // Holding the walls: they wait for us to come close (until they sally out).
+    if (f.side === "them" && tactic === "hold" && !sallied(sim) && !nearestWithin(sim, f, HOLD_RANGE)) continue;
     // Our riders hold back until the raiders come close, then ride in as the
     // lines meet.
     if (f.side === "us" && spec.charge && sim.t < RIDERS_WAIT && !nearestWithin(sim, f, 2.6)) continue;
@@ -872,6 +884,20 @@ export function enemyLineup(
   });
   const field = fieldOf(seed, biome);
   return { theirs: theirs.map((p) => fitSpot(field, p)), themBoost: scale, tactic };
+}
+
+// A people defending its island: their army in a line behind palisades
+// across the middle of their side, bowmen behind, towers at the back
+// corners. They hold the walls (`hold`).
+export function defenderLineup(strength: number, seed: number, era: number, walls: number, towers: number, biome: Biome = "grass"): { theirs: Placed[]; themBoost: number; tactic: Tactic } {
+  const army = enemyLineup(strength, "army", seed, era, biome);
+  const field = fieldOf(seed, biome);
+  const fort: Placed[] = [];
+  for (let i = 0; i < walls; i++) fort.push({ kind: "palisade", x: (i - (walls - 1) / 2) * 0.5, z: THEM_ZONE[1] - 0.1 });
+  for (let i = 0; i < towers; i++) fort.push({ kind: "tower", x: (i % 2 ? 1 : -1) * (HALF_W - 0.7), z: THEM_ZONE[0] + 0.6 });
+  // The army stands back from the walls.
+  const theirs = army.theirs.map((p) => ({ ...p, z: Math.max(THEM_ZONE[0], p.z - 0.35) }));
+  return { theirs: [...fort.map((p) => fitSpot(field, p)), ...theirs], themBoost: army.themBoost, tactic: "hold" };
 }
 
 // Our army set out the usual way: palisades across the front, spearmen right

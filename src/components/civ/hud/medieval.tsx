@@ -158,6 +158,10 @@ const minutes = (s: number) => String(Math.round((s / 60) * 10) / 10);
 
 const MOOD_STYLE = { friendly: "bg-emerald-600", wary: "bg-amber-500", hostile: "bg-red-700" } as const;
 
+// How a battle on their island looks to our scouts (from the odds of leaving
+// it to chance): the real fight depends on how we lead it.
+const looks = (odds: number) => (odds >= 85 ? "looks easy" : odds >= 60 ? "a fair fight" : odds >= 30 ? "hard" : "very hard");
+
 // The two kingdoms: how they feel about us, and what we can do about it.
 export function KingdomsPanel() {
   const { state, dispatch, setPanel } = useGame();
@@ -256,24 +260,31 @@ export function KingdomsPanel() {
                   <button
                     type="button"
                     disabled={!!raid}
-                    onClick={() => dispatch({ type: "raidKingdom", kingdom: id })}
+                    onClick={() => {
+                      // Lead it on their island (or, in a shared match, the odds decide).
+                      dispatch(state.mp ? { type: "raidKingdom", kingdom: id } : { type: "assault", kingdom: id, mode: "raid" });
+                      setPanel(null);
+                    }}
                     className="pixel-btn flex justify-between bg-red-800 px-2 py-1 text-left text-white disabled:opacity-40"
-                    title={raid ?? "They will be furious, and their army will come for revenge"}
+                    title={raid ?? "Lead the raid on their island yourself (or leave it to the odds). They will be furious, and their army will come for revenge"}
                     data-testid={`raid-${id}`}
                   >
                     <span>Raid them</span>
-                    <span className="text-[11px]">{raid ? "" : `${party.sent} warriors · ${odds}% chance`}</span>
+                    <span className="text-[11px]">{raid ? "" : `${party.sent} warriors · ${state.mp ? `${odds}% chance` : looks(odds)}`}</span>
                   </button>
                   <button
                     type="button"
                     disabled={!!conquest}
-                    onClick={() => dispatch({ type: "conquer", kingdom: id })}
+                    onClick={() => {
+                      dispatch(state.mp ? { type: "conquer", kingdom: id } : { type: "assault", kingdom: id, mode: "conquer" });
+                      setPanel(null);
+                    }}
                     className="pixel-btn flex justify-between bg-[#3b0d0d] px-2 py-1 text-left text-white disabled:opacity-40"
-                    title={conquest ?? "Take the whole kingdom: their island becomes ours and they pay tribute. Many warriors will fall."}
+                    title={conquest ?? "Lead the whole army against them on their island, behind their walls and towers: win and their island becomes ours and they pay tribute. Many warriors will fall."}
                     data-testid={`conquer-${id}`}
                   >
                     <span>Conquer them</span>
-                    <span className="text-[11px]">{conquest ? "" : `all ${state.soldiers} warriors · ${conquestChance}% chance`}</span>
+                    <span className="text-[11px]">{conquest ? "" : `all ${state.soldiers} warriors · ${state.mp ? `${conquestChance}% chance` : looks(conquestChance)}`}</span>
                   </button>
                   {k.conquered ? (
                     <span className="text-[10px] text-emerald-800">
@@ -282,7 +293,7 @@ export function KingdomsPanel() {
                   ) : (
                     !conquest && (
                       <span className="text-[10px] text-red-900">
-                        Conquest: about {Math.round(CONQUEST.losses.won * 100)}% of the army falls even if we win, our people mourn (−{-CONQUEST.happiness} happiness), and the other {state.world ? "peoples" : "kingdom"} will fear and hate us.
+                        Conquest: {state.mp ? `about ${Math.round(CONQUEST.losses.won * 100)}% of the army falls even if we win` : "a hard battle at their walls, and those who fall don't come back"}, our people mourn (−{-CONQUEST.happiness} happiness), and the other {state.world ? "peoples" : "kingdom"} will fear and hate us.
                       </span>
                     )
                   )}

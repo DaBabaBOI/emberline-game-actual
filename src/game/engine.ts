@@ -157,7 +157,7 @@ import { generateMap, ISLANDS, isLand, revealAround, riverPath, terrainHeight } 
 import { mulberry32 } from "./noise";
 import { COUNCIL, LAWS, leanOn } from "./council";
 import { ECONOMY, FORTUNES, INCOME, LEVELS, economyEffects, economyMood, hasEconomy, incomeOf, levelFor, startingLuck, unpaid, wageBill } from "./economy";
-import { MAX_FIGHTERS, enemyLineup, fieldOf, inOurZone, runBattle, type BattleSetup, type Biome, type Order, type Placed, type Roster } from "./battle";
+import { MAX_FIGHTERS, defenderLineup, enemyLineup, fieldOf, inOurZone, runBattle, type BattleSetup, type Biome, type Order, type Placed, type Roster } from "./battle";
 import { sealMatches, sealOf } from "./seal";
 import { generateWorld, growWorld, homeName, isleById, islandOfKingdom, islesNear, kingdomIdOf } from "./world";
 import { CHAPTERS, type Objective } from "./story";
@@ -222,6 +222,10 @@ export type Action =
   | { type: "setEconomy"; system: EconomySystem }
   | { type: "setWage"; wage: Wage }
   | { type: "openPort"; kingdom: KingdomId }
+  | { type: "assault"; kingdom: KingdomId; mode: "raid" | "conquer" }
+  | { type: "assaultBattle"; placements: Placed[]; orders?: Order[] }
+  | { type: "assaultAuto" }
+  | { type: "assaultCancel" }
   | { type: "buildWarship" }
   | { type: "joinCouncil" }
   | { type: "leaveCouncil" }
@@ -234,6 +238,7 @@ export type Action =
   | { type: "dismissHint" }
   | { type: "demolish"; tileId: number }
   | { type: "devGrant" }
+  | { type: "devArmy" }
   | { type: "devPeople" }
   | { type: "devFiresOut" }
   | { type: "devGrief" }
@@ -1794,17 +1799,19 @@ export function conquestError(state: GameState, kingdom: KingdomId): string | nu
   if (k.conquered) return "It is ours already";
   if (state.plague) return "Not while the plague is coming";
   if (state.raid || state.legion) return "We are under attack ourselves";
+  if (state.assault) return "Our warriors are already at sea";
+  if (state.assault) return "Our warriors are already at sea";
   if (k.treaty) return "We have a treaty with them";
   if (state.tick < (state.raidedTick ?? -Infinity) + KINGDOM_RAID.wait) return "Our warriors are still recovering";
   if (state.soldiers < CONQUEST.minWarriors) return `Need at least ${CONQUEST.minWarriors} warriors`;
   return null;
 }
 
-function conquer(state: GameState, kingdom: KingdomId): GameState {
+function conquer(state: GameState, kingdom: KingdomId, fought?: { won: boolean; fell: number }): GameState {
   const strength = conquestStrength(state);
   const luck = 0.75 + mulberry32(state.seed + state.tick * 73)() * 0.5;
-  const won = strength * luck >= kingdomDefense(state, kingdom) * DIFFICULTIES[state.difficulty].raiders;
-  const fell = Math.min(state.soldiers, Math.max(1, Math.round(state.soldiers * (won ? CONQUEST.losses.won : CONQUEST.losses.lost))));
+  const won = fought ? fought.won : strength * luck >= kingdomDefense(state, kingdom) * DIFFICULTIES[state.difficulty].raiders;
+  const fell = fought ? Math.min(state.soldiers, fought.fell) : Math.min(state.soldiers, Math.max(1, Math.round(state.soldiers * (won ? CONQUEST.losses.won : CONQUEST.losses.lost))));
   const name = kingdomName(state, kingdom);
   const counted = bumpStats(state, (st) => {
     st.deaths.battle += fell;
@@ -1839,6 +1846,61 @@ function conquer(state: GameState, kingdom: KingdomId): GameState {
   });
 }
 
+// ---- Assaults: raiding or conquering a people, fought out on their island ----
+
+// The ground on their island: what most of it is (forest, hills, a river...).
+function islandBiome(state: GameState, kingdom: KingdomId): Biome {
+  const island = kingdomInfo(state, kingdom).island;
+  const land = state.tiles.filter((t) => t.island === island && isLand(t.terrain));
+  if (!land.length) return (["grass", "forest", "hills", "open", "rocky"] as Biome[])[Math.abs(hashString(kingdom)) % 5];
+  const share = (...terrains: string[]) => land.filter((t) => terrains.includes(t.terrain)).length / land.length;
+  if (share("river") > 0.05) return "river";
+  if (share("marsh") > 0.15) return "marsh";
+  if (share("forest") > 0.35) return "forest";
+  if (share("mountain") > 0.15) return "rocky";
+  if (share("hills") > 0.2) return "hills";
+  if (share("beach", "steppe") > 0.4) return "open";
+  return "grass";
+}
+function hashString(s: string) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return h;
+}
+// Who sails: for a raid, the raiding party (a share of the warriors, each
+// kind in proportion); for a conquest, everyone, and the mercenaries. Walls
+// and towers stay at home.
+export function assaultRoster(state: GameState, mode: "raid" | "conquer"): { roster: Roster; usBoost: number; scale: number; share: number } {
+  const base = battleRoster(state);
+  const share = mode === "raid" ? KINGDOM_RAID.share : 1;
+  const roster: Roster = {};
+  for (const k of ["warrior", "spearman", "archer", "rider", "merc"] as const) {
+    const n = Math.round((base.roster[k] ?? 0) * (k === "merc" && mode === "raid" ? 0 : share));
+    if (n) roster[k] = n;
+  }
+  roster.chief = 1;
+  return { roster, usBoost: base.usBoost, scale: base.scale, share };
+}
+// Their side: how strong (as the dice would have it), their walls and towers.
+export function assaultSetup(state: GameState, assault: { kingdom: KingdomId; mode: "raid" | "conquer"; tick: number }, placements: Placed[]): BattleSetup {
+  const { roster, usBoost } = assaultRoster(state, assault.mode);
+  const seed = state.seed + assault.tick * 17 + Math.abs(hashString(assault.kingdom)) % 1000;
+  const biome = islandBiome(state, assault.kingdom);
+  const field = fieldOf(seed, biome);
+  const left: Roster = { ...roster };
+  const ours: Placed[] = [];
+  for (const p of placements) {
+    if (!left[p.kind] || !inOurZone(p.x, p.z, field)) continue;
+    left[p.kind] = (left[p.kind] ?? 0) - 1;
+    ours.push({ kind: p.kind, x: p.x, z: p.z });
+  }
+  const conquest = assault.mode === "conquer";
+  const strength = (conquest ? kingdomDefense(state, assault.kingdom) : kingdomRaidDefense(state, assault.kingdom)) * DIFFICULTIES[state.difficulty].raiders;
+  const { theirs, themBoost, tactic } = defenderLineup(Math.max(2, Math.round(strength)), seed, state.era, conquest ? 4 + state.era : 2 + Math.floor(state.era / 2), conquest ? Math.min(4, 1 + Math.floor(state.era / 2)) : 0, biome);
+  return { seed, ours, theirs, usBoost, themBoost, tactic, biome };
+}
+export const assaulting = (state: GameState) => !!state.assault;
+
 export function kingdomRaidError(state: GameState, kingdom: KingdomId): string | null {
   const k = state.kingdoms?.[kingdom];
   if (!k) return "Not yet";
@@ -1851,11 +1913,12 @@ export function kingdomRaidError(state: GameState, kingdom: KingdomId): string |
   return null;
 }
 
-function raidKingdom(state: GameState, kingdom: KingdomId): GameState {
+// `fought`: how it went on the battlefield (else a roll of the dice).
+function raidKingdom(state: GameState, kingdom: KingdomId, fought?: { won: boolean; fell: number }): GameState {
   const { sent, strength } = raidParty(state);
   const luck = 0.75 + mulberry32(state.seed + state.tick * 71)() * 0.5;
-  const won = strength * luck >= kingdomRaidDefense(state, kingdom) * DIFFICULTIES[state.difficulty].raiders;
-  const fell = Math.min(state.soldiers, Math.max(1, Math.round(sent * (won ? KINGDOM_RAID.losses.won : KINGDOM_RAID.losses.lost))));
+  const won = fought ? fought.won : strength * luck >= kingdomRaidDefense(state, kingdom) * DIFFICULTIES[state.difficulty].raiders;
+  const fell = fought ? Math.min(state.soldiers, fought.fell) : Math.min(state.soldiers, Math.max(1, Math.round(sent * (won ? KINGDOM_RAID.losses.won : KINGDOM_RAID.losses.lost))));
   const loot = won ? kingdomLoot(state, kingdom) : {};
   const name = kingdomName(state, kingdom);
   const counted = bumpStats(state, (st) => {
@@ -4842,7 +4905,7 @@ function startGrace(state: GameState): GameState {
 
 function tick(state: GameState): GameState {
   // An event card, or a Council vote, waits for the player.
-  if (state.phase !== "playing" || state.event || state.council?.vote) return state;
+  if (state.phase !== "playing" || state.event || state.council?.vote || state.assault) return state;
   return noteLostHomes(state, tickOnce(state));
 }
 
@@ -6235,7 +6298,10 @@ function updateRaids(state: GameState): GameState {
     // and the fight takes a few seconds (training a warrior can still tip it).
     if (raid.response === "hide") return raidHide(state, raid);
     if (raid.fightStart === undefined) {
-      return { ...state, raid: { ...raid, response: raid.response === "command" ? "command" : "fight", fightStart: state.tick } };
+      // Not answered by the time they land: you command the battle (where
+      // you can), as if you'd chosen to.
+      const commanded = raid.response === "command" || (!raid.response && canCommand(state, raid));
+      return { ...state, raid: { ...raid, response: commanded ? "command" : "fight", fightStart: state.tick } };
     }
     // Commanded: the battle screen is up, and plays out what the player sets.
     if (raid.response === "command") return state;
@@ -7499,6 +7565,48 @@ function step(state: GameState, action: Action): GameState {
     case "conquer":
       return conquestError(state, action.kingdom) ? state : breakPeace(conquer(state, action.kingdom), action.kingdom);
 
+    case "assault": {
+      const error = action.mode === "raid" ? kingdomRaidError(state, action.kingdom) : conquestError(state, action.kingdom);
+      if (error || state.mp) return state;
+      return { ...state, assault: { kingdom: action.kingdom, mode: action.mode, tick: state.tick } };
+    }
+
+    case "assaultCancel":
+      return state.assault ? { ...state, assault: null, log: ["We called the attack off.", ...state.log].slice(0, 30) } : state;
+
+    case "assaultAuto": {
+      // Leave it to the warriors after all: the dice decide, as before.
+      const a = state.assault;
+      if (!a) return state;
+      const done = { ...state, assault: null };
+      return breakPeace(a.mode === "raid" ? raidKingdom(done, a.kingdom) : conquer(done, a.kingdom), a.kingdom);
+    }
+
+    case "assaultBattle": {
+      const a = state.assault;
+      if (!a) return state;
+      const setup = assaultSetup(state, a, action.placements);
+      if (!setup.ours.length) return state;
+      const result = runBattle(setup, (action.orders ?? []).slice(0, 4000));
+      const { scale } = assaultRoster(state, a.mode);
+      const lost = (k: "spearman" | "archer" | "rider" | "merc" | "warrior", have: number) => Math.min(have, Math.round((result.fell[k] ?? 0) * scale));
+      const spears = lost("spearman", spearmenOf(state));
+      const archers = lost("archer", archersOf(state));
+      const riders = lost("rider", ridersOf(state));
+      const mercs = lost("merc", mercsOf(state));
+      const fell = Math.max(result.won ? 0 : 1, lost("warrior", plainWarriors(state)) + spears + archers + riders);
+      const done: GameState = {
+        ...state,
+        assault: null,
+        spearmen: spearmenOf(state) - spears,
+        archers: archersOf(state) - archers,
+        riders: ridersOf(state) - riders,
+        mercs: state.mercs && result.won ? { ...state.mercs, count: Math.max(0, mercsOf(state) - mercs) } : state.mercs && a.mode === "conquer" ? null : state.mercs,
+      };
+      const after = a.mode === "raid" ? raidKingdom(done, a.kingdom, { won: result.won, fell }) : conquer(done, a.kingdom, { won: result.won, fell });
+      return breakPeace({ ...after, log: [`You led the attack${result.fell.chief ? "; the chief was wounded, but will mend" : ""}.`, ...after.log].slice(0, 30) }, a.kingdom);
+    }
+
     case "openPort": {
       if (portError(state, action.kingdom)) return state;
       const name = kingdomName(state, action.kingdom);
@@ -8325,6 +8433,17 @@ function step(state: GameState, action: Action): GameState {
     case "devPeople":
       if (!state.dev) return state;
       return withMeters({ ...state, population: state.population + 10, log: ["Dev: +10 people.", ...state.log].slice(0, 30) });
+
+    // Dev: thirty more warriors (spears, bows and, from the Medieval era, riders).
+    case "devArmy":
+      if (!state.dev) return state;
+      return withMeters({
+        ...state,
+        soldiers: state.soldiers + 30,
+        spearmen: spearmenOf(state) + 10,
+        archers: archersOf(state) + 8,
+        riders: ridersOf(state) + (state.era >= 3 ? 4 : 0),
+      });
 
     case "devGrant":
       if (!state.dev) return state;

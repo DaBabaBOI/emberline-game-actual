@@ -383,6 +383,9 @@ export interface GameState {
   kingdoms?: Record<KingdomId, { mood: number; treaty: boolean; giftTick?: number; conquered?: boolean; met?: number; hurt?: number; port?: boolean }>;
   // Warships in our fleet (see WARSHIP).
   warships?: number;
+  // Our army sailing against a people (a raid or a conquest), fought out on
+  // their island; the game waits until it's done.
+  assault?: { kingdom: KingdomId; mode: "raid" | "conquer"; tick: number } | null;
   // The port we opened last (for the camera shot of the ship docking).
   portOpened?: { kingdom: KingdomId; tick: number } | null;
   // An endless world (world.ts): its seed and the chunks made so far. Missing

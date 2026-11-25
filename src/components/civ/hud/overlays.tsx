@@ -623,7 +623,7 @@ export function RaidBanner() {
               <PixelIcon name="sword" size={18} />
               <span>
                 <span className="text-sm font-semibold">Command the battle</span>
-                <span className="block text-[11px] text-white/75">Place your warriors, the chief, palisades and towers yourself, then watch it play out</span>
+                <span className="block text-[11px] text-white/75">Set out your army on the battlefield, send them where you want, or fight as one of them (what happens if you don&apos;t choose)</span>
               </span>
             </button>
           )}
@@ -763,6 +763,9 @@ export function DevPanel() {
         </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devReveal" })}>
           Reveal map
+        </button>
+        <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devArmy" })}>
+          +30 warriors
         </button>
         <button type="button" className="pixel-btn bg-[#4a3b2e] px-2 py-1" onClick={() => dispatch({ type: "devEvent", id: "wildfire" })}>
           Wildfire
