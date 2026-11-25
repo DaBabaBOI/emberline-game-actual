@@ -9,6 +9,7 @@ export const UPDATES: Update[] = [
   {
     date: "2026-11-25",
     items: [
+      "The raiders learn. Every day their chiefs fight thousands of practice battles on every kind of ground, and now choose the plan that works best there: a rush where the going is open, a flank through the woods, a wedge where it pays. You still see their plan before you set out your warriors, so you can counter it.",
       "Take a canoe out as the chief (first person): walk up to a Canoe Dock or Shipyard and press E. Paddle the sea and the rivers (Shift to paddle hard); unknown water is mapped as you go. Press E by dry land to step ashore: onto a new island to make it ours, or onto a people's coast to pay them a visit.",
       "The fog is now a soft blanket of cloud, so you can always tell what you haven't explored (it used to look just like the sea). Scouts, canoes and ships map the way as they go: watch the land come out of the cloud along their path.",
       "First person: the raiders hit back now. Your hearts show in a fight; lose them all and you are struck down and carried back to the fire (your blows in that fight are lost, and everyone is shaken). Step away to catch your breath and they come back.",

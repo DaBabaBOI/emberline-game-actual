@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "train:tactics": "jiti scripts/train-tactics.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",
@@ -34,6 +35,7 @@
     "autoprefixer": "^10.6.1",
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
+    "jiti": "^1.21.7",
     "postcss": "^8.5.28",
     "prettier": "^3.9.9",
     "prettier-plugin-tailwindcss": "^0.8.1",

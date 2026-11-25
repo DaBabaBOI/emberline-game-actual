@@ -1,0 +1,75 @@
+name: Train the raiders' tactics
+
+# Every day the raiders' chiefs study: practice battles on every kind of
+# ground, for every kind of raid and stage of history (scripts/train-tactics.ts).
+# What they learned (src/game/tactics-learned.json) is committed, and the game
+# is redeployed so raiders choose their plans by it.
+on:
+  schedule:
+    - cron: "41 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: train-tactics
+  cancel-in-progress: false
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Practice battles
+        id: train
+        run: npm run train:tactics
+        env:
+          GAMES: "24"
+
+      - name: Check the game still builds with what they learned
+        run: npm run typecheck
+
+      - name: Commit what they learned
+        id: commit
+        run: |
+          if git diff --quiet -- src/game/tactics-learned.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/game/tactics-learned.json
+          git commit -m "Raiders studied ${{ steps.train.outputs.played }} more practice battles (${{ steps.train.outputs.total }} in all)"
+          # Someone may have pushed meanwhile: put this on top and try again.
+          ok=false
+          for i in 1 2 3; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              ok=true
+              break
+            fi
+            sleep $((i * 10))
+          done
+          if [ "$ok" != true ]; then
+            echo "Couldn't push what they learned."
+            exit 1
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      # A push made with this workflow's token doesn't start other workflows,
+      # so ask for the deploy directly.
+      - name: Redeploy the game
+        if: steps.commit.outputs.changed == 'true'
+        run: gh workflow run deploy.yml --ref main
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -28,6 +28,7 @@
 // deploys in z US_ZONE (in front of the camera), the raiders in THEM_ZONE.
 
 import { mulberry32 } from "./noise";
+import LEARNED_FILE from "./tactics-learned.json";
 
 export type FighterKind =
   | "warrior"
@@ -829,12 +830,50 @@ function fitSpot(field: Field, p: Placed): Placed {
 // bowman or two; a war party brings brutes and bowmen; a fire raid
 // torch-bearers; an army more brutes and bowmen, and horsemen from the
 // Classical era). Their plan suits who came.
+// What the raiders' chiefs have learned: which plan tends to work on which
+// ground, for each kind of raid and stage of history. A trainer plays
+// practice battles every day (scripts/train-tactics.ts, run by a GitHub
+// Action) and writes src/game/tactics-learned.json; each raid then picks its
+// plan by those weights (among the plans its fighters allow). Read from the
+// build, so every player, and both sides of a replay, see the same.
+export type RaidPlanKind = "band" | "party" | "fire" | "army";
+export interface LearnedTactics {
+  trained: string | null;
+  battles: number;
+  // By `${biome}:${kind}:${eraBucket}`: practice battles played, the weight of
+  // each plan, and its record (battles, enemy wins).
+  contexts: Record<string, { games: number; weights: Partial<Record<Tactic, number>>; record: Partial<Record<Tactic, [number, number]>> }>;
+}
+export const LEARNED = LEARNED_FILE as unknown as LearnedTactics;
+export const eraBucket = (era: number) => (era <= 1 ? "early" : era <= 3 ? "middle" : "late");
+export const learnedKey = (biome: Biome, kind: RaidPlanKind, era: number) => `${biome}:${kind}:${eraBucket(era)}`;
+// How many practice battles their chiefs have studied on this kind of ground.
+export const studied = (biome: Biome, kind: RaidPlanKind, era: number) => LEARNED.contexts[learnedKey(biome, kind, era)]?.games ?? 0;
+
+// One plan from those possible, by the learned weights (an even pick
+// without them); `roll` is 0..1.
+function pickPlan(plans: Tactic[], weights: Partial<Record<Tactic, number>> | undefined, roll: number): Tactic {
+  if (!weights) return plans[Math.floor(roll * plans.length)];
+  const w = plans.map((p) => Math.max(0, weights[p] ?? 1 / plans.length));
+  const total = w.reduce((a, b) => a + b, 0);
+  if (total <= 0) return plans[Math.floor(roll * plans.length)];
+  let at = roll * total;
+  for (let i = 0; i < plans.length; i++) {
+    at -= w[i];
+    if (at < 0) return plans[i];
+  }
+  return plans[plans.length - 1];
+}
+
+// `force`: play this plan if their fighters allow it (the trainer);
+// `learned: false`: an even pick, ignoring what was learned.
 export function enemyLineup(
   strength: number,
-  kind: "band" | "party" | "fire" | "army",
+  kind: RaidPlanKind,
   seed: number,
   era = 0,
   biome: Biome = "grass",
+  opts: { force?: Tactic; learned?: boolean } = {},
 ): { theirs: Placed[]; themBoost: number; tactic: Tactic } {
   const rand = mulberry32(seed * 7 + 3);
   const brutes = kind === "party" ? Math.floor(strength * 0.15) : kind === "army" ? Math.floor(strength * 0.2) : 0;
@@ -853,7 +892,8 @@ export function enemyLineup(
   if (torches || horsemen || kinds.length >= 8) plans.push("flank");
   if (bowmen >= 2) plans.push("volley");
   if (brutes >= 2) plans.push("wedge");
-  const tactic = plans[Math.floor(rand() * plans.length)];
+  const roll = rand();
+  const tactic = opts.force && plans.includes(opts.force) ? opts.force : pickPlan(plans, opts.learned === false ? undefined : LEARNED.contexts[learnedKey(biome, kind, era)]?.weights, roll);
   // A big raid fights as fewer, tougher figures.
   const scale = Math.max(1, kinds.length / MAX_FIGHTERS);
   const n = Math.min(kinds.length, MAX_FIGHTERS);
@@ -890,7 +930,8 @@ export function enemyLineup(
 // across the middle of their side, bowmen behind, towers at the back
 // corners. They hold the walls (`hold`).
 export function defenderLineup(strength: number, seed: number, era: number, walls: number, towers: number, biome: Biome = "grass"): { theirs: Placed[]; themBoost: number; tactic: Tactic } {
-  const army = enemyLineup(strength, "army", seed, era, biome);
+  // (How they stand, not a plan: they hold the walls, so nothing learned.)
+  const army = enemyLineup(strength, "army", seed, era, biome, { learned: false });
   const field = fieldOf(seed, biome);
   const fort: Placed[] = [];
   for (let i = 0; i < walls; i++) fort.push({ kind: "palisade", x: (i - (walls - 1) / 2) * 0.5, z: THEM_ZONE[1] - 0.1 });

@@ -25,6 +25,7 @@ import {
   shoots,
   startBattle,
   stepBattle,
+  studied,
   waterAt,
   type BattleResult,
   type BattleSim,
@@ -326,6 +327,8 @@ function BattleScreen() {
         ? `They left behind ${amountText(state, spoils)}.`
         : "They will take what they came for.";
   const plan = TACTICS[preview.tactic ?? "rush"];
+  // How many practice battles their chiefs studied on ground like this (raids only: a people at home holds its walls).
+  const lessons = assault || !raid ? 0 : studied(field.biome, raid.kingdom ? "army" : (raid.kind ?? "party"), state.era);
   const sel = phase === "fight" ? picked : [];
   const heroKind = hero?.kind;
   const groups = MOBILE.filter((k) => (roster[k] ?? 0) > 0);
@@ -368,6 +371,7 @@ function BattleScreen() {
           </p>
           <p className="mt-0.5 text-xs text-amber-200" data-testid="battle-plan">
             Their plan: <span className="font-semibold">{plan.name}</span>. {plan.hint}
+            {lessons > 0 && <span className="text-white/60"> Their chiefs studied {lessons} practice battles on ground like this before choosing it.</span>}
           </p>
           <p className="mt-0.5 text-xs text-emerald-200" data-testid="battle-ground">
             The ground: {BIOMES[field.biome]}
