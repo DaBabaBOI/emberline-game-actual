@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
-import { BUILDINGS, BUILDINGS_BY_ID, LEADER, PLANT_COST, RELIGHT_WOOD } from "@/game/content";
+import { BUILDINGS, BUILDINGS_BY_ID, CHIEF_HP, LEADER, PLANT_COST, RELIGHT_WOOD } from "@/game/content";
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { VillagerTalk } from "./villager-talk";
@@ -16,7 +16,7 @@ import type { IconId } from "@/game/sprites";
 // in the build view, a way back to the chief.
 export function LeaderHud() {
   const { state } = useGame();
-  const { view, prompt, menu, locked, build, pops } = useLeader();
+  const { view, prompt, menu, locked, build, pops, hp, hurt, down, boat } = useLeader();
   // What the chief can build now, for the hotbar.
   const hotbar = BUILDINGS.filter((b) => b.era <= state.era && isUnlocked(state, b));
   // First person: Leader mode, or any game where the player chose to walk.
@@ -84,6 +84,27 @@ export function LeaderHud() {
         ))}
       </div>
 
+      {/* A blow taken: red at the edges. Struck down: dark, then waking by the fire. */}
+      {hurt > 0 && <div key={hurt} className="hurt-flash pointer-events-none fixed inset-0 z-[14]" aria-hidden="true" />}
+      {down && (
+        <div className="down-fade pointer-events-none fixed inset-0 z-[16] flex items-center justify-center" data-testid="chief-down">
+          <p className="font-pixel max-w-md px-4 text-center text-lg text-white">
+            You were struck down! Your people carried you back to the fire. Catch your breath before you fight again.
+          </p>
+        </div>
+      )}
+
+      {/* The chief's hearts: in a fight, or while still hurt. */}
+      {(prompt?.kind === "fight" || hp < CHIEF_HP.hp) && !down && (
+        <div className="pointer-events-none fixed inset-x-0 top-[64%] z-[15] flex justify-center gap-0.5" data-testid="chief-hearts" aria-label={`Health ${hp} of ${CHIEF_HP.hp}`}>
+          {Array.from({ length: CHIEF_HP.hp }, (_, i) => (
+            <span key={i} className={"text-lg drop-shadow-[0_2px_0_rgba(0,0,0,0.7)] " + (i < hp ? "text-red-500" : "text-white/30")}>
+              ♥
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Raiders about: which way, and how far. */}
       {state.raid && state.raid.response !== "hide" && <RaidCompass />}
 
@@ -144,7 +165,9 @@ export function LeaderHud() {
       {/* The controls, and the way to the build view. */}
       <div className="pointer-events-none fixed bottom-1 left-1/2 z-[15] flex -translate-x-1/2 items-center justify-center gap-2 whitespace-nowrap px-3" data-testid="leader-controls">
         <span className={"pixel-panel-dark font-pixel hidden px-2 py-1 text-[11px] text-white/85" + (touch ? "" : " md:inline")}>
-          WASD walk · Shift run · Space jump · E talk / go in · Click act · P plant · 1-9 build · Q put away · G your people · {switchKey} map · Esc mouse
+          {boat
+            ? `In the canoe: WASD paddle · Shift paddle hard · E step ashore by dry land · unknown water is mapped as you go · ${switchKey} map · Esc mouse`
+            : `WASD walk · Shift run · Space jump · E talk / go in / take a canoe · Click act · P plant · 1-9 build · Q put away · G your people · ${switchKey} map · Esc mouse`}
         </span>
         <button type="button" onClick={() => setLeaderView("map")} className="pixel-btn font-pixel pointer-events-auto bg-amber-400 px-3 py-1 text-sm text-[#2b2119]" data-testid="leader-to-map">
           {state.leader ? "Build view" : "Back to the map"} ({switchKey})
@@ -171,11 +194,23 @@ function PromptText({ prompt, hits }: { prompt: NonNullable<ReturnType<typeof us
   if (prompt.kind === "fight")
     return (
       <>
-        {key("Click", true)}: strike the raiders! ({hits}/{LEADER.maxHits} blows, each +{LEADER.hit} defense)
+        {key("Click", true)}: strike the raiders! ({hits}/{LEADER.maxHits} blows, each +{LEADER.hit} defense). They hit back: step away to catch your breath.
+      </>
+    );
+  if (prompt.kind === "ashore")
+    return (
+      <>
+        {key("E")}: step ashore
       </>
     );
   const tile = state.tiles[prompt.tile];
   if (!tile) return null;
+  if (prompt.kind === "board")
+    return (
+      <>
+        {key("E")}: take a canoe out from the {BUILDINGS_BY_ID[tile.building ?? "dock"]?.name ?? "dock"}
+      </>
+    );
   if (prompt.kind === "build") {
     const def = build ? BUILDINGS_BY_ID[build] : null;
     if (!def) return null;

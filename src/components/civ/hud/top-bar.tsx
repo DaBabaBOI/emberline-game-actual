@@ -201,7 +201,7 @@ function ChiefXp({ state }: { state: GameState }) {
 }
 
 export function TopBar({ children }: { children?: React.ReactNode }) {
-  const { state, dispatch, panel } = useGame();
+  const { state, dispatch, panel, clock } = useGame();
   const era = ERAS[state.era];
   const r = state.resources;
   const low = new Set(warnings(state).map((w) => w.id));
@@ -317,6 +317,11 @@ export function TopBar({ children }: { children?: React.ReactNode }) {
               {s.label}
             </button>
           ))}
+          {clock.waiting && (
+            <span className="self-center px-1 text-[10px] leading-tight text-amber-200" title="Do the step Elder Ama is pointing at (or move the camera away from it) and time runs again" data-testid="time-waits">
+              ⏸ {clock.waiting}
+            </span>
+          )}
         </div>
         <span className="order-3 flex items-center gap-1 lg:order-none">
           <SpeedrunClock />

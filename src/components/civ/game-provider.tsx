@@ -30,7 +30,8 @@ interface GameContextValue {
   // The game waits while Elder Ama thinks about a question (Ask Elder Ama).
   setAsking: (asking: boolean) => void;
   // Whether time is passing, and how long a tick takes now (ms).
-  clock: { running: boolean; msPerTick: number };
+  // `waiting`: why time is held although the game isn't paused (Ama's guided step).
+  clock: { running: boolean; msPerTick: number; waiting: string | null };
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -75,13 +76,35 @@ export function GameProvider({
   const perTick = tickSeconds(state);
   const ticking = !(state.speed === 0 || state.phase !== "playing" || panel || held || paused);
   const msPerTick = (perTick * 1000) / Math.max(1, state.speed);
+  // One steady timer. Time spent running adds up across short stops (Ama's
+  // hand finding its target and losing it again as the camera moves, a panel
+  // opened for a moment) instead of starting the tick over each time: a timer
+  // restarted faster than a tick never ticks, and time froze or stuttered.
+  const ticker = useRef({ ticking, msPerTick });
   useEffect(() => {
-    if (!ticking) return;
-    const id = setInterval(() => dispatch({ type: "tick" }), msPerTick);
-    return () => clearInterval(id);
+    ticker.current = { ticking, msPerTick };
   }, [ticking, msPerTick]);
+  useEffect(() => {
+    let done = 0;
+    let last = performance.now();
+    const id = setInterval(() => {
+      const now = performance.now();
+      const dt = Math.min(now - last, 1000);
+      last = now;
+      const t = ticker.current;
+      if (!t.ticking) return;
+      done += dt;
+      if (done >= t.msPerTick) {
+        // Never more than one tick at once (no burst after a hidden tab).
+        done = Math.min(done - t.msPerTick, t.msPerTick / 2);
+        dispatch({ type: "tick" });
+      }
+    }, 40);
+    return () => clearInterval(id);
+  }, [dispatch]);
   // An event card stops the clock too (the engine ignores ticks meanwhile).
-  const clock = { running: ticking && !state.event, msPerTick };
+  const waiting = state.speed > 0 && !panel && !paused && held ? "Time waits while Elder Ama shows you" : null;
+  const clock = { running: ticking && !state.event, msPerTick, waiting };
 
   const lastTick = useRef(state.tick);
   useEffect(() => {

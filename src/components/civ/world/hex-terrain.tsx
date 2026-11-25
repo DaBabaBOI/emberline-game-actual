@@ -20,8 +20,9 @@ const TERRAIN_COLORS: Record<Terrain, string> = {
   river: "#5bb8e3",
 };
 
-// Unexplored tiles lie flat, as low as the deep sea floor.
-const FOG_HEIGHT = 0.12;
+// Unexplored tiles lie flat under a blanket of cloud, just above the sea, so
+// the unknown never looks like water (or land): you see where you haven't been.
+const FOG_HEIGHT = 0.3;
 // Finding new land: it rises out of the fog over `rise` seconds (each tile a
 // little after the last, up to `stagger`), as the mist over it billows up and
 // melts away over `mist` seconds. A huge reveal (a new game, a map) just shows.
@@ -37,9 +38,8 @@ function newlyFound(known: { current: Set<number> | null }, tiles: Tile[]) {
   const fresh = [...now].filter((id) => !before.has(id));
   return fresh.length > REVEAL.most ? [] : fresh;
 }
-// The colour of the open sea floor far away (see Sea), so the unknown runs on
-// past the edge of the world without a seam.
-const UNKNOWN = new Color("#0f3f66");
+// The pale grey-blue of the cloud over the unknown.
+const UNKNOWN = new Color("#d9e3eb");
 const CHARRED = new Color("#2e2620");
 // Cut-over forest shows bare earth and stumps; worn-out grass dries up.
 const BARE = new Color("#7a6443");
@@ -59,9 +59,9 @@ function jitter(id: number, salt: number) {
   return x - Math.floor(x);
 }
 
-// Nothing unexplored shows: land, sea and river alike lie flat and dark
-// under the water, so the shape of what is out there stays hidden until
-// someone goes and looks (a mist bank marks the edge: FogEdge).
+// Nothing unexplored shows: land, sea and river alike lie flat under the
+// cloud, so the shape of what is out there stays hidden until someone goes
+// and looks (a soft bank of cloud marks the edge: FogEdge).
 export function underCloud(tile: Tile) {
   return !tile.revealed;
 }
@@ -138,7 +138,7 @@ export function HexTerrain({
         if (dry > 0 && tile.terrain === "river") color.lerp(LOW_RIVER, dry * 0.7);
       } else {
         color.copy(UNKNOWN);
-        color.offsetHSL(0, 0, (jitter(tile.id, 2) - 0.5) * 0.02);
+        color.offsetHSL(0, 0, (jitter(tile.id, 2) - 0.5) * 0.035);
       }
       mesh.setColorAt(tile.id, color);
     }
@@ -252,25 +252,28 @@ export function RevealMist({ tiles }: { tiles: Tile[] }) {
   );
 }
 
-// The edge of the known world: a low bank of mist over the unexplored tiles
-// that touch explored ones, drifting slowly. It hides what is just beyond.
-const PUFF = new IcosahedronGeometry(1, 1);
+// The edge of the known world: a soft bank of cloud over the unexplored tiles
+// that touch explored ones (and round the rim of the world), drifting slowly.
+const PUFF = new IcosahedronGeometry(1, 2);
+const FOG_PUFFS = 1400;
 export function FogEdge({ tiles }: { tiles: Tile[] }) {
   const ref = useRef<InstancedMesh>(null);
   const puffs = useMemo(() => {
     const byKey = new Map(tiles.map((t) => [hexKey(t.q, t.r), t]));
-    const out: { x: number; z: number; s: number; h: number; phase: number }[] = [];
+    const out: { x: number; z: number; s: number; h: number; phase: number; flat: number }[] = [];
     for (const t of tiles) {
       if (t.revealed) continue;
-      const edge = NEIGHBOR_OFFSETS.some(([dq, dr]) => byKey.get(hexKey(t.q + dq, t.r + dr))?.revealed);
+      const near = NEIGHBOR_OFFSETS.map(([dq, dr]) => byKey.get(hexKey(t.q + dq, t.r + dr)));
+      const edge = near.some((n) => n?.revealed) || near.some((n) => !n);
       if (!edge) continue;
-      for (let k = 0; k < 2; k++) {
+      for (let k = 0; k < 3 && out.length < FOG_PUFFS; k++) {
         out.push({
-          x: t.x + (jitter(t.id, 3 + k) - 0.5) * 1.1,
-          z: t.z + (jitter(t.id, 5 + k) - 0.5) * 1.1,
-          s: 0.75 + jitter(t.id, 7 + k) * 0.55,
-          h: 0.42 + jitter(t.id, 9 + k) * 0.3,
+          x: t.x + (jitter(t.id, 3 + k) - 0.5) * 1.3,
+          z: t.z + (jitter(t.id, 5 + k) - 0.5) * 1.3,
+          s: 0.55 + jitter(t.id, 7 + k) * 0.45,
+          h: FOG_HEIGHT + 0.08 + jitter(t.id, 9 + k) * 0.18,
           phase: jitter(t.id, 11 + k) * Math.PI * 2,
+          flat: 0.55,
         });
       }
     }
@@ -284,7 +287,7 @@ export function FogEdge({ tiles }: { tiles: Tile[] }) {
     puffs.forEach((p, i) => {
       const breathe = 1 + Math.sin(t * 0.5 + p.phase) * 0.08;
       dummy.position.set(p.x + Math.sin(t * 0.13 + p.phase) * 0.15, p.h + Math.sin(t * 0.4 + p.phase) * 0.04, p.z);
-      dummy.scale.set(p.s * 1.25 * breathe, p.s * 0.42, p.s * 1.1 * breathe);
+      dummy.scale.set(p.s * 1.25 * breathe, p.s * p.flat, p.s * 1.1 * breathe);
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
     });
@@ -293,7 +296,7 @@ export function FogEdge({ tiles }: { tiles: Tile[] }) {
   if (!puffs.length) return null;
   return (
     <instancedMesh key={puffs.length} ref={ref} args={[PUFF, undefined, puffs.length]} raycast={() => null} frustumCulled={false}>
-      <meshStandardMaterial color="#e8eef2" transparent opacity={0.72} roughness={1} flatShading depthWrite={false} />
+      <meshStandardMaterial color="#f4f8fb" emissive="#c8d6e2" emissiveIntensity={0.25} transparent opacity={0.92} roughness={1} depthWrite={false} />
     </instancedMesh>
   );
 }

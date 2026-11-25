@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
+import { DoubleSide } from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import type { Group, PerspectiveCamera } from "three";
 import type { Battle, Tile } from "@/game/types";
@@ -10,8 +11,9 @@ import { grabStore } from "./villagers";
 import { Figures, type Agent } from "./figures";
 import { CHIP_COLORS, Chips, HeldTool, holdTool, spawnChips, type HeldKind } from "./held-tool";
 import { isLand } from "@/game/map";
-import { LEADER } from "@/game/content";
-import { leader, leaderButtons, leaderSnapshot, leaderStick, setLeaderBuild, setLeaderLocked, setLeaderMenu, setLeaderPrompt, setLeaderView, villagerName, type LeaderPrompt } from "./leader";
+import { CHIEF_HP, LEADER } from "@/game/content";
+import { leader, leaderButtons, leaderSnapshot, leaderStick, setLeaderBoat, setLeaderBuild, setLeaderHealth, setLeaderLocked, setLeaderMenu, setLeaderPrompt, setLeaderView, villagerName, type LeaderPrompt } from "./leader";
+import { SEA_LEVEL } from "./water";
 import { band, bandSay, trackChief } from "./band";
 import { playSfx } from "@/lib/audio";
 
@@ -30,6 +32,11 @@ const RUN = 4;
 const REACH = 1.25;
 // How far the crosshair reaches: to build or plant, and to work or step in.
 const SIGHT = 7;
+// In a canoe: paddling speed (Shift: harder), sitting low, and how far round
+// it the sea is mapped as it goes.
+const PADDLE = 2.6;
+const PADDLE_HARD = 4.2;
+const SEAT = 0.36;
 const HANDS = 3.2;
 
 export type LeaderAct = { kind: "build" | "gather" | "plant" | "open" | "relight"; tile: number };
@@ -41,7 +48,10 @@ export function LeaderRig({
   active,
   battle,
   onStrike,
+  onDown,
+  onSail,
   onAct,
+  running = true,
   coldFires = [],
   era = 0,
   armed = false,
@@ -56,7 +66,13 @@ export function LeaderRig({
   active: boolean;
   battle: Battle | null;
   onStrike: () => void;
+  // The chief was struck down in a fight.
+  onDown: () => void;
+  // Out in a canoe: water just seen for the first time, or dry land stepped onto.
+  onSail: (e: { sees?: number[]; lands?: number }) => void;
   onAct: (act: LeaderAct) => void;
+  // Time is passing (not paused): only then do the raiders hit back.
+  running?: boolean;
   // Campfires gone cold (E relights them).
   coldFires?: number[];
   // The era (a spear early on, a sword later), and raiders about (weapon in hand).
@@ -89,19 +105,25 @@ export function LeaderRig({
   }, [tiles]);
   const keys = useRef(new Set<string>());
   const strike = useRef(onStrike);
+  const downed = useRef(onDown);
+  const sail = useRef(onSail);
   const act = useRef(onAct);
   const cold = useRef(coldFires);
   useEffect(() => {
     strike.current = onStrike;
+    downed.current = onDown;
+    sail.current = onSail;
     act.current = onAct;
     cold.current = coldFires;
   });
   const fight = battle?.live ? tiles[battle.tile] : null;
   const fightRef = useRef(fight);
+  const runningRef = useRef(running);
   const armedRef = useRef(armed);
   const canQuarry = useRef(quarry);
   useEffect(() => {
     fightRef.current = fight;
+    runningRef.current = running;
     armedRef.current = armed;
     canQuarry.current = quarry;
     Object.assign(band.context, { raid: armed, hungry, rumour, era });
@@ -112,27 +134,53 @@ export function LeaderRig({
   const tool = useRef<Group>(null);
   const held = useRef<{ kind: HeldKind | null; since: number }>({ kind: null, since: 0 });
 
-  // The chief starts near the fire, looking across the village: on open
-  // ground (not inside the fire, a hut or the sea), the nearest free spot.
-  useEffect(() => {
-    if (leader.ready) return;
-    // A couple of steps back from the fire, so it isn't right in your face.
-    let at = { x: home.x + 1.3, z: home.z + 1.3 };
-    for (let r = 1.8; r < 4 && !ground.walkable(at.x, at.z); r += 0.3) {
-      for (let a = 0; a < 12; a++) {
-        const p = { x: home.x + Math.cos((a * Math.PI) / 6) * r, z: home.z + Math.sin((a * Math.PI) / 6) * r };
-        if (ground.walkable(p.x, p.z)) {
-          at = p;
-          break;
+  // By the fire, looking across the village: on open ground (not inside the
+  // fire, a hut or the sea), the nearest free spot. Where the chief starts,
+  // and where our people carry them if they are struck down.
+  const toFire = useMemo(
+    () => () => {
+      // A couple of steps back from the fire, so it isn't right in your face.
+      let at = { x: home.x + 1.3, z: home.z + 1.3 };
+      for (let r = 1.8; r < 4 && !ground.walkable(at.x, at.z); r += 0.3) {
+        for (let a = 0; a < 12; a++) {
+          const p = { x: home.x + Math.cos((a * Math.PI) / 6) * r, z: home.z + Math.sin((a * Math.PI) / 6) * r };
+          if (ground.walkable(p.x, p.z)) {
+            at = p;
+            break;
+          }
         }
       }
-    }
-    leader.x = at.x;
-    leader.z = at.z;
-    leader.y = ground.heightAt(leader.x, leader.z);
-    leader.yaw = Math.atan2(leader.x - home.x, leader.z - home.z);
+      leader.x = at.x;
+      leader.z = at.z;
+      leader.y = ground.heightAt(leader.x, leader.z);
+      leader.yaw = Math.atan2(leader.x - home.x, leader.z - home.z);
+    },
+    [ground, home],
+  );
+  useEffect(() => {
+    if (leader.ready) return;
+    toFire();
     leader.ready = true;
-  }, [ground, home]);
+  }, [toFire]);
+  // The raiders hitting back: time in the thick of it until the next blow
+  // (and how long that is), and time away from it until a heart comes back.
+  const danger = useRef({ t: 0, next: CHIEF_HP.every, heal: 0 });
+  // Canoes: where they can be taken out (our Canoe Docks and Shipyards), what
+  // a canoe floats on (the sea, a river), and when the sea was last mapped.
+  const docks = useMemo(() => tiles.filter((t) => t.building === "dock" || t.building === "shipyard"), [tiles]);
+  const floats = useMemo(
+    () => (x: number, z: number) => {
+      const t = ground.tileAt(x, z);
+      return !!t && !isLand(t.terrain);
+    },
+    [ground],
+  );
+  const mapped = useRef(0);
+  // For the key handlers (set up once): the map as it is now.
+  const world = useRef({ tiles, ground, floats });
+  useEffect(() => {
+    world.current = { tiles, ground, floats };
+  });
 
   // Keys, the mouse, and the pointer lock.
   useEffect(() => {
@@ -183,6 +231,8 @@ export function LeaderRig({
       const now = performance.now();
       const p = leaderSnapshot().prompt;
       if (p?.kind === "fight") {
+        // Struck down a moment ago: too dazed to fight.
+        if (now < leader.downUntil) return;
         if (now - leader.strikeAt > 450) {
           leader.strikeAt = now;
           strike.current();
@@ -210,6 +260,34 @@ export function LeaderRig({
     };
     const interact = () => {
       const p = leaderSnapshot().prompt;
+      if (p?.kind === "board") {
+        // Into a canoe at the water's edge by the dock, facing out to sea.
+        const { tiles, floats } = world.current;
+        const dock = tiles[p.tile];
+        for (let r = 0.8; r < 2.2; r += 0.2)
+          for (let a = 0; a < 16; a++) {
+            const x = dock.x + Math.cos((a * Math.PI) / 8) * r;
+            const z = dock.z + Math.sin((a * Math.PI) / 8) * r;
+            if (!floats(x, z)) continue;
+            leader.x = x;
+            leader.z = z;
+            leader.yaw = Math.atan2(-(x - dock.x), -(z - dock.z));
+            setLeaderBoat(true);
+            // The band stays ashore.
+            band.want = false;
+            bandSay("You", "I'm taking a canoe out. Keep the fire going!");
+            return;
+          }
+        return;
+      }
+      if (p?.kind === "ashore") {
+        leader.x = p.x;
+        leader.z = p.z;
+        setLeaderBoat(false);
+        const t = world.current.ground.tileAt(p.x, p.z);
+        if (t) sail.current({ lands: t.id });
+        return;
+      }
       if (p?.kind === "talk") {
         if (document.pointerLockElement) document.exitPointerLock();
         setLeaderMenu({ index: p.index, name: p.name });
@@ -280,12 +358,15 @@ export function LeaderRig({
     leader.moving = active && (ahead !== 0 || side !== 0);
     band.active = active;
     const running = k.has("shift");
+    const boat = leader.boat;
+    // On foot: dry, open ground. In a canoe: water.
+    const can = boat ? floats : ground.walkable;
     if (leader.moving) {
       const len = Math.max(1, Math.hypot(ahead, side));
-      const step = ((running ? RUN : WALK) * dt) / len;
+      const step = ((boat ? (running ? PADDLE_HARD : PADDLE) : running ? RUN : WALK) * dt) / len;
       // A footstep every stride (quicker running), unless in mid-air.
       stride.current += step * len;
-      if (stride.current > (running ? 0.95 : 0.7) && leader.hop === 0) {
+      if (!boat && stride.current > (running ? 0.95 : 0.7) && leader.hop === 0) {
         stride.current = 0;
         playSfx("footstep");
       }
@@ -293,13 +374,16 @@ export function LeaderRig({
       const dz = (fz * ahead + fx * side) * step;
       // Slide along whatever is in the way (water, a building, a mountain);
       // and if somehow standing inside something, any step gets you out.
-      if (!ground.walkable(leader.x, leader.z) || ground.walkable(leader.x + dx, leader.z + dz)) {
+      if (!can(leader.x, leader.z) || can(leader.x + dx, leader.z + dz)) {
         leader.x += dx;
         leader.z += dz;
-      } else if (ground.walkable(leader.x + dx, leader.z)) leader.x += dx;
-      else if (ground.walkable(leader.x, leader.z + dz)) leader.z += dz;
+      } else if (can(leader.x + dx, leader.z)) leader.x += dx;
+      else if (can(leader.x, leader.z + dz)) leader.z += dz;
     }
-    leader.y += (ground.heightAt(leader.x, leader.z) - leader.y) * Math.min(1, dt * 10);
+    // Afloat: on the water's surface (a river runs a little higher than the sea).
+    const under = boat ? ground.tileAt(leader.x, leader.z) : undefined;
+    const surface = boat ? Math.max(SEA_LEVEL, under && under.terrain === "river" ? under.height : SEA_LEVEL) : ground.heightAt(leader.x, leader.z);
+    leader.y += (surface - leader.y) * Math.min(1, dt * 10);
     // A jump: up, and back down.
     if (leader.hop > 0 || leader.vy > 0) {
       leader.hop += leader.vy * dt;
@@ -316,8 +400,9 @@ export function LeaderRig({
     // Walking: the head bobs and sways a little (more when running), and the
     // view widens at a run.
     const pace = running && leader.moving ? 1.6 : 1;
-    const bob = leader.moving ? Math.sin(now / (120 / pace)) * 0.025 * pace : 0;
-    const sway = leader.moving ? Math.sin(now / (240 / pace)) * 0.012 * pace : 0;
+    // In a canoe the waves rock you gently instead.
+    const bob = boat ? Math.sin(now / 520) * 0.018 : leader.moving ? Math.sin(now / (120 / pace)) * 0.025 * pace : 0;
+    const sway = boat ? Math.sin(now / 830) * 0.02 : leader.moving ? Math.sin(now / (240 / pace)) * 0.012 * pace : 0;
     const fov = running && leader.moving ? 80 : 72;
     if (Math.abs(camera.fov - fov) > 0.05) {
       camera.fov += (fov - camera.fov) * Math.min(1, dt * 6);
@@ -325,14 +410,15 @@ export function LeaderRig({
     }
     // The view dips with a swing of the axe (or a blow).
     const swing = Math.max(0, 1 - (now - Math.max(leader.actAt, leader.strikeAt)) / 260);
-    camera.position.set(leader.x, leader.y + EYE + bob + leader.hop, leader.z);
+    camera.position.set(leader.x, leader.y + (boat ? SEAT : EYE) + bob + leader.hop, leader.z);
     camera.rotation.set(leader.pitch - Math.sin(swing * Math.PI) * 0.06, leader.yaw, sway, "YXZ");
     // In hand: a weapon in a fight (or with raiders about), the right tool for
     // what's under the crosshair, a hammer while building.
     const was = leaderSnapshot();
     const weapon: HeldKind = era >= 2 ? "sword" : "spear";
-    const kind: HeldKind | null =
-      was.prompt?.kind === "fight"
+    const kind: HeldKind | null = boat
+      ? null
+      : was.prompt?.kind === "fight"
         ? weapon
         : was.prompt?.kind === "gather"
           ? was.prompt.what === "wood"
@@ -345,11 +431,74 @@ export function LeaderRig({
               : null;
     holdTool(tool.current, camera, kind, held.current, now, Math.max(leader.actAt, leader.strikeAt), leader.moving);
 
+    // Out in a canoe: map the sea round us, and offer to step ashore where
+    // there is dry land just ahead.
+    if (boat) {
+      if (now - mapped.current > 400) {
+        mapped.current = now;
+        const seen = new Set<number>();
+        for (let a = 0; a < 7; a++)
+          for (const r of a === 0 ? [0] : [1.1, 2]) {
+            const t = ground.tileAt(leader.x + Math.cos((a * Math.PI) / 3) * r, leader.z + Math.sin((a * Math.PI) / 3) * r);
+            if (t && !t.revealed) seen.add(t.id);
+          }
+        if (seen.size) sail.current({ sees: [...seen] });
+      }
+      let shore: LeaderPrompt = null;
+      for (const r of [0.55, 0.75, 0.95]) {
+        const x = leader.x + fx * r;
+        const z = leader.z + fz * r;
+        const t = ground.tileAt(x, z);
+        // Dry land (even unexplored land: stepping onto it is how you explore it).
+        if (t && isLand(t.terrain) && t.terrain !== "mountain" && !(t.building && Math.hypot(x - t.x, z - t.z) < 0.62)) {
+          shore = { kind: "ashore", x, z };
+          break;
+        }
+      }
+      setLeaderPrompt(shore);
+      return;
+    }
+    // Waking up by the fire.
+    const hearts = leaderSnapshot();
+    if (hearts.down && now >= leader.downUntil) setLeaderHealth({ down: false });
     // Within reach: a fight, or a villager in front.
-    if (fightRef.current && Math.hypot(fightRef.current.x - leader.x, fightRef.current.z - leader.z) < 3.2) {
+    const near = fightRef.current ? Math.hypot(fightRef.current.x - leader.x, fightRef.current.z - leader.z) : Infinity;
+    const d = danger.current;
+    if (near < 3.2) {
+      // The raiders hit back: often right among them, less at the edge.
+      d.heal = 0;
+      if (runningRef.current) d.t += dt * (near < 1.6 ? 1 : 0.5);
+      if (d.t >= d.next) {
+        d.t = 0;
+        d.next = CHIEF_HP.every * (0.7 + Math.random() * 0.6);
+        playSfx("hurt");
+        if (hearts.hp > 1) setLeaderHealth({ hp: hearts.hp - 1, hurt: hearts.hurt + 1 });
+        else {
+          // Struck down: our people carry the chief back to the fire.
+          leader.downUntil = now + CHIEF_HP.dazed * 1000;
+          setLeaderHealth({ hp: CHIEF_HP.hp, hurt: hearts.hurt + 1, down: true });
+          toFire();
+          downed.current();
+          return;
+        }
+      }
       setLeaderPrompt({ kind: "fight" });
       return;
     }
+    // Away from the fight, a heart comes back now and then.
+    if (hearts.hp < CHIEF_HP.hp) {
+      d.heal += dt;
+      if (d.heal >= CHIEF_HP.heal) {
+        d.heal = 0;
+        setLeaderHealth({ hp: hearts.hp + 1 });
+      }
+    }
+    // By a Canoe Dock or Shipyard: a canoe to take out.
+    for (const d of docks)
+      if (Math.hypot(d.x - leader.x, d.z - leader.z) < 1.35) {
+        setLeaderPrompt({ kind: "board", tile: d.id });
+        return;
+      }
     // What the crosshair is on: a tree, a mountain's peak, a building (it
     // stands about this high over the middle of its tile) or the ground.
     const lx = -Math.sin(leader.yaw) * Math.cos(leader.pitch);
@@ -429,6 +578,53 @@ export function LeaderRig({
       <Figures agents={body} max={1} />
       <HeldTool toolRef={tool} />
       <Chips />
+      <ChiefCanoe />
     </>
+  );
+}
+
+// The chief's canoe: a dugout hull, hollowed on top, with a paddle that dips
+// on one side then the other while paddling. Drawn wherever the chief is
+// afloat (seen from above on the map, and the bow ahead in first person).
+function ChiefCanoe() {
+  const group = useRef<Group>(null);
+  const paddle = useRef<Group>(null);
+  useFrame(() => {
+    const g = group.current;
+    if (!g) return;
+    g.visible = leader.ready && leader.boat;
+    if (!g.visible) return;
+    const now = performance.now();
+    // Riding on the water, not in it.
+    g.position.set(leader.x - Math.sin(leader.yaw) * 0.12, leader.y + 0.07 + Math.sin(now / 520) * 0.012, leader.z - Math.cos(leader.yaw) * 0.12);
+    g.rotation.set(0, leader.yaw, Math.sin(now / 830) * 0.03);
+    const p = paddle.current;
+    if (p) {
+      const stroke = leader.moving ? now / 260 : 0;
+      p.position.x = Math.sin(stroke) >= 0 ? 0.17 : -0.17;
+      p.rotation.set(-0.6 + Math.cos(stroke * 2) * 0.35, 0, Math.sin(stroke) >= 0 ? -0.5 : 0.5);
+    }
+  });
+  return (
+    <group ref={group} visible={false}>
+      <mesh scale={[0.15, 0.1, 0.55]} castShadow>
+        <sphereGeometry args={[1, 14, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2]} />
+        <meshStandardMaterial color="#8a5a2b" roughness={0.9} side={DoubleSide} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[0.13, 0.5, 1]} position={[0, 0.003, 0]}>
+        <circleGeometry args={[1, 18]} />
+        <meshStandardMaterial color="#6b4423" roughness={1} />
+      </mesh>
+      <group ref={paddle} position={[0.17, 0.12, -0.08]}>
+        <mesh>
+          <cylinderGeometry args={[0.008, 0.008, 0.42, 6]} />
+          <meshStandardMaterial color="#c49a6c" />
+        </mesh>
+        <mesh position={[0, -0.22, 0]} scale={[0.05, 0.1, 0.008]}>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial color="#a0703f" />
+        </mesh>
+      </group>
+    </group>
   );
 }

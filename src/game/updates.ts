@@ -9,6 +9,13 @@ export const UPDATES: Update[] = [
   {
     date: "2026-11-25",
     items: [
+      "Take a canoe out as the chief (first person): walk up to a Canoe Dock or Shipyard and press E. Paddle the sea and the rivers (Shift to paddle hard); unknown water is mapped as you go. Press E by dry land to step ashore: onto a new island to make it ours, or onto a people's coast to pay them a visit.",
+      "The fog is now a soft blanket of cloud, so you can always tell what you haven't explored (it used to look just like the sea). Scouts, canoes and ships map the way as they go: watch the land come out of the cloud along their path.",
+      "First person: the raiders hit back now. Your hearts show in a fight; lose them all and you are struck down and carried back to the fire (your blows in that fight are lost, and everyone is shaken). Step away to catch your breath and they come back.",
+      "Spearmen are just warriors now: once you learn Hunting Spears, every warrior picks up a spear. No more separate Spear card.",
+      "Time no longer stutters or freezes while Elder Ama points the way, and when time waits for her step, the top bar says so.",
+      "Elder Ama knows what each advancement actually does, so she doesn't guess (Seed Saving: every field grows 10% more).",
+      "A new era rebuilds every old home wherever it stands: wooden houses on a beach or a hill used to be left behind.",
       "Raiding or conquering a people is now a battle you lead on their island: their ground (hills, woods, a river with fords), their palisades and, for a conquest, their watchtowers. They hold the walls and wait for you, until one of theirs falls or they lose patience and sally out. Place your warriors, spearmen, archers and riders, then lead them, fight as one of them, or let them fight it out. Who falls is who actually fell, and you can call it off before it starts. The Peoples panel says how hard it looks.",
       "Raiders you don't answer now become a battle you lead too, whenever you have warriors to command.",
       "A new Advancements tree: every card has an icon and shows how close you are (a Knowledge bar and its goal), cards you can research right now glow with a Ready! badge, and a Next steps strip at the top shows the best four to research, with a Research button right there. Click a card and its whole path lights up, what it needs and everything it leads to, and the bar below lists its needs (ticked or not), what it leads to (click to jump there), and its goals with progress bars. Filter by branch, or show only what you can research. Drag to look around; lines to what you can research next flow, and a new discovery bursts on its card.",

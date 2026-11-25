@@ -149,7 +149,7 @@ export function CoachPanel() {
   const { waiting } = useGuide();
   const step = state.coach ? AFTER_STEPS[state.coach.node] : null;
   if (!step || state.tutorialStep < TUTORIAL.length) return null;
-  const guided = !!(step.build || step.upgrade);
+  const guided = !!step.build;
   return (
     <div className="pixel-panel pointer-events-auto relative z-[26] w-full p-2.5 text-xs md:p-3 md:text-sm" data-testid="coach">
       <div className="mb-1 flex items-center gap-2">

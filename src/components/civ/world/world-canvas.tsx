@@ -1036,6 +1036,12 @@ export function WorldCanvas() {
           hungry={state.famineTicks > 0 || state.resources.food < 20}
           rumour={(state.rumours ?? []).length > 0}
           onStrike={() => dispatch({ type: "leaderStrike" })}
+          onDown={() => dispatch({ type: "leaderDown" })}
+          running={state.speed > 0 && !state.event}
+          onSail={({ sees, lands }) => {
+            if (sees) dispatch({ type: "chiefSees", tiles: sees });
+            if (lands !== undefined) dispatch({ type: "chiefLands", tile: lands });
+          }}
           onAct={({ kind, tile }) => {
             if (kind === "build" && leaderSnap.build) {
               const why = placementError(state, state.tiles[tile], BUILDINGS_BY_ID[leaderSnap.build]);

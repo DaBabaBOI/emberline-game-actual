@@ -1,5 +1,5 @@
-import { AFTER_STEPS, BUILDINGS_BY_ID, ERAS, LAST_TUTORIAL, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL } from "@/game/content";
-import { buildingCost, countBuildings, everydayWater, placementError, placementHarm, scoutCost, spearmenOf, nearRiver, warriorCap } from "@/game/engine";
+import { AFTER_STEPS, BUILDINGS_BY_ID, ERAS, LAST_TUTORIAL, TRAIN_COST, TREE_BY_ID, TUTORIAL } from "@/game/content";
+import { buildingCost, countBuildings, everydayWater, placementError, placementHarm, scoutCost, nearRiver } from "@/game/engine";
 import { hexDistance } from "@/game/hex";
 import { familyOf, partners } from "@/components/civ/world/facing";
 import type { GameState, Resources } from "@/game/types";
@@ -95,23 +95,12 @@ function buildStep(state: GameState, id: string, selected: string | null, panel:
     : { target: { kind: "tile", tileId }, waiting: null };
 }
 
-// The guided step after an advancement: place what it unlocked, or give a
-// warrior a spear. Explanation-only steps have no target.
+// The guided step after an advancement: place what it unlocked.
+// Explanation-only steps have no target.
 function coachGuide(state: GameState, selected: string | null, panel: string | null): Guide {
   const step = state.coach ? AFTER_STEPS[state.coach.node] : null;
   if (!step) return NONE;
   if (step.build) return buildStep(state, step.build, selected, panel);
-  if (step.upgrade) {
-    if (panel === "tree") return { target: { kind: "ui", ids: ["tree-close"] }, waiting: null };
-    if (spearmenOf(state) < state.soldiers) {
-      const wait = missing(state, SPEAR_COST);
-      return wait ? { target: null, waiting: wait } : { target: { kind: "ui", ids: ["tool-upgrade"] }, waiting: null };
-    }
-    // No warrior without a spear: train a new one (it comes with a spear).
-    if (state.soldiers >= warriorCap(state)) return { target: null, waiting: "Build another War Camp to train more." };
-    const wait = missing(state, TRAIN_COST);
-    return wait ? { target: null, waiting: wait } : { target: { kind: "ui", ids: ["tool-train"] }, waiting: null };
-  }
   return NONE;
 }
 

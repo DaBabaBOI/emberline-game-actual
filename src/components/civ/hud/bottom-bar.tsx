@@ -5,7 +5,7 @@ import { setPlanMode, usePlanMode } from "@/components/civ/world/plan-mode";
 import { LEVELS, hasEconomy } from "@/game/economy";
 import { setLeaderView } from "@/components/civ/world/leader";
 import { useRef, useState, type ReactNode } from "react";
-import { BUILDINGS, CANOE, ERAS, LAST, MERCS, SPACE, TRADE, LOW_WOOD_AFTER_BUY, PLANT_COST, SPEAR_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL, WARFARE_LEVELS, WARRIORS_PER_CAMP } from "@/game/content";
+import { BUILDINGS, CANOE, ERAS, LAST, MERCS, SPACE, TRADE, LOW_WOOD_AFTER_BUY, PLANT_COST, TRAIN_COST, TREE_BY_ID, TUTORIAL, WARFARE_LEVELS, WARRIORS_PER_CAMP } from "@/game/content";
 import {
   archersOf,
   mercCost,
@@ -52,7 +52,6 @@ import {
   production,
   rainfall,
   scoutCost,
-  spearmenOf,
   tradeOffer,
   sellOffer,
   tutorialLocked,
@@ -564,19 +563,6 @@ export function BottomBar() {
             </ToolButton>
           )}
           {!last && <ArmyButton />}
-          {!last && state.researched.includes("spears") && spearmenOf(state) < state.soldiers && (
-            <ToolButton
-              guide="tool-upgrade"
-              icon="sword"
-              label={`Spear ${spearmenOf(state)}/${state.soldiers}`}
-              onClick={() => dispatch({ type: "upgradeWarrior" })}
-              disabled={!canAfford(state, SPEAR_COST)}
-              title="Give a warrior a spear: spearmen fight 1.5x as hard."
-              tone="bg-red-900 hover:bg-red-800"
-            >
-              <Cost cost={SPEAR_COST} />
-            </ToolButton>
-          )}
           {!last && state.researched.includes("barter-roads") && <CaravanButton />}
           {!last && (countBuildings(state).dock ?? 0) > 0 && <CanoeButton />}
           {!last && state.researched.includes("navigation") && <ShipButton />}

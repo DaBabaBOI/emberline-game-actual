@@ -77,8 +77,7 @@ export const DIFFICULTIES: Record<
 
 export const WARRIORS_PER_CAMP = 6;
 export const TRAIN_COST = { food: 8, wood: 4 };
-// After Hunting Spears: give a warrior a spear. Spearmen fight 1.5x as hard.
-export const SPEAR_COST = { wood: 4 };
+// After Hunting Spears every warrior on foot carries a spear: 1.5x as hard.
 export const SPEARMAN_STRENGTH = 1.5;
 // Other kinds of fighter, each trained at a War Camp like a warrior (they take
 // a warrior's place there): archers after Archery (they shoot from behind the
@@ -1087,7 +1086,7 @@ export const TREE: TreeNode[] = [
   {
     id: "spears",
     name: "Hunting Spears",
-    description: "+15% food. Warriors can carry spears: train new spearmen, or give your warriors spears, to fight 50% harder.",
+    description: "+15% food. Every warrior carries a spear and fights 50% harder.",
     branch: "military",
     era: 0,
     cost: 6,
@@ -1969,7 +1968,7 @@ export const AFTER_STEPS: Record<string, AfterStep> = {
   firekeeping: { text: "We know how to bank a fire now: every campfire burns 1.5 times as long (50% longer) before it needs more wood. Less wood cut, less smoke. We can also build a Watch Tower on the shore, to see raiders coming sooner." },
   fishing: { build: "fishing", text: "Rafts! Place a Fishing Spot on the shore, next to the water. Fish near the coast give even more. A Canoe Dock lets us paddle out to the islands to the south, but every canoe costs one big tree." },
   "early-farming": { build: "farm", text: "We can plant grain. Place Farmland on open grass: it feeds many, but it takes the land from the wild." },
-  spears: { upgrade: true, text: "Stone-tipped spears! Our hunters bring back more food. Give a warrior a spear with the Spear button: in a fight, a spearman counts as 1.5 warriors (a warrior without one counts as 1). Every warrior you train from now on gets a spear." },
+  spears: { text: "Stone-tipped spears! Our hunters bring back more food, and every warrior picks one up: in a fight a spearman counts as 1.5 warriors, and a line of spears stops a charge. Every warrior you train from now on carries one too." },
   herbalism: { build: "healer", text: "We know which plants heal. Build a Healer's Hut: the sick get better faster, and sickness spreads less." },
   herding: { build: "pen", text: "We can keep goats and sheep. Place a Livestock Pen: steady food, but grazing wears down the grass." },
   "hide-clothing": { text: "Warm clothes from hides and wool: each Livestock Pen now keeps 10 people warm, and families cook at small hearths in their homes. With enough pens you need no campfires at all: less wood, less smoke." },
@@ -2593,8 +2592,8 @@ export const LESSONS: { id: string; title: string; text: string; sdg: string }[]
 
 // Elder Ama's welcome when the tribe enters a new era (shown like a lesson).
 // A new era rebuilds the town for its age, free: older homes and teaching
-// buildings become this era's (by the era just entered: from -> to). Only on
-// ground the new building can stand on.
+// buildings become this era's (by the era just entered: from -> to), each
+// rebuilt where it stands.
 export const ERA_MAKEOVER: Record<number, Record<string, string>> = {
   1: { hut: "house" },
   2: { hut: "house", elder: "school" },
@@ -3478,6 +3477,12 @@ export const LEFT_BEHIND_WARN = 200;
 // `stone` off a hill. Every `fellHits`-th blow at the same tree or rock brings
 // `fellBonus` more (a log comes down; a slab breaks off).
 export const LEADER = { hit: 0.6, maxHits: 8, helpTicks: 30, wood: 1, stone: 1, chopThin: 0.03, chopMin: 0.2, fellHits: 5, fellBonus: 3 };
+// In the thick of a fight (first person) the raiders hit back: a blow about
+// every `every` seconds right among them (half as often at the edge), `hp`
+// blows and the chief falls. Our people carry them back to the fire (dazed for
+// `dazed` seconds, their blows in this fight lost, `happiness` off); away from
+// the fight a heart comes back every `heal` seconds.
+export const CHIEF_HP = { hp: 6, every: 1.5, heal: 5, dazed: 8, happiness: 6 };
 export const DROP = { helpBoost: 0.5, helpTicks: 20, fogTicks: 20, fogLuck: 0.05, fogReveal: 2 };
 // Someone dropped into a fire or the open sea dies, and the tribe grieves: each
 // death costs `happiness`, taken off after the 0-100 cap so it always shows. It

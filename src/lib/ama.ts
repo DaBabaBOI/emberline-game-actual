@@ -88,6 +88,9 @@ export function townSummary(state: GameState): string {
   // goals, so Ama never has to guess what something needs.
   const learned = TREE.filter((n) => state.researched.includes(n.id) && !n.secret).map((n) => n.name);
   lines.push(`Advancements already learned: ${learned.length ? learned.join(", ") : "none"}.`);
+  // What the last few learned ones do (players ask about what they just got).
+  const recent = state.researched.slice(-4).map((id) => TREE.find((t) => t.id === id)).filter((n) => n && !n.secret);
+  if (recent.length) lines.push(`What the latest ones do: ${recent.map((n) => `${n!.name}: ${n!.description.slice(0, 90)}`).join(" | ")}.`);
   const ready = new Set(affordableResearch(state).map((n) => n.id));
   const open = TREE.filter(
     (n) => n.era <= state.era && !n.secret && !n.comingSoon && !state.researched.includes(n.id) && n.requires.every((r) => state.researched.includes(r)),
@@ -97,7 +100,8 @@ export function townSummary(state: GameState): string {
       `Advancements open to learn (these are their ONLY requirements): ${open
         .map((n) => {
           const goals = goalProgress(state, n.id).map((g) => `${g.label} ${g.have}/${g.need}`);
-          return `${n.name}: ${researchCost(state, n)} Knowledge${goals.length ? `, goals: ${goals.join("; ")}` : ""}${ready.has(n.id) ? " (can learn now)" : ""}`;
+          // What it actually does, so its effect is never guessed.
+          return `${n.name} (${n.description.slice(0, 90)}): ${researchCost(state, n)} Knowledge${goals.length ? `, goals: ${goals.join("; ")}` : ""}${ready.has(n.id) ? " (can learn now)" : ""}`;
         })
         .join(" | ")}`,
     );

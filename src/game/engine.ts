@@ -122,7 +122,6 @@ import {
   TRAIN_COST,
   TREE,
   TREE_BY_ID,
-  SPEAR_COST,
   SPEARMAN_STRENGTH,
   ARCHER,
   RIDER,
@@ -145,6 +144,7 @@ import {
   ERA_MAKEOVER,
   UPGRADES,
   LEADER,
+  CHIEF_HP,
   TEMPERS,
   KINGDOM_ARMY,
   RUINS_FINDS,
@@ -341,7 +341,10 @@ export type Action =
   | { type: "devSparks" }
   | { type: "devClearForest" }
   | { type: "endCoach" }
-  | { type: "upgradeWarrior" };
+  | { type: "leaderDown" }
+  // The chief out in a canoe (first person): sea seen for the first time, and dry land stepped onto.
+  | { type: "chiefSees"; tiles: number[] }
+  | { type: "chiefLands"; tile: number };
 
 export interface NewGameOptions {
   dev?: boolean;
@@ -949,7 +952,9 @@ function eraMakeover(state: GameState, era: number): { tiles: Tile[]; changed: n
   const tiles = state.tiles.map((t) => {
     const to = t.building ? swaps[t.building] : undefined;
     const def = to ? BUILDINGS_BY_ID[to] : undefined;
-    if (!def || !def.terrain.includes(t.terrain)) return t;
+    // Rebuilt where it stands, even on ground the new kind couldn't be placed
+    // on fresh (a wooden house on the beach or a hill becomes brick too).
+    if (!def) return t;
     const key = `${t.building}>${to}`;
     counts[key] = (counts[key] ?? 0) + 1;
     changed.push(t.id);
@@ -2130,7 +2135,7 @@ export function isleKind(state: GameState, island: number) {
 // A boat comes ashore by `at`: a wild island becomes ours to build on, the
 // first to land among old ruins finds what was left there, and a people's
 // coast is a friendly visit.
-function landfall(state: GameState, at: Tile, by: "canoe" | "ship"): GameState {
+function landfall(state: GameState, at: Tile, by: "canoe" | "ship" | "chief"): GameState {
   const land = landNear(state, at);
   if (!land || !state.world) return state;
   const isle = isleById(state.world.seed, land.island);
@@ -2140,14 +2145,18 @@ function landfall(state: GameState, at: Tile, by: "canoe" | "ship"): GameState {
   if (kingdom) {
     if (!state.kingdoms?.[kingdom] || state.kingdoms[kingdom].conquered) return state;
     const fed = { ...state, resources: { ...state.resources, food: state.resources.food + 10 } };
-    return changeMood(say(fed, `Our ${by} landed on the coast of ${kingdomName(state, kingdom)}. They traded a little and sent our sailors home with food (+10 food).`), { [kingdom]: SHIP.meetMood / 2 });
+    const line =
+      by === "chief"
+        ? `You paddled to the coast of ${kingdomName(state, kingdom)} yourself. They were honoured, and sent you home with food (+10 food).`
+        : `Our ${by} landed on the coast of ${kingdomName(state, kingdom)}. They traded a little and sent our sailors home with food (+10 food).`;
+    return changeMood(say(fed, line), { [kingdom]: SHIP.meetMood / 2 });
   }
   let next = state;
   if (!(next.outposts ?? []).includes(isle.id)) {
     const tiles = next.tiles.map((t) => (t.island === isle.id && !t.revealed ? { ...t, revealed: true } : t));
     next = say(
       { ...next, tiles, outposts: [...(next.outposts ?? []), isle.id] },
-      `Our ${by} reached ${isle.name}! It is ours now: we can build anything there${by === "canoe" ? ", but small islands are fragile" : ""}.`,
+      `${by === "chief" ? "You stepped ashore on" : `Our ${by} reached`} ${isle.name}! It is ours now: we can build anything there${by !== "ship" ? ", but small islands are fragile" : ""}.`,
     );
   }
   if (isle.kind === "ruins" && !(next.ruinsFound ?? []).includes(isle.id)) next = { ...next, ruinsSearch: { island: isle.id, tick: next.tick } };
@@ -4655,7 +4664,6 @@ export function goalsMet(state: GameState, nodeId: string): boolean {
 
 function coachCount(state: GameState, node: string): number {
   const step = AFTER_STEPS[node];
-  if (step?.upgrade) return spearmenOf(state);
   return step?.build ? countBuildings(state)[step.build] ?? 0 : 0;
 }
 
@@ -4664,7 +4672,7 @@ function advanceCoach(state: GameState): GameState {
   const c = state.coach;
   if (!c) return state;
   const step = AFTER_STEPS[c.node];
-  if ((step?.build || step?.upgrade) && coachCount(state, c.node) > c.from) return farewellAfterCoach({ ...state, coach: null }, c.node);
+  if (step?.build && coachCount(state, c.node) > c.from) return farewellAfterCoach({ ...state, coach: null }, c.node);
   return state;
 }
 
@@ -5046,6 +5054,7 @@ function tickOnce(state: GameState): GameState {
   if ((next.sellPrice ?? 1) < 1) next = { ...next, sellPrice: Math.min(1, (next.sellPrice ?? 1) + TRADE.ease) };
   next = reachTypeOne(next);
   next = returnCaravans(next);
+  next = mapTheWay(next);
   next = returnScouts(next);
   next = returnCanoes(next);
   next = last ? next : returnShips(updateKingdoms(next));
@@ -5909,6 +5918,39 @@ function scoutsReturn(state: GameState, tileId: number): GameState {
     log: [`The scouts are back: they mapped ${newLand} tiles of new land${learned ? ` (+${learned} Knowledge)` : ""}.`, ...state.log].slice(0, 30),
   });
 }
+// Scouts, canoes and ships map the way as they go: the tiles either side of
+// their path out (a tile or so wide) come out of the fog as they pass, so you
+// can follow them across the map. Only the way out: coming back, they retrace it.
+const WAY_WIDE = 1.45; // tile spacing is about 1.73: a tile either side
+function mapTheWay(state: GameState): GameState {
+  const trips: { from: Tile; to: Tile; frac: number }[] = [];
+  const out = (start: number, back: number) => Math.min(1, (2 * (state.tick - start)) / Math.max(1, back - start));
+  const s = state.scouting;
+  if (s && s.start !== undefined && state.tiles[s.tile]) trips.push({ from: state.tiles[s.from ?? state.startTile], to: state.tiles[s.tile], frac: out(s.start, s.back) });
+  for (const c of state.canoes ?? [])
+    if (c.tile !== undefined && state.tiles[c.tile]) trips.push({ from: state.tiles[c.dock ?? state.startTile] ?? state.tiles[state.startTile], to: state.tiles[c.tile], frac: out(c.start, c.back) });
+  for (const sh of state.ships ?? [])
+    if (sh.tile !== undefined && state.tiles[sh.tile]) trips.push({ from: state.tiles[state.startTile], to: state.tiles[sh.tile], frac: out(sh.start, sh.back) });
+  if (!trips.length) return state;
+  let changed = false;
+  const tiles = state.tiles.map((t) => {
+    if (t.revealed) return t;
+    for (const { from, to, frac } of trips) {
+      // How far this tile is from the stretch travelled so far.
+      const ex = (to.x - from.x) * frac;
+      const ez = (to.z - from.z) * frac;
+      const len = ex * ex + ez * ez;
+      const k = len ? Math.max(0, Math.min(1, ((t.x - from.x) * ex + (t.z - from.z) * ez) / len)) : 0;
+      if (Math.hypot(t.x - (from.x + ex * k), t.z - (from.z + ez * k)) <= WAY_WIDE) {
+        changed = true;
+        return { ...t, revealed: true };
+      }
+    }
+    return t;
+  });
+  return changed ? { ...state, tiles } : state;
+}
+
 const returnScouts = (state: GameState) => (state.scouting && state.tick >= state.scouting.back ? scoutsReturn(state, state.scouting.tile) : state);
 
 function dropPerson(state: GameState, tileId: number | null): GameState {
@@ -6652,6 +6694,11 @@ function fitTroops(state: GameState): GameState {
     const archers = Math.max(0, (next.archers ?? 0) - over);
     over -= (next.archers ?? 0) - archers;
     next = { ...next, riders, archers, spearmen: Math.max(0, (next.spearmen ?? 0) - over) };
+  }
+  // Once we know spears, every warrior on foot carries one: no arming them one by one.
+  if (next.researched.includes("spears")) {
+    const unarmed = next.soldiers - (next.spearmen ?? 0) - (next.archers ?? 0) - (next.riders ?? 0);
+    if (unarmed > 0) next = { ...next, spearmen: (next.spearmen ?? 0) + unarmed };
   }
   if (next.mercs && next.tick >= next.mercs.until && next.raid?.fightStart === undefined) {
     next = { ...next, mercs: null, log: [`The mercenaries' time is up: they take their pay and go.`, ...next.log].slice(0, 30) };
@@ -8183,6 +8230,34 @@ function step(state: GameState, action: Action): GameState {
       return { ...state, raid: { ...raid, leaderHits: (raid.leaderHits ?? 0) + 1 } };
     }
 
+    // The chief was struck down in the fight (first person): our people carry
+    // them back to the fire. Their blows in this fight are lost, and everyone
+    // is shaken.
+    case "leaderDown": {
+      const raid = state.raid;
+      if (!raid || raid.fightStart === undefined) return state;
+      return withMeters({
+        ...state,
+        raid: { ...raid, leaderHits: 0 },
+        modifiers: { ...state.modifiers, happiness: state.modifiers.happiness - CHIEF_HP.happiness },
+        log: ["The chief was struck down! Our people carried them back to the fire.", ...state.log].slice(0, 30),
+      });
+    }
+
+    case "chiefSees": {
+      const ids = new Set(action.tiles.slice(0, 24));
+      if (!ids.size || state.phase !== "playing") return state;
+      return { ...state, tiles: state.tiles.map((t) => (ids.has(t.id) && !t.revealed ? { ...t, revealed: true } : t)) };
+    }
+
+    case "chiefLands": {
+      const tile = state.tiles[action.tile];
+      if (!tile || !isLand(tile.terrain) || state.phase !== "playing") return state;
+      // Where we stand is explored now; a new island is ours, a people's coast a visit.
+      const seen = { ...state, tiles: state.tiles.map((t) => (!t.revealed && hexDistance(t, tile) <= 1 ? { ...t, revealed: true } : t)) };
+      return withMeters(landfall(seen, seen.tiles[tile.id], "chief"));
+    }
+
     case "leaderGather": {
       // The chief works with their own hands: an armful of wood from the forest
       // (it thins it a little), or a few stones broken off a hill.
@@ -8497,17 +8572,6 @@ function step(state: GameState, action: Action): GameState {
     case "devGoals":
       // Dev: treat every advancement goal as met (toggle).
       return state.dev ? { ...state, devGoals: !state.devGoals } : state;
-
-    case "upgradeWarrior": {
-      if (!state.researched.includes("spears") || spearmenOf(state) >= state.soldiers || !canAfford(state, SPEAR_COST))
-        return state;
-      return withMeters({
-        ...state,
-        spearmen: spearmenOf(state) + 1,
-        resources: spend(state.resources, SPEAR_COST),
-        log: ["A warrior took up a spear.", ...state.log].slice(0, 30),
-      });
-    }
 
     case "endCoach":
       return state.coach ? farewellAfterCoach({ ...state, coach: null }, state.coach.node) : state;

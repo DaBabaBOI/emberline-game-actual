@@ -1029,3 +1029,10 @@ button {
     animation: none;
   }
 }
+
+/* First person: a blow taken (red at the edges), and being struck down (dark, then waking by the fire). */
+@keyframes hurt-flash { from { opacity: 1; } to { opacity: 0; } }
+.hurt-flash { background: radial-gradient(ellipse at center, transparent 45%, rgba(185, 28, 28, 0.55) 100%); animation: hurt-flash 0.6s ease-out forwards; }
+@keyframes down-fade { 0% { opacity: 1; } 75% { opacity: 0.9; } 100% { opacity: 0; } }
+.down-fade { background: #000; animation: down-fade 8s ease-in forwards; }
+@media (prefers-reduced-motion: reduce) { .hurt-flash { animation-duration: 0.3s; } }

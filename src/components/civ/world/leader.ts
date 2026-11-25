@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { CHIEF_HP } from "@/game/content";
 
 // Leader mode: where the chief stands and looks (moved every frame by the
 // first-person rig, so kept out of React), and the few things the HUD shows:
@@ -9,7 +10,9 @@ import { useSyncExternalStore } from "react";
 // `walked`: they've walked in first person this game (in the base game the
 // chief only stands on the map once they have).
 // `aimAt`: where the crosshair meets something (chips fly from there).
-export const leader = { x: 0, z: 0, y: 0, yaw: 0, pitch: -0.08, ready: false, moving: false, strikeAt: 0, hop: 0, vy: 0, actAt: 0, walked: false, aimAt: { x: 0, y: 0, z: 0 } };
+// `downUntil`: struck down in a fight, dazed until then (performance.now()).
+// `boat`: out in a canoe (on the sea or a river).
+export const leader = { x: 0, z: 0, y: 0, yaw: 0, pitch: -0.08, ready: false, moving: false, strikeAt: 0, hop: 0, vy: 0, actAt: 0, walked: false, aimAt: { x: 0, y: 0, z: 0 }, downUntil: 0, boat: false };
 
 export type LeaderView = "fp" | "map";
 
@@ -34,12 +37,17 @@ export type LeaderPrompt =
   | { kind: "gather"; tile: number; what: "wood" | "stone"; spent?: boolean }
   | { kind: "plant"; tile: number }
   | { kind: "build"; tile: number }
+  // At a Canoe Dock or Shipyard: take a canoe out. In a canoe by dry land: step ashore there.
+  | { kind: "board"; tile: number }
+  | { kind: "ashore"; x: number; z: number }
   | null;
 
 // `pops`: what the chief just got by hand ("+1 wood"), rising by the crosshair.
 type Pop = { id: number; text: string; big: boolean };
-type Snapshot = { view: LeaderView; prompt: LeaderPrompt; menu: { index: number; name: string } | null; locked: boolean; build: string | null; pops: Pop[] };
-let snap: Snapshot = { view: "map", prompt: null, menu: null, locked: false, build: null, pops: [] };
+// `hp`: the chief's hearts (they only go down in a fight); `hurt`: counts the
+// blows taken (a red flash for each); `down`: struck down, waking by the fire.
+type Snapshot = { view: LeaderView; prompt: LeaderPrompt; menu: { index: number; name: string } | null; locked: boolean; build: string | null; pops: Pop[]; hp: number; hurt: number; down: boolean; boat: boolean };
+let snap: Snapshot = { view: "map", prompt: null, menu: null, locked: false, build: null, pops: [], hp: CHIEF_HP.hp, hurt: 0, down: false, boat: false };
 const listeners = new Set<() => void>();
 
 function set(next: Partial<Snapshot>) {
@@ -50,6 +58,10 @@ function set(next: Partial<Snapshot>) {
     merged.locked === snap.locked &&
     merged.build === snap.build &&
     merged.pops === snap.pops &&
+    merged.hp === snap.hp &&
+    merged.hurt === snap.hurt &&
+    merged.down === snap.down &&
+    merged.boat === snap.boat &&
     JSON.stringify(merged.prompt) === JSON.stringify(snap.prompt)
   )
     return;
@@ -61,10 +73,15 @@ export const setLeaderView = (view: LeaderView) => set({ view, menu: null });
 // A game begins (or is loaded): the chief is placed afresh on its island, in
 // first person for Leader mode, on the map otherwise.
 export function resetLeader(view: LeaderView) {
-  Object.assign(leader, { ready: false, walked: view === "fp", hop: 0, vy: 0 });
-  set({ view, menu: null, prompt: null, build: null });
+  Object.assign(leader, { ready: false, walked: view === "fp", hop: 0, vy: 0, downUntil: 0, boat: false });
+  set({ view, menu: null, prompt: null, build: null, hp: CHIEF_HP.hp, down: false, boat: false });
 }
 export const setLeaderPrompt = (prompt: LeaderPrompt) => set({ prompt });
+export const setLeaderHealth = (next: { hp?: number; hurt?: number; down?: boolean }) => set(next);
+export function setLeaderBoat(boat: boolean) {
+  leader.boat = boat;
+  set({ boat });
+}
 export const setLeaderMenu = (menu: Snapshot["menu"]) => set({ menu });
 export const setLeaderLocked = (locked: boolean) => set({ locked });
 // The building picked from the hotbar to build (null: hands free).

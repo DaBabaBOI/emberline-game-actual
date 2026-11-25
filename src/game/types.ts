@@ -281,8 +281,6 @@ export interface Goal {
 export interface AfterStep {
   text: string;
   build?: string;
-  // Give a warrior a spear (Hunting Spears).
-  upgrade?: boolean;
 }
 
 export interface EventChoice {

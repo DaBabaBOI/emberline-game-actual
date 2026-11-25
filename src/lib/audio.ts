@@ -636,7 +636,7 @@ function crickets(at: number) {
 }
 
 // ---- Sound effects --------------------------------------------------------------------
-export type Sfx = "build" | "discover" | "era" | "raid" | "battle" | "event" | "click" | "step" | "footstep" | "win" | "lose" | "sell" | "firework" | "ama";
+export type Sfx = "build" | "discover" | "era" | "raid" | "battle" | "event" | "click" | "step" | "footstep" | "win" | "lose" | "sell" | "firework" | "ama" | "hurt";
 
 export function playSfx(kind: Sfx) {
   if (!engine) return;
@@ -644,6 +644,11 @@ export function playSfx(kind: Sfx) {
   const at = ctx.currentTime + 0.02;
   const out = engine.sounds;
   switch (kind) {
+    case "hurt":
+      // A blow taken: a dull, low thud.
+      drum(out, at, 0.7, 0.7);
+      tone(out, midi(40), at, 0.08, { type: "triangle", attack: 0.002, release: 0.25, gain: 0.08 });
+      break;
     case "build":
       // Two knocks of a mallet on wood.
       drum(out, at, 0.5, 1.6);
