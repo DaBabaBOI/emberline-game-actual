@@ -63,7 +63,8 @@ import { BUILDING_SCALE, MODELS, buildingTurn } from "./building-models";
 import { turnFor } from "./facing";
 import { BattleScene, FireVictims, RaidBoats, Raiders, StrikeBoats, Villagers, Warriors } from "./villagers";
 import { PickUp } from "./pick-up";
-import { SeaTraffic, TradeShips, WaitingShips } from "./trade";
+import { PortShips, SeaTraffic, TradeShips, WaitingShips } from "./trade";
+import { Fleet, Traffic } from "./transport";
 import { ForeignVillages } from "./foreign";
 import { RumourMarkers } from "./rumours";
 import { Cracks, disasterView, FloodWater, GroundDust, QuakeShake, QuakeSway, QuakeWaves, Rubble, Ruins, StormRain } from "./disasters";
@@ -812,6 +813,9 @@ export function WorldCanvas() {
       <ForeignVillages state={state} />
       <RumourMarkers state={state} />
       <WaitingShips state={state} home={home} />
+      <PortShips state={state} home={home} />
+      <Fleet state={state} home={home} speed={figureSpeed} />
+      <Traffic state={state} speed={figureSpeed} />
       {/* The plague: rats scurrying round a few homes. */}
       {plagueOn &&
         buildings

@@ -67,6 +67,9 @@ export type RaidResponse = "fight" | "hide" | "tribute" | "tributeCoins" | "comm
 
 export interface Raid {
   strength: number;
+  // Our warships met them at sea: how many raiders went down, and whether we
+  // lost a warship.
+  seaFight?: { sunk: number; lost: number };
   // What kind of raiders (older saves: a war party), and how the player answered.
   kind?: RaidKind;
   response?: RaidResponse;
@@ -377,7 +380,11 @@ export interface GameState {
   // `conquered`: we took it; its island is ours and it pays tribute.
   // `met`: the tick we found them (their army grows from then); `hurt`: the
   // share of their army our raids have cost them (it heals over time).
-  kingdoms?: Record<KingdomId, { mood: number; treaty: boolean; giftTick?: number; conquered?: boolean; met?: number; hurt?: number }>;
+  kingdoms?: Record<KingdomId, { mood: number; treaty: boolean; giftTick?: number; conquered?: boolean; met?: number; hurt?: number; port?: boolean }>;
+  // Warships in our fleet (see WARSHIP).
+  warships?: number;
+  // The port we opened last (for the camera shot of the ship docking).
+  portOpened?: { kingdom: KingdomId; tick: number } | null;
   // An endless world (world.ts): its seed and the chunks made so far. Missing
   // on the classic map (the story, multiplayer and Build to Last).
   world?: { seed: number; chunks: string[] };

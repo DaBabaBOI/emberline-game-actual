@@ -3,7 +3,7 @@
 // The Medieval era's screens: choosing the landmark that carries the town into
 // the Middle Ages, the two kingdoms, ships, and the Black Death.
 
-import { CONQUEST, LANDMARKS, PLAGUE, DIPLOMACY, REBELLION, TICK_SECONDS } from "@/game/content";
+import { CONQUEST, LANDMARKS, PLAGUE, DIPLOMACY, PORT, REBELLION, TICK_SECONDS } from "@/game/content";
 import {
   canAfford,
   crushOdds,
@@ -25,6 +25,7 @@ import {
   secs,
   raidParty,
   treatyError,
+  portError,
 } from "@/game/engine";
 import type { KingdomId, LandmarkId, Resources } from "@/game/types";
 import type { IconId } from "@/game/sprites";
@@ -201,6 +202,7 @@ export function KingdomsPanel() {
                   <span className={cn("px-1.5 text-[11px] text-white", k.conquered ? "bg-[#5b6f8a]" : MOOD_STYLE[mood])}>
                     {k.conquered ? "ours" : mood}
                     {k.treaty ? " · treaty" : ""}
+                    {k.port ? " · port" : ""}
                   </span>
                 </div>
                 <p className="mb-1 text-[11px] text-stone-600">
@@ -238,6 +240,19 @@ export function KingdomsPanel() {
                     <span>Treaty</span>
                     <CostLine cost={{ currency: DIPLOMACY.treaty.coins }} />
                   </button>
+                  {!k.conquered && (
+                    <button
+                      type="button"
+                      disabled={!!portError(state, id)}
+                      onClick={() => dispatch({ type: "openPort", kingdom: id })}
+                      className="pixel-btn flex justify-between bg-sky-300 px-2 py-1 text-left text-[#2b2119] disabled:opacity-40"
+                      title={portError(state, id) ?? "A jetty and a warehouse on their island: our ships dock there and trade, every day, while they stay friendly"}
+                      data-testid={`port-${id}`}
+                    >
+                      <span>{k.port ? "Our port is open" : "Open a port"}</span>
+                      {!k.port && <CostLine cost={PORT.cost} />}
+                    </button>
+                  )}
                   <button
                     type="button"
                     disabled={!!raid}

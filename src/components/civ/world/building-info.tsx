@@ -1,6 +1,6 @@
 "use client";
 
-import { BUILDINGS_BY_ID, FALLOW, FIRE_SCARE, IMPROVE, LANDMARKS, NUCLEAR, QUARRY_DUST, SMOG, WEAR } from "@/game/content";
+import { BUILDINGS_BY_ID, FALLOW, FIRE_SCARE, IMPROVE, LANDMARKS, NUCLEAR, QUARRY_DUST, SMOG, TREE_BY_ID, WEAR } from "@/game/content";
 import {
   connections,
   soilOf,
@@ -32,6 +32,9 @@ import {
   woodcutterYield,
   linkedAqueducts,
   behindWalls,
+  commuteLoss,
+  commuteOf,
+  transportNow,
 } from "@/game/engine";
 import type { GameState, Tile } from "@/game/types";
 import { PixelIcon } from "@/components/civ/pixel-icon";
@@ -137,6 +140,15 @@ export function BuildingInfo({
       {tile.building !== "walls" && behindWalls(state, tile) && (
         <p className="mt-1 text-emerald-700" data-testid="behind-walls">
           Behind the walls: raiders can&apos;t burn it.
+        </p>
+      )}
+
+      {/* The walk to work (TRANSPORT): how far, and what it costs. */}
+      {commuteLoss(state, tile) > 0.005 && (
+        <p className="mt-1 flex gap-1.5 text-amber-800" data-testid="commute">
+          <PixelIcon name="person" size={12} />
+          Workers walk {commuteOf(state, tile)} tiles from the nearest home: {Math.round(commuteLoss(state, tile) * 100)}% less made.{" "}
+          {transportNow(state).next ? `Build homes nearby, or learn ${TREE_BY_ID[transportNow(state).next!.needs]?.name ?? transportNow(state).next!.name}.` : "Build homes nearby."}
         </p>
       )}
 

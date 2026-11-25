@@ -3,8 +3,8 @@
 import { useGame } from "@/components/civ/game-provider";
 import { PixelIcon } from "@/components/civ/pixel-icon";
 import { ECONOMY, INCOME, LEVELS, economyMoodParts, hasEconomy, incomeLines, wageBill } from "@/game/economy";
-import { incomeNow } from "@/game/engine";
-import { ERAS } from "@/game/content";
+import { commuteLoss, incomeNow, transportNow } from "@/game/engine";
+import { ERAS, TRANSPORT, TREE_BY_ID } from "@/game/content";
 import type { IconId } from "@/game/sprites";
 import type { EconomySystem, GameState, Wage } from "@/game/types";
 import { cn } from "@/lib/utils";
@@ -90,6 +90,9 @@ export function EconomyPanel() {
             </div>
           </div>
         </section>
+
+        {/* Getting around (TRANSPORT). */}
+        <GettingAround />
 
         {/* How work is organised. */}
         <h4 className="font-pixel mt-3 font-semibold">How we work{!eco && <span className="ml-2 text-amber-700">Choose one!</span>}</h4>
@@ -194,5 +197,45 @@ export function EconomyPanel() {
         </p>
       </div>
     </div>
+  );
+}
+
+// How people get to work: what we have, how far they walk for free, what
+// the walk costs the town now, and what would help next.
+function GettingAround() {
+  const { state } = useGame();
+  const t = transportNow(state);
+  const work = state.tiles.filter((tile) => tile.building && commuteLoss(state, tile) > 0.005);
+  const avg = work.length ? work.reduce((s, tile) => s + commuteLoss(state, tile), 0) / work.length : 0;
+  return (
+    <section className="mt-3 border-2 border-[#140e0a] bg-white/60 p-3" data-testid="transport">
+      <h4 className="font-pixel flex items-center gap-1.5 font-semibold">
+        <PixelIcon name="cart" size={18} />
+        Getting around
+      </h4>
+      <p className="mt-1 text-[11px]">
+        People walk from home to work. Up to {t.free >= 99 ? "any distance" : `${t.free} tiles`} is fine{t.free >= 99 ? "" : `; each tile further costs ${Math.round(t.perTile * 1000) / 10}% of what a workplace makes`}.
+        {state.researched.includes(TRANSPORT.river.needs) ? ` By the river, boats carry them ${TRANSPORT.river.free} tiles more.` : ""} Near a Railway Station, trains carry them for free.
+      </p>
+      <div className="mt-1 flex flex-wrap gap-1">
+        <span className="font-pixel bg-stone-600 px-1.5 py-0.5 text-[10px] text-white">On foot</span>
+        {TRANSPORT.steps.map((s) => (
+          <span key={s.needs} className={cn("font-pixel flex items-center gap-1 px-1.5 py-0.5 text-[10px]", t.have.includes(s) ? "bg-emerald-700 text-white" : "bg-stone-200 text-stone-500")}>
+            <PixelIcon name={s.icon} size={12} />
+            {s.name}
+          </span>
+        ))}
+      </div>
+      <p className="mt-1 text-[11px]">
+        {work.length ? (
+          <span className="text-amber-800">
+            {work.length} workplace{work.length === 1 ? " is" : "s are"} far from homes, losing {Math.round(avg * 100)}% on average.
+          </span>
+        ) : (
+          <span className="text-emerald-700">No workplace loses anything to the walk.</span>
+        )}
+        {t.next ? ` Next: ${t.next.name} (learn ${TREE_BY_ID[t.next.needs]?.name ?? t.next.needs}).` : ""}
+      </p>
+    </section>
   );
 }

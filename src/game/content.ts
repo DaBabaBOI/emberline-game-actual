@@ -91,6 +91,48 @@ export const RIDER = { strength: 2, cost: { food: 18, wood: 4, currency: 12 } };
 // who stand with you for `ticks` and then go. Each is worth `strength`
 // warriors, and they don't need room in a War Camp.
 export const MERCS = { band: 4, strength: 1.5, cost: 8, ticks: 300, most: 12 };
+// Getting around (from the Ancient era): people walk from home to work, so a
+// workplace far from any home loses time to the walk. Up to `free` tiles is
+// fine; each tile further costs `perTile` of what it makes (at most `max`).
+// Each way of getting around lets people go further for free and lose less a
+// tile; by the river, boats carry them (Ocean Ships); near a Railway Station,
+// trains do; with maglev, nobody loses anything.
+export const TRANSPORT = {
+  era: 1,
+  free: 2,
+  perTile: 0.06,
+  max: 0.3,
+  floor: 0.005,
+  steps: [
+    { needs: "pack-animals", name: "Pack animals", free: 1, perTile: 0.01, icon: "sheep" },
+    { needs: "wheel", name: "Ox carts", free: 1, perTile: 0.012, icon: "cart" },
+    { needs: "roads", name: "Paved roads", free: 1, perTile: 0.01, icon: "road" },
+    { needs: "horseback", name: "Horses and wagons", free: 0, perTile: 0.008, icon: "horse" },
+    { needs: "transit", name: "Trams and buses", free: 3, perTile: 0.01, icon: "train" },
+    { needs: "maglev", name: "Maglev trains", free: 99, perTile: 0, icon: "train" },
+  ] as { needs: string; name: string; free: number; perTile: number; icon: IconId }[],
+  river: { needs: "navigation", free: 3 },
+  station: 4,
+};
+// A port on a friendly people's island: our ships dock there and trade.
+// Needs a Canoe Dock or Shipyard, and them friendly; closes if they turn hostile.
+export const PORT = { cost: { wood: 30, currency: 40 }, trade: 0.3, mood: 6 };
+// Warships (war canoes, then triremes, galleons, ironclads, destroyers): each
+// Canoe Dock keeps one, each Shipyard two. At sea they meet raiders before
+// they land and sink `sink` of them each (at most `maxSink` of the raid);
+// against more than `outgunned` raiders a warship, a fight can cost one
+// (chance `lose`). They also sail with our raids and conquests (`raid` each).
+export const WARSHIP = {
+  cost: { wood: 40, currency: 20 },
+  perDock: 1,
+  perShipyard: 2,
+  sink: 0.12,
+  maxSink: 0.6,
+  outgunned: 4,
+  lose: 0.3,
+  raid: 1.5,
+  names: ["War canoe", "War canoe", "Trireme", "Galleon", "Ironclad", "Destroyer"],
+};
 // How warfare grows: each step a new way of fighting (shown in the army menu).
 export const WARFARE_LEVELS: { name: string; needs: string | null; what: string }[] = [
   { name: "Clubs and fists", needs: null, what: "Warriors" },
@@ -1052,6 +1094,15 @@ export const TREE: TreeNode[] = [
     requires: ["toolmaking"],
   },
   {
+    id: "pack-animals",
+    name: "Pack Animals",
+    description: "Donkeys and oxen carry the loads, so workers lose less time walking between home and work.",
+    branch: "transport",
+    era: 1,
+    cost: 14,
+    requires: ["herding"],
+  },
+  {
     id: "archery",
     name: "Archery",
     description: "Bows and arrows. Train archers at the War Camp: they shoot from behind your line, further from high ground, and hit hardest behind walls.",
@@ -1459,7 +1510,16 @@ export const TREE: TreeNode[] = [
     cost: 80,
     requires: ["steam"],
     unlocks: ["coalplant"],
+  },  {
+    id: "transit",
+    name: "Trams and Buses",
+    description: "Electric trams and buses take people to work: workplaces far from home lose much less to the commute.",
+    branch: "transport",
+    era: 4,
+    cost: 70,
+    requires: ["electricity"],
   },
+
   {
     id: "steel",
     name: "Steel Frames",
@@ -1691,7 +1751,16 @@ export const TREE: TreeNode[] = [
     era: 5,
     cost: 160,
     requires: ["ai"],
+  },  {
+    id: "maglev",
+    name: "Maglev",
+    description: "Silent magnetic trains glide across the island in minutes: nobody loses any time getting to work.",
+    branch: "transport",
+    era: 5,
+    cost: 110,
+    requires: ["transit"],
   },
+
   {
     id: "purpose",
     name: "Shorter Work Week",
@@ -1830,6 +1899,8 @@ export const ADVANCEMENT_GOALS: Record<string, Goal[]> = {
   irrigation: [{ label: "Have Farmland", kind: "have", building: "farm", amount: 5 }],
   forestry: [{ label: "Plant saplings", kind: "tally", key: "planted", amount: 3 }],
   archery: [{ label: "Have a War Camp", kind: "have", building: "warcamp", amount: 1 }],
+  "pack-animals": [{ label: "Have a Livestock Pen", kind: "have", building: "pen", amount: 1 }],
+  transit: [{ label: "Have a Railway Station", kind: "have", building: "station", amount: 1 }],
   horseback: [{ label: "Have a Livestock Pen", kind: "have", building: "pen", amount: 1 }],
   "bronze-arms": [
     { label: "Have a Bronze Smithy", kind: "have", building: "smithy", amount: 1 },

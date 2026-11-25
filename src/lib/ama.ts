@@ -10,6 +10,10 @@ import {
   goalProgress,
   housingCapacity,
   incomeNow,
+  commuteLoss,
+  transportNow,
+  warshipCap,
+  warshipsOf,
   isUnlocked,
   lastProblems,
   powerDemand,
@@ -60,6 +64,13 @@ export function townSummary(state: GameState): string {
   if (powerSupply(state) || powerDemand(state)) lines.push(`Power: ${round(powerSupply(state))} made, ${round(powerDemand(state))} needed.`);
   const econ = economyFacts(state);
   if (econ) lines.push(econ);
+  if (state.era >= 1 && state.mode !== "last") {
+    const t = transportNow(state);
+    const far = state.tiles.filter((tile) => tile.building && commuteLoss(state, tile) > 0.005);
+    lines.push(
+      `Getting around: ${t.have.length ? t.have.map((s) => s.name).join(", ") : "on foot only"}; workers walk ${t.free >= 99 ? "any distance" : `${t.free} tiles`} from the nearest home for free, then lose ${Math.round(t.perTile * 1000) / 10}% a tile (homes nearby, a Railway Station, river boats or better transport help). ${far.length ? `${far.length} workplaces lose some of their work to the walk.` : "No workplace loses anything to the walk."}${t.next ? ` Next transport: ${t.next.name}.` : ""} Warships: ${warshipsOf(state)} of ${warshipCap(state)} (each Canoe Dock keeps one, each Shipyard two; they sink raiders at sea). Ports on friendly islands: ${Object.entries(state.kingdoms ?? {}).filter(([, k]) => k.port).length}.`,
+    );
+  }
   const council = state.council;
   if (council)
     lines.push(

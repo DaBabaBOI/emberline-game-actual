@@ -127,6 +127,9 @@ import {
   ARCHER,
   RIDER,
   MERCS,
+  TRANSPORT,
+  PORT,
+  WARSHIP,
   ADVANCEMENT_GOALS,
   AFTER_STEPS,
   KNOWLEDGE_MILESTONES,
@@ -218,6 +221,8 @@ export type Action =
   | { type: "hireMercs" }
   | { type: "setEconomy"; system: EconomySystem }
   | { type: "setWage"; wage: Wage }
+  | { type: "openPort"; kingdom: KingdomId }
+  | { type: "buildWarship" }
   | { type: "joinCouncil" }
   | { type: "leaveCouncil" }
   | { type: "councilVote"; yes: boolean }
@@ -1759,7 +1764,8 @@ export function treatyError(state: GameState, kingdom: KingdomId): string | null
 export function raidParty(state: GameState) {
   const sent = Math.floor(state.soldiers * KINGDOM_RAID.share);
   const perWarrior = state.soldiers ? armyPower(state) / state.soldiers : 0;
-  return { sent, strength: sent * perWarrior };
+  // Our warships sail with them.
+  return { sent, strength: sent * perWarrior + warshipsOf(state) * WARSHIP.raid * armsFactor(state) };
 }
 
 // The chance (0-1) that a raid on this kingdom succeeds, given the luck roll.
@@ -1772,7 +1778,7 @@ export function raidOdds(state: GameState, kingdom: KingdomId) {
 
 // Conquest: the whole army against the kingdom (CONQUEST).
 function conquestStrength(state: GameState) {
-  return armyPower(state) + mercPower(state);
+  return armyPower(state) + mercPower(state) + warshipsOf(state) * WARSHIP.raid * armsFactor(state);
 }
 
 export function conquestOdds(state: GameState, kingdom: KingdomId) {
@@ -2818,10 +2824,12 @@ export function production(state: GameState): Resources {
     // Hunters with nothing to hunt for gather wood at their camp instead; the
     // gathering of wild plants goes on.
     const resting = tile.building === "gatherer" && state.huntersHelping;
+    // Time lost walking to work from the nearest home (TRANSPORT).
+    const walk = commuteLoss(state, tile);
     if (resting) out.wood += HUNTERS.wood * factor * share * boost * worn * better;
     for (const [k, v] of Object.entries(def.produces ?? {}))
       // Costs (a bathhouse burning wood) don't shrink as it wears; output does.
-      out[k as keyof Resources] += (v ?? 0) * factor * share * boost * (k === "food" ? dust * (resting ? HUNTERS.foodKept : 1) : 1) * ((v ?? 0) > 0 ? worn * better : 1);
+      out[k as keyof Resources] += (v ?? 0) * factor * share * boost * (k === "food" ? dust * (resting ? HUNTERS.foodKept : 1) : 1) * ((v ?? 0) > 0 ? worn * better * (1 - walk) : 1);
     if (def.depositBonus && tile.deposit === def.depositBonus.deposit) {
       for (const [k, v] of Object.entries(def.depositBonus.amount))
         out[k as keyof Resources] += (v ?? 0) * share;
@@ -2865,6 +2873,8 @@ export function production(state: GameState): Resources {
   // (More under the Council's Open Trade; less under its sanctions.)
   const treatyTrade = DIPLOMACY.treaty.trade * (councilBound(state) && lawInForce(state, "trade") ? COUNCIL.trade : 1) * (sanctioned(state) ? COUNCIL.sanction : 1);
   if (!closed) for (const k of Object.values(state.kingdoms ?? {})) if (k.treaty) out.currency += treatyTrade;
+  // Our ports on friendly islands: trade whenever our ships dock.
+  if (!closed) for (const k of Object.values(state.kingdoms ?? {})) if (k.port && !k.conquered) out.currency += PORT.trade * (sanctioned(state) ? COUNCIL.sanction : 1);
   // Conquered kingdoms pay tribute.
   for (const k of Object.values(state.kingdoms ?? {}))
     if (k.conquered) {
@@ -3991,6 +4001,95 @@ export function burnTicks(state: GameState) {
   return Math.round(CAMPFIRE_BURN_TICKS * (state.researched.includes("firekeeping") ? 1.5 : 1));
 }
 
+// ---- Getting around (TRANSPORT) ----
+
+// The ways of getting around we have, and how far people walk for free and
+// what each tile further costs.
+export function transportNow(state: GameState) {
+  const have = TRANSPORT.steps.filter((s) => state.researched.includes(s.needs));
+  return {
+    have,
+    next: TRANSPORT.steps.find((s) => !state.researched.includes(s.needs)) ?? null,
+    free: TRANSPORT.free + have.reduce((n, s) => n + s.free, 0),
+    perTile: Math.max(TRANSPORT.floor, TRANSPORT.perTile - have.reduce((n, s) => n + s.perTile, 0)),
+  };
+}
+const HOME_KINDS = new Set(Object.values(BUILDINGS_BY_ID).filter((b) => (b.housing ?? 0) > 0).map((b) => b.id));
+// The homes, stations and riverside tiles, worked out once for each map
+// (the tiles only change when something is built, cleared or found).
+const commuteMaps = new WeakMap<Tile[], { homes: Tile[]; stations: Tile[]; riverside: Set<number> }>();
+function commuteMap(state: GameState) {
+  let m = commuteMaps.get(state.tiles);
+  if (!m) {
+    const rivers = state.tiles.filter((t) => t.terrain === "river");
+    const riverside = new Set<number>();
+    for (const t of state.tiles) if (t.building && rivers.some((r) => hexDistance(r, t) <= 1)) riverside.add(t.id);
+    m = { homes: state.tiles.filter((t) => t.building && HOME_KINDS.has(t.building)), stations: state.tiles.filter((t) => t.building === "station"), riverside };
+    commuteMaps.set(state.tiles, m);
+  }
+  return m;
+}
+// How far a building's workers walk: to the nearest home (or the camp's fire).
+export function commuteOf(state: GameState, tile: Tile) {
+  let best = hexDistance(tile, state.tiles[state.startTile]);
+  for (const t of commuteMap(state).homes) best = Math.min(best, hexDistance(t, tile));
+  return best;
+}
+// The share of what a workplace makes that is lost to the walk there (none in
+// the Stone Age, for homes, landmarks and anything making nothing).
+export function commuteLoss(state: GameState, tile: Tile) {
+  if (state.era < TRANSPORT.era || state.tutorialStep < TUTORIAL.length || state.mode === "last" || !tile.building) return 0;
+  const def = BUILDINGS_BY_ID[tile.building];
+  if (!def || def.landmark || (def.housing ?? 0) > 0 || !Object.values(def.produces ?? {}).some((v) => (v ?? 0) > 0)) return 0;
+  const t = transportNow(state);
+  if (t.free >= 99) return 0;
+  let free = t.free;
+  // Boats on the river, trains from a station.
+  const map = commuteMap(state);
+  if (state.researched.includes(TRANSPORT.river.needs) && map.riverside.has(tile.id)) free += TRANSPORT.river.free;
+  if (map.stations.some((n) => hexDistance(n, tile) <= TRANSPORT.station)) return 0;
+  return Math.min(TRANSPORT.max, Math.max(0, (commuteOf(state, tile) - free) * t.perTile));
+}
+
+// ---- Ports and warships ----
+
+// A people turned hostile shuts our port on their island.
+function closeHostilePorts(state: GameState): GameState {
+  const shut = Object.entries(state.kingdoms ?? {}).filter(([, k]) => k.port && (k.conquered || moodOf(k.mood) === "hostile"));
+  if (!shut.length) return state;
+  const kingdoms = { ...state.kingdoms! };
+  for (const [id, k] of shut) kingdoms[id] = { ...k, port: false };
+  const lines = shut.filter(([, k]) => !k.conquered).map(([id]) => `${kingdomName(state, id)} turned against us and closed our port on their island.`);
+  return { ...state, kingdoms, log: [...lines, ...state.log].slice(0, 30) };
+}
+
+export function portError(state: GameState, kingdom: KingdomId): string | null {
+  const k = state.kingdoms?.[kingdom];
+  if (!k) return "Not yet";
+  if (k.conquered) return "It is ours already";
+  if (k.port) return "We have a port there";
+  const counts = countBuildings(state);
+  if (!counts.dock && !counts.shipyard) return "Build a Canoe Dock or a Shipyard first";
+  if (moodOf(k.mood) !== "friendly") return "They must be friendly first";
+  if (!canAfford(state, PORT.cost)) return "Not enough to pay for it";
+  return null;
+}
+export const warshipsOf = (state: GameState) => state.warships ?? 0;
+export const warshipName = (state: GameState) => WARSHIP.names[Math.min(WARSHIP.names.length - 1, state.era)];
+export function warshipCap(state: GameState) {
+  const counts = countBuildings(state);
+  return (counts.dock ?? 0) * WARSHIP.perDock + (counts.shipyard ?? 0) * WARSHIP.perShipyard;
+}
+export const warshipCost = (state: GameState) => ({ wood: WARSHIP.cost.wood, currency: Math.round(WARSHIP.cost.currency * (1 + state.era * 0.5)) });
+export function warshipError(state: GameState) {
+  if (state.tutorialStep < TUTORIAL.length || state.mode === "last" || state.mp) return "Not now";
+  if (state.era < 1) return "Warships come in the Ancient era";
+  if (warshipCap(state) === 0) return "Build a Canoe Dock or a Shipyard first";
+  if (warshipsOf(state) >= warshipCap(state)) return "No room: each Canoe Dock keeps one warship, each Shipyard two";
+  if (!canAfford(state, warshipCost(state))) return "Not enough to pay for it";
+  return null;
+}
+
 // What training each kind of fighter costs, and why it can't be trained now.
 export type TrainKind = "warrior" | "archer" | "rider";
 export function trainCost(kind: TrainKind) {
@@ -4889,6 +4988,7 @@ function tickOnce(state: GameState): GameState {
   next = last ? next : returnShips(updateKingdoms(next));
   next = updateEconomy(next);
   next = updateCouncil(next);
+  next = closeHostilePorts(next);
   next = finishStage(next);
   // The final battle ends the story (won or lost): nothing else happens today.
   if (next.phase !== "playing" || next.debrief) return { ...next, meters: computeMeters(next) };
@@ -6207,10 +6307,20 @@ function updateRaids(state: GameState): GameState {
       ),
     );
     const early = ((countBuildings(state).watchfire ?? 0) > 0 ? WATCH_FIRE.warnTicks : 0) + (state.researched.includes("townwatch") ? 6 : 0);
+    // Our warships meet them at sea first: some go down before they land,
+    // and against a big fleet we may lose a ship.
+    const fleet = warshipsOf(state);
+    const sunk = fleet ? Math.min(Math.floor(strength * WARSHIP.maxSink), Math.round(strength * WARSHIP.sink * fleet)) : 0;
+    const shipLost = fleet && strength > fleet * WARSHIP.outgunned && rand() < WARSHIP.lose ? 1 : 0;
+    const seaNews = fleet
+      ? [`Our ${fleet === 1 ? warshipName(state).toLowerCase() : `${fleet} ${warshipName(state).toLowerCase()}s`} met them at sea: ${sunk ? `${sunk} of them went down before they could land` : "they slipped past"}${shipLost ? ", but we lost a ship" : ""}.`]
+      : [];
     return {
       ...state,
+      warships: fleet - shipLost,
       raid: {
-        strength,
+        seaFight: fleet ? { sunk, lost: shipLost } : undefined,
+        strength: strength - sunk,
         kind,
         fromTile: from.id,
         targetTile: home.id,
@@ -6226,9 +6336,10 @@ function updateRaids(state: GameState): GameState {
       nextRaidTick: state.tick + Math.round((RAID_GAP.base + Math.floor(rand() * RAID_GAP.spread)) * gapFactor(state)),
       lastBigTick: state.tick,
       log: [
+        ...seaNews,
         from_
-          ? `An army of ${kingdomName(state, from_)} (${strength}) is landing on the shore! ${revenge ? "They have come for revenge." : "They are at war with us."}${early ? " The lookouts in the watch tower saw them early." : ""}`
-          : `${RAID_KINDS[kind].name} of ${strength} raiders is landing on the shore!${early ? " The lookouts in the watch tower saw them early." : ""}`,
+          ? `An army of ${kingdomName(state, from_)} (${strength - sunk}) is landing on the shore! ${revenge ? "They have come for revenge." : "They are at war with us."}${early ? " The lookouts in the watch tower saw them early." : ""}`
+          : `${RAID_KINDS[kind].name} of ${strength - sunk} raiders is landing on the shore!${early ? " The lookouts in the watch tower saw them early." : ""}`,
         ...state.log,
       ].slice(0, 30),
     };
@@ -7387,6 +7498,29 @@ function step(state: GameState, action: Action): GameState {
 
     case "conquer":
       return conquestError(state, action.kingdom) ? state : breakPeace(conquer(state, action.kingdom), action.kingdom);
+
+    case "openPort": {
+      if (portError(state, action.kingdom)) return state;
+      const name = kingdomName(state, action.kingdom);
+      const pleased = changeMood(state, { [action.kingdom]: PORT.mood });
+      return withMeters({
+        ...pleased,
+        kingdoms: { ...pleased.kingdoms!, [action.kingdom]: { ...pleased.kingdoms![action.kingdom], port: true } },
+        resources: spend(state.resources, PORT.cost),
+        portOpened: { kingdom: action.kingdom, tick: state.tick },
+        log: [`We opened a port on ${name}'s island: our ships dock there and trade.`, ...state.log].slice(0, 30),
+      });
+    }
+
+    case "buildWarship": {
+      if (warshipError(state)) return state;
+      return withMeters({
+        ...state,
+        warships: warshipsOf(state) + 1,
+        resources: spend(state.resources, warshipCost(state)),
+        log: [`A new ${warshipName(state).toLowerCase()} joins the fleet. Warships meet raiders at sea before they land.`, ...state.log].slice(0, 30),
+      });
+    }
 
     case "joinCouncil": {
       const c = state.council;

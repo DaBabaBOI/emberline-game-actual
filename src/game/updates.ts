@@ -7,6 +7,15 @@ export interface Update {
 
 export const UPDATES: Update[] = [
   {
+    date: "2026-11-25",
+    items: [
+      "Getting around matters now (from the Ancient era): people walk from home to work, so a workplace far from any home loses some of what it makes to the walk. Build homes nearby, or get better transport: Pack Animals, ox carts (The Wheel), Paved Roads, horses and wagons, river boats (by the river, with Ocean Ships), Railway Stations (no walk near one), Trams and Buses, and finally Maglev (nobody loses anything). A building's panel says how far its workers walk, and Economy shows how the whole town gets around.",
+      "You can see it: donkeys with baskets, ox carts, covered wagons, buses and gliding maglev pods go to and fro between homes and the workplaces furthest from them.",
+      "Ports on friendly islands: once a people is friendly and you have a Canoe Dock or Shipyard, open a port on their island (Peoples). Our ship ties up at a jetty there and trades every day; the camera flies over to watch it dock. A port closes if they turn against us.",
+      "Warships: war canoes, triremes, galleons, ironclads and destroyers (Train → army menu). Each Canoe Dock keeps one and each Shipyard two. They patrol round your island, sail out to meet raiders before they land and sink some of them (the camera goes out to watch the fight), and they sail with your raids and conquests.",
+    ],
+  },
+  {
     date: "2026-11-01",
     items: [
       "The economy (from the Ancient era, Economy button): choose how work is organised: a Free market (capitalism: more money, but some get rich while others stay poor, and markets boom and bust), Shared work (communism: fair shares and steady food, but less money and less reason to work harder), or a Mixed economy (markets plus help for those in need, like most countries today).",

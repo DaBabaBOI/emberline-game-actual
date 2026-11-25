@@ -75,7 +75,7 @@ export function CinematicCamera({ home, battleTick }: { home: Tile; battleTick: 
         const look = centre.clone().lerp(r.fromTarget, e);
         camera.position.set(look.x + Math.sin(angle) * dist, height, look.z + Math.cos(angle) * dist);
         camera.lookAt(look);
-      } else if (r.shot.kind === "battle" && r.shot.at) {
+      } else if ((r.shot.kind === "battle" || r.shot.kind === "look") && r.shot.at) {
         // In close over the fight, low, turning slowly round it. It lasts until
         // the fight is over (the game ends the shot) or the player leaves it.
         const at = r.shot.at;

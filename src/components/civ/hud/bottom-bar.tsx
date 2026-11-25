@@ -15,6 +15,11 @@ import {
   secs,
   trainCost,
   trainError,
+  warshipCap,
+  warshipCost,
+  warshipError,
+  warshipName,
+  warshipsOf,
   type TrainKind,
   affordableResearch,
   buildingCost,
@@ -810,6 +815,7 @@ function ArmyMenu({ at, onClose }: { at: { left: number; bottom: number }; onClo
     { kind: "rider", name: "Rider", icon: "horse", note: "Fast; charges, wheels away, charges again", have: ridersOf(state) },
   ];
   const mercErr = mercError(state);
+  const shipErr = warshipError(state);
   const mercs = mercsOf(state);
   return (
     <>
@@ -858,6 +864,25 @@ function ArmyMenu({ at, onClose }: { at: { left: number; bottom: number }; onClo
               </button>
             );
           })}
+          {state.era >= 1 && (
+            <button
+              type="button"
+              disabled={!!shipErr}
+              onClick={() => dispatch({ type: "buildWarship" })}
+              title={shipErr ?? "Warships meet raiders at sea and sink some before they land, and sail with our raids"}
+              className="pixel-btn flex items-center gap-2 bg-[#1e3a5f] px-2 py-1 text-left hover:bg-[#28497a] disabled:opacity-45"
+              data-testid="build-warship"
+            >
+              <PixelIcon name={warshipCap(state) ? "boat" : "lock"} size={20} />
+              <span className="flex-1">
+                <span className="block">
+                  {warshipName(state)} <span className="font-num text-white/60">×{warshipsOf(state)}/{warshipCap(state)}</span>
+                </span>
+                <span className="block text-[10px] text-white/60">{warshipCap(state) ? "Sinks raiders at sea before they land" : "Needs a Canoe Dock or a Shipyard"}</span>
+              </span>
+              {warshipCap(state) > 0 && <Cost cost={warshipCost(state)} bad={!canAfford(state, warshipCost(state))} />}
+            </button>
+          )}
           <button
             type="button"
             disabled={!!mercErr}

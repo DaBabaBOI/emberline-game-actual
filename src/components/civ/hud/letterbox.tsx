@@ -9,7 +9,8 @@ import { prefersLessMotion } from "@/lib/graphics";
 // a new era begins. Black bars close in top and bottom while it plays; a click
 // or a key skips it. Players who ask for less motion get no shots.
 
-export type ShotKind = "intro" | "era" | "battle";
+// "look": a few seconds in close over a spot (a sea fight, a port opening).
+export type ShotKind = "intro" | "era" | "battle" | "look";
 export interface Shot {
   kind: ShotKind;
   title: string;

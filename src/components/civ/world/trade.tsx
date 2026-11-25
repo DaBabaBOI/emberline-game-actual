@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Group } from "three";
 import { Html } from "./html";
 import { CANOE, DIPLOMACY, TICK_SECONDS } from "@/game/content";
-import { kingdomInfo, moodOf, nextVoyage } from "@/game/engine";
+import { kingdomInfo, kingdomName, moodOf, nextVoyage } from "@/game/engine";
+import { playShot } from "@/components/civ/hud/letterbox";
 import { ISLANDS, isLand } from "@/game/map";
 import type { GameState, KingdomId, Tile } from "@/game/types";
 
@@ -293,5 +294,64 @@ export function WaitingShips({ state, home }: { state: GameState; home: Tile }) 
         <Ship key={side} route={held} start={-100} back={0} tick={state.tick} speed={0} sail="#d8d0bd" stripe="#e6c229" oneWay={{ arrive: 0.01 }} side={side} />
       ))}
     </group>
+  );
+}
+
+// Our ports on friendly islands: a jetty and one of our ships moored at it,
+// on the coast that faces home. The camera goes to look when one opens.
+export function PortShips({ state, home }: { state: GameState; home: Tile }) {
+  const ports = Object.entries(state.kingdoms ?? {}).filter(([, k]) => k.port && !k.conquered);
+  const opened = state.portOpened;
+  const shown = useRef<number | null>(null);
+  useEffect(() => {
+    if (!opened || shown.current === opened.tick || state.tick - opened.tick > 3) return;
+    shown.current = opened.tick;
+    const route = kingdomRoute(state, home, opened.kingdom);
+    if (route) playShot({ kind: "look", title: `A port on ${kingdomName(state, opened.kingdom)}'s island`, subtitle: "Our ships dock and trade here now", seconds: 6, at: { x: route.to.x, z: route.to.z, y: 0.2 } });
+  }, [opened, state, home]);
+  return (
+    <>
+      {ports.map(([id]) => {
+        const route = kingdomRoute(state, home, id);
+        if (!route) return null;
+        const { from, to } = route;
+        const heading = Math.atan2(from.x - to.x, from.z - to.z);
+        return (
+          <group key={id} position={[to.x, 0, to.z]} rotation={[0, heading, 0]}>
+            {/* The jetty, out from their shore. */}
+            <mesh castShadow position={[0, 0.27, -0.35]}>
+              <boxGeometry args={[0.22, 0.04, 0.9]} />
+              <meshStandardMaterial color="#8a5a2e" />
+            </mesh>
+            {[-0.7, -0.35, 0].map((z) => (
+              <mesh key={z} position={[0.1, 0.14, z]}>
+                <cylinderGeometry args={[0.025, 0.025, 0.28, 6]} />
+                <meshStandardMaterial color="#5e3b1c" />
+              </mesh>
+            ))}
+            {/* Our ship, tied up alongside. */}
+            <group position={[0.35, 0.2, -0.2]} scale={1.3}>
+              <mesh castShadow position={[0, 0.06, 0]}>
+                <boxGeometry args={[0.26, 0.12, 0.7]} />
+                <meshStandardMaterial color="#7a5230" flatShading />
+              </mesh>
+              <mesh position={[0, 0.45, 0]}>
+                <cylinderGeometry args={[0.018, 0.022, 0.7, 6]} />
+                <meshStandardMaterial color="#5e3b1c" />
+              </mesh>
+              {/* Sail furled at the mast. */}
+              <mesh position={[0, 0.62, 0]} rotation={[0, 0, Math.PI / 2]}>
+                <cylinderGeometry args={[0.03, 0.03, 0.46, 6]} />
+                <meshStandardMaterial color="#f1e6cf" />
+              </mesh>
+              <mesh position={[0, 0.82, 0]}>
+                <boxGeometry args={[0.12, 0.08, 0.005]} />
+                <meshStandardMaterial color="#b3261e" />
+              </mesh>
+            </group>
+          </group>
+        );
+      })}
+    </>
   );
 }
