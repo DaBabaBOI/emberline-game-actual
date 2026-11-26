@@ -1,1817 +1,1817 @@
 {
-  "trained": "2026-11-25",
-  "battles": 11580,
+  "trained": "2026-11-26",
+  "battles": 16739,
   "contexts": {
     "forest:army:early": {
-      "games": 64,
+      "games": 86,
       "weights": {
-        "flank": 0.523,
-        "rush": 0.277,
-        "wedge": 0.2
+        "flank": 0.666,
+        "rush": 0.206,
+        "wedge": 0.128
       },
       "record": {
         "flank": [
-          9.1,
-          7.3
+          14.7,
+          13.2
         ],
         "rush": [
-          49.5,
-          29.3
+          66.1,
+          36.9
         ],
         "wedge": [
-          5.1,
-          2.6
+          5.3,
+          2.2
         ]
       }
     },
     "forest:army:late": {
-      "games": 198,
+      "games": 264,
       "weights": {
-        "flank": 0.171,
-        "rush": 0.451,
-        "volley": 0.099,
-        "wedge": 0.279
+        "flank": 0.213,
+        "rush": 0.446,
+        "volley": 0.097,
+        "wedge": 0.244
       },
       "record": {
         "flank": [
-          49.5,
-          15.5
+          66.1,
+          26.2
         ],
         "rush": [
-          49.5,
-          28
+          66.1,
+          38.8
         ],
         "volley": [
-          49.5,
-          7.3
+          66.1,
+          7.2
         ],
         "wedge": [
-          49.5,
-          21.8
+          66.1,
+          28.5
         ]
       }
     },
     "forest:army:middle": {
-      "games": 191,
+      "games": 254,
       "weights": {
-        "flank": 0.262,
-        "rush": 0.313,
-        "volley": 0.102,
-        "wedge": 0.323
+        "flank": 0.286,
+        "rush": 0.286,
+        "volley": 0.1,
+        "wedge": 0.328
       },
       "record": {
         "flank": [
-          49.5,
-          15.7
+          66.1,
+          25.3
         ],
         "rush": [
-          49.5,
-          18
+          66.1,
+          25.3
         ],
         "volley": [
-          42.1,
-          2.9
+          55.8,
+          5.5
         ],
         "wedge": [
-          49.5,
-          18.4
+          66.1,
+          27.6
         ]
       }
     },
     "forest:band:early": {
-      "games": 70,
+      "games": 93,
       "weights": {
-        "flank": 0.644,
-        "rush": 0.356
+        "flank": 0.645,
+        "rush": 0.355
       },
       "record": {
         "flank": [
-          20.5,
-          20.5
+          26.4,
+          26.4
         ],
         "rush": [
-          49.5,
-          40.6
+          66.1,
+          54.5
         ]
       }
     },
     "forest:band:late": {
-      "games": 144,
+      "games": 194,
       "weights": {
-        "flank": 0.512,
-        "rush": 0.367,
-        "volley": 0.121
+        "flank": 0.432,
+        "rush": 0.415,
+        "volley": 0.153
       },
       "record": {
         "flank": [
-          49.5,
-          20.8
+          66.1,
+          24.7
         ],
         "rush": [
-          49.5,
-          16.5
+          66.1,
+          24
         ],
         "volley": [
-          44.8,
-          1.9
+          62.1,
+          6.6
         ]
       }
     },
     "forest:band:middle": {
-      "games": 112,
+      "games": 148,
       "weights": {
-        "flank": 0.399,
-        "rush": 0.503,
+        "flank": 0.444,
+        "rush": 0.457,
         "volley": 0.098
       },
       "record": {
         "flank": [
-          49.5,
-          35.6
+          66.1,
+          47.3
         ],
         "rush": [
-          49.5,
-          38.6
+          66.1,
+          47.8
         ],
         "volley": [
-          12.5,
-          3.6
+          15.6,
+          4.1
         ]
       }
     },
     "forest:fire:early": {
-      "games": 99,
+      "games": 132,
       "weights": {
-        "flank": 0.113,
-        "rush": 0.887
+        "flank": 0.15,
+        "rush": 0.85
       },
       "record": {
         "flank": [
-          49.5,
-          19.5
+          66.1,
+          32.6
         ],
         "rush": [
-          49.5,
-          46
+          66.1,
+          62.1
         ]
       }
     },
     "forest:fire:late": {
-      "games": 99,
+      "games": 132,
       "weights": {
-        "flank": 0.105,
-        "rush": 0.895
+        "flank": 0.099,
+        "rush": 0.901
       },
       "record": {
         "flank": [
-          49.5,
-          9
+          66.1,
+          10.6
         ],
         "rush": [
-          49.5,
-          36.6
+          66.1,
+          49.1
         ]
       }
     },
     "forest:fire:middle": {
-      "games": 99,
+      "games": 132,
       "weights": {
-        "flank": 0.208,
-        "rush": 0.792
+        "flank": 0.2,
+        "rush": 0.8
       },
       "record": {
         "flank": [
-          49.5,
-          27.5
+          66.1,
+          37.4
         ],
         "rush": [
-          49.5,
-          44.7
+          66.1,
+          61
         ]
       }
     },
     "forest:party:early": {
-      "games": 62,
+      "games": 84,
       "weights": {
-        "flank": 0.635,
-        "rush": 0.365
+        "flank": 0.67,
+        "rush": 0.33
       },
       "record": {
         "flank": [
-          12.8,
-          10.1
+          17.9,
+          13.6
         ],
         "rush": [
-          49.5,
-          30.5
+          66.1,
+          36.9
         ]
       }
     },
     "forest:party:late": {
-      "games": 198,
+      "games": 264,
       "weights": {
-        "flank": 0.208,
-        "rush": 0.372,
-        "volley": 0.151,
-        "wedge": 0.269
+        "flank": 0.273,
+        "rush": 0.333,
+        "volley": 0.124,
+        "wedge": 0.27
       },
       "record": {
         "flank": [
-          49.5,
-          11.5
+          66.1,
+          20.8
         ],
         "rush": [
-          49.5,
-          19
+          66.1,
+          24.2
         ],
         "volley": [
-          49.5,
-          7.4
+          66.1,
+          7.3
         ],
         "wedge": [
-          49.5,
-          14.8
+          66.1,
+          20.6
         ]
       }
     },
     "forest:party:middle": {
-      "games": 182,
+      "games": 237,
       "weights": {
-        "flank": 0.272,
-        "rush": 0.224,
-        "volley": 0.127,
-        "wedge": 0.378
+        "flank": 0.309,
+        "rush": 0.191,
+        "volley": 0.104,
+        "wedge": 0.396
       },
       "record": {
         "flank": [
-          49.5,
-          20.9
+          66.1,
+          29.8
         ],
         "rush": [
-          49.5,
-          18.4
+          66.1,
+          21.6
         ],
         "volley": [
-          44.8,
-          10
+          56.1,
+          9.5
         ],
         "wedge": [
-          37.8,
-          19.2
+          49.1,
+          25.3
         ]
       }
     },
     "grass:army:early": {
-      "games": 61,
+      "games": 86,
       "weights": {
-        "flank": 0.421,
-        "rush": 0.197,
-        "wedge": 0.383
+        "flank": 0.487,
+        "rush": 0.275,
+        "wedge": 0.238
       },
       "record": {
         "flank": [
-          8.3,
-          5.6
+          17.1,
+          11.8
         ],
         "rush": [
-          49.5,
-          22.2
+          66.1,
+          34.9
         ],
         "wedge": [
-          2.7,
-          1.9
+          3.3,
+          1.6
         ]
       }
     },
     "grass:army:late": {
-      "games": 198,
+      "games": 264,
       "weights": {
-        "flank": 0.224,
-        "rush": 0.368,
-        "volley": 0.099,
-        "wedge": 0.308
+        "flank": 0.258,
+        "rush": 0.357,
+        "volley": 0.103,
+        "wedge": 0.282
       },
       "record": {
         "flank": [
-          49.5,
-          17.8
+          66.1,
+          27.1
         ],
         "rush": [
-          49.5,
-          24.2
+          66.1,
+          32.6
         ],
         "volley": [
-          49.5,
-          6.4
+          66.1,
+          11.4
         ],
         "wedge": [
-          49.5,
-          21.9
+          66.1,
+          28.6
         ]
       }
     },
     "grass:army:middle": {
-      "games": 193,
+      "games": 259,
       "weights": {
-        "flank": 0.204,
-        "rush": 0.424,
-        "volley": 0.096,
-        "wedge": 0.275
+        "flank": 0.207,
+        "rush": 0.395,
+        "volley": 0.099,
+        "wedge": 0.299
       },
       "record": {
         "flank": [
-          49.5,
-          17.8
+          66.1,
+          20.1
         ],
         "rush": [
-          49.5,
-          27.2
+          66.1,
+          31.1
         ],
         "volley": [
-          44.1,
-          1.9
+          60.5,
+          5.6
         ],
         "wedge": [
-          49.5,
-          21.6
+          66.1,
+          26.4
         ]
       }
     },
     "grass:band:early": {
-      "games": 68,
+      "games": 95,
       "weights": {
-        "flank": 0.66,
-        "rush": 0.34
+        "flank": 0.602,
+        "rush": 0.398
       },
       "record": {
         "flank": [
-          18,
-          18
+          29.3,
+          27.3
         ],
         "rush": [
-          49.5,
-          39.4
+          66.1,
+          53.5
         ]
       }
     },
     "grass:band:late": {
-      "games": 141,
+      "games": 192,
       "weights": {
-        "flank": 0.302,
-        "rush": 0.598,
+        "flank": 0.27,
+        "rush": 0.632,
         "volley": 0.099
       },
       "record": {
         "flank": [
-          49.5,
-          21.2
+          66.1,
+          24
         ],
         "rush": [
-          49.5,
-          30
+          66.1,
+          38.5
         ],
         "volley": [
-          42.1,
-          5.1
+          59.8,
+          4.3
         ]
       }
     },
     "grass:band:middle": {
-      "games": 110,
+      "games": 151,
       "weights": {
-        "flank": 0.354,
-        "rush": 0.548,
+        "flank": 0.351,
+        "rush": 0.551,
         "volley": 0.098
       },
       "record": {
         "flank": [
-          49.5,
-          33.5
+          66.1,
+          44.5
         ],
         "rush": [
-          49.5,
-          39.1
+          66.1,
+          52.2
         ],
         "volley": [
-          10.8,
-          2.7
+          19.2,
+          5.3
         ]
       }
     },
     "grass:fire:early": {
-      "games": 99,
+      "games": 132,
       "weights": {
-        "flank": 0.193,
-        "rush": 0.807
+        "flank": 0.191,
+        "rush": 0.809
       },
       "record": {
         "flank": [
-          49.5,
-          29.3
+          66.1,
+          35.9
         ],
         "rush": [
-          49.5,
-          47.7
+          66.1,
+          60.5
         ]
       }
     },
     "grass:fire:late": {
-      "games": 99,
+      "games": 132,
       "weights": {
-        "flank": 0.097,
-        "rush": 0.903
+        "flank": 0.098,
+        "rush": 0.902
       },
       "record": {
         "flank": [
-          49.5,
-          9.6
+          66.1,
+          14.2
         ],
         "rush": [
-          49.5,
-          42.1
+          66.1,
+          54.8
         ]
       }
     },
     "grass:fire:middle": {
-      "games": 99,
+      "games": 132,
       "weights": {
-        "flank": 0.229,
-        "rush": 0.771
+        "flank": 0.243,
+        "rush": 0.757
       },
       "record": {
         "flank": [
-          49.5,
-          25.8
+          66.1,
+          36.9
         ],
         "rush": [
-          49.5,
-          41.4
+          66.1,
+          56.2
         ]
       }
     },
     "grass:party:early": {
-      "games": 66,
+      "games": 84,
       "weights": {
         "flank": 0.769,
         "rush": 0.231
       },
       "record": {
         "flank": [
-          16.6,
-          15.8
+          18.1,
+          16.4
         ],
         "rush": [
-          49.5,
-          30
+          66.1,
+          37.5
         ]
       }
     },
     "grass:party:late": {
-      "games": 198,
+      "games": 264,
       "weights": {
-        "flank": 0.279,
-        "rush": 0.248,
-        "volley": 0.203,
-        "wedge": 0.27
+        "flank": 0.288,
+        "rush": 0.319,
+        "volley": 0.156,
+        "wedge": 0.238
       },
       "record": {
         "flank": [
-          49.5,
-          15.9
-        ],
-        "rush": [
-          49.5,
-          14.4
-        ],
-        "volley": [
-          49.5,
-          11.8
-        ],
-        "wedge": [
-          49.5,
-          15.5
-        ]
-      }
-    },
-    "grass:party:middle": {
-      "games": 178,
-      "weights": {
-        "flank": 0.385,
-        "rush": 0.332,
-        "volley": 0.115,
-        "wedge": 0.168
-      },
-      "record": {
-        "flank": [
-          49.5,
-          25.9
-        ],
-        "rush": [
-          49.5,
-          24
-        ],
-        "volley": [
-          44.8,
-          9.3
-        ],
-        "wedge": [
-          33.8,
-          10.3
-        ]
-      }
-    },
-    "hills:army:early": {
-      "games": 71,
-      "weights": {
-        "flank": 0.602,
-        "rush": 0.124,
-        "wedge": 0.274
-      },
-      "record": {
-        "flank": [
-          11.8,
-          11
-        ],
-        "rush": [
-          49.5,
-          23.4
-        ],
-        "wedge": [
-          9.3,
-          6.6
-        ]
-      }
-    },
-    "hills:army:late": {
-      "games": 198,
-      "weights": {
-        "flank": 0.264,
-        "rush": 0.355,
-        "volley": 0.099,
-        "wedge": 0.281
-      },
-      "record": {
-        "flank": [
-          49.5,
-          19.2
-        ],
-        "rush": [
-          49.5,
-          23
-        ],
-        "volley": [
-          49.5,
-          4.9
-        ],
-        "wedge": [
-          49.5,
-          20
-        ]
-      }
-    },
-    "hills:army:middle": {
-      "games": 190,
-      "weights": {
-        "flank": 0.254,
-        "rush": 0.347,
-        "volley": 0.141,
-        "wedge": 0.258
-      },
-      "record": {
-        "flank": [
-          49.5,
-          17.8
-        ],
-        "rush": [
-          49.5,
-          21.8
-        ],
-        "volley": [
-          41.3,
-          8.4
-        ],
-        "wedge": [
-          49.5,
-          18
-        ]
-      }
-    },
-    "hills:band:early": {
-      "games": 70,
-      "weights": {
-        "flank": 0.519,
-        "rush": 0.481
-      },
-      "record": {
-        "flank": [
-          20.2,
-          16.5
-        ],
-        "rush": [
-          49.5,
-          38.6
-        ]
-      }
-    },
-    "hills:band:late": {
-      "games": 142,
-      "weights": {
-        "flank": 0.491,
-        "rush": 0.411,
-        "volley": 0.098
-      },
-      "record": {
-        "flank": [
-          49.5,
-          26.8
-        ],
-        "rush": [
-          49.5,
+          66.1,
           24.5
         ],
-        "volley": [
-          43.3,
-          2.7
-        ]
-      }
-    },
-    "hills:band:middle": {
-      "games": 108,
-      "weights": {
-        "flank": 0.522,
-        "rush": 0.383,
-        "volley": 0.095
-      },
-      "record": {
-        "flank": [
-          49.5,
-          38.3
-        ],
         "rush": [
-          49.5,
-          34.3
+          66.1,
+          26.2
         ],
         "volley": [
-          9.3,
-          1
-        ]
-      }
-    },
-    "hills:fire:early": {
-      "games": 99,
-      "weights": {
-        "flank": 0.125,
-        "rush": 0.875
-      },
-      "record": {
-        "flank": [
-          49.5,
-          22.6
-        ],
-        "rush": [
-          49.5,
-          47.7
-        ]
-      }
-    },
-    "hills:fire:late": {
-      "games": 99,
-      "weights": {
-        "flank": 0.099,
-        "rush": 0.901
-      },
-      "record": {
-        "flank": [
-          49.5,
-          14.5
-        ],
-        "rush": [
-          49.5,
-          44.3
-        ]
-      }
-    },
-    "hills:fire:middle": {
-      "games": 99,
-      "weights": {
-        "flank": 0.185,
-        "rush": 0.815
-      },
-      "record": {
-        "flank": [
-          49.5,
-          22
-        ],
-        "rush": [
-          49.5,
-          41.1
-        ]
-      }
-    },
-    "hills:party:early": {
-      "games": 60,
-      "weights": {
-        "flank": 0.685,
-        "rush": 0.315
-      },
-      "record": {
-        "flank": [
-          10,
-          9
-        ],
-        "rush": [
-          49.5,
-          31.9
-        ]
-      }
-    },
-    "hills:party:late": {
-      "games": 198,
-      "weights": {
-        "flank": 0.203,
-        "rush": 0.411,
-        "volley": 0.099,
-        "wedge": 0.287
-      },
-      "record": {
-        "flank": [
-          49.5,
-          14.5
-        ],
-        "rush": [
-          49.5,
-          23.6
-        ],
-        "volley": [
-          49.5,
-          3.9
-        ],
-        "wedge": [
-          49.5,
-          19
-        ]
-      }
-    },
-    "hills:party:middle": {
-      "games": 178,
-      "weights": {
-        "flank": 0.373,
-        "rush": 0.263,
-        "volley": 0.099,
-        "wedge": 0.265
-      },
-      "record": {
-        "flank": [
-          49.5,
-          26.1
-        ],
-        "rush": [
-          49.5,
-          21.6
-        ],
-        "volley": [
-          41.3,
-          5.6
-        ],
-        "wedge": [
-          37.7,
-          16.5
-        ]
-      }
-    },
-    "marsh:army:early": {
-      "games": 71,
-      "weights": {
-        "flank": 0.316,
-        "rush": 0.117,
-        "wedge": 0.567
-      },
-      "record": {
-        "flank": [
-          13.3,
-          6.4
-        ],
-        "rush": [
-          49.5,
-          11.1
-        ],
-        "wedge": [
-          8,
-          5.3
-        ]
-      }
-    },
-    "marsh:army:late": {
-      "games": 198,
-      "weights": {
-        "flank": 0.16,
-        "rush": 0.262,
-        "volley": 0.212,
-        "wedge": 0.366
-      },
-      "record": {
-        "flank": [
-          49.5,
-          9.4
-        ],
-        "rush": [
-          49.5,
-          15.7
-        ],
-        "volley": [
-          49.5,
-          13
-        ],
-        "wedge": [
-          49.5,
-          20
-        ]
-      }
-    },
-    "marsh:army:middle": {
-      "games": 196,
-      "weights": {
-        "flank": 0.292,
-        "rush": 0.256,
-        "volley": 0.112,
-        "wedge": 0.341
-      },
-      "record": {
-        "flank": [
-          49.5,
-          14.5
-        ],
-        "rush": [
-          49.5,
-          12.8
-        ],
-        "volley": [
-          47,
-          2
-        ],
-        "wedge": [
-          49.5,
-          16.5
-        ]
-      }
-    },
-    "marsh:band:early": {
-      "games": 75,
-      "weights": {
-        "flank": 0.707,
-        "rush": 0.293
-      },
-      "record": {
-        "flank": [
-          25,
-          21.5
-        ],
-        "rush": [
-          49.5,
-          30.6
-        ]
-      }
-    },
-    "marsh:band:late": {
-      "games": 143,
-      "weights": {
-        "flank": 0.372,
-        "rush": 0.5,
-        "volley": 0.127
-      },
-      "record": {
-        "flank": [
-          49.5,
-          17.2
-        ],
-        "rush": [
-          49.5,
-          21
-        ],
-        "volley": [
-          44,
-          2.9
-        ]
-      }
-    },
-    "marsh:band:middle": {
-      "games": 113,
-      "weights": {
-        "flank": 0.433,
-        "rush": 0.419,
-        "volley": 0.148
-      },
-      "record": {
-        "flank": [
-          49.5,
-          25.6
-        ],
-        "rush": [
-          49.5,
-          25.2
-        ],
-        "volley": [
-          13.7,
-          2.9
-        ]
-      }
-    },
-    "marsh:fire:early": {
-      "games": 99,
-      "weights": {
-        "flank": 0.162,
-        "rush": 0.838
-      },
-      "record": {
-        "flank": [
-          49.5,
-          14.5
-        ],
-        "rush": [
-          49.5,
-          35.7
-        ]
-      }
-    },
-    "marsh:fire:late": {
-      "games": 99,
-      "weights": {
-        "flank": 0.162,
-        "rush": 0.838
-      },
-      "record": {
-        "flank": [
-          49.5,
-          8.3
-        ],
-        "rush": [
-          49.5,
-          29.5
-        ]
-      }
-    },
-    "marsh:fire:middle": {
-      "games": 99,
-      "weights": {
-        "flank": 0.346,
-        "rush": 0.654
-      },
-      "record": {
-        "flank": [
-          49.5,
-          21.8
-        ],
-        "rush": [
-          49.5,
-          30
-        ]
-      }
-    },
-    "marsh:party:early": {
-      "games": 59,
-      "weights": {
-        "flank": 0.495,
-        "rush": 0.505
-      },
-      "record": {
-        "flank": [
-          9.4,
-          4.7
-        ],
-        "rush": [
-          49.5,
-          25
-        ]
-      }
-    },
-    "marsh:party:late": {
-      "games": 198,
-      "weights": {
-        "flank": 0.298,
-        "rush": 0.242,
-        "volley": 0.117,
-        "wedge": 0.343
-      },
-      "record": {
-        "flank": [
-          49.5,
-          16.7
-        ],
-        "rush": [
-          49.5,
+          66.1,
           14
         ],
-        "volley": [
-          49.5,
-          4.7
-        ],
         "wedge": [
-          49.5,
-          18.5
-        ]
-      }
-    },
-    "marsh:party:middle": {
-      "games": 183,
-      "weights": {
-        "flank": 0.413,
-        "rush": 0.278,
-        "volley": 0.162,
-        "wedge": 0.147
-      },
-      "record": {
-        "flank": [
-          49.5,
-          22.9
-        ],
-        "rush": [
-          49.5,
-          17.8
-        ],
-        "volley": [
-          44.1,
-          9.6
-        ],
-        "wedge": [
-          39.7,
-          7.6
-        ]
-      }
-    },
-    "open:army:early": {
-      "games": 62,
-      "weights": {
-        "flank": 0.344,
-        "rush": 0.24,
-        "wedge": 0.416
-      },
-      "record": {
-        "flank": [
-          7.3,
-          5.6
-        ],
-        "rush": [
-          49.5,
-          30.9
-        ],
-        "wedge": [
-          5.4,
-          4.6
-        ]
-      }
-    },
-    "open:army:late": {
-      "games": 198,
-      "weights": {
-        "flank": 0.206,
-        "rush": 0.238,
-        "volley": 0.122,
-        "wedge": 0.434
-      },
-      "record": {
-        "flank": [
-          49.5,
-          16
-        ],
-        "rush": [
-          49.5,
-          17.9
-        ],
-        "volley": [
-          49.5,
-          9.3
-        ],
-        "wedge": [
-          49.5,
-          25.6
-        ]
-      }
-    },
-    "open:army:middle": {
-      "games": 194,
-      "weights": {
-        "flank": 0.189,
-        "rush": 0.487,
-        "volley": 0.1,
-        "wedge": 0.224
-      },
-      "record": {
-        "flank": [
-          49.5,
-          19
-        ],
-        "rush": [
-          49.5,
-          31.2
-        ],
-        "volley": [
-          45,
-          9.4
-        ],
-        "wedge": [
-          49.5,
+          66.1,
           21.2
         ]
       }
     },
-    "open:band:early": {
-      "games": 72,
+    "grass:party:middle": {
+      "games": 237,
       "weights": {
-        "flank": 0.638,
-        "rush": 0.362
-      },
-      "record": {
-        "flank": [
-          22.2,
-          22.2
-        ],
-        "rush": [
-          49.5,
-          41.1
-        ]
-      }
-    },
-    "open:band:late": {
-      "games": 149,
-      "weights": {
-        "flank": 0.475,
-        "rush": 0.426,
-        "volley": 0.1
-      },
-      "record": {
-        "flank": [
-          49.5,
-          23.4
-        ],
-        "rush": [
-          49.5,
-          22
-        ],
-        "volley": [
-          49.5,
-          2.9
-        ]
-      }
-    },
-    "open:band:middle": {
-      "games": 106,
-      "weights": {
-        "flank": 0.409,
-        "rush": 0.496,
-        "volley": 0.095
-      },
-      "record": {
-        "flank": [
-          49.5,
-          37.8
-        ],
-        "rush": [
-          49.5,
-          40.3
-        ],
-        "volley": [
-          7.3,
-          1
-        ]
-      }
-    },
-    "open:fire:early": {
-      "games": 99,
-      "weights": {
-        "flank": 0.154,
-        "rush": 0.846
-      },
-      "record": {
-        "flank": [
-          49.5,
-          23.9
-        ],
-        "rush": [
-          49.5,
-          45.8
-        ]
-      }
-    },
-    "open:fire:late": {
-      "games": 99,
-      "weights": {
-        "flank": 0.099,
-        "rush": 0.901
-      },
-      "record": {
-        "flank": [
-          49.5,
-          16.4
-        ],
-        "rush": [
-          49.5,
-          45.8
-        ]
-      }
-    },
-    "open:fire:middle": {
-      "games": 99,
-      "weights": {
-        "flank": 0.14,
-        "rush": 0.86
-      },
-      "record": {
-        "flank": [
-          49.5,
-          21.9
-        ],
-        "rush": [
-          49.5,
-          45.3
-        ]
-      }
-    },
-    "open:party:early": {
-      "games": 63,
-      "weights": {
-        "flank": 0.673,
-        "rush": 0.327
-      },
-      "record": {
-        "flank": [
-          13.8,
-          10.1
-        ],
-        "rush": [
-          49.5,
-          25.9
-        ]
-      }
-    },
-    "open:party:late": {
-      "games": 198,
-      "weights": {
-        "flank": 0.27,
-        "rush": 0.27,
-        "volley": 0.131,
-        "wedge": 0.33
-      },
-      "record": {
-        "flank": [
-          49.5,
-          20.8
-        ],
-        "rush": [
-          49.5,
-          20.8
-        ],
-        "volley": [
-          49.5,
-          11.5
-        ],
-        "wedge": [
-          49.5,
-          23.4
-        ]
-      }
-    },
-    "open:party:middle": {
-      "games": 171,
-      "weights": {
-        "flank": 0.352,
-        "rush": 0.268,
-        "volley": 0.098,
-        "wedge": 0.282
-      },
-      "record": {
-        "flank": [
-          49.5,
-          30.8
-        ],
-        "rush": [
-          49.5,
-          27.3
-        ],
-        "volley": [
-          40.6,
-          9.1
-        ],
-        "wedge": [
-          31.3,
-          17.7
-        ]
-      }
-    },
-    "river:army:early": {
-      "games": 63,
-      "weights": {
-        "flank": 0.255,
-        "rush": 0.143,
-        "wedge": 0.602
-      },
-      "record": {
-        "flank": [
-          8.4,
-          2.6
-        ],
-        "rush": [
-          49.5,
-          9.4
-        ],
-        "wedge": [
-          4.6,
-          2.7
-        ]
-      }
-    },
-    "river:army:late": {
-      "games": 198,
-      "weights": {
-        "flank": 0.177,
-        "rush": 0.253,
-        "volley": 0.347,
-        "wedge": 0.223
-      },
-      "record": {
-        "flank": [
-          49.5,
-          7
-        ],
-        "rush": [
-          49.5,
-          11.6
-        ],
-        "volley": [
-          49.5,
-          15.7
-        ],
-        "wedge": [
-          49.5,
-          10
-        ]
-      }
-    },
-    "river:army:middle": {
-      "games": 194,
-      "weights": {
-        "flank": 0.247,
-        "rush": 0.276,
-        "volley": 0.209,
-        "wedge": 0.267
-      },
-      "record": {
-        "flank": [
-          49.5,
-          7.3
-        ],
-        "rush": [
-          49.5,
-          8.7
-        ],
-        "volley": [
-          45,
-          4.6
-        ],
-        "wedge": [
-          49.5,
-          8.3
-        ]
-      }
-    },
-    "river:band:early": {
-      "games": 70,
-      "weights": {
-        "flank": 0.776,
-        "rush": 0.224
-      },
-      "record": {
-        "flank": [
-          20.4,
-          13
-        ],
-        "rush": [
-          49.5,
-          15.2
-        ]
-      }
-    },
-    "river:band:late": {
-      "games": 145,
-      "weights": {
-        "flank": 0.425,
-        "rush": 0.385,
-        "volley": 0.19
-      },
-      "record": {
-        "flank": [
-          49.5,
-          15.4
-        ],
-        "rush": [
-          49.5,
-          14.1
-        ],
-        "volley": [
-          45.8,
-          4.6
-        ]
-      }
-    },
-    "river:band:middle": {
-      "games": 111,
-      "weights": {
-        "flank": 0.225,
-        "rush": 0.496,
-        "volley": 0.279
-      },
-      "record": {
-        "flank": [
-          49.5,
-          14
-        ],
-        "rush": [
-          49.5,
-          24.2
-        ],
-        "volley": [
-          11.6,
-          3.7
-        ]
-      }
-    },
-    "river:fire:early": {
-      "games": 99,
-      "weights": {
-        "flank": 0.56,
-        "rush": 0.44
-      },
-      "record": {
-        "flank": [
-          49.5,
-          22.6
-        ],
-        "rush": [
-          49.5,
-          19.5
-        ]
-      }
-    },
-    "river:fire:late": {
-      "games": 99,
-      "weights": {
-        "flank": 0.215,
-        "rush": 0.785
-      },
-      "record": {
-        "flank": [
-          49.5,
-          10.5
-        ],
-        "rush": [
-          49.5,
-          27.2
-        ]
-      }
-    },
-    "river:fire:middle": {
-      "games": 99,
-      "weights": {
-        "flank": 0.232,
-        "rush": 0.768
-      },
-      "record": {
-        "flank": [
-          49.5,
-          19.4
-        ],
-        "rush": [
-          49.5,
-          34.8
-        ]
-      }
-    },
-    "river:party:early": {
-      "games": 64,
-      "weights": {
-        "flank": 0.609,
-        "rush": 0.391
-      },
-      "record": {
-        "flank": [
-          14,
-          6.4
-        ],
-        "rush": [
-          49.5,
-          17.1
-        ]
-      }
-    },
-    "river:party:late": {
-      "games": 198,
-      "weights": {
-        "flank": 0.285,
-        "rush": 0.262,
-        "volley": 0.183,
-        "wedge": 0.27
-      },
-      "record": {
-        "flank": [
-          49.5,
-          8.4
-        ],
-        "rush": [
-          49.5,
-          7.3
-        ],
-        "volley": [
-          49.5,
-          2.7
-        ],
-        "wedge": [
-          49.5,
-          7.7
-        ]
-      }
-    },
-    "river:party:middle": {
-      "games": 180,
-      "weights": {
-        "flank": 0.169,
-        "rush": 0.242,
-        "volley": 0.22,
-        "wedge": 0.369
-      },
-      "record": {
-        "flank": [
-          49.5,
-          4.7
-        ],
-        "rush": [
-          49.5,
-          9.3
-        ],
-        "volley": [
-          44.1,
-          7.1
-        ],
-        "wedge": [
-          37.3,
-          11
-        ]
-      }
-    },
-    "rocky:army:early": {
-      "games": 67,
-      "weights": {
-        "flank": 0.27,
-        "rush": 0.118,
-        "wedge": 0.612
-      },
-      "record": {
-        "flank": [
-          14.4,
-          8.7
-        ],
-        "rush": [
-          49.5,
-          18.8
-        ],
-        "wedge": [
-          2.9,
-          2.9
-        ]
-      }
-    },
-    "rocky:army:late": {
-      "games": 198,
-      "weights": {
-        "flank": 0.309,
-        "rush": 0.283,
-        "volley": 0.209,
-        "wedge": 0.198
-      },
-      "record": {
-        "flank": [
-          49.5,
-          18.8
-        ],
-        "rush": [
-          49.5,
-          17.7
-        ],
-        "volley": [
-          49.5,
-          13.8
-        ],
-        "wedge": [
-          49.5,
-          13.1
-        ]
-      }
-    },
-    "rocky:army:middle": {
-      "games": 192,
-      "weights": {
-        "flank": 0.199,
-        "rush": 0.345,
+        "flank": 0.43,
+        "rush": 0.292,
         "volley": 0.099,
-        "wedge": 0.358
+        "wedge": 0.179
       },
       "record": {
         "flank": [
-          49.5,
-          17.2
+          66.1,
+          37
         ],
         "rush": [
-          49.5,
+          66.1,
+          30.4
+        ],
+        "volley": [
+          60.1,
+          8.9
+        ],
+        "wedge": [
+          44.7,
+          14.8
+        ]
+      }
+    },
+    "hills:army:early": {
+      "games": 89,
+      "weights": {
+        "flank": 0.465,
+        "rush": 0.174,
+        "wedge": 0.362
+      },
+      "record": {
+        "flank": [
+          15,
+          11.4
+        ],
+        "rush": [
+          66.1,
+          31.9
+        ],
+        "wedge": [
+          7.9,
+          5.6
+        ]
+      }
+    },
+    "hills:army:late": {
+      "games": 264,
+      "weights": {
+        "flank": 0.238,
+        "rush": 0.366,
+        "volley": 0.099,
+        "wedge": 0.296
+      },
+      "record": {
+        "flank": [
+          66.1,
           24.3
         ],
+        "rush": [
+          66.1,
+          31.6
+        ],
         "volley": [
-          43.7,
-          5.4
+          66.1,
+          8.2
         ],
         "wedge": [
-          49.5,
-          24.8
+          66.1,
+          28
         ]
       }
     },
-    "rocky:band:early": {
-      "games": 68,
+    "hills:army:middle": {
+      "games": 255,
       "weights": {
-        "flank": 0.565,
-        "rush": 0.435
+        "flank": 0.25,
+        "rush": 0.343,
+        "volley": 0.122,
+        "wedge": 0.284
       },
       "record": {
         "flank": [
-          18.9,
-          17
+          66.1,
+          25.1
         ],
         "rush": [
-          49.5,
-          40
-        ]
-      }
-    },
-    "rocky:band:late": {
-      "games": 143,
-      "weights": {
-        "flank": 0.299,
-        "rush": 0.566,
-        "volley": 0.135
-      },
-      "record": {
-        "flank": [
-          49.5,
-          19.4
-        ],
-        "rush": [
-          49.5,
-          27.6
+          66.1,
+          30.5
         ],
         "volley": [
-          44,
-          8.1
+          57.1,
+          11.1
+        ],
+        "wedge": [
+          66.1,
+          27.3
         ]
       }
     },
-    "rocky:band:middle": {
-      "games": 115,
+    "hills:band:early": {
+      "games": 91,
       "weights": {
-        "flank": 0.451,
-        "rush": 0.451,
+        "flank": 0.482,
+        "rush": 0.518
+      },
+      "record": {
+        "flank": [
+          25.2,
+          20
+        ],
+        "rush": [
+          66.1,
+          52.8
+        ]
+      }
+    },
+    "hills:band:late": {
+      "games": 191,
+      "weights": {
+        "flank": 0.49,
+        "rush": 0.411,
         "volley": 0.099
       },
       "record": {
         "flank": [
-          49.5,
-          41.3
+          66.1,
+          33.8
         ],
         "rush": [
-          49.5,
-          41.3
+          66.1,
+          30.8
         ],
         "volley": [
-          16.4,
-          6.6
+          58.8,
+          3.3
+        ]
+      }
+    },
+    "hills:band:middle": {
+      "games": 145,
+      "weights": {
+        "flank": 0.497,
+        "rush": 0.407,
+        "volley": 0.095
+      },
+      "record": {
+        "flank": [
+          66.1,
+          51.6
+        ],
+        "rush": [
+          66.1,
+          48.2
+        ],
+        "volley": [
+          12.9,
+          1.9
+        ]
+      }
+    },
+    "hills:fire:early": {
+      "games": 132,
+      "weights": {
+        "flank": 0.13,
+        "rush": 0.87
+      },
+      "record": {
+        "flank": [
+          66.1,
+          31.2
+        ],
+        "rush": [
+          66.1,
+          63.5
+        ]
+      }
+    },
+    "hills:fire:late": {
+      "games": 132,
+      "weights": {
+        "flank": 0.098,
+        "rush": 0.902
+      },
+      "record": {
+        "flank": [
+          66.1,
+          18.3
+        ],
+        "rush": [
+          66.1,
+          60.7
+        ]
+      }
+    },
+    "hills:fire:middle": {
+      "games": 132,
+      "weights": {
+        "flank": 0.16,
+        "rush": 0.84
+      },
+      "record": {
+        "flank": [
+          66.1,
+          28.7
+        ],
+        "rush": [
+          66.1,
+          56.9
+        ]
+      }
+    },
+    "hills:party:early": {
+      "games": 81,
+      "weights": {
+        "flank": 0.628,
+        "rush": 0.372
+      },
+      "record": {
+        "flank": [
+          14.5,
+          11.6
+        ],
+        "rush": [
+          66.1,
+          42.1
+        ]
+      }
+    },
+    "hills:party:late": {
+      "games": 264,
+      "weights": {
+        "flank": 0.227,
+        "rush": 0.404,
+        "volley": 0.099,
+        "wedge": 0.27
+      },
+      "record": {
+        "flank": [
+          66.1,
+          23.3
+        ],
+        "rush": [
+          66.1,
+          33.1
+        ],
+        "volley": [
+          66.1,
+          6.3
+        ],
+        "wedge": [
+          66.1,
+          26.2
+        ]
+      }
+    },
+    "hills:party:middle": {
+      "games": 238,
+      "weights": {
+        "flank": 0.344,
+        "rush": 0.31,
+        "volley": 0.099,
+        "wedge": 0.247
+      },
+      "record": {
+        "flank": [
+          66.1,
+          34.2
+        ],
+        "rush": [
+          66.1,
+          32.4
+        ],
+        "volley": [
+          55.1,
+          9.8
+        ],
+        "wedge": [
+          51,
+          22
+        ]
+      }
+    },
+    "marsh:army:early": {
+      "games": 94,
+      "weights": {
+        "flank": 0.32,
+        "rush": 0.173,
+        "wedge": 0.507
+      },
+      "record": {
+        "flank": [
+          19.3,
+          7.4
+        ],
+        "rush": [
+          66.1,
+          15.4
+        ],
+        "wedge": [
+          8.8,
+          4.5
+        ]
+      }
+    },
+    "marsh:army:late": {
+      "games": 264,
+      "weights": {
+        "flank": 0.191,
+        "rush": 0.261,
+        "volley": 0.203,
+        "wedge": 0.344
+      },
+      "record": {
+        "flank": [
+          66.1,
+          15
+        ],
+        "rush": [
+          66.1,
+          20.3
+        ],
+        "volley": [
+          66.1,
+          16
+        ],
+        "wedge": [
+          66.1,
+          25
+        ]
+      }
+    },
+    "marsh:army:middle": {
+      "games": 260,
+      "weights": {
+        "flank": 0.281,
+        "rush": 0.275,
+        "volley": 0.114,
+        "wedge": 0.33
+      },
+      "record": {
+        "flank": [
+          66.1,
+          19.3
+        ],
+        "rush": [
+          66.1,
+          18.9
+        ],
+        "volley": [
+          62,
+          3.7
+        ],
+        "wedge": [
+          66.1,
+          22
+        ]
+      }
+    },
+    "marsh:band:early": {
+      "games": 102,
+      "weights": {
+        "flank": 0.634,
+        "rush": 0.366
+      },
+      "record": {
+        "flank": [
+          36.3,
+          27.3
+        ],
+        "rush": [
+          66.1,
+          40
+        ]
+      }
+    },
+    "marsh:band:late": {
+      "games": 192,
+      "weights": {
+        "flank": 0.394,
+        "rush": 0.448,
+        "volley": 0.158
+      },
+      "record": {
+        "flank": [
+          66.1,
+          19.6
+        ],
+        "rush": [
+          66.1,
+          21.8
+        ],
+        "volley": [
+          59.4,
+          3.5
+        ]
+      }
+    },
+    "marsh:band:middle": {
+      "games": 148,
+      "weights": {
+        "flank": 0.408,
+        "rush": 0.475,
+        "volley": 0.117
+      },
+      "record": {
+        "flank": [
+          66.1,
+          33.8
+        ],
+        "rush": [
+          66.1,
+          36.4
+        ],
+        "volley": [
+          15.6,
+          2.5
+        ]
+      }
+    },
+    "marsh:fire:early": {
+      "games": 132,
+      "weights": {
+        "flank": 0.162,
+        "rush": 0.838
+      },
+      "record": {
+        "flank": [
+          66.1,
+          20.3
+        ],
+        "rush": [
+          66.1,
+          48.3
+        ]
+      }
+    },
+    "marsh:fire:late": {
+      "games": 132,
+      "weights": {
+        "flank": 0.162,
+        "rush": 0.838
+      },
+      "record": {
+        "flank": [
+          66.1,
+          13.1
+        ],
+        "rush": [
+          66.1,
+          41.1
+        ]
+      }
+    },
+    "marsh:fire:middle": {
+      "games": 132,
+      "weights": {
+        "flank": 0.269,
+        "rush": 0.731
+      },
+      "record": {
+        "flank": [
+          66.1,
+          27.5
+        ],
+        "rush": [
+          66.1,
+          44.5
+        ]
+      }
+    },
+    "marsh:party:early": {
+      "games": 83,
+      "weights": {
+        "flank": 0.514,
+        "rush": 0.486
+      },
+      "record": {
+        "flank": [
+          17,
+          8
+        ],
+        "rush": [
+          66.1,
+          30.3
+        ]
+      }
+    },
+    "marsh:party:late": {
+      "games": 264,
+      "weights": {
+        "flank": 0.33,
+        "rush": 0.228,
+        "volley": 0.12,
+        "wedge": 0.321
+      },
+      "record": {
+        "flank": [
+          66.1,
+          22.2
+        ],
+        "rush": [
+          66.1,
+          15.9
+        ],
+        "volley": [
+          66.1,
+          5
+        ],
+        "wedge": [
+          66.1,
+          21.7
+        ]
+      }
+    },
+    "marsh:party:middle": {
+      "games": 243,
+      "weights": {
+        "flank": 0.377,
+        "rush": 0.309,
+        "volley": 0.168,
+        "wedge": 0.146
+      },
+      "record": {
+        "flank": [
+          66.1,
+          28.5
+        ],
+        "rush": [
+          66.1,
+          25.1
+        ],
+        "volley": [
+          59.5,
+          13.2
+        ],
+        "wedge": [
+          51.7,
+          9.5
+        ]
+      }
+    },
+    "open:army:early": {
+      "games": 86,
+      "weights": {
+        "flank": 0.46,
+        "rush": 0.22,
+        "wedge": 0.32
+      },
+      "record": {
+        "flank": [
+          13.2,
+          10.8
+        ],
+        "rush": [
+          66.1,
+          39.3
+        ],
+        "wedge": [
+          6.6,
+          4.9
+        ]
+      }
+    },
+    "open:army:late": {
+      "games": 264,
+      "weights": {
+        "flank": 0.226,
+        "rush": 0.263,
+        "volley": 0.1,
+        "wedge": 0.411
+      },
+      "record": {
+        "flank": [
+          66.1,
+          24.6
+        ],
+        "rush": [
+          66.1,
+          27.2
+        ],
+        "volley": [
+          66.1,
+          9.9
+        ],
+        "wedge": [
+          66.1,
+          34.8
+        ]
+      }
+    },
+    "open:army:middle": {
+      "games": 258,
+      "weights": {
+        "flank": 0.207,
+        "rush": 0.38,
+        "volley": 0.104,
+        "wedge": 0.309
+      },
+      "record": {
+        "flank": [
+          66.1,
+          25.2
+        ],
+        "rush": [
+          66.1,
+          35.5
+        ],
+        "volley": [
+          59.3,
+          12
+        ],
+        "wedge": [
+          66.1,
+          32
+        ]
+      }
+    },
+    "open:band:early": {
+      "games": 88,
+      "weights": {
+        "flank": 0.647,
+        "rush": 0.353
+      },
+      "record": {
+        "flank": [
+          21.9,
+          21.9
+        ],
+        "rush": [
+          66.1,
+          53.9
+        ]
+      }
+    },
+    "open:band:late": {
+      "games": 196,
+      "weights": {
+        "flank": 0.467,
+        "rush": 0.435,
+        "volley": 0.099
+      },
+      "record": {
+        "flank": [
+          66.1,
+          31.9
+        ],
+        "rush": [
+          66.1,
+          30.7
+        ],
+        "volley": [
+          64.1,
+          2.5
+        ]
+      }
+    },
+    "open:band:middle": {
+      "games": 145,
+      "weights": {
+        "flank": 0.45,
+        "rush": 0.456,
+        "volley": 0.094
+      },
+      "record": {
+        "flank": [
+          66.1,
+          50.1
+        ],
+        "rush": [
+          66.1,
+          50.3
+        ],
+        "volley": [
+          13.2,
+          0.9
+        ]
+      }
+    },
+    "open:fire:early": {
+      "games": 132,
+      "weights": {
+        "flank": 0.173,
+        "rush": 0.827
+      },
+      "record": {
+        "flank": [
+          66.1,
+          34.3
+        ],
+        "rush": [
+          66.1,
+          60.9
+        ]
+      }
+    },
+    "open:fire:late": {
+      "games": 132,
+      "weights": {
+        "flank": 0.102,
+        "rush": 0.898
+      },
+      "record": {
+        "flank": [
+          66.1,
+          21.9
+        ],
+        "rush": [
+          66.1,
+          58.9
+        ]
+      }
+    },
+    "open:fire:middle": {
+      "games": 132,
+      "weights": {
+        "flank": 0.171,
+        "rush": 0.829
+      },
+      "record": {
+        "flank": [
+          66.1,
+          32.6
+        ],
+        "rush": [
+          66.1,
+          59.5
+        ]
+      }
+    },
+    "open:party:early": {
+      "games": 86,
+      "weights": {
+        "flank": 0.57,
+        "rush": 0.43
+      },
+      "record": {
+        "flank": [
+          19.7,
+          13.6
+        ],
+        "rush": [
+          66.1,
+          40
+        ]
+      }
+    },
+    "open:party:late": {
+      "games": 264,
+      "weights": {
+        "flank": 0.275,
+        "rush": 0.291,
+        "volley": 0.121,
+        "wedge": 0.313
+      },
+      "record": {
+        "flank": [
+          66.1,
+          26.7
+        ],
+        "rush": [
+          66.1,
+          27.7
+        ],
+        "volley": [
+          66.1,
+          12.8
+        ],
+        "wedge": [
+          66.1,
+          28.9
+        ]
+      }
+    },
+    "open:party:middle": {
+      "games": 233,
+      "weights": {
+        "flank": 0.37,
+        "rush": 0.293,
+        "volley": 0.097,
+        "wedge": 0.24
+      },
+      "record": {
+        "flank": [
+          66.1,
+          42.2
+        ],
+        "rush": [
+          66.1,
+          38.2
+        ],
+        "volley": [
+          57.5,
+          10.7
+        ],
+        "wedge": [
+          43.6,
+          23
+        ]
+      }
+    },
+    "river:army:early": {
+      "games": 91,
+      "weights": {
+        "flank": 0.408,
+        "rush": 0.127,
+        "wedge": 0.465
+      },
+      "record": {
+        "flank": [
+          16.1,
+          7.2
+        ],
+        "rush": [
+          66.1,
+          10
+        ],
+        "wedge": [
+          8.9,
+          4.3
+        ]
+      }
+    },
+    "river:army:late": {
+      "games": 264,
+      "weights": {
+        "flank": 0.193,
+        "rush": 0.229,
+        "volley": 0.354,
+        "wedge": 0.224
+      },
+      "record": {
+        "flank": [
+          66.1,
+          11
+        ],
+        "rush": [
+          66.1,
+          13.9
+        ],
+        "volley": [
+          66.1,
+          21.3
+        ],
+        "wedge": [
+          66.1,
+          13.5
+        ]
+      }
+    },
+    "river:army:middle": {
+      "games": 256,
+      "weights": {
+        "flank": 0.207,
+        "rush": 0.281,
+        "volley": 0.22,
+        "wedge": 0.293
+      },
+      "record": {
+        "flank": [
+          66.1,
+          8.2
+        ],
+        "rush": [
+          66.1,
+          13.4
+        ],
+        "volley": [
+          57.3,
+          7.9
+        ],
+        "wedge": [
+          66.1,
+          14.1
+        ]
+      }
+    },
+    "river:band:early": {
+      "games": 93,
+      "weights": {
+        "flank": 0.69,
+        "rush": 0.31
+      },
+      "record": {
+        "flank": [
+          27.3,
+          16
+        ],
+        "rush": [
+          66.1,
+          24.9
+        ]
+      }
+    },
+    "river:band:late": {
+      "games": 193,
+      "weights": {
+        "flank": 0.351,
+        "rush": 0.393,
+        "volley": 0.256
+      },
+      "record": {
+        "flank": [
+          66.1,
+          15.1
+        ],
+        "rush": [
+          66.1,
+          17
+        ],
+        "volley": [
+          60.9,
+          8.9
+        ]
+      }
+    },
+    "river:band:middle": {
+      "games": 146,
+      "weights": {
+        "flank": 0.28,
+        "rush": 0.44,
+        "volley": 0.279
+      },
+      "record": {
+        "flank": [
+          66.1,
+          20.9
+        ],
+        "rush": [
+          66.1,
+          28.6
+        ],
+        "volley": [
+          13.9,
+          4.1
+        ]
+      }
+    },
+    "river:fire:early": {
+      "games": 132,
+      "weights": {
+        "flank": 0.407,
+        "rush": 0.593
+      },
+      "record": {
+        "flank": [
+          66.1,
+          24.2
+        ],
+        "rush": [
+          66.1,
+          30.6
+        ]
+      }
+    },
+    "river:fire:late": {
+      "games": 132,
+      "weights": {
+        "flank": 0.177,
+        "rush": 0.823
+      },
+      "record": {
+        "flank": [
+          66.1,
+          10.9
+        ],
+        "rush": [
+          66.1,
+          37.1
+        ]
+      }
+    },
+    "river:fire:middle": {
+      "games": 132,
+      "weights": {
+        "flank": 0.205,
+        "rush": 0.795
+      },
+      "record": {
+        "flank": [
+          66.1,
+          24.5
+        ],
+        "rush": [
+          66.1,
+          47.6
+        ]
+      }
+    },
+    "river:party:early": {
+      "games": 86,
+      "weights": {
+        "flank": 0.464,
+        "rush": 0.536
+      },
+      "record": {
+        "flank": [
+          19.9,
+          6.4
+        ],
+        "rush": [
+          66.1,
+          24.5
+        ]
+      }
+    },
+    "river:party:late": {
+      "games": 264,
+      "weights": {
+        "flank": 0.23,
+        "rush": 0.31,
+        "volley": 0.195,
+        "wedge": 0.265
+      },
+      "record": {
+        "flank": [
+          66.1,
+          7.1
+        ],
+        "rush": [
+          66.1,
+          12.2
+        ],
+        "volley": [
+          66.1,
+          4.3
+        ],
+        "wedge": [
+          66.1,
+          9.5
+        ]
+      }
+    },
+    "river:party:middle": {
+      "games": 240,
+      "weights": {
+        "flank": 0.189,
+        "rush": 0.284,
+        "volley": 0.242,
+        "wedge": 0.285
+      },
+      "record": {
+        "flank": [
+          66.1,
+          9
+        ],
+        "rush": [
+          66.1,
+          15.9
+        ],
+        "volley": [
+          60.5,
+          12
+        ],
+        "wedge": [
+          47.7,
+          11.4
+        ]
+      }
+    },
+    "rocky:army:early": {
+      "games": 85,
+      "weights": {
+        "flank": 0.334,
+        "rush": 0.142,
+        "wedge": 0.523
+      },
+      "record": {
+        "flank": [
+          14.2,
+          8.4
+        ],
+        "rush": [
+          66.1,
+          24
+        ],
+        "wedge": [
+          4.5,
+          3.5
+        ]
+      }
+    },
+    "rocky:army:late": {
+      "games": 264,
+      "weights": {
+        "flank": 0.341,
+        "rush": 0.27,
+        "volley": 0.198,
+        "wedge": 0.191
+      },
+      "record": {
+        "flank": [
+          66.1,
+          28
+        ],
+        "rush": [
+          66.1,
+          24
+        ],
+        "volley": [
+          66.1,
+          18.7
+        ],
+        "wedge": [
+          66.1,
+          18.1
+        ]
+      }
+    },
+    "rocky:army:middle": {
+      "games": 254,
+      "weights": {
+        "flank": 0.192,
+        "rush": 0.391,
+        "volley": 0.1,
+        "wedge": 0.317
+      },
+      "record": {
+        "flank": [
+          66.1,
+          22.6
+        ],
+        "rush": [
+          66.1,
+          34.7
+        ],
+        "volley": [
+          56.1,
+          9.6
+        ],
+        "wedge": [
+          66.1,
+          31.1
+        ]
+      }
+    },
+    "rocky:band:early": {
+      "games": 90,
+      "weights": {
+        "flank": 0.501,
+        "rush": 0.499
+      },
+      "record": {
+        "flank": [
+          24.1,
+          20.5
+        ],
+        "rush": [
+          66.1,
+          55
+        ]
+      }
+    },
+    "rocky:band:late": {
+      "games": 194,
+      "weights": {
+        "flank": 0.365,
+        "rush": 0.49,
+        "volley": 0.145
+      },
+      "record": {
+        "flank": [
+          66.1,
+          27.5
+        ],
+        "rush": [
+          66.1,
+          32.5
+        ],
+        "volley": [
+          61.4,
+          10.9
+        ]
+      }
+    },
+    "rocky:band:middle": {
+      "games": 152,
+      "weights": {
+        "flank": 0.45,
+        "rush": 0.45,
+        "volley": 0.099
+      },
+      "record": {
+        "flank": [
+          66.1,
+          53.1
+        ],
+        "rush": [
+          66.1,
+          53.1
+        ],
+        "volley": [
+          19.9,
+          7.6
         ]
       }
     },
     "rocky:fire:early": {
-      "games": 99,
+      "games": 132,
       "weights": {
-        "flank": 0.123,
-        "rush": 0.877
+        "flank": 0.111,
+        "rush": 0.889
       },
       "record": {
         "flank": [
-          49.5,
-          22.2
+          66.1,
+          28.9
         ],
         "rush": [
-          49.5,
-          47.5
+          66.1,
+          64.4
         ]
       }
     },
     "rocky:fire:late": {
-      "games": 99,
+      "games": 132,
       "weights": {
-        "flank": 0.095,
-        "rush": 0.905
+        "flank": 0.098,
+        "rush": 0.902
       },
       "record": {
         "flank": [
-          49.5,
-          9.4
+          66.1,
+          15
         ],
         "rush": [
-          49.5,
-          46.8
+          66.1,
+          56.8
         ]
       }
     },
     "rocky:fire:middle": {
-      "games": 99,
+      "games": 132,
       "weights": {
-        "flank": 0.255,
-        "rush": 0.745
+        "flank": 0.297,
+        "rush": 0.703
       },
       "record": {
         "flank": [
-          49.5,
-          28.2
+          66.1,
+          40
         ],
         "rush": [
-          49.5,
-          42
+          66.1,
+          54.7
         ]
       }
     },
     "rocky:party:early": {
-      "games": 63,
+      "games": 80,
       "weights": {
-        "flank": 0.474,
-        "rush": 0.526
+        "flank": 0.595,
+        "rush": 0.405
       },
       "record": {
         "flank": [
-          13.7,
-          8.1
+          13.6,
+          8.9
         ],
         "rush": [
-          49.5,
-          30.2
+          66.1,
+          35.7
         ]
       }
     },
     "rocky:party:late": {
-      "games": 198,
+      "games": 264,
       "weights": {
-        "flank": 0.255,
-        "rush": 0.244,
-        "volley": 0.122,
-        "wedge": 0.379
+        "flank": 0.29,
+        "rush": 0.236,
+        "volley": 0.16,
+        "wedge": 0.313
       },
       "record": {
         "flank": [
-          49.5,
-          14.1
+          66.1,
+          22
         ],
         "rush": [
-          49.5,
-          13.5
+          66.1,
+          18.5
         ],
         "volley": [
-          49.5,
-          4.6
+          66.1,
+          11.9
         ],
         "wedge": [
-          49.5,
-          19.2
+          66.1,
+          23.3
         ]
       }
     },
     "rocky:party:middle": {
-      "games": 178,
+      "games": 240,
       "weights": {
-        "flank": 0.387,
-        "rush": 0.364,
-        "volley": 0.1,
-        "wedge": 0.15
+        "flank": 0.341,
+        "rush": 0.414,
+        "volley": 0.102,
+        "wedge": 0.143
       },
       "record": {
         "flank": [
-          49.5,
-          23.6
+          66.1,
+          29.1
         ],
         "rush": [
-          49.5,
-          22.8
+          66.1,
+          32.4
         ],
         "volley": [
-          46,
-          5.6
+          60.1,
+          7.8
         ],
         "wedge": [
-          33,
-          7.4
+          48.1,
+          10.3
         ]
       }
     }
